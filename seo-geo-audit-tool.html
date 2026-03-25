@@ -3158,18 +3158,36 @@ async function revokeInviteCode(id){
 document.addEventListener('DOMContentLoaded',()=>{checkSession();checkUpgradeRedirect();checkRegistrationMode();});
 
 // ============================================================
-// SIMULATION
+// SIMULATION — deterministic seed based on name+city (stable scores)
 // ============================================================
 let storedName='',storedCity='';
+function _seedHash(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return Math.abs(h);}
 function generateAuditData(name,city){
-    const r=(a,b)=>Math.floor(Math.random()*(b-a+1))+a;
-    const rb=p=>Math.random()<p;
-    const rc=()=>{const x=Math.random();return x<.15?'cited':x<.35?'partial':'not';};
-    return{name,city,hasPrimaryCategory:rb(.7),primaryCategorySpecific:rb(.4),secondaryCategories:r(0,5),descriptionLength:r(0,750),photoCount:r(0,60),hoursComplete:rb(.6),specialHours:rb(.3),attributeCount:r(0,12),postsPerMonth:r(0,6),menuUploaded:rb(.5),menuStructured:rb(.2),bookingLink:rb(.5),rating:r(28,49)/10,reviewCount:r(0,400),recentReviewsPerMonth:r(0,20),responseRate:r(0,100),platformsWithReviews:r(1,5),napConsistency:r(30,100),directoryPresence:r(2,20),listingCompleteness:r(20,100),hasSchemaRestaurant:rb(.3),schemaComplete:rb(.15),hasFAQ:rb(.15),faqCount:r(0,12),titleOptimized:rb(.25),hasTitle:rb(.7),mobileSpeed:r(20,95),contentRichness:r(1,10),napOnSite:rb(.5),citedByChatGPT:rc(),citedByPerplexity:rc(),citedByGemini:rc(),citedByClaude:rc(),bestOfListings:r(0,8),yelpOptimized:r(0,10),foursquarePresent:rb(.4),foursquareOptimized:rb(.2),ugcPresence:r(0,6),inAIOverviews:['yes','partial','no'][r(0,2)],socialScore:r(0,10),brandMentions:r(0,15),
-    // New fields — SEO on-page
-    hasMetaDesc:rb(.5),metaDescLength:r(0,200),hasOpenGraph:rb(.3),hasPhoneLink:rb(.4),hasMapEmbed:rb(.3),hasSocialLinks:rb(.3),hasSitemap:rb(.4),hasRobotsTxt:rb(.5),hasBookingLink:rb(.4),hasCanonical:rb(.4),
-    // New fields — GEO advanced
-    hasWikipedia:rb(.05),localBacklinks:r(0,15),gbpQACount:r(0,20),contentFreshness:rb(.3),hasBlog:rb(.2)};
+    const seed=_seedHash((name+city).toLowerCase());
+    let _si=seed;
+    const _next=()=>{_si=(_si*1103515245+12345)&0x7fffffff;return _si/0x7fffffff;};
+    const r=(a,b)=>Math.floor(_next()*(b-a+1))+a;
+    const rb=p=>_next()<p;
+    const rc=()=>{const x=_next();return x<.15?'cited':x<.35?'partial':'not';};
+    // GBP fields: defaults pessimistes (non vérifiable sans API GBP)
+    // Site web fields: defaults pessimistes (seront remplacés par le crawl réel)
+    return{name,city,
+    // --- GBP (en attente API — valeurs par défaut basses) ---
+    hasPrimaryCategory:false,primaryCategorySpecific:false,secondaryCategories:0,descriptionLength:0,photoCount:0,hoursComplete:false,specialHours:false,attributeCount:0,postsPerMonth:0,menuUploaded:false,menuStructured:false,bookingLink:false,
+    // --- Avis (en attente API — estimation conservatrice) ---
+    rating:0,reviewCount:0,recentReviewsPerMonth:0,responseRate:0,platformsWithReviews:0,
+    // --- Citations (seront remplacées par scan annuaires) ---
+    napConsistency:0,directoryPresence:0,listingCompleteness:0,
+    // --- SEO site web (seront remplacées par crawl réel) ---
+    hasSchemaRestaurant:false,schemaComplete:false,hasFAQ:false,faqCount:0,titleOptimized:false,hasTitle:false,mobileSpeed:50,contentRichness:0,napOnSite:false,
+    // --- SEO on-page (seront remplacées par crawl réel) ---
+    hasMetaDesc:false,metaDescLength:0,hasOpenGraph:false,hasPhoneLink:false,hasMapEmbed:false,hasSocialLinks:false,hasSitemap:false,hasRobotsTxt:false,hasBookingLink:false,hasCanonical:false,hasAltTags:false,headingCount:0,hasHreflang:false,httpsRedirect:true,
+    // --- IA (en attente d'intégration API IA) ---
+    citedByChatGPT:'not',citedByPerplexity:'not',citedByGemini:'not',citedByClaude:'not',bestOfListings:0,yelpOptimized:0,foursquarePresent:false,foursquareOptimized:false,ugcPresence:0,inAIOverviews:'no',socialScore:0,brandMentions:0,
+    // --- GEO avancé ---
+    hasWikipedia:false,localBacklinks:0,gbpQACount:0,contentFreshness:false,hasBlog:false,
+    // --- Source tracking ---
+    _auditSource:'default',_pendingGBP:true,_pendingAI:true};
 }
 
 // ============================================================
@@ -4207,7 +4225,18 @@ function startScan(name,city){
                 if(ra.hasMapEmbed!==undefined) currentData.hasMapEmbed=ra.hasMapEmbed;
                 if(ra.hasCanonical!==undefined) currentData.hasCanonical=ra.hasCanonical;
                 if(ra.wordCount) currentData.contentRichness=Math.min(10,Math.round(ra.wordCount/200));
+                // Additional real fields from crawl
+                if(ra.hasAltTags!==undefined) currentData.hasAltTags=ra.hasAltTags;
+                if(ra.headingCount!==undefined) currentData.headingCount=ra.headingCount;
+                if(ra.hasHreflang!==undefined) currentData.hasHreflang=ra.hasHreflang;
+                if(ra.httpsRedirect!==undefined) currentData.httpsRedirect=ra.httpsRedirect;
+                if(ra.hasSitemap!==undefined) currentData.hasSitemap=ra.hasSitemap;
+                if(ra.hasRobotsTxt!==undefined) currentData.hasRobotsTxt=ra.hasRobotsTxt;
+                if(ra.hasAggregateRating!==undefined) currentData.hasAggregateRating=ra.hasAggregateRating;
+                if(ra.hasMenu!==undefined&&ra.hasMenu) currentData.menuUploaded=true;
+                if(ra.imageCount) currentData.photoCount=Math.max(currentData.photoCount||0,ra.imageCount);
                 currentData._auditSource='real';
+                currentData._pendingGBP=true; // Still waiting for GBP API
                 console.log('✅ Audit réel intégré — données site web réelles');
             }
             // Merge PageSpeed data if available
@@ -4226,7 +4255,21 @@ function startScan(name,city){
             }
             // Inject CMS detection results into audit data
             if(detectedCMS&&detectedCMS.detected){currentData.detectedCMS=detectedCMS.detected;currentData.websiteUrl=storedWebsite;currentData.seoAnalysis=detectedCMS.seoAnalysis||{};}
-            if(autonomousScanResult&&autonomousScanResult.directories){currentData.directoryStatus=autonomousScanResult.directories;}
+            if(autonomousScanResult&&autonomousScanResult.directories){
+                currentData.directoryStatus=autonomousScanResult.directories;
+                // Wire directory scan results to citation audit items
+                const dirs=autonomousScanResult.directories;
+                const foundCount=Object.values(dirs).filter(d=>d.status==='found'||d.status==='connected').length;
+                const checkedCount=Object.values(dirs).length;
+                if(checkedCount>0){
+                    currentData.directoryPresence=foundCount;
+                    currentData.listingCompleteness=Math.round(foundCount/checkedCount*100);
+                    currentData._directoriesReal=true;
+                    // Check Yelp/Foursquare specifically
+                    if(dirs.yelp)currentData.yelpOptimized=dirs.yelp.status==='found'||dirs.yelp.status==='connected'?6:0;
+                    if(dirs.foursquare){currentData.foursquarePresent=dirs.foursquare.status==='found'||dirs.foursquare.status==='connected';currentData.foursquareOptimized=currentData.foursquarePresent;}
+                }
+            }
             currentScores=computeScores(currentData);activeMainTab=defaultTab;activeCategory=defaultCat;
             document.getElementById('dashResto').innerHTML=`📍 ${name} — ${city}${storedWebsite?' · <span style="color:var(--cyn);font-size:.78rem;">'+storedWebsite+'</span>':''}`;
             showScreen('dashboard');renderDashboard();saveAllData();
