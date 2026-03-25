@@ -535,6 +535,62 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;-moz-use
   .cmd-card{border-radius:12px;margin:8px;}
   .action-card{padding:20px;margin:8px;}
 }
+/* PRICING PAGE */
+.pricing-back{position:absolute;top:20px;left:20px;background:none;border:none;color:var(--mut);font-size:.9rem;cursor:pointer;display:flex;align-items:center;gap:6px;z-index:10;}
+.pricing-back:hover{color:var(--txt);}
+.pricing-hero{text-align:center;padding:40px 20px 24px;max-width:700px;margin:0 auto;}
+.pricing-hero h1{font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--ind),var(--cyn));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px;}
+.pricing-hero p{color:var(--mut);font-size:.95rem;line-height:1.5;}
+.pricing-toggle{display:flex;align-items:center;justify-content:center;gap:12px;margin:20px 0;}
+.pricing-toggle span{font-size:.85rem;color:var(--mut);}
+.pricing-toggle span.active{color:var(--txt);font-weight:700;}
+.pricing-toggle .toggle-pill{width:48px;height:24px;background:var(--s3);border-radius:12px;cursor:pointer;position:relative;transition:.2s;}
+.pricing-toggle .toggle-pill.yearly{background:var(--ind);}
+.pricing-toggle .toggle-pill::after{content:'';position:absolute;width:18px;height:18px;background:#fff;border-radius:50%;top:3px;left:3px;transition:.2s;}
+.pricing-toggle .toggle-pill.yearly::after{left:27px;}
+.pricing-save{background:rgba(16,185,129,.15);color:var(--grn);padding:2px 8px;border-radius:4px;font-size:.7rem;font-weight:700;}
+.pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;max-width:1100px;margin:0 auto;padding:0 20px 40px;}
+.price-card{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:28px 24px;position:relative;transition:.2s;}
+.price-card:hover{border-color:var(--ind);transform:translateY(-2px);}
+.price-card.popular{border-color:var(--ind);box-shadow:0 0 30px rgba(108,99,255,.15);}
+.price-card.popular::before{content:'Le + populaire';position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--ind);color:#fff;padding:4px 14px;border-radius:20px;font-size:.7rem;font-weight:700;}
+.price-card-name{font-size:1.1rem;font-weight:800;margin-bottom:4px;}
+.price-card-desc{font-size:.78rem;color:var(--mut);margin-bottom:16px;min-height:36px;}
+.price-card-amount{font-size:2.2rem;font-weight:900;margin-bottom:4px;}
+.price-card-amount span{font-size:.85rem;font-weight:400;color:var(--mut);}
+.price-card-period{font-size:.75rem;color:var(--mut);margin-bottom:20px;}
+.price-card-features{list-style:none;padding:0;margin:0 0 24px;}
+.price-card-features li{padding:6px 0;font-size:.8rem;display:flex;align-items:center;gap:8px;color:var(--txt);}
+.price-card-features li .check{color:var(--grn);font-weight:700;}
+.price-card-features li .cross{color:var(--mut);opacity:.4;}
+.price-card-btn{width:100%;padding:12px;border:none;border-radius:10px;font-size:.88rem;font-weight:700;cursor:pointer;transition:.2s;}
+.price-card-btn.primary{background:var(--ind);color:#fff;}
+.price-card-btn.primary:hover{background:var(--ind2);}
+.price-card-btn.secondary{background:var(--s3);color:var(--txt);border:1px solid var(--bdr);}
+.price-card-btn.secondary:hover{border-color:var(--ind);}
+.pricing-faq{max-width:700px;margin:0 auto 40px;padding:0 20px;}
+.pricing-faq h2{text-align:center;font-size:1.2rem;margin-bottom:20px;}
+.faq-item{background:var(--s1);border:1px solid var(--bdr);border-radius:10px;margin-bottom:8px;overflow:hidden;}
+.faq-q{padding:14px 18px;font-weight:700;font-size:.85rem;cursor:pointer;display:flex;justify-content:space-between;align-items:center;}
+.faq-q:hover{background:var(--s2);}
+.faq-a{padding:0 18px 14px;font-size:.8rem;color:var(--mut);line-height:1.6;display:none;}
+.faq-item.open .faq-a{display:block;}
+.faq-item.open .faq-q .arr{transform:rotate(180deg);}
+.faq-q .arr{transition:.2s;}
+
+/* LEGAL PAGES */
+.legal-page{max-width:800px;margin:0 auto;padding:40px 24px;position:relative;}
+.legal-page h1{font-size:1.5rem;font-weight:900;margin-bottom:8px;}
+.legal-page .legal-date{font-size:.78rem;color:var(--mut);margin-bottom:28px;}
+.legal-page h2{font-size:1rem;font-weight:800;margin:24px 0 8px;color:var(--ind);}
+.legal-page h3{font-size:.88rem;font-weight:700;margin:16px 0 6px;}
+.legal-page p,.legal-page li{font-size:.82rem;color:var(--mut);line-height:1.7;}
+.legal-page ul{padding-left:20px;margin:8px 0;}
+.legal-page a{color:var(--ind);}
+.legal-footer{display:flex;gap:16px;justify-content:center;padding:20px;font-size:.75rem;}
+.legal-footer a{color:var(--mut);text-decoration:none;cursor:pointer;}
+.legal-footer a:hover{color:var(--ind);}
+
 @media(max-width:480px){
   .sub-scores{grid-template-columns:repeat(2,1fr);}
   .dash-tab{padding:10px 12px;font-size:.75rem;}
@@ -1186,6 +1242,101 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
     </div>
     <div class="history-section" id="historySection"></div>
     <div id="groupBtnSection" style="margin-top:16px;z-index:1;position:relative;"></div>
+    <div class="legal-footer" style="margin-top:32px;">
+        <a onclick="showScreen('pricing')">💰 Tarifs</a>
+        <a onclick="showScreen('cgv')">Conditions Générales</a>
+        <a onclick="showScreen('privacy')">Politique de confidentialité</a>
+        <a onclick="showScreen('mentions')">Mentions légales</a>
+    </div>
+</div>
+
+<!-- PRICING PAGE -->
+<div class="screen" id="pricing">
+<button class="pricing-back" onclick="goLanding()">← Retour</button>
+<div class="pricing-hero">
+    <h1>Des tarifs simples et transparents</h1>
+    <p>Boostez la visibilité de votre restaurant sur Google et les moteurs IA. Essai gratuit, sans engagement.</p>
+    <div class="pricing-toggle">
+        <span id="pToggleMonth" class="active">Mensuel</span>
+        <div class="toggle-pill" id="pTogglePill" onclick="togglePricingPeriod()"></div>
+        <span id="pToggleYear">Annuel</span>
+        <span class="pricing-save">-20%</span>
+    </div>
+</div>
+<div class="pricing-grid" id="pricingGrid"></div>
+<div class="pricing-faq">
+    <h2>Questions fréquentes</h2>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+        <div class="faq-q">Puis-je essayer gratuitement ? <span class="arr">▼</span></div>
+        <div class="faq-a">Oui ! Le plan Free vous permet de scanner 1 restaurant par jour et de voir votre score SEO + GEO complet. Aucune carte bancaire requise.</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+        <div class="faq-q">Comment fonctionne l'auto-apply ? <span class="arr">▼</span></div>
+        <div class="faq-a">RestauRank détecte votre CMS (WordPress, Webflow, Wix…) et applique automatiquement les améliorations SEO : Schema.org, balises meta, FAQ, NAP. Vous validez chaque action avant qu'elle soit appliquée.</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+        <div class="faq-q">Puis-je changer de plan à tout moment ? <span class="arr">▼</span></div>
+        <div class="faq-a">Oui, vous pouvez upgrader, downgrader ou annuler à tout moment. Le changement prend effet immédiatement et le prorata est calculé automatiquement.</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+        <div class="faq-q">Quels moyens de paiement acceptez-vous ? <span class="arr">▼</span></div>
+        <div class="faq-a">Nous acceptons les cartes Visa, Mastercard, American Express, et les prélèvements SEPA via notre partenaire de paiement sécurisé Stripe.</div>
+    </div>
+    <div class="faq-item" onclick="this.classList.toggle('open')">
+        <div class="faq-q">Mes données sont-elles sécurisées ? <span class="arr">▼</span></div>
+        <div class="faq-a">Vos données sont chiffrées en transit (HTTPS) et au repos. Nous ne partageons jamais vos données avec des tiers. Conformité RGPD garantie.</div>
+    </div>
+</div>
+<div class="legal-footer">
+    <a onclick="showScreen('cgv')">Conditions Générales</a>
+    <a onclick="showScreen('privacy')">Politique de confidentialité</a>
+    <a onclick="showScreen('mentions')">Mentions légales</a>
+</div>
+</div>
+
+<!-- CGV -->
+<div class="screen" id="cgv">
+<div class="legal-page">
+    <button class="pricing-back" onclick="goLanding()">← Retour</button>
+    <h1>Conditions Générales de Vente</h1>
+    <div class="legal-date">Dernière mise à jour : 26 mars 2026</div>
+    <div id="cgvContent"></div>
+    <div class="legal-footer" style="margin-top:40px;">
+        <a onclick="showScreen('pricing')">Tarifs</a>
+        <a onclick="showScreen('privacy')">Politique de confidentialité</a>
+        <a onclick="showScreen('mentions')">Mentions légales</a>
+    </div>
+</div>
+</div>
+
+<!-- POLITIQUE DE CONFIDENTIALITE -->
+<div class="screen" id="privacy">
+<div class="legal-page">
+    <button class="pricing-back" onclick="goLanding()">← Retour</button>
+    <h1>Politique de Confidentialité</h1>
+    <div class="legal-date">Dernière mise à jour : 26 mars 2026</div>
+    <div id="privacyContent"></div>
+    <div class="legal-footer" style="margin-top:40px;">
+        <a onclick="showScreen('pricing')">Tarifs</a>
+        <a onclick="showScreen('cgv')">Conditions Générales</a>
+        <a onclick="showScreen('mentions')">Mentions légales</a>
+    </div>
+</div>
+</div>
+
+<!-- MENTIONS LEGALES -->
+<div class="screen" id="mentions">
+<div class="legal-page">
+    <button class="pricing-back" onclick="goLanding()">← Retour</button>
+    <h1>Mentions Légales</h1>
+    <div class="legal-date">Dernière mise à jour : 26 mars 2026</div>
+    <div id="mentionsContent"></div>
+    <div class="legal-footer" style="margin-top:40px;">
+        <a onclick="showScreen('pricing')">Tarifs</a>
+        <a onclick="showScreen('cgv')">Conditions Générales</a>
+        <a onclick="showScreen('privacy')">Politique de confidentialité</a>
+    </div>
+</div>
 </div>
 
 <!-- SAVE INDICATOR -->
@@ -7721,6 +7872,208 @@ function viewKeywordAnalysis(i){}
 function markHolidayOpen(){}
 function markHolidayClosed(){}
 
+// ============================================================
+// PRICING PAGE
+// ============================================================
+let _pricingYearly=false;
+function togglePricingPeriod(){
+    _pricingYearly=!_pricingYearly;
+    document.getElementById('pTogglePill').classList.toggle('yearly',_pricingYearly);
+    document.getElementById('pToggleMonth').classList.toggle('active',!_pricingYearly);
+    document.getElementById('pToggleYear').classList.toggle('active',_pricingYearly);
+    renderPricingGrid();
+}
+function renderPricingGrid(){
+    const grid=document.getElementById('pricingGrid');
+    if(!grid)return;
+    const plans=[
+        {key:'free',name:'Free',desc:'Découvrez votre score SEO + GEO',price:0,yearly:0,features:[
+            {t:'1 restaurant',ok:true},{t:'1 scan / jour',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'Auto-apply',ok:false},{t:'Gestion des avis',ok:false},{t:'Annuaires (3 max)',ok:true},{t:'Support email',ok:false}
+        ],btn:'secondary',label:'Commencer gratuitement'},
+        {key:'starter',name:'Starter',desc:'Pour un restaurant qui veut passer à l\'action',price:29,yearly:23,popular:false,features:[
+            {t:'1 restaurant',ok:true},{t:'5 scans / jour',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'⚡ Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis',ok:true},{t:'5 annuaires',ok:true},{t:'Support email prioritaire',ok:true}
+        ],btn:'primary',label:'Choisir Starter'},
+        {key:'pro',name:'Pro',desc:'Multi-sites, équipe, et automatisation complète',price:79,yearly:63,popular:true,features:[
+            {t:'3 restaurants',ok:true},{t:'Scans illimités',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'⚡ Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis IA',ok:true},{t:'11 annuaires',ok:true},{t:'3 membres d\'équipe',ok:true}
+        ],btn:'primary',label:'Choisir Pro'},
+        {key:'premium',name:'Premium',desc:'Chaînes de restaurants et franchises',price:149,yearly:119,features:[
+            {t:'10 restaurants',ok:true},{t:'Scans illimités',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'⚡ Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis IA',ok:true},{t:'11 annuaires',ok:true},{t:'10 membres d\'équipe',ok:true}
+        ],btn:'secondary',label:'Choisir Premium'}
+    ];
+    grid.innerHTML=plans.map(p=>{
+        const price=_pricingYearly?p.yearly:p.price;
+        const period=_pricingYearly?'/mois (facturé annuellement)':'/mois';
+        return `<div class="price-card${p.popular?' popular':''}">
+            <div class="price-card-name">${p.name}</div>
+            <div class="price-card-desc">${p.desc}</div>
+            <div class="price-card-amount">${price===0?'Gratuit':price+'€'} ${price>0?'<span>HT'+period+'</span>':''}</div>
+            ${price>0?`<div class="price-card-period">${_pricingYearly?'Soit '+(price*12)+'€/an au lieu de '+(p.price*12)+'€':'Sans engagement, annulable à tout moment'}</div>`:'<div class="price-card-period">Aucune carte bancaire requise</div>'}
+            <ul class="price-card-features">${p.features.map(f=>`<li><span class="${f.ok?'check':'cross'}">${f.ok?'✓':'✗'}</span> ${f.t}</li>`).join('')}</ul>
+            <button class="price-card-btn ${p.btn}" onclick="pricingCTA('${p.key}')">${p.label}</button>
+        </div>`;
+    }).join('');
+}
+function pricingCTA(plan){
+    if(plan==='free'){
+        goLanding();return;
+    }
+    // If logged in, show upgrade modal; otherwise prompt login first
+    if(currentAccount&&sessionToken){
+        showUpgradeModal('',plan);
+    } else {
+        // Store intent then go to auth
+        window._pendingPlan=plan;
+        showScreen('landing');
+        setTimeout(()=>{
+            const authBox=document.querySelector('.auth-box');
+            if(authBox)authBox.scrollIntoView({behavior:'smooth'});
+        },200);
+    }
+}
+
+// ============================================================
+// LEGAL PAGES CONTENT
+// ============================================================
+function renderLegalPages(){
+    const cgv=document.getElementById('cgvContent');
+    if(cgv)cgv.innerHTML=`
+<h2>Article 1 — Objet</h2>
+<p>Les présentes Conditions Générales de Vente (CGV) régissent les relations contractuelles entre la société RestauRank (ci-après « le Prestataire ») et tout professionnel de la restauration utilisant le service RestauRank (ci-après « le Client »). En souscrivant à un abonnement, le Client accepte sans réserve les présentes CGV.</p>
+
+<h2>Article 2 — Description du service</h2>
+<p>RestauRank est un service en ligne (SaaS) d'audit et d'optimisation de la visibilité en ligne des restaurants. Le service comprend :</p>
+<ul>
+<li>L'audit SEO local (Google Search, Maps, Local Pack, annuaires)</li>
+<li>L'audit GEO (visibilité sur les moteurs IA : ChatGPT, Perplexity, Gemini, Claude)</li>
+<li>L'application automatique d'améliorations via les APIs des plateformes connectées</li>
+<li>La gestion centralisée des informations du restaurant (Hub Central)</li>
+<li>Le suivi des avis clients et la gestion des réponses</li>
+</ul>
+
+<h2>Article 3 — Abonnements et tarifs</h2>
+<p>Le service est proposé sous forme d'abonnement mensuel ou annuel. Les tarifs en vigueur sont affichés sur la page Tarifs du site. Tous les prix sont indiqués en euros hors taxes (HT). La TVA applicable sera ajoutée au moment du paiement conformément à la législation en vigueur.</p>
+<p>Les plans disponibles sont : Free (gratuit), Starter (29€/mois HT), Pro (79€/mois HT), et Premium (149€/mois HT). Les tarifs annuels bénéficient d'une réduction de 20%.</p>
+
+<h2>Article 4 — Paiement</h2>
+<p>Le paiement s'effectue par carte bancaire (Visa, Mastercard, American Express) ou prélèvement SEPA via la plateforme de paiement sécurisée Stripe. L'abonnement est prélevé automatiquement à chaque début de période (mensuelle ou annuelle). En cas d'échec de paiement, le Client dispose d'un délai de 7 jours pour régulariser sa situation avant suspension du service.</p>
+
+<h2>Article 5 — Durée et résiliation</h2>
+<p>L'abonnement mensuel est sans engagement et peut être résilié à tout moment depuis l'espace client. La résiliation prend effet à la fin de la période en cours. L'abonnement annuel peut être résilié à tout moment ; le service reste actif jusqu'à la fin de la période annuelle payée. Aucun remboursement prorata ne sera effectué sauf en cas de manquement grave du Prestataire.</p>
+
+<h2>Article 6 — Droit de rétractation</h2>
+<p>Conformément à l'article L.221-28 du Code de la consommation, le droit de rétractation ne s'applique pas aux contrats de fourniture de contenu numérique non fourni sur un support matériel dont l'exécution a commencé avec l'accord préalable du consommateur. En acceptant ces CGV et en utilisant le service, le Client renonce expressément à son droit de rétractation.</p>
+
+<h2>Article 7 — Responsabilité</h2>
+<p>Le Prestataire s'engage à fournir le service avec diligence et dans les règles de l'art. Le service est fourni « en l'état ». Le Prestataire ne saurait être tenu responsable des résultats obtenus suite aux audits et optimisations, ni des modifications apportées par des tiers aux plateformes tierces (Google, Yelp, TripAdvisor, etc.). La responsabilité du Prestataire est limitée au montant des sommes effectivement payées par le Client au cours des 12 derniers mois.</p>
+
+<h2>Article 8 — Propriété intellectuelle</h2>
+<p>Le service RestauRank, son code source, son design et ses contenus sont la propriété exclusive du Prestataire. Le Client bénéficie d'un droit d'utilisation non exclusif et non transférable pendant la durée de son abonnement.</p>
+
+<h2>Article 9 — Données personnelles</h2>
+<p>Le traitement des données personnelles est régi par notre Politique de Confidentialité, accessible depuis le site. Le Prestataire s'engage à respecter le Règlement Général sur la Protection des Données (RGPD).</p>
+
+<h2>Article 10 — Modification des CGV</h2>
+<p>Le Prestataire se réserve le droit de modifier les présentes CGV. Les modifications seront notifiées par email au moins 30 jours avant leur entrée en vigueur. L'utilisation continue du service après cette date vaut acceptation des nouvelles CGV.</p>
+
+<h2>Article 11 — Droit applicable et juridiction</h2>
+<p>Les présentes CGV sont soumises au droit français. En cas de litige, les parties s'engagent à rechercher une solution amiable. À défaut, les tribunaux de Paris seront seuls compétents.</p>
+`;
+
+    const privacy=document.getElementById('privacyContent');
+    if(privacy)privacy.innerHTML=`
+<h2>1. Responsable du traitement</h2>
+<p>RestauRank, dont le siège social est situé en France, est responsable du traitement de vos données personnelles. Contact : contact@restaurank.com</p>
+
+<h2>2. Données collectées</h2>
+<p>Nous collectons les données suivantes :</p>
+<ul>
+<li><strong>Données d'inscription :</strong> adresse email, mot de passe (hashé), nom</li>
+<li><strong>Données de restaurant :</strong> nom, adresse, téléphone, site web, horaires, photos</li>
+<li><strong>Données d'utilisation :</strong> historique des audits, actions effectuées, logs de connexion</li>
+<li><strong>Données de paiement :</strong> traitées exclusivement par Stripe (nous ne stockons jamais les numéros de carte)</li>
+<li><strong>Données techniques :</strong> adresse IP, type de navigateur, pages visitées</li>
+</ul>
+
+<h2>3. Finalités du traitement</h2>
+<p>Vos données sont utilisées pour :</p>
+<ul>
+<li>Fournir et améliorer le service d'audit SEO/GEO</li>
+<li>Gérer votre compte et votre abonnement</li>
+<li>Appliquer les améliorations automatiques sur vos plateformes connectées</li>
+<li>Vous envoyer des notifications de service (résultats d'audit, alertes)</li>
+<li>Assurer la sécurité du service</li>
+</ul>
+
+<h2>4. Base légale</h2>
+<p>Le traitement est fondé sur l'exécution du contrat (article 6.1.b du RGPD) pour la fourniture du service, et sur l'intérêt légitime (article 6.1.f) pour l'amélioration du service et la sécurité.</p>
+
+<h2>5. Durée de conservation</h2>
+<p>Les données de compte sont conservées pendant toute la durée de l'abonnement et 3 ans après la résiliation. Les données de paiement sont conservées par Stripe conformément à sa propre politique. Les logs techniques sont conservés 12 mois.</p>
+
+<h2>6. Partage des données</h2>
+<p>Vos données ne sont jamais vendues à des tiers. Elles peuvent être partagées avec :</p>
+<ul>
+<li><strong>Stripe :</strong> pour le traitement des paiements</li>
+<li><strong>Google (GBP API) :</strong> pour l'application des améliorations sur votre fiche Google</li>
+<li><strong>Votre CMS :</strong> pour l'application des améliorations sur votre site web (uniquement avec votre autorisation explicite)</li>
+</ul>
+
+<h2>7. Vos droits</h2>
+<p>Conformément au RGPD, vous disposez des droits suivants :</p>
+<ul>
+<li>Droit d'accès à vos données</li>
+<li>Droit de rectification</li>
+<li>Droit à l'effacement (« droit à l'oubli »)</li>
+<li>Droit à la portabilité des données</li>
+<li>Droit d'opposition au traitement</li>
+<li>Droit de déposer une plainte auprès de la CNIL</li>
+</ul>
+<p>Pour exercer ces droits, contactez-nous à : contact@restaurank.com</p>
+
+<h2>8. Sécurité</h2>
+<p>Nous mettons en œuvre des mesures techniques et organisationnelles appropriées : chiffrement HTTPS, hashage des mots de passe (scrypt), accès restreint aux données, hébergement sécurisé.</p>
+
+<h2>9. Cookies</h2>
+<p>RestauRank utilise uniquement des cookies techniques essentiels au fonctionnement du service (session d'authentification, préférences d'affichage). Aucun cookie de tracking publicitaire n'est utilisé.</p>
+
+<h2>10. Modifications</h2>
+<p>Cette politique peut être mise à jour. Les modifications significatives seront communiquées par email. La date de dernière mise à jour est indiquée en haut de cette page.</p>
+`;
+
+    const mentions=document.getElementById('mentionsContent');
+    if(mentions)mentions.innerHTML=`
+<h2>Éditeur du site</h2>
+<p>RestauRank<br>
+Service en ligne d'audit et d'optimisation de la visibilité des restaurants<br>
+Email : contact@restaurank.com<br>
+Site : https://restaurank.onrender.com</p>
+
+<h2>Hébergement</h2>
+<p>Le site est hébergé par :<br>
+Render Services, Inc.<br>
+525 Brannan Street, Suite 300<br>
+San Francisco, CA 94107, États-Unis<br>
+Site : https://render.com</p>
+
+<h2>Paiement sécurisé</h2>
+<p>Les paiements sont traités par :<br>
+Stripe, Inc.<br>
+354 Oyster Point Blvd<br>
+South San Francisco, CA 94080, États-Unis<br>
+Site : https://stripe.com</p>
+
+<h2>Propriété intellectuelle</h2>
+<p>L'ensemble des éléments du site RestauRank (textes, graphismes, logiciels, marques, etc.) sont protégés par les lois relatives à la propriété intellectuelle. Toute reproduction, représentation ou exploitation non autorisée est interdite.</p>
+
+<h2>Protection des données</h2>
+<p>Conformément au Règlement Général sur la Protection des Données (RGPD) et à la loi Informatique et Libertés, vous disposez d'un droit d'accès, de rectification et de suppression de vos données. Pour exercer ce droit, contactez-nous à contact@restaurank.com.</p>
+<p>Autorité de contrôle : Commission Nationale de l'Informatique et des Libertés (CNIL) — www.cnil.fr</p>
+
+<h2>Limitation de responsabilité</h2>
+<p>RestauRank s'efforce de fournir des informations aussi précises que possible. Toutefois, la responsabilité du site ne saurait être engagée en cas d'imprécisions, d'inexactitudes ou d'omissions. Les résultats des audits sont fournis à titre indicatif et ne constituent pas des garanties de performance.</p>
+`;
+}
+
 // Initialize on load
 document.addEventListener('DOMContentLoaded',()=>{
     // Load data from server on startup
@@ -7728,7 +8081,7 @@ document.addEventListener('DOMContentLoaded',()=>{
         if(store){_serverDataCache=store;console.log('📡 Data loaded from server:',Object.keys(store.restaurants||{}).length,'restaurants');}
         renderHistory();
     }).catch(()=>{});
-    setTimeout(()=>{renderHubFeatures();renderAiSettings();renderReviewAutomation();renderGooglePostsList();},500);
+    setTimeout(()=>{renderHubFeatures();renderAiSettings();renderReviewAutomation();renderGooglePostsList();renderPricingGrid();renderLegalPages();},500);
 });
 
 </script>
