@@ -2873,7 +2873,7 @@ async function checkSession(){
     showAuth('login');
 }
 
-function onAuthSuccess(){
+async function onAuthSuccess(){
     // Hide auth screens
     document.querySelectorAll('.auth-screen').forEach(s=>s.classList.remove('active'));
     // Show user bar
@@ -2891,13 +2891,27 @@ function onAuthSuccess(){
         showOnboardingWizard();
         return;
     }
-    // Returning user → check if has restaurants, show getting started if empty
-    const rests=getStoredRestaurants();
-    window._showGettingStarted=(rests.length===0);
 
-    // Show landing with top padding for user bar
-    document.getElementById('landing').classList.add('active');
+    // RETURNING USER → load restaurants from SERVER (not just localStorage)
     document.getElementById('landing').style.paddingTop='54px';
+    try{
+        const store=await loadAllDataFromServer();
+        if(store&&store.restaurants&&Object.keys(store.restaurants).length>0){
+            _serverDataCache=store;
+            renderHistory();
+            // Auto-reload last restaurant → go directly to dashboard
+            const lastKey=store.lastRestaurantKey||Object.keys(store.restaurants)[0];
+            if(lastKey&&store.restaurants[lastKey]){
+                await loadRestaurant(lastKey);
+                return; // loadRestaurant shows dashboard
+            }
+        }
+    }catch(e){console.warn('Server load after login failed',e);}
+
+    // No restaurants found → show landing
+    window._showGettingStarted=true;
+    document.getElementById('landing').classList.add('active');
+    renderHistory();
 }
 
 // ══ ONBOARDING WIZARD ══
