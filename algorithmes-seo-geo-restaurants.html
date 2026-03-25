@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Algorithmes SEO Local + GEO — Comment Google et les IA classent les restaurants</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+        :root {
+            --bg: #08090d; --s1: #12141c; --s2: #1a1d28; --s3: #1f2230;
+            --border: #262a3a; --text: #e8eaf0; --muted: #7c8198;
+            --indigo: #6366f1; --cyan: #06b6d4; --green: #10b981;
+            --orange: #f59e0b; --red: #ef4444; --pink: #ec4899;
+            --purple: #8b5cf6; --blue: #3b82f6;
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); line-height:1.65; }
+
+        /* Hero */
+        .hero { padding:64px 24px 40px; text-align:center; border-bottom:1px solid var(--border); position:relative; overflow:hidden; }
+        .hero::before { content:''; position:absolute; inset:0; background:radial-gradient(ellipse 50% 60% at 40% 20%, rgba(99,102,241,.1), transparent), radial-gradient(ellipse 40% 50% at 70% 80%, rgba(6,182,212,.06), transparent); }
+        .hero h1 { font-size:clamp(1.5rem,3.5vw,2.4rem); font-weight:900; background:linear-gradient(135deg,#6366f1,#06b6d4); -webkit-background-clip:text; -webkit-text-fill-color:transparent; position:relative; margin-bottom:10px; }
+        .hero p { color:var(--muted); font-size:.95rem; max-width:640px; margin:0 auto; position:relative; }
+
+        /* Nav */
+        .nav { position:sticky; top:0; z-index:100; display:flex; justify-content:center; gap:6px; padding:12px 16px; background:rgba(8,9,13,.92); backdrop-filter:blur(16px); border-bottom:1px solid var(--border); flex-wrap:wrap; }
+        .nb { padding:8px 18px; border-radius:8px; border:1px solid var(--border); background:transparent; color:var(--muted); cursor:pointer; font-size:.82rem; font-weight:500; font-family:inherit; transition:.25s; }
+        .nb:hover { background:var(--s2); color:var(--text); }
+        .nb.on { background:var(--indigo); color:#fff; border-color:var(--indigo); }
+
+        .container { max-width:1100px; margin:0 auto; padding:36px 20px; }
+        .sec { display:none; } .sec.on { display:block; animation:fi .3s ease; }
+        @keyframes fi { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+
+        h2 { font-size:1.35rem; font-weight:800; margin-bottom:6px; }
+        .sub { color:var(--muted); font-size:.9rem; margin-bottom:28px; max-width:720px; }
+
+        /* Weight bar chart */
+        .weight-chart { margin:24px 0; }
+        .weight-row { display:flex; align-items:center; gap:12px; margin-bottom:10px; }
+        .weight-label { width:180px; font-size:.82rem; font-weight:600; flex-shrink:0; text-align:right; }
+        .weight-bar-bg { flex:1; height:28px; background:var(--s2); border-radius:6px; overflow:hidden; position:relative; }
+        .weight-bar { height:100%; border-radius:6px; display:flex; align-items:center; padding-left:10px; font-size:.72rem; font-weight:700; color:#fff; transition:width 1s ease; }
+        .weight-pct { width:40px; font-size:.82rem; font-weight:700; text-align:center; flex-shrink:0; }
+
+        /* Cards */
+        .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; }
+        .card { background:var(--s1); border:1px solid var(--border); border-radius:12px; padding:22px; transition:.3s; }
+        .card:hover { transform:translateY(-2px); border-color:var(--indigo); }
+        .card h3 { font-size:.95rem; font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+        .card p { font-size:.83rem; color:var(--muted); line-height:1.6; }
+
+        /* Score dot */
+        .dot { width:10px; height:10px; border-radius:50%; display:inline-block; flex-shrink:0; }
+
+        /* Tags */
+        .tags { display:flex; flex-wrap:wrap; gap:4px; margin:8px 0; }
+        .t { padding:3px 8px; border-radius:5px; font-size:.67rem; font-weight:600; text-transform:uppercase; letter-spacing:.3px; }
+        .t-g { background:rgba(16,185,129,.12); color:var(--green); }
+        .t-o { background:rgba(245,158,11,.12); color:var(--orange); }
+        .t-p { background:rgba(139,92,246,.12); color:var(--purple); }
+        .t-b { background:rgba(59,130,246,.12); color:var(--blue); }
+        .t-r { background:rgba(239,68,68,.12); color:var(--red); }
+        .t-c { background:rgba(6,182,212,.12); color:var(--cyan); }
+        .t-pk { background:rgba(236,72,153,.12); color:var(--pink); }
+
+        /* Table */
+        .tw { overflow-x:auto; border-radius:10px; border:1px solid var(--border); margin:20px 0; }
+        table { width:100%; border-collapse:collapse; font-size:.83rem; }
+        th { background:var(--s2); padding:10px 12px; font-size:.7rem; text-transform:uppercase; letter-spacing:.5px; color:var(--muted); text-align:left; }
+        td { padding:10px 12px; border-top:1px solid var(--border); }
+        tr:hover td { background:var(--s3); }
+
+        /* Comparison split */
+        .split { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+        .split-card { background:var(--s1); border:1px solid var(--border); border-radius:12px; padding:24px; }
+        .split-card h3 { font-size:1rem; font-weight:700; margin-bottom:12px; }
+        .split-card ul { list-style:none; padding:0; }
+        .split-card li { padding:5px 0; font-size:.83rem; color:var(--muted); display:flex; gap:8px; align-items:flex-start; }
+        .split-card li::before { content:'→'; color:var(--indigo); flex-shrink:0; }
+
+        /* Insight box */
+        .insight { background:linear-gradient(135deg, rgba(99,102,241,.08), rgba(6,182,212,.05)); border:1px solid rgba(99,102,241,.2); border-radius:12px; padding:20px 24px; margin:20px 0; }
+        .insight h4 { font-size:.9rem; font-weight:700; color:var(--indigo); margin-bottom:8px; }
+        .insight p { font-size:.85rem; color:var(--text); }
+
+        footer { text-align:center; padding:36px 24px; color:var(--muted); font-size:.72rem; border-top:1px solid var(--border); }
+
+        @media(max-width:700px) { .grid{grid-template-columns:1fr;} .split{grid-template-columns:1fr;} .weight-label{width:120px;font-size:.72rem;} }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>Les Algorithmes SEO Local + GEO</h1>
+    <p>Comment Google classe les restaurants dans le Local Pack, et comment ChatGPT / Perplexity / Google AI choisissent quel restaurant recommander. La base technique pour construire ta webapp.</p>
+</div>
+
+<div class="nav" id="nav">
+    <button class="nb on" data-t="seo">Algorithme Google SEO Local</button>
+    <button class="nb" data-t="geo">Algorithme GEO (IA)</button>
+    <button class="nb" data-t="compare">SEO vs GEO</button>
+    <button class="nb" data-t="actions">Actions pour ta Webapp</button>
+</div>
+
+<div class="container">
+
+<!-- ===================== SEO LOCAL ===================== -->
+<div class="sec on" id="seo">
+    <h2>Algorithme Google Local Search — Comment ça marche</h2>
+    <div class="sub">Google utilise 3 piliers fondamentaux pour classer les résultats locaux (Local Pack = les 3 résultats Maps). En 2026, les poids ont évolué avec l'importance croissante des signaux d'engagement et d'entité.</div>
+
+    <!-- 3 Piliers -->
+    <div class="grid" style="margin-bottom:28px;">
+        <div class="card" style="border-top:3px solid var(--blue);">
+            <h3><span class="dot" style="background:var(--blue);"></span> Pertinence (Relevance)</h3>
+            <p>Correspondance entre la requête de l'utilisateur et le profil du restaurant. Google compare les mots-clés recherchés avec ta catégorie, ta description, tes attributs, les mots dans tes avis et ton site web.</p>
+            <div class="tags"><span class="t t-b">Catégorie GBP</span><span class="t t-b">Description</span><span class="t t-b">Mots-clés avis</span><span class="t t-b">Contenu site</span></div>
+        </div>
+        <div class="card" style="border-top:3px solid var(--green);">
+            <h3><span class="dot" style="background:var(--green);"></span> Distance (Proximity)</h3>
+            <p>Proximité physique entre l'utilisateur et le restaurant. C'est le signal le plus puissant pour les requêtes "near me" / "à proximité". Tu ne peux pas l'influencer directement — mais tu peux optimiser pour des quartiers spécifiques.</p>
+            <div class="tags"><span class="t t-g">Géolocalisation</span><span class="t t-g">Adresse exacte</span><span class="t t-g">Zone de service</span></div>
+        </div>
+        <div class="card" style="border-top:3px solid var(--purple);">
+            <h3><span class="dot" style="background:var(--purple);"></span> Proéminence (Prominence)</h3>
+            <p>Notoriété et autorité du restaurant sur le web. En 2026, la proéminence pèse davantage sur les signaux d'engagement réel (clics, appels, itinéraires) que sur la simple quantité de backlinks.</p>
+            <div class="tags"><span class="t t-p">Avis</span><span class="t t-p">Citations</span><span class="t t-p">Backlinks</span><span class="t t-p">Engagement</span></div>
+        </div>
+    </div>
+
+    <!-- Weight Chart -->
+    <h3 style="font-size:1.05rem; margin-bottom:4px;">Poids des facteurs de ranking — Local Pack 2026</h3>
+    <p style="font-size:.8rem; color:var(--muted); margin-bottom:16px;">Source : Whitespark Local Search Ranking Factors 2026 / BrightLocal</p>
+
+    <div class="weight-chart">
+        <div class="weight-row">
+            <div class="weight-label">Google Business Profile</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:32%; background:linear-gradient(90deg,var(--indigo),var(--blue));">GBP</div></div>
+            <div class="weight-pct" style="color:var(--indigo);">32%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">Avis (Reviews)</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:20%; background:linear-gradient(90deg,var(--green),var(--cyan));">Avis</div></div>
+            <div class="weight-pct" style="color:var(--green);">20%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">On-Page (site web)</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:15%; background:linear-gradient(90deg,var(--orange),#e67e22);">On-Page</div></div>
+            <div class="weight-pct" style="color:var(--orange);">~15%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">Citations / NAP</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:11%; background:linear-gradient(90deg,var(--pink),var(--red));">Citations</div></div>
+            <div class="weight-pct" style="color:var(--pink);">~11%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">Signaux comportementaux</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:9%; background:linear-gradient(90deg,var(--purple),var(--pink));">Behav.</div></div>
+            <div class="weight-pct" style="color:var(--purple);">~9%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">Backlinks</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:8%; background:linear-gradient(90deg,var(--cyan),var(--blue));">Links</div></div>
+            <div class="weight-pct" style="color:var(--cyan);">~8%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">Personnalisation</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:5%; background:var(--muted);">Perso</div></div>
+            <div class="weight-pct" style="color:var(--muted);">~5%</div>
+        </div>
+    </div>
+
+    <!-- Détail par facteur -->
+    <h3 style="font-size:1.05rem; margin:28px 0 16px;">Détail de chaque facteur — Ce que ta webapp doit auditer</h3>
+
+    <div class="grid">
+        <div class="card">
+            <h3>📊 Google Business Profile (32%)</h3>
+            <div class="tags"><span class="t t-r">Critique</span></div>
+            <p><strong>Le facteur n°1.</strong> 8 des 10 signaux les plus importants viennent du GBP. Ce que Google regarde :</p>
+            <ul style="list-style:none; padding:0; margin-top:10px;">
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Catégorie principale</strong> — Signal n°1 absolu. "Restaurant italien" vs "Restaurant" fait toute la différence</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Catégories secondaires</strong> — Jusqu'à 9 catégories complémentaires (pizza, pâtes, livraison…)</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Nom de l'entreprise</strong> — Le mot-clé dans le nom aide (controversé mais prouvé)</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Description (750 car.)</strong> — Mots-clés géo + type de cuisine + spécialités</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Photos</strong> — Quantité, qualité, fraîcheur. Min. 20 photos récentes</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Attributs</strong> — Terrasse, WiFi, accessible PMR, livraison, végétarien…</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Horaires</strong> — Complets + horaires spéciaux (fériés). "Ouvert maintenant" = facteur top 5</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Google Posts</strong> — Publications régulières = signal de fraîcheur</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Q&A</strong> — Réponses aux questions = contenu indexable</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Menu</strong> — Uploadé et structuré</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>⭐ Avis / Reviews (20%)</h3>
+            <div class="tags"><span class="t t-r">Critique</span><span class="t t-g">En hausse</span></div>
+            <p><strong>En forte progression</strong> (était 16% en 2023, maintenant 20%). Google évalue les avis de manière sophistiquée :</p>
+            <ul style="list-style:none; padding:0; margin-top:10px;">
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Note moyenne</strong> — 4.2+ est le minimum pour apparaître dans le Local Pack</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Volume</strong> — Nombre total d'avis vs concurrents locaux</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Fraîcheur</strong> — Avis récents > avis anciens. Distribution naturelle dans le temps</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Contenu textuel</strong> — Les avis avec texte comptent plus que les étoiles seules</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Mots-clés dans les avis</strong> — "excellente pizza" dans un avis boost le ranking pour "pizza"</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Réponses du propriétaire</strong> — Google favorise les profils qui répondent aux avis</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Sentiment</strong> — Analyse NLP du sentiment global (positif/négatif/thèmes)</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Crédibilité du reviewer</strong> — Local Guides et reviewers actifs ont plus de poids</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>🌐 On-Page / Site Web (~15%)</h3>
+            <div class="tags"><span class="t t-o">Important</span></div>
+            <p>Le site web du restaurant reste important pour valider l'autorité et la pertinence :</p>
+            <ul style="list-style:none; padding:0; margin-top:10px;">
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Title tag</strong> — "Restaurant Italien Paris 11 | [Nom]" — ville + cuisine dans le title</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">NAP sur le site</strong> — Nom, adresse, téléphone identiques au GBP, crawlable</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Schema.org</strong> — Restaurant, Menu, AggregateRating, OpeningHours, GeoCoordinates</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Vitesse mobile</strong> — Core Web Vitals (LCP < 2.5s, CLS < 0.1, INP < 200ms)</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Contenu localisé</strong> — Pages dédiées quartier/ville si multi-sites</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">HTTPS + Mobile-friendly</strong> — Obligatoire en 2026</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>📌 Citations / NAP (~11%)</h3>
+            <div class="tags"><span class="t t-o">Important</span><span class="t t-r">En baisse</span></div>
+            <p>Cohérence du NAP (Name, Address, Phone) sur tous les annuaires. La quantité compte moins qu'avant — c'est la <strong>cohérence</strong> qui prime :</p>
+            <ul style="list-style:none; padding:0; margin-top:10px;">
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Consistance NAP</strong> — Même format exact partout (pas "Rue" vs "R." vs "rue")</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Annuaires clés</strong> — Google, Yelp, TripAdvisor, TheFork, Pages Jaunes, Apple Maps</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Qualité > Quantité</strong> — 20 citations cohérentes > 100 incohérentes</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Mentions non structurées</strong> — Articles, blogs food, guides = citations implicites</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>🖱️ Signaux comportementaux (~9%)</h3>
+            <div class="tags"><span class="t t-g">En hausse</span><span class="t t-p">Nouveau 2026</span></div>
+            <p><strong>Signal en forte hausse en 2026.</strong> Google mesure comment les utilisateurs interagissent :</p>
+            <ul style="list-style:none; padding:0; margin-top:10px;">
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">CTR (Click-Through Rate)</strong> — % de clics quand le resto apparaît dans les résultats</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Appels téléphoniques</strong> — Clics sur le bouton "Appeler" depuis GBP</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Demandes d'itinéraire</strong> — Clics sur "Y aller" dans Maps</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Visites du site</strong> — Clics vers le site web depuis GBP</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Engagement photos</strong> — Vues des photos, ajout de photos par les clients</li>
+                <li style="padding:4px 0; font-size:.82rem; color:var(--muted);">→ <strong style="color:var(--text);">Dwell time</strong> — Temps passé à consulter la fiche</li>
+            </ul>
+        </div>
+
+        <div class="card">
+            <h3>🔗 Backlinks (~8%) + Perso (~5%)</h3>
+            <div class="tags"><span class="t t-r">En baisse</span></div>
+            <p><strong>Backlinks :</strong> Les liens depuis des sites d'autorité (blogs food, presse locale, guides) restent utiles mais pèsent moins qu'avant. Les liens locaux (mairie, associations de quartier) sont les plus précieux.</p>
+            <p style="margin-top:8px;"><strong>Personnalisation :</strong> Google adapte les résultats selon l'historique de recherche et les visites passées de l'utilisateur. Non contrôlable directement.</p>
+        </div>
+    </div>
+
+    <div class="insight">
+        <h4>💡 Insight clé pour ta webapp</h4>
+        <p>Le GBP à lui seul représente 32% du ranking. C'est là que ta webapp peut avoir le plus d'impact immédiat : un audit approfondi du profil Google Business avec des recommandations priorisées est la feature n°1 à construire. Ensuite, les avis (20%) et les citations (11%) sont les deux leviers les plus actionnables.</p>
+    </div>
+</div>
+
+<!-- ===================== GEO ===================== -->
+<div class="sec" id="geo">
+    <h2>Algorithme GEO — Comment les IA recommandent les restaurants</h2>
+    <div class="sub">Les LLM (ChatGPT, Perplexity, Claude, Gemini) n'ont pas un "algorithme" unique comme Google. Ils combinent données d'entraînement + recherche web temps réel. Voici comment ils fonctionnent.</div>
+
+    <!-- Sources breakdown -->
+    <h3 style="font-size:1.05rem; margin-bottom:4px;">D'où viennent les recommandations restaurant des IA ?</h3>
+    <p style="font-size:.8rem; color:var(--muted); margin-bottom:16px;">Source : Yext — Analyse de 6.8M citations / 1.6M réponses IA (2025)</p>
+
+    <div class="weight-chart">
+        <div class="weight-row">
+            <div class="weight-label">Annuaires tiers</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:41.6%; background:linear-gradient(90deg,var(--blue),var(--cyan));">Yelp, Google, DoorDash…</div></div>
+            <div class="weight-pct" style="color:var(--blue);">41.6%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">Site web du restaurant</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:39.8%; background:linear-gradient(90deg,var(--green),var(--cyan));">Site propre du resto</div></div>
+            <div class="weight-pct" style="color:var(--green);">39.8%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">Avis & réseaux sociaux</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:13%; background:linear-gradient(90deg,var(--orange),var(--pink));">Reviews, Instagram…</div></div>
+            <div class="weight-pct" style="color:var(--orange);">13%</div>
+        </div>
+        <div class="weight-row">
+            <div class="weight-label">News, forums, gouv</div>
+            <div class="weight-bar-bg"><div class="weight-bar" style="width:6%; background:var(--purple);">Presse, Reddit…</div></div>
+            <div class="weight-pct" style="color:var(--purple);">6%</div>
+        </div>
+    </div>
+
+    <div class="insight" style="margin-bottom:28px;">
+        <h4>💡 86% des citations IA proviennent de sources contrôlables</h4>
+        <p>Le site web du restaurant (39.8%) + les annuaires (41.6%) = 81.4% des sources. Le restaurateur peut directement influencer sa visibilité IA en optimisant ces deux leviers. C'est exactement ce que ta webapp doit automatiser.</p>
+    </div>
+
+    <!-- Comment chaque IA fonctionne -->
+    <h3 style="font-size:1.05rem; margin-bottom:16px;">Comment chaque moteur IA choisit quel restaurant citer</h3>
+
+    <div class="grid">
+        <div class="card" style="border-top:3px solid var(--green);">
+            <h3>🟢 ChatGPT (OpenAI)</h3>
+            <div class="tags"><span class="t t-g">Yelp-heavy</span><span class="t t-b">Bing</span></div>
+            <p><strong>Mode sans Browse :</strong> Recommande basé sur les données d'entraînement. Favorise les restaurants fréquemment mentionnés comme "meilleur" dans des sources de confiance (guides, blogs, listes "best of").</p>
+            <p style="margin-top:8px;"><strong>Mode Browse / Search :</strong> Recherche via Bing, puis tire de :</p>
+            <ul style="list-style:none; padding:0; margin-top:6px;">
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Yelp</strong> (source n°1 pour ChatGPT)</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Foursquare</strong> (base de données locale)</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>TripAdvisor</strong> (avis + classement)</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Site web du restaurant</strong> (contenu structuré)</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Articles / blogs food</strong> (listes "best of")</li>
+            </ul>
+        </div>
+
+        <div class="card" style="border-top:3px solid var(--purple);">
+            <h3>🟣 Perplexity</h3>
+            <div class="tags"><span class="t t-p">Sources diversifiées</span><span class="t t-g">Toujours live</span></div>
+            <p><strong>Toujours en mode recherche live</strong> — Perplexity ne répond jamais uniquement depuis son training. Il cite toujours ses sources.</p>
+            <p style="margin-top:8px;">Sources utilisées :</p>
+            <ul style="list-style:none; padding:0; margin-top:6px;">
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Distribution plus équilibrée</strong> entre annuaires, sites propres, et avis</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Plus de poids aux reviews/social media</strong> que ChatGPT</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>News et forums</strong> — Reddit, articles presse, blogs</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>TripAdvisor + Yelp</strong> comme sources principales</li>
+            </ul>
+        </div>
+
+        <div class="card" style="border-top:3px solid var(--blue);">
+            <h3>🔵 Google AI Overviews</h3>
+            <div class="tags"><span class="t t-b">GBP-centric</span><span class="t t-r">+387% restos</span></div>
+            <p><strong>Intégré directement dans Google Search.</strong> AI Overviews a grimpé de +387% pour les requêtes restaurant. Il tire de :</p>
+            <ul style="list-style:none; padding:0; margin-top:6px;">
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Google Business Profile</strong> (source primaire — catégorie, avis, photos)</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Sentiment des avis</strong> — Thèmes extraits des avis Google</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Site web</strong> — Contenu structuré, FAQ, menu</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Qualité photos</strong> — Google analyse le contenu visuel</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Q&A GBP</strong> — Réponses aux questions fréquentes</li>
+            </ul>
+            <p style="margin-top:8px; font-size:.8rem; color:var(--orange);"><strong>Note :</strong> AI Overviews n'apparaît que sur ~7% des requêtes locales — mais en croissance rapide.</p>
+        </div>
+
+        <div class="card" style="border-top:3px solid var(--orange);">
+            <h3>🟠 Gemini (Google)</h3>
+            <div class="tags"><span class="t t-o">Site-first</span><span class="t t-b">Google data</span></div>
+            <p><strong>Favorise les sites propres (first-party)</strong> plus que ChatGPT. Tire naturellement de tout l'écosystème Google :</p>
+            <ul style="list-style:none; padding:0; margin-top:6px;">
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Site web du restaurant</strong> (source n°1 pour Gemini)</li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Google Business Profile</strong></li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>Google Maps data</strong></li>
+                <li style="padding:3px 0; font-size:.8rem; color:var(--muted);">→ <strong>YouTube</strong> (si vidéos du restaurant existent)</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Facteurs de citabilité -->
+    <h3 style="font-size:1.05rem; margin:28px 0 16px;">Les 8 facteurs de "citabilité" par les IA</h3>
+    <p style="font-size:.82rem; color:var(--muted); margin-bottom:16px;">Ce qui fait qu'un restaurant sera ou ne sera pas recommandé par un LLM.</p>
+
+    <div class="grid">
+        <div class="card">
+            <h3>1. Présence sur les "best of" lists</h3>
+            <div class="tags"><span class="t t-r">Impact très élevé</span></div>
+            <p>Les LLM adorent les listes "Top 10 restaurants italiens à Lyon". Si le restaurant apparaît dans ces listes sur des blogs food, guides locaux, magazines — il sera cité.</p>
+        </div>
+        <div class="card">
+            <h3>2. Contenu structuré et rich</h3>
+            <div class="tags"><span class="t t-r">Impact très élevé</span></div>
+            <p>FAQ, menu détaillé avec descriptions, page "À propos" avec histoire, spécialités décrites en langage naturel. Les IA ont besoin de texte à extraire et résumer.</p>
+        </div>
+        <div class="card">
+            <h3>3. Volume & qualité des avis</h3>
+            <div class="tags"><span class="t t-g">Impact élevé</span></div>
+            <p>Les avis servent de "preuve sociale" pour les IA. Un restaurant avec 500 avis à 4.5 sera plus cité qu'un restaurant avec 20 avis à 4.8.</p>
+        </div>
+        <div class="card">
+            <h3>4. Schema.org / données structurées</h3>
+            <div class="tags"><span class="t t-g">Impact élevé</span></div>
+            <p>Le balisage schema.org (Restaurant, Menu, Review, FAQ) aide les crawlers IA à comprendre et extraire les données proprement.</p>
+        </div>
+        <div class="card">
+            <h3>5. Mentions non liées (unlinked mentions)</h3>
+            <div class="tags"><span class="t t-o">Impact moyen-élevé</span></div>
+            <p>Les mentions dans des articles, forums, Reddit, même sans lien = signaux d'autorité pour les LLM. "Le restaurant X dans le Marais est excellent" dans un post Reddit compte.</p>
+        </div>
+        <div class="card">
+            <h3>6. Complétude des profils annuaires</h3>
+            <div class="tags"><span class="t t-o">Impact moyen-élevé</span></div>
+            <p>Plus les fiches Yelp, TripAdvisor, TheFork sont complètes (photos, description, horaires, menu), plus l'IA a de données pour recommander.</p>
+        </div>
+        <div class="card">
+            <h3>7. Fraîcheur du contenu</h3>
+            <div class="tags"><span class="t t-o">Impact moyen</span></div>
+            <p>Des avis récents, un site mis à jour, des posts Google réguliers = signaux de restaurant actif et fiable.</p>
+        </div>
+        <div class="card">
+            <h3>8. Autorité du domaine</h3>
+            <div class="tags"><span class="t t-b">Impact moyen</span></div>
+            <p>Un site avec un bon DA (Domain Authority), des backlinks de qualité, et une ancienneté = plus de confiance pour les IA.</p>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== COMPARE ===================== -->
+<div class="sec" id="compare">
+    <h2>SEO Local vs GEO — Comparaison des algorithmes</h2>
+    <div class="sub">Les deux systèmes se chevauchent mais ont des différences fondamentales. Comprendre les deux permet à ta webapp d'optimiser sur les deux fronts simultanément.</div>
+
+    <div class="tw">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:20%;">Aspect</th>
+                    <th style="width:40%;">Google SEO Local</th>
+                    <th style="width:40%;">GEO (Moteurs IA)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Comment ça fonctionne</strong></td>
+                    <td>Algorithme de classement basé sur 3 piliers (Relevance, Distance, Prominence) + centaines de signaux pondérés</td>
+                    <td>LLM génère une réponse en combinant données d'entraînement + recherche web live. Pas de "classement" — c'est une sélection/génération</td>
+                </tr>
+                <tr>
+                    <td><strong>Résultat typique</strong></td>
+                    <td>Liste de 3 résultats (Local Pack) + 10 liens organiques. Chaque résultat a sa fiche.</td>
+                    <td>Texte libre citant 2-7 restaurants avec descriptions. Pas de classement strict.</td>
+                </tr>
+                <tr>
+                    <td><strong>Source n°1</strong></td>
+                    <td>Google Business Profile (32%)</td>
+                    <td>Annuaires tiers — Yelp pour ChatGPT, site web pour Gemini</td>
+                </tr>
+                <tr>
+                    <td><strong>Rôle de la distance</strong></td>
+                    <td>Critique — signal majeur pour "near me"</td>
+                    <td>Faible — les IA ont du mal avec la géolocalisation précise</td>
+                </tr>
+                <tr>
+                    <td><strong>Rôle des avis</strong></td>
+                    <td>20% du ranking — volume, note, fraîcheur, mots-clés</td>
+                    <td>Source d'info directe — l'IA extrait et résume les avis</td>
+                </tr>
+                <tr>
+                    <td><strong>Rôle du contenu</strong></td>
+                    <td>~15% (on-page) — Title tags, schema.org, NAP</td>
+                    <td>~40% — Le contenu riche et structuré est LA source primaire pour les IA</td>
+                </tr>
+                <tr>
+                    <td><strong>Mesurabilité</strong></td>
+                    <td>Très bonne — rank tracking, impressions GBP, analytics</td>
+                    <td>Naissante — tracking de citations IA = marché émergent</td>
+                </tr>
+                <tr>
+                    <td><strong>Contrôle direct</strong></td>
+                    <td>Élevé — GBP, site web, citations sont contrôlables</td>
+                    <td>Indirect — on optimise les sources, pas l'IA elle-même</td>
+                </tr>
+                <tr>
+                    <td><strong>Vitesse de résultat</strong></td>
+                    <td>Semaines à mois pour voir les changements de ranking</td>
+                    <td>Variable — dépend du crawl des IA et de la mise à jour du modèle</td>
+                </tr>
+                <tr>
+                    <td><strong>Adoption utilisateurs</strong></td>
+                    <td>90%+ des consommateurs utilisent Google pour trouver un resto</td>
+                    <td>En forte croissance (+527% trafic IA) — surtout 18-35 ans</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="split" style="margin-top:24px;">
+        <div class="split-card" style="border-top:3px solid var(--blue);">
+            <h3 style="color:var(--blue);">Ce qui aide le SEO mais PAS le GEO</h3>
+            <ul>
+                <li>Proximité géographique (distance physique)</li>
+                <li>Signaux comportementaux (CTR, appels, itinéraires)</li>
+                <li>Personnalisation basée sur l'historique utilisateur</li>
+                <li>Google Posts (pas crawlé par les IA externes)</li>
+            </ul>
+        </div>
+        <div class="split-card" style="border-top:3px solid var(--purple);">
+            <h3 style="color:var(--purple);">Ce qui aide le GEO mais PAS le SEO</h3>
+            <ul>
+                <li>Présence sur les listes "best of" / articles food</li>
+                <li>Mentions sur Reddit, forums, réseaux sociaux</li>
+                <li>FAQ structurée avec réponses longues et naturelles</li>
+                <li>Profil Yelp complet (source primaire ChatGPT)</li>
+                <li>Profil Foursquare (base de données IA sous-jacente)</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="split" style="margin-top:16px;">
+        <div class="split-card" style="border-top:3px solid var(--green);">
+            <h3 style="color:var(--green);">Ce qui aide LES DEUX (synergies)</h3>
+            <ul>
+                <li>Google Business Profile complet et optimisé</li>
+                <li>Avis nombreux, récents, avec du texte riche</li>
+                <li>Site web avec contenu structuré et schema.org</li>
+                <li>NAP consistant sur tous les annuaires</li>
+                <li>TripAdvisor / TheFork bien remplis</li>
+                <li>Backlinks de sites d'autorité (guides, presse)</li>
+            </ul>
+        </div>
+        <div class="split-card" style="border-top:3px solid var(--orange);">
+            <h3 style="color:var(--orange);">Chiffres clés à retenir</h3>
+            <ul>
+                <li><strong>32%</strong> — Poids du GBP dans le ranking Google local</li>
+                <li><strong>41.6%</strong> — Part des annuaires tiers dans les citations IA</li>
+                <li><strong>86%</strong> — Part des citations IA provenant de sources contrôlables</li>
+                <li><strong>+527%</strong> — Croissance du trafic IA en 2025</li>
+                <li><strong>60%</strong> — Recherches Google résolues sans clic (AI Overviews)</li>
+                <li><strong>2-7</strong> — Nombre de sources typiquement citées par un LLM</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- ===================== ACTIONS ===================== -->
+<div class="sec" id="actions">
+    <h2>Implications concrètes pour ta Webapp</h2>
+    <div class="sub">Comment traduire cette compréhension des algorithmes en features actionnables pour ton outil SEO+GEO boosté à Claude.</div>
+
+    <div class="grid">
+        <div class="card" style="border-left:3px solid var(--indigo);">
+            <h3>🔍 Audit GBP intelligent</h3>
+            <div class="tags"><span class="t t-r">Priorité 1</span><span class="t t-b">SEO 32%</span></div>
+            <p>Scanner chacun des 10+ signaux GBP (catégorie, description, photos, attributs, horaires, posts, Q&A, menu, lien résa). Scorer chaque signal /10 et générer des recommandations ultra-concrètes via Claude ("Changez votre catégorie principale de 'Restaurant' à 'Restaurant italien'").</p>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--green);">
+            <h3>⭐ Analyse des avis multi-plateformes</h3>
+            <div class="tags"><span class="t t-r">Priorité 1</span><span class="t t-b">SEO 20%</span><span class="t t-p">GEO 13%</span></div>
+            <p>Agréger les avis Google + TripAdvisor + TheFork + Yelp. Analyser volume, note, fraîcheur, taux de réponse, sentiment. Claude génère un résumé des thèmes positifs/négatifs et suggère des réponses optimisées SEO.</p>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--purple);">
+            <h3>🤖 Test de citation IA automatisé</h3>
+            <div class="tags"><span class="t t-r">Priorité 1</span><span class="t t-p">GEO unique</span></div>
+            <p>Envoyer automatiquement des requêtes type "meilleur [cuisine] à [ville]" aux APIs de ChatGPT, Perplexity, Gemini. Vérifier si le restaurant est cité. Tracker l'évolution dans le temps. Feature unique que personne ne fait.</p>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--cyan);">
+            <h3>📌 Scan NAP + création de fiches</h3>
+            <div class="tags"><span class="t t-g">Priorité 2</span><span class="t t-b">SEO 11%</span><span class="t t-p">GEO 41.6%</span></div>
+            <p>Crawler les 20+ annuaires clés, vérifier la présence et la cohérence NAP. Signaler les fiches manquantes avec CTA "Créer la fiche en 1 clic". Pour le GEO, prioriser Yelp et Foursquare (sources IA principales).</p>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--orange);">
+            <h3>🌐 Audit site web SEO+GEO</h3>
+            <div class="tags"><span class="t t-g">Priorité 2</span><span class="t t-b">SEO 15%</span><span class="t t-p">GEO 39.8%</span></div>
+            <p>Analyser le site : balises meta, schema.org, vitesse, mobile, HTTPS. Côté GEO : vérifier la présence de FAQ, descriptions riches, storytelling. Claude génère le code schema.org Restaurant prêt à copier.</p>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--pink);">
+            <h3>📝 Génération de contenu GEO par Claude</h3>
+            <div class="tags"><span class="t t-o">Priorité 3</span><span class="t t-p">GEO</span></div>
+            <p>Claude génère du contenu optimisé pour être cité par les IA : FAQ structurée, descriptions détaillées des plats, histoire du restaurant, page "spécialités". Le tout en langage naturel, riche en entités, parfait pour les LLM.</p>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--green);">
+            <h3>📊 Score unifié SEO+GEO /100</h3>
+            <div class="tags"><span class="t t-r">Priorité 1</span><span class="t t-b">SEO</span><span class="t t-p">GEO</span></div>
+            <p>Un score unique combiné : SEO score (pondéré selon les % Google) + GEO score (basé sur citabilité IA). Dashboard avec évolution dans le temps. Le restaurateur comprend en 2 secondes où il en est.</p>
+        </div>
+
+        <div class="card" style="border-left:3px solid var(--purple);">
+            <h3>🔔 Monitoring continu + alertes</h3>
+            <div class="tags"><span class="t t-o">Priorité 3</span></div>
+            <p>Re-scan automatique hebdomadaire. Alertes : nouvel avis négatif, fiche modifiée par un tiers, concurrent entre dans les citations IA, perte de position sur un mot-clé. Claude résume les changements par email/notification.</p>
+        </div>
+    </div>
+
+    <div class="insight" style="margin-top:24px;">
+        <h4>🚀 L'avantage "Claude-powered"</h4>
+        <p>Ce qui différencie ta webapp de Malou ou BrightLocal : chaque recommandation est générée par Claude, personnalisée pour le restaurant spécifique, rédigée en français simple, et immédiatement actionnable. Pas de dashboards génériques — des actions concrètes : "Ajoutez 'terrasse' dans vos attributs GBP", "Voici votre FAQ optimisée GEO à copier-coller", "Répondez à cet avis négatif comme ceci : [réponse générée]".</p>
+    </div>
+</div>
+
+</div>
+
+<footer>
+    Sources : Whitespark Local Ranking Factors 2026, BrightLocal, Yext (6.8M citations), SearchEngineLand, Cheers.tech, Malou.io, MapRanks, ALM Corp, Sapt.ai, RestaurantBusinessOnline<br>
+    Analyse réalisée en mars 2026
+</footer>
+
+<script>
+document.querySelectorAll('.nb').forEach(b=>{
+    b.addEventListener('click',()=>{
+        document.querySelectorAll('.nb').forEach(x=>x.classList.remove('on'));
+        document.querySelectorAll('.sec').forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
+        document.getElementById(b.dataset.t).classList.add('on');
+    });
+});
+</script>
+</body>
+</html>

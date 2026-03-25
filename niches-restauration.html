@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niches & Besoins en Restauration — Opportunités E-Commerce / Webapp</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+        :root {
+            --bg: #0f1117;
+            --surface: #1a1d27;
+            --surface-hover: #222633;
+            --border: #2a2e3d;
+            --text: #e4e6ef;
+            --text-muted: #8b8fa3;
+            --accent-blue: #4f7df9;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-orange: #f59e0b;
+            --accent-red: #ef4444;
+            --accent-pink: #ec4899;
+            --accent-cyan: #06b6d4;
+            --gradient-1: linear-gradient(135deg, #4f7df9, #8b5cf6);
+            --gradient-2: linear-gradient(135deg, #10b981, #06b6d4);
+            --gradient-3: linear-gradient(135deg, #f59e0b, #ef4444);
+            --gradient-4: linear-gradient(135deg, #ec4899, #8b5cf6);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            overflow-x: hidden;
+        }
+
+        /* Hero */
+        .hero {
+            position: relative;
+            padding: 80px 24px 60px;
+            text-align: center;
+            overflow: hidden;
+        }
+        .hero::before {
+            content: '';
+            position: absolute;
+            top: -50%; left: -50%;
+            width: 200%; height: 200%;
+            background: radial-gradient(ellipse at 30% 50%, rgba(79,125,249,0.08) 0%, transparent 60%),
+                        radial-gradient(ellipse at 70% 50%, rgba(139,92,246,0.06) 0%, transparent 60%);
+            animation: drift 20s ease-in-out infinite;
+        }
+        @keyframes drift {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-30px, 20px); }
+        }
+        .hero h1 {
+            font-size: clamp(1.8rem, 4vw, 3rem);
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            position: relative;
+            margin-bottom: 12px;
+        }
+        .hero p {
+            font-size: 1.1rem;
+            color: var(--text-muted);
+            max-width: 640px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* Stats bar */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 40px;
+            padding: 24px;
+            flex-wrap: wrap;
+            position: relative;
+        }
+        .stat {
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 800;
+            background: var(--gradient-1);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Navigation tabs */
+        .nav-tabs {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            padding: 16px 24px;
+            flex-wrap: wrap;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            background: rgba(15,17,23,0.9);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-tab {
+            padding: 10px 20px;
+            border-radius: 50px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.3s;
+        }
+        .nav-tab:hover, .nav-tab.active {
+            background: var(--accent-blue);
+            color: white;
+            border-color: var(--accent-blue);
+            transform: translateY(-1px);
+        }
+
+        /* Container */
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 24px;
+        }
+
+        /* Section */
+        .section {
+            margin-bottom: 60px;
+            display: none;
+        }
+        .section.active {
+            display: block;
+            animation: fadeUp 0.4s ease-out;
+        }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-header {
+            margin-bottom: 32px;
+        }
+        .section-header h2 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .section-header p {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+        }
+
+        /* Cards grid */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 28px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+        .card:hover {
+            transform: translateY(-4px);
+            border-color: var(--accent-blue);
+            box-shadow: 0 8px 30px rgba(79,125,249,0.1);
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+        }
+
+        .card-icon {
+            width: 48px; height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 16px;
+        }
+
+        .card h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+        .card p {
+            font-size: 0.88rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        /* Tags */
+        .tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+        .tag {
+            padding: 4px 10px;
+            border-radius: 50px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tag-high { background: rgba(16,185,129,0.15); color: #10b981; }
+        .tag-medium { background: rgba(245,158,11,0.15); color: #f59e0b; }
+        .tag-trend { background: rgba(139,92,246,0.15); color: #8b5cf6; }
+        .tag-niche { background: rgba(236,72,153,0.15); color: #ec4899; }
+        .tag-saas { background: rgba(6,182,212,0.15); color: #06b6d4; }
+
+        /* Metrics inside cards */
+        .card-metrics {
+            display: flex;
+            gap: 16px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+        .metric {
+            text-align: center;
+            flex: 1;
+        }
+        .metric-value {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--accent-blue);
+        }
+        .metric-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Competitive table */
+        .table-wrap {
+            overflow-x: auto;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th {
+            background: var(--surface);
+            padding: 14px 16px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            text-align: left;
+        }
+        td {
+            padding: 14px 16px;
+            font-size: 0.88rem;
+            border-top: 1px solid var(--border);
+        }
+        tr:hover td { background: var(--surface-hover); }
+
+        .score-bar {
+            width: 60px; height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        /* Summary section */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 24px;
+        }
+        .summary-card h4 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .summary-card ul {
+            list-style: none;
+            padding: 0;
+        }
+        .summary-card li {
+            padding: 6px 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+        .summary-card li::before {
+            content: '→';
+            color: var(--accent-blue);
+            flex-shrink: 0;
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 24px;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            border-top: 1px solid var(--border);
+        }
+
+        @media (max-width: 640px) {
+            .cards-grid { grid-template-columns: 1fr; }
+            .stats-bar { gap: 20px; }
+            .nav-tab { padding: 8px 14px; font-size: 0.78rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>Niches & Besoins en Restauration</h1>
+    <p>Cartographie complète des opportunités e-commerce et webapp pour le secteur de la restauration en 2026</p>
+</div>
+
+<div class="stats-bar">
+    <div class="stat">
+        <div class="stat-value">12</div>
+        <div class="stat-label">Niches identifiées</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">6</div>
+        <div class="stat-label">Catégories majeures</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">70%</div>
+        <div class="stat-label">Commandes en ligne</div>
+    </div>
+    <div class="stat">
+        <div class="stat-value">€54 Mds</div>
+        <div class="stat-label">Marché FR restauration</div>
+    </div>
+</div>
+
+<div class="nav-tabs" id="navTabs">
+    <div class="nav-tab active" data-tab="equipement">Équipement & Matériel</div>
+    <div class="nav-tab" data-tab="consommables">Consommables & Emballages</div>
+    <div class="nav-tab" data-tab="saas">SaaS & Logiciels</div>
+    <div class="nav-tab" data-tab="food">Produits Alimentaires</div>
+    <div class="nav-tab" data-tab="services">Services & Formation</div>
+    <div class="nav-tab" data-tab="synthese">Synthèse</div>
+</div>
+
+<div class="container">
+
+    <!-- ÉQUIPEMENT -->
+    <div class="section active" id="equipement">
+        <div class="section-header">
+            <h2>🔧 Équipement & Matériel Professionnel</h2>
+            <p>Le marché CHR (Cafés, Hôtels, Restaurants) en France est en pleine digitalisation. Les restaurateurs achètent de plus en plus en ligne avec un besoin fort de conseil et de service après-vente.</p>
+        </div>
+        <div class="cards-grid">
+            <div class="card" style="--card-color: var(--accent-blue);">
+                <div class="card-icon" style="background: rgba(79,125,249,0.15);">🍳</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                    <span class="tag tag-trend">Tendance 2026</span>
+                </div>
+                <h3>Cuisine connectée & intelligente</h3>
+                <p>Appareils de cuisson intelligents communiquant entre eux, contrôle de température au degré près, récupération thermique et modes éco-énergétiques. La cuisine connectée est la grande tendance équipement 2026.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">€€€</div>
+                        <div class="metric-label">Panier moyen</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(16,185,129,0.15);">🤖</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                    <span class="tag tag-niche">Niche</span>
+                </div>
+                <h3>Automatisation & robotique cuisine</h3>
+                <p>Robots de cuisine, systèmes de préparation automatisés, bornes de commande. Face à la pénurie de main-d'œuvre, l'automatisation est une priorité pour les restaurateurs en 2026.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Très élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">€€€€</div>
+                        <div class="metric-label">Panier moyen</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(245,158,11,0.15);">🚚</div>
+                <div class="tags">
+                    <span class="tag tag-medium">Croissance</span>
+                </div>
+                <h3>Équipement food truck & street food</h3>
+                <p>Matériel compact et mobile : plancha, friteuse, vitrine réfrigérée embarquée, générateurs. Un segment en forte croissance avec le boom des concepts itinérants.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">€€€</div>
+                        <div class="metric-label">Panier moyen</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(139,92,246,0.15);">♻️</div>
+                <div class="tags">
+                    <span class="tag tag-trend">Tendance 2026</span>
+                    <span class="tag tag-niche">Niche</span>
+                </div>
+                <h3>Équipements éco-énergétiques</h3>
+                <p>Appareils basse consommation, récupération de chaleur, systèmes anti-gaspi. Avec la hausse des coûts énergétiques, les restaurateurs recherchent activement des solutions pour réduire leur facture.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">€€€</div>
+                        <div class="metric-label">Panier moyen</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONSOMMABLES -->
+    <div class="section" id="consommables">
+        <div class="section-header">
+            <h2>📦 Consommables & Emballages</h2>
+            <p>Avec l'essor du click & collect et de la livraison (70% de commandes en ligne en 2026), le marché de l'emballage professionnel éco-responsable explose.</p>
+        </div>
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-icon" style="background: rgba(16,185,129,0.15);">🌿</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                    <span class="tag tag-trend">Tendance 2026</span>
+                </div>
+                <h3>Emballages éco-responsables</h3>
+                <p>Contenants en bagasse (canne à sucre), PLA, carton kraft, feuille de palmier, bois. Compostables, micro-ondables, résistants aux graisses. La réglementation interdit progressivement les plastiques à usage unique.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Très élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Forte</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(236,72,153,0.15);">🥡</div>
+                <div class="tags">
+                    <span class="tag tag-niche">Niche</span>
+                    <span class="tag tag-medium">Croissance</span>
+                </div>
+                <h3>Packaging personnalisé pour dark kitchens</h3>
+                <p>Emballages brandés en petites séries pour les restaurants virtuels et dark kitchens. Personnalisation rapide, MOQ faibles, et branding fort pour se démarquer sur les plateformes de livraison.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(6,182,212,0.15);">🧴</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                </div>
+                <h3>Produits d'hygiène & nettoyage pro</h3>
+                <p>Gammes HACCP, désinfectants alimentaires, produits de nettoyage écologiques certifiés. Achats récurrents à forte marge avec des normes sanitaires toujours plus exigeantes.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(245,158,11,0.15);">👕</div>
+                <div class="tags">
+                    <span class="tag tag-niche">Niche</span>
+                </div>
+                <h3>Vêtements pro & EPI restauration</h3>
+                <p>Vestes de cuisine, tabliers personnalisés, chaussures de sécurité antidérapantes, charlottes, gants. Marché de renouvellement régulier avec possibilité de personnalisation.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Moyen</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SAAS -->
+    <div class="section" id="saas">
+        <div class="section-header">
+            <h2>💻 SaaS & Solutions Logicielles</h2>
+            <p>Le marché des solutions SaaS pour la restauration est en pleine expansion. Les restaurateurs cherchent des outils intégrés, simples et abordables pour gérer l'ensemble de leur activité.</p>
+        </div>
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-icon" style="background: rgba(79,125,249,0.15);">🧠</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                    <span class="tag tag-saas">SaaS</span>
+                    <span class="tag tag-trend">Tendance 2026</span>
+                </div>
+                <h3>IA pour gestion prédictive</h3>
+                <p>Prévision de la demande, optimisation des stocks, planification du personnel, personnalisation des menus par IA. L'intelligence artificielle devient un outil pratique incontournable en restauration.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Très élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">MRR</div>
+                        <div class="metric-label">Modèle</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(16,185,129,0.15);">📊</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                    <span class="tag tag-saas">SaaS</span>
+                </div>
+                <h3>Gestion des coûts & marges</h3>
+                <p>50% des restaurateurs ont revu leur stratégie d'achat. Outil de calcul de food cost en temps réel, comparaison fournisseurs, alertes prix, et optimisation des fiches techniques / recettes.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Très élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">MRR</div>
+                        <div class="metric-label">Modèle</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(139,92,246,0.15);">🔗</div>
+                <div class="tags">
+                    <span class="tag tag-trend">Tendance 2026</span>
+                    <span class="tag tag-saas">SaaS</span>
+                </div>
+                <h3>Plateforme omnicanale unifiée</h3>
+                <p>Hub centralisant caisse, stocks, commandes (sur place, click & collect, livraison), fidélité, réservations et analytics. Les restaurateurs veulent UN seul outil au lieu de 5-10 outils fragmentés.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Très élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Forte</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">MRR</div>
+                        <div class="metric-label">Modèle</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(245,158,11,0.15);">⭐</div>
+                <div class="tags">
+                    <span class="tag tag-niche">Niche</span>
+                    <span class="tag tag-saas">SaaS</span>
+                </div>
+                <h3>Fidélisation & CRM restaurant</h3>
+                <p>Wallets numériques, programmes de points intégrés au smartphone, campagnes SMS/push automatisées, analyse du comportement client. La fidélisation omnicanale est le levier marketing n°1 en 2026.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">MRR</div>
+                        <div class="metric-label">Modèle</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(236,72,153,0.15);">👥</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                    <span class="tag tag-saas">SaaS</span>
+                </div>
+                <h3>Gestion RH & planning personnel</h3>
+                <p>Planning intelligent, gestion des contrats extras, paie simplifiée, suivi des heures. La pénurie de main-d'œuvre rend la gestion RH critique — les outils de rétention et formation sont très demandés.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">MRR</div>
+                        <div class="metric-label">Modèle</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(6,182,212,0.15);">📱</div>
+                <div class="tags">
+                    <span class="tag tag-niche">Niche</span>
+                    <span class="tag tag-saas">SaaS</span>
+                </div>
+                <h3>E-réputation & avis en ligne</h3>
+                <p>Centralisation et réponse automatique aux avis Google/TripAdvisor/TheFork, gestion de la présence en ligne, et analytics de sentiment. 90% des clients consultent les avis avant de choisir un restaurant.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">MRR</div>
+                        <div class="metric-label">Modèle</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 32px;">
+            <h3 style="margin-bottom: 16px; font-size: 1.1rem;">Paysage concurrentiel SaaS restauration France</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Solution</th>
+                            <th>Spécialité</th>
+                            <th>Forces</th>
+                            <th>Limites / Opportunités</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Lightspeed</strong></td>
+                            <td>Caisse & gestion</td>
+                            <td>Multisites, complet</td>
+                            <td>Cher pour petits restos</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Innovorder</strong></td>
+                            <td>Commandes multicanal</td>
+                            <td>Bornes + livraison + caisse</td>
+                            <td>Moins fort en fidélisation</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Zenchef</strong></td>
+                            <td>Réservation & CRM</td>
+                            <td>Sans commission</td>
+                            <td>Pas de gestion de stocks</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hey Pongo</strong></td>
+                            <td>Fidélisation</td>
+                            <td>Base client unifiée</td>
+                            <td>Pas de caisse / commandes</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Deliverect</strong></td>
+                            <td>Agrégation livraison</td>
+                            <td>Sync Uber Eats, Deliveroo</td>
+                            <td>Pas de caisse propre</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Apicbase</strong></td>
+                            <td>Back-office / food cost</td>
+                            <td>Recettes, coûts, stocks</td>
+                            <td>Pas de front-office</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- PRODUITS ALIMENTAIRES -->
+    <div class="section" id="food">
+        <div class="section-header">
+            <h2>🥘 Produits Alimentaires de Niche</h2>
+            <p>Les tendances culinaires 2026 créent des opportunités pour des marketplaces et e-commerces spécialisés en approvisionnement alimentaire professionnel.</p>
+        </div>
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-icon" style="background: rgba(16,185,129,0.15);">🌱</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                    <span class="tag tag-trend">Tendance 2026</span>
+                </div>
+                <h3>Approvisionnement local & circuits courts</h3>
+                <p>Marketplace connectant producteurs locaux et restaurateurs. Les collaborations local-resto créent de la valeur ajoutée et attirent les clients en quête d'authenticité. Forte demande de traçabilité.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Très élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(139,92,246,0.15);">🥦</div>
+                <div class="tags">
+                    <span class="tag tag-trend">Tendance 2026</span>
+                </div>
+                <h3>Ingrédients vegan & végétaux pro</h3>
+                <p>Protéines végétales texturées, alternatives au fromage/viande/œuf pour professionnels. Le végan n'est plus une niche — c'est un segment mainstream que chaque restaurant doit adresser.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(245,158,11,0.15);">🍶</div>
+                <div class="tags">
+                    <span class="tag tag-niche">Niche</span>
+                    <span class="tag tag-trend">Tendance 2026</span>
+                </div>
+                <h3>Boissons sans alcool premium</h3>
+                <p>Mocktails, kombuchas, sodas artisanaux, eaux aromatisées craft. Le « sober curious » explose en 2026, et les restaurateurs manquent de fournisseurs spécialisés pour une carte sans alcool ambitieuse.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(236,72,153,0.15);">🌍</div>
+                <div class="tags">
+                    <span class="tag tag-niche">Niche</span>
+                </div>
+                <h3>Ingrédients ethniques & spécialisés</h3>
+                <p>Épices rares, sauces asiatiques pro, ingrédients africains, latino-américains. Les cuisines du monde sont en forte demande mais l'approvisionnement reste un casse-tête pour beaucoup de chefs.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Moyen</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(6,182,212,0.15);">🧊</div>
+                <div class="tags">
+                    <span class="tag tag-medium">Croissance</span>
+                </div>
+                <h3>Produits anti-gaspi & upcyclés</h3>
+                <p>Ingrédients issus de surplus, légumes « moches », farines de sous-produits. Réduction du gaspillage alimentaire + économies de 15 à 30% sur les matières premières.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SERVICES -->
+    <div class="section" id="services">
+        <div class="section-header">
+            <h2>🎓 Services & Formation</h2>
+            <p>Au-delà des produits physiques et logiciels, les restaurateurs ont un besoin croissant de services d'accompagnement, de formation et de conseil.</p>
+        </div>
+        <div class="cards-grid">
+            <div class="card">
+                <div class="card-icon" style="background: rgba(79,125,249,0.15);">📚</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                    <span class="tag tag-trend">Tendance 2026</span>
+                </div>
+                <h3>Formation en ligne (e-learning CHR)</h3>
+                <p>HACCP, gestion financière, marketing digital, management d'équipe, techniques de cuisine. Avec le turnover élevé, la formation continue est critique — et le format en ligne est privilégié.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">MRR</div>
+                        <div class="metric-label">Modèle</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(16,185,129,0.15);">📸</div>
+                <div class="tags">
+                    <span class="tag tag-niche">Niche</span>
+                </div>
+                <h3>Marketing digital & contenus pour restos</h3>
+                <p>Photos de plats professionnelles, gestion réseaux sociaux, création de menus digitaux, SEO local. Les restaurateurs n'ont ni le temps ni les compétences pour gérer leur présence en ligne.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(245,158,11,0.15);">🔧</div>
+                <div class="tags">
+                    <span class="tag tag-high">Demande forte</span>
+                </div>
+                <h3>Maintenance & SAV équipements</h3>
+                <p>Contrats de maintenance préventive, réparation d'urgence, pièces détachées en ligne. Un service critique — une panne de four ou chambre froide peut coûter des milliers d'euros par jour.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Élevé</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Moyenne</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-icon" style="background: rgba(139,92,246,0.15);">📋</div>
+                <div class="tags">
+                    <span class="tag tag-niche">Niche</span>
+                    <span class="tag tag-medium">Croissance</span>
+                </div>
+                <h3>Conformité & normes (HACCP, accessibilité)</h3>
+                <p>Audit HACCP en ligne, mise en conformité accessibilité ERP, diagnostic énergétique, accompagnement réglementaire. Un marché récurrent lié aux obligations légales des restaurateurs.</p>
+                <div class="card-metrics">
+                    <div class="metric">
+                        <div class="metric-value">Moyen</div>
+                        <div class="metric-label">Potentiel</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Faible</div>
+                        <div class="metric-label">Concurrence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value">Récurrent</div>
+                        <div class="metric-label">Type achat</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SYNTHÈSE -->
+    <div class="section" id="synthese">
+        <div class="section-header">
+            <h2>🎯 Synthèse & Recommandations Webapp</h2>
+            <p>Vue d'ensemble des opportunités classées par attractivité pour une webapp e-commerce ciblant le secteur de la restauration.</p>
+        </div>
+
+        <div class="summary-grid">
+            <div class="summary-card">
+                <h4>🔥 Top 5 — Niches les plus prometteuses</h4>
+                <ul>
+                    <li>SaaS de gestion des coûts & marges (food cost) — faible concurrence, demande très forte</li>
+                    <li>Marketplace circuits courts producteurs-restos — tendance authenticity 2026</li>
+                    <li>Emballages éco-responsables personnalisés — réglementation + livraison en boom</li>
+                    <li>IA prédictive (stocks, planning, demande) — adoption massive en cours</li>
+                    <li>Plateforme e-learning CHR — turnover élevé = besoin formation permanent</li>
+                </ul>
+            </div>
+
+            <div class="summary-card">
+                <h4>💰 Modèles économiques recommandés</h4>
+                <ul>
+                    <li><strong>SaaS (MRR)</strong> — abonnement mensuel 49-299€/mois selon fonctionnalités</li>
+                    <li><strong>Marketplace</strong> — commission 5-15% sur chaque transaction</li>
+                    <li><strong>E-commerce B2B</strong> — marge 25-40% sur consommables récurrents</li>
+                    <li><strong>Freemium + upsell</strong> — version gratuite limitée pour acquisition</li>
+                </ul>
+            </div>
+
+            <div class="summary-card">
+                <h4>⚠️ Pain points majeurs des restaurateurs</h4>
+                <ul>
+                    <li>Hausse des coûts matières premières (28% des restos en difficulté)</li>
+                    <li>Pénurie de main-d'œuvre (personnel non revenu post-COVID)</li>
+                    <li>Fragmentation des outils (5-10 logiciels non connectés)</li>
+                    <li>Pression des plateformes de livraison (commissions 25-30%)</li>
+                    <li>Conformité réglementaire (HACCP, plastique, accessibilité)</li>
+                </ul>
+            </div>
+
+            <div class="summary-card">
+                <h4>🚀 Facteurs clés de succès</h4>
+                <ul>
+                    <li>Interface ultra-simple (les restaurateurs n'ont pas le temps)</li>
+                    <li>Mobile-first (usage principal sur smartphone)</li>
+                    <li>Intégrations natives (caisse, Uber Eats, Deliveroo, comptabilité)</li>
+                    <li>ROI démontrable rapidement (essai gratuit + résultats en 30 jours)</li>
+                    <li>Support réactif (les urgences sont quotidiennes en restauration)</li>
+                </ul>
+            </div>
+
+            <div class="summary-card">
+                <h4>📊 Chiffres clés du marché 2026</h4>
+                <ul>
+                    <li>Marché restauration France : ~54 milliards €</li>
+                    <li>70% des consommateurs commandent en ligne régulièrement</li>
+                    <li>50% des restaurateurs ont revu leur stratégie d'achat</li>
+                    <li>30% des commandes incluent une promotion/réduction</li>
+                    <li>+10 000 buffets à volonté en France, en croissance</li>
+                </ul>
+            </div>
+
+            <div class="summary-card">
+                <h4>🎯 Segments cibles prioritaires</h4>
+                <ul>
+                    <li><strong>Restauration rapide & snacking</strong> — volume élevé, sensible aux coûts</li>
+                    <li><strong>Dark kitchens</strong> — 100% digital, besoin d'outils intégrés</li>
+                    <li><strong>Indépendants 1-3 points de vente</strong> — sous-équipés en digital</li>
+                    <li><strong>Food trucks</strong> — marché en forte croissance, besoins spécifiques</li>
+                    <li><strong>Traiteurs & collectivités</strong> — volumes + besoins logistiques</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<footer>
+    Recherche réalisée en mars 2026 — Sources : Food Institute, National Restaurant Association, Lightspeed, ComboHR, HeyPongo, Tendances-Restauration.com, RestoConnection, ACCIO
+</footer>
+
+<script>
+    const tabs = document.querySelectorAll('.nav-tab');
+    const sections = document.querySelectorAll('.section');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            tabs.forEach(t => t.classList.remove('active'));
+            sections.forEach(s => s.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(tab.dataset.tab).classList.add('active');
+        });
+    });
+</script>
+</body>
+</html>

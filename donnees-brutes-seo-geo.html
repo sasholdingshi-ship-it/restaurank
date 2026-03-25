@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Données Brutes — Algorithmes SEO Local + GEO Restaurants</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Inter:wght@400;500;600;700;800;900&display=swap');
+        :root {
+            --bg:#08090d;--s1:#12141c;--s2:#1a1d28;--s3:#222633;
+            --bdr:#262a3a;--txt:#e8eaf0;--mut:#7c8198;
+            --ind:#6366f1;--cyn:#06b6d4;--grn:#10b981;--org:#f59e0b;
+            --red:#ef4444;--pnk:#ec4899;--prp:#8b5cf6;--blu:#3b82f6;
+        }
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);line-height:1.6;}
+        .hero{padding:56px 24px 36px;text-align:center;border-bottom:1px solid var(--bdr);}
+        .hero h1{font-size:clamp(1.4rem,3vw,2.2rem);font-weight:900;background:linear-gradient(135deg,var(--ind),var(--cyn));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+        .hero p{color:var(--mut);font-size:.88rem;max-width:700px;margin:8px auto 0;}
+        .nav{position:sticky;top:0;z-index:100;display:flex;justify-content:center;gap:5px;padding:12px 16px;background:rgba(8,9,13,.93);backdrop-filter:blur(16px);border-bottom:1px solid var(--bdr);flex-wrap:wrap;}
+        .nb{padding:7px 16px;border-radius:7px;border:1px solid var(--bdr);background:transparent;color:var(--mut);cursor:pointer;font-size:.78rem;font-weight:500;font-family:inherit;transition:.25s;}
+        .nb:hover{background:var(--s2);color:var(--txt);}.nb.on{background:var(--ind);color:#fff;border-color:var(--ind);}
+        .ct{max-width:1160px;margin:0 auto;padding:32px 20px;}
+        .sec{display:none;}.sec.on{display:block;animation:fi .3s ease;}
+        @keyframes fi{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        h2{font-size:1.2rem;font-weight:800;margin-bottom:4px;}
+        h3{font-size:1rem;font-weight:700;margin:24px 0 8px;}
+        .sub{color:var(--mut);font-size:.85rem;margin-bottom:24px;}
+        .src{display:inline-block;padding:3px 8px;border-radius:5px;font-size:.65rem;font-weight:600;background:rgba(99,102,241,.1);color:var(--ind);margin-bottom:12px;}
+
+        /* Rank table */
+        .tw{overflow-x:auto;border-radius:10px;border:1px solid var(--bdr);margin:12px 0 20px;}
+        table{width:100%;border-collapse:collapse;font-size:.82rem;}
+        th{background:var(--s2);padding:10px 12px;font-size:.68rem;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);text-align:left;white-space:nowrap;position:sticky;top:0;}
+        td{padding:9px 12px;border-top:1px solid var(--bdr);vertical-align:top;}
+        tr:hover td{background:var(--s3);}
+        .rank{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:6px;font-size:.7rem;font-weight:700;}
+        .r1{background:rgba(239,68,68,.15);color:var(--red);}
+        .r2{background:rgba(245,158,11,.15);color:var(--org);}
+        .r3{background:rgba(16,185,129,.12);color:var(--grn);}
+
+        /* Weight bar */
+        .wb{display:flex;align-items:center;gap:6px;}
+        .wt{height:6px;border-radius:3px;transition:width .8s ease;}
+        .pct{font-family:'JetBrains Mono',monospace;font-size:.75rem;font-weight:600;min-width:36px;}
+
+        /* Code block */
+        .code{background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:16px 20px;overflow-x:auto;margin:12px 0;}
+        .code pre{font-family:'JetBrains Mono',monospace;font-size:.78rem;line-height:1.7;color:var(--txt);white-space:pre;}
+        .code .cm{color:#6b7280;}.code .str{color:var(--grn);}.code .key{color:var(--cyn);}.code .val{color:var(--org);}
+
+        /* API card */
+        .api-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px;}
+        .api-card{background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:18px 20px;}
+        .api-card h4{font-size:.88rem;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px;}
+        .api-card p{font-size:.78rem;color:var(--mut);line-height:1.5;}
+        .api-badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:.65rem;font-weight:600;}
+        .api-ok{background:rgba(16,185,129,.12);color:var(--grn);}
+        .api-lim{background:rgba(245,158,11,.12);color:var(--org);}
+        .api-no{background:rgba(239,68,68,.12);color:var(--red);}
+        .api-read{background:rgba(59,130,246,.12);color:var(--blu);}
+        .api-write{background:rgba(139,92,246,.12);color:var(--prp);}
+
+        .note{background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:10px;padding:14px 18px;margin:16px 0;font-size:.82rem;}
+        .note strong{color:var(--ind);}
+
+        .mono{font-family:'JetBrains Mono',monospace;}
+        footer{text-align:center;padding:32px 24px;color:var(--mut);font-size:.7rem;border-top:1px solid var(--bdr);}
+
+        @media(max-width:700px){.api-grid{grid-template-columns:1fr;} table{font-size:.75rem;}}
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <h1>Données Brutes — SEO Local + GEO</h1>
+    <p>Facteurs de ranking exacts, poids précis, sources par moteur IA, propriétés schema.org, APIs annuaires. Données sourcées, pas de résumés.</p>
+</div>
+
+<div class="nav" id="nav">
+    <button class="nb on" data-t="pack">Local Pack (Maps)</button>
+    <button class="nb" data-t="organic">Local Organic</button>
+    <button class="nb" data-t="ai">AI Visibility</button>
+    <button class="nb" data-t="citations">Citations IA (Yext)</button>
+    <button class="nb" data-t="schema">Schema.org</button>
+    <button class="nb" data-t="apis">APIs Annuaires</button>
+</div>
+
+<div class="ct">
+
+<!-- ===================== LOCAL PACK ===================== -->
+<div class="sec on" id="pack">
+<h2>Google Local Pack / Maps — Facteurs de Ranking 2026</h2>
+<div class="src">Source : Whitespark Local Search Ranking Factors 2026 — 47 experts, 187 facteurs, scoring 0–5 • Nov 2025</div>
+
+<h3>Poids par catégorie de signaux</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>#</th><th>Catégorie</th><th>Poids</th><th style="min-width:200px;">Barre</th><th>Évolution vs 2023</th></tr></thead>
+    <tbody>
+        <tr><td><span class="rank r1">1</span></td><td><strong>Google Business Profile signals</strong></td><td class="mono pct" style="color:var(--red);">32%</td><td><div class="wb"><div class="wt" style="width:32%;max-width:200px;background:var(--red);"></div></div></td><td class="mono" style="color:var(--mut);">stable (était ~33%)</td></tr>
+        <tr><td><span class="rank r1">2</span></td><td><strong>Review signals</strong></td><td class="mono pct" style="color:var(--org);">20%</td><td><div class="wb"><div class="wt" style="width:20%;max-width:200px;background:var(--org);"></div></div></td><td class="mono" style="color:var(--grn);">↑ était 16% en 2023</td></tr>
+        <tr><td><span class="rank r2">3</span></td><td><strong>On-Page signals</strong></td><td class="mono pct" style="color:var(--blu);">15%</td><td><div class="wb"><div class="wt" style="width:15%;max-width:200px;background:var(--blu);"></div></div></td><td class="mono" style="color:var(--red);">↓ était ~19% en 2023</td></tr>
+        <tr><td><span class="rank r2">4</span></td><td><strong>Behavioral signals</strong></td><td class="mono pct" style="color:var(--prp);">9%</td><td><div class="wb"><div class="wt" style="width:9%;max-width:200px;background:var(--prp);"></div></div></td><td class="mono" style="color:var(--grn);">↑ en hausse</td></tr>
+        <tr><td><span class="rank r3">5</span></td><td><strong>Link signals</strong></td><td class="mono pct" style="color:var(--cyn);">8%</td><td><div class="wb"><div class="wt" style="width:8%;max-width:200px;background:var(--cyn);"></div></div></td><td class="mono" style="color:var(--red);">↓ en baisse</td></tr>
+        <tr><td><span class="rank r3">6</span></td><td><strong>Citation signals</strong></td><td class="mono pct" style="color:var(--pnk);">6%</td><td><div class="wb"><div class="wt" style="width:6%;max-width:200px;background:var(--pnk);"></div></div></td><td class="mono" style="color:var(--red);">↓ en baisse</td></tr>
+        <tr><td><span class="rank r3">7</span></td><td><strong>Personalization</strong></td><td class="mono pct" style="color:var(--mut);">6%</td><td><div class="wb"><div class="wt" style="width:6%;max-width:200px;background:var(--mut);"></div></div></td><td class="mono" style="color:var(--mut);">stable</td></tr>
+        <tr><td><span class="rank r3">8</span></td><td><strong>Social signals</strong></td><td class="mono pct" style="color:var(--mut);">4%</td><td><div class="wb"><div class="wt" style="width:4%;max-width:200px;background:var(--mut);"></div></div></td><td class="mono" style="color:var(--grn);">NOUVEAU 2026</td></tr>
+    </tbody>
+</table>
+</div>
+
+<h3>Top 15 facteurs individuels — Local Pack (classement Whitespark 2026)</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>#</th><th>Facteur exact</th><th>Catégorie</th><th>Impact</th></tr></thead>
+    <tbody>
+        <tr><td><span class="rank r1">1</span></td><td><strong>Primary GBP category</strong></td><td>GBP</td><td style="color:var(--red);">■■■■■ Critique</td></tr>
+        <tr><td><span class="rank r1">2</span></td><td><strong>Proximity of address to the point of search</strong></td><td>GBP/Geo</td><td style="color:var(--red);">■■■■■ Critique</td></tr>
+        <tr><td><span class="rank r1">3</span></td><td><strong>Keywords in GBP business title</strong></td><td>GBP</td><td style="color:var(--red);">■■■■■ Critique</td></tr>
+        <tr><td><span class="rank r1">4</span></td><td><strong>Physical address in the city of search</strong></td><td>GBP/Geo</td><td style="color:var(--red);">■■■■ Très élevé</td></tr>
+        <tr><td><span class="rank r1">5</span></td><td><strong>Business is open at the time of search</strong> <span style="color:var(--grn);font-size:.7rem;">NOUVEAU</span></td><td>GBP</td><td style="color:var(--red);">■■■■ Très élevé</td></tr>
+        <tr><td><span class="rank r2">6</span></td><td><strong>High Google star ratings</strong> (note moyenne élevée)</td><td>Reviews</td><td style="color:var(--org);">■■■■ Très élevé</td></tr>
+        <tr><td><span class="rank r2">7</span></td><td><strong>Address shows on GBP</strong> (adresse visible, pas masquée)</td><td>GBP</td><td style="color:var(--org);">■■■■ Très élevé</td></tr>
+        <tr><td><span class="rank r2">8</span></td><td><strong>Additional GBP categories</strong> (catégories secondaires)</td><td>GBP</td><td style="color:var(--org);">■■■ Élevé</td></tr>
+        <tr><td><span class="rank r2">9</span></td><td><strong>Number of native Google reviews with text</strong></td><td>Reviews</td><td style="color:var(--org);">■■■ Élevé</td></tr>
+        <tr><td><span class="rank r2">10</span></td><td><strong>Map pin properly placed</strong> (pin Maps correctement positionné)</td><td>GBP</td><td style="color:var(--org);">■■■ Élevé</td></tr>
+        <tr><td><span class="rank r3">11</span></td><td><strong>Recency of reviews</strong> (fraîcheur des avis)</td><td>Reviews</td><td style="color:var(--grn);">■■■ Élevé</td></tr>
+        <tr><td><span class="rank r3">12</span></td><td><strong>Proximity of address to centroid</strong> (proximité centre-ville)</td><td>GBP/Geo</td><td style="color:var(--grn);">■■■ Élevé</td></tr>
+        <tr><td><span class="rank r3">13</span></td><td><strong>Click-through rate from local search results</strong></td><td>Behavioral</td><td style="color:var(--grn);">■■■ Élevé</td></tr>
+        <tr><td><span class="rank r3">14</span></td><td><strong>Steady growth of reviews over time</strong> (vélocité constante)</td><td>Reviews</td><td style="color:var(--grn);">■■■ Élevé</td></tr>
+        <tr><td><span class="rank r3">15</span></td><td><strong>HTML NAP matching GBP NAP</strong> (cohérence site web ↔ GBP)</td><td>On-Page/Citation</td><td style="color:var(--grn);">■■ Moyen-élevé</td></tr>
+    </tbody>
+</table>
+</div>
+
+<div class="note">
+    <strong>Analyse pour ta webapp :</strong> 6 des 10 premiers facteurs sont des signaux GBP directs. Les 3 premiers (primary category, proximity, keywords in title) sont à eux seuls les plus déterminants. Le facteur #5 "business is open at time of search" est NOUVEAU en 2026 — auditer les horaires et horaires spéciaux est un quick win. Le facteur #13 (CTR) confirme que l'apparence de la fiche (photos, note, description) impacte le ranking.
+</div>
+
+<h3>Facteurs Review détaillés (20% du Local Pack)</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Facteur</th><th>Détail précis</th></tr></thead>
+    <tbody>
+        <tr><td><strong>High Google star ratings</strong></td><td>Note ≥ 4.2 = seuil minimum pour apparaître dans le Local Pack de façon régulière. Les tops rankent à 4.4+</td></tr>
+        <tr><td><strong>Number of reviews with text</strong></td><td>Les avis avec texte comptent plus que les avis étoiles seules. Le texte est analysé pour les keywords.</td></tr>
+        <tr><td><strong>Recency of reviews</strong></td><td>Whitespark 2025 : "le facteur le plus sous-estimé". Un restaurant avec 10 avis/mois récents bat un restaurant avec 500 avis anciens.</td></tr>
+        <tr><td><strong>Steady growth over time</strong></td><td>Distribution naturelle dans le temps. Pic soudain de 50 avis = potentiel filtre spam. Croissance régulière = signal positif.</td></tr>
+        <tr><td><strong>Keywords in reviews</strong></td><td>"Excellente pizza margherita" → boost pour "pizza" + "margherita". Google affiche ces mots en gras dans les "Review Justifications".</td></tr>
+        <tr><td><strong>Owner responses to reviews</strong></td><td>Taux de réponse élevé = signal d'activité. Les réponses avec des mots-clés pertinents contribuent aussi.</td></tr>
+        <tr><td><strong>Diversity of review platforms</strong></td><td>Avis sur Google + TripAdvisor + TheFork = meilleur signal qu'avis uniquement Google.</td></tr>
+        <tr><td><strong>Reviewer authority</strong></td><td>Avis de Local Guides (niveau 4+) et reviewers actifs pèsent plus. Avis de comptes nouveaux pèsent moins.</td></tr>
+    </tbody>
+</table>
+</div>
+
+<h3>Facteurs GBP détaillés (32% du Local Pack)</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Signal GBP</th><th>Spec technique / Ce que Google vérifie</th></tr></thead>
+    <tbody>
+        <tr><td><strong>Primary category</strong></td><td>Liste exacte Google : "Restaurant italien", "Pizzeria", "Restaurant japonais", "Bar à sushis", "Crêperie", etc. Il y a 4 000+ catégories. La catégorie doit être la plus spécifique possible.</td></tr>
+        <tr><td><strong>Additional categories</strong></td><td>Max 9 catégories secondaires. Ex pour un resto italien : "Pizzeria", "Livraison de repas", "Restaurant pour le déjeuner", "Traiteur".</td></tr>
+        <tr><td><strong>Business title</strong></td><td>Le nom exact légal. Si "Pizza Roma" → keyword "pizza" est intégré. Google pénalise le keyword stuffing ("Pizza Roma — Meilleur Restaurant Italien Paris 11").</td></tr>
+        <tr><td><strong>Description</strong></td><td>750 caractères max. Doit contenir : type de cuisine, quartier/ville, spécialités, ambiance. Pas de keywords forcés. Langage naturel.</td></tr>
+        <tr><td><strong>Photos</strong></td><td>Google compte : nb photos total, nb photos récentes (< 3 mois), photos de l'extérieur (facade), intérieur, plats, équipe. Min recommandé : 25+. Les photos avec EXIF (géolocalisation) aident.</td></tr>
+        <tr><td><strong>Opening hours</strong></td><td>Heures normales + "More hours" (happy hour, brunch, dernière commande) + "Special hours" (jours fériés). Signal #5 en 2026.</td></tr>
+        <tr><td><strong>Attributes</strong></td><td>Google offre ~80 attributs pour restaurants : Terrasse, Wi-Fi, Parking, Accessible PMR, Végétarien, Halal, Casher, Livraison, Click & Collect, Réservation, Animaux acceptés, etc.</td></tr>
+        <tr><td><strong>Google Posts</strong></td><td>Types : Update, Offer, Event. Durée de vie : 7 jours (events = jusqu'à la date). Fréquence recommandée : 1/semaine min. Inclure CTA (Réserver, Commander, En savoir plus).</td></tr>
+        <tr><td><strong>Q&A</strong></td><td>Le propriétaire peut poser ET répondre à ses propres questions. Contenu indexable. Ex : "Avez-vous une terrasse ?" → "Oui, 30 places en terrasse couverte."</td></tr>
+        <tr><td><strong>Menu</strong></td><td>Upload direct ou lien URL. Google a lancé le scan IA de menus photos (2025). L'API permet updateFoodMenus avec prix, descriptions, infos nutritionnelles.</td></tr>
+        <tr><td><strong>Booking link</strong></td><td>Lien de réservation intégré (TheFork, OpenTable, ou site propre). "Reserve a table" button visible.</td></tr>
+        <tr><td><strong>Website URL</strong></td><td>Lien vers le site officiel. Le site doit avoir le NAP identique au GBP. Google vérifie la cohérence.</td></tr>
+    </tbody>
+</table>
+</div>
+</div>
+
+<!-- ===================== LOCAL ORGANIC ===================== -->
+<div class="sec" id="organic">
+<h2>Local Organic — Facteurs de Ranking 2026</h2>
+<div class="src">Source : Whitespark 2026 Survey — BrightLocal compilation</div>
+
+<h3>Poids par catégorie de signaux</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>#</th><th>Catégorie</th><th>Poids</th><th style="min-width:200px;">Barre</th></tr></thead>
+    <tbody>
+        <tr><td><span class="rank r1">1</span></td><td><strong>On-Page signals</strong></td><td class="mono pct" style="color:var(--red);">33%</td><td><div class="wb"><div class="wt" style="width:33%;max-width:200px;background:var(--red);"></div></div></td></tr>
+        <tr><td><span class="rank r1">2</span></td><td><strong>Link signals</strong></td><td class="mono pct" style="color:var(--org);">24%</td><td><div class="wb"><div class="wt" style="width:24%;max-width:200px;background:var(--org);"></div></div></td></tr>
+        <tr><td><span class="rank r2">3</span></td><td><strong>Behavioral signals</strong></td><td class="mono pct" style="color:var(--prp);">10%</td><td><div class="wb"><div class="wt" style="width:10%;max-width:200px;background:var(--prp);"></div></div></td></tr>
+        <tr><td><span class="rank r2">4</span></td><td><strong>Personalization</strong></td><td class="mono pct" style="color:var(--mut);">8%</td><td><div class="wb"><div class="wt" style="width:8%;max-width:200px;background:var(--mut);"></div></div></td></tr>
+        <tr><td><span class="rank r3">5</span></td><td><strong>GBP signals</strong></td><td class="mono pct" style="color:var(--blu);">7%</td><td><div class="wb"><div class="wt" style="width:7%;max-width:200px;background:var(--blu);"></div></div></td></tr>
+        <tr><td><span class="rank r3">6</span></td><td><strong>Citation signals</strong></td><td class="mono pct" style="color:var(--pnk);">7%</td><td><div class="wb"><div class="wt" style="width:7%;max-width:200px;background:var(--pnk);"></div></div></td></tr>
+        <tr><td><span class="rank r3">7</span></td><td><strong>Review signals</strong></td><td class="mono pct" style="color:var(--grn);">6%</td><td><div class="wb"><div class="wt" style="width:6%;max-width:200px;background:var(--grn);"></div></div></td></tr>
+        <tr><td><span class="rank r3">8</span></td><td><strong>Social signals</strong></td><td class="mono pct" style="color:var(--mut);">5%</td><td><div class="wb"><div class="wt" style="width:5%;max-width:200px;background:var(--mut);"></div></div></td></tr>
+    </tbody>
+</table>
+</div>
+
+<h3>Top 15 facteurs individuels — Local Organic</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>#</th><th>Facteur exact</th><th>Catégorie</th></tr></thead>
+    <tbody>
+        <tr><td><span class="rank r1">1</span></td><td><strong>Dedicated page for each service</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r1">2</span></td><td><strong>Geographic keyword relevance of content</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r1">3</span></td><td><strong>Quality / authority of inbound links to domain</strong></td><td>Links</td></tr>
+        <tr><td><span class="rank r1">4</span></td><td><strong>Keywords in GBP landing page title tag</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r1">5</span></td><td><strong>Number of inbound links from industry-relevant domains</strong></td><td>Links</td></tr>
+        <tr><td><span class="rank r2">6</span></td><td><strong>Internal linking across website</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r2">7</span></td><td><strong>Relevant product/service keywords across website</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r2">8</span></td><td><strong>Keywords in GBP landing page headings</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r2">9</span></td><td><strong>Website focuses on specific niche</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r2">10</span></td><td><strong>Keywords in anchor text of inbound links to domain</strong></td><td>Links</td></tr>
+        <tr><td><span class="rank r3">11</span></td><td><strong>Keywords in title tags across website</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r3">12</span></td><td><strong>Diversity of inbound links to domain</strong></td><td>Links</td></tr>
+        <tr><td><span class="rank r3">13</span></td><td><strong>Quantity of inbound links from locally-relevant domains</strong></td><td>Links</td></tr>
+        <tr><td><span class="rank r3">14</span></td><td><strong>Volume of quality content across website</strong></td><td>On-Page</td></tr>
+        <tr><td><span class="rank r3">15</span></td><td><strong>Keywords in headings across website</strong></td><td>On-Page</td></tr>
+    </tbody>
+</table>
+</div>
+</div>
+
+<!-- ===================== AI VISIBILITY ===================== -->
+<div class="sec" id="ai">
+<h2>AI Search Visibility — Facteurs 2026</h2>
+<div class="src">Source : Whitespark 2026 Survey — PREMIÈRE année de cette catégorie</div>
+
+<h3>Poids par catégorie de signaux — AI Visibility</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>#</th><th>Catégorie</th><th>Poids</th><th style="min-width:200px;">Barre</th><th>Différence vs Local Pack</th></tr></thead>
+    <tbody>
+        <tr><td><span class="rank r1">1</span></td><td><strong>On-Page signals</strong></td><td class="mono pct" style="color:var(--red);">24%</td><td><div class="wb"><div class="wt" style="width:24%;max-width:200px;background:var(--red);"></div></div></td><td class="mono" style="color:var(--grn);">↑ vs 15% (Pack) — Le contenu est ROI pour l'IA</td></tr>
+        <tr><td><span class="rank r1">2</span></td><td><strong>Review signals</strong></td><td class="mono pct" style="color:var(--org);">16%</td><td><div class="wb"><div class="wt" style="width:16%;max-width:200px;background:var(--org);"></div></div></td><td class="mono" style="color:var(--red);">↓ vs 20% (Pack)</td></tr>
+        <tr><td><span class="rank r1">3</span></td><td><strong>Citation signals</strong></td><td class="mono pct" style="color:var(--pnk);">13%</td><td><div class="wb"><div class="wt" style="width:13%;max-width:200px;background:var(--pnk);"></div></div></td><td class="mono" style="color:var(--grn);">↑↑ vs 6% (Pack) — Les citations x2 pour l'IA</td></tr>
+        <tr><td><span class="rank r2">4</span></td><td><strong>Link signals</strong></td><td class="mono pct" style="color:var(--cyn);">13%</td><td><div class="wb"><div class="wt" style="width:13%;max-width:200px;background:var(--cyn);"></div></div></td><td class="mono" style="color:var(--grn);">↑ vs 8% (Pack)</td></tr>
+        <tr><td><span class="rank r2">5</span></td><td><strong>GBP signals</strong></td><td class="mono pct" style="color:var(--blu);">12%</td><td><div class="wb"><div class="wt" style="width:12%;max-width:200px;background:var(--blu);"></div></div></td><td class="mono" style="color:var(--red);">↓↓ vs 32% (Pack) — GBP 3x moins pour l'IA</td></tr>
+        <tr><td><span class="rank r3">6</span></td><td><strong>Personalization</strong></td><td class="mono pct" style="color:var(--mut);">9%</td><td><div class="wb"><div class="wt" style="width:9%;max-width:200px;background:var(--mut);"></div></div></td><td class="mono" style="color:var(--grn);">↑ vs 6% (Pack)</td></tr>
+        <tr><td><span class="rank r3">7</span></td><td><strong>Social signals</strong></td><td class="mono pct" style="color:var(--mut);">9%</td><td><div class="wb"><div class="wt" style="width:9%;max-width:200px;background:var(--mut);"></div></div></td><td class="mono" style="color:var(--grn);">↑↑ vs 4% (Pack) — Les réseaux sociaux x2 pour l'IA</td></tr>
+        <tr><td><span class="rank r3">8</span></td><td><strong>Behavioral signals</strong></td><td class="mono pct" style="color:var(--mut);">4%</td><td><div class="wb"><div class="wt" style="width:4%;max-width:200px;background:var(--mut);"></div></div></td><td class="mono" style="color:var(--red);">↓ vs 9% (Pack) — L'IA ne voit pas les clics</td></tr>
+    </tbody>
+</table>
+</div>
+
+<div class="note">
+    <strong>Données clés AI Visibility :</strong><br>
+    • On-Page passe de 15% (Pack) à <strong>24%</strong> (IA) — le contenu structuré est LE levier n°1 pour l'IA<br>
+    • Citations passent de 6% (Pack) à <strong>13%</strong> (IA) — les annuaires comptent 2x plus pour l'IA que pour Google Maps<br>
+    • GBP chute de 32% (Pack) à <strong>12%</strong> (IA) — les IA ne s'appuient pas autant sur GBP que Google<br>
+    • Social passe de 4% (Pack) à <strong>9%</strong> (IA) — Instagram, Reddit, forums = sources IA importantes<br>
+    • Behavioral chute de 9% (Pack) à <strong>4%</strong> (IA) — normal, les IA n'ont pas accès aux données de clics
+</div>
+</div>
+
+<!-- ===================== CITATIONS IA ===================== -->
+<div class="sec" id="citations">
+<h2>Citations IA — Données Brutes Yext</h2>
+<div class="src">Source : Yext — 17.2M citations, 1.6M+ réponses IA analysées (ChatGPT, Gemini, Perplexity) • Jul-Aug 2025</div>
+
+<h3>Répartition globale des sources de citation</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Source</th><th>%</th><th>Nb citations</th><th>Contrôle marque</th></tr></thead>
+    <tbody>
+        <tr><td><strong>First-party websites</strong> (sites propres)</td><td class="mono" style="color:var(--grn);font-weight:700;">44%</td><td class="mono">~2.9M</td><td>✅ Contrôle total</td></tr>
+        <tr><td><strong>Third-party listings</strong> (annuaires)</td><td class="mono" style="color:var(--blu);font-weight:700;">42%</td><td class="mono">~2.9M</td><td>✅ Contrôlable</td></tr>
+        <tr><td><strong>Reviews & Social media</strong></td><td class="mono" style="color:var(--org);font-weight:700;">8%</td><td class="mono">~545K</td><td>⚠️ Influençable</td></tr>
+        <tr><td><strong>News, Forums, Govt, Other</strong></td><td class="mono" style="color:var(--mut);font-weight:700;">6%</td><td class="mono">~408K</td><td>❌ Non contrôlable</td></tr>
+    </tbody>
+</table>
+</div>
+
+<h3>Données par modèle IA</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Modèle</th><th>Source #1 citée</th><th>% exact</th><th>Spécificité</th></tr></thead>
+    <tbody>
+        <tr><td><strong>ChatGPT</strong> (OpenAI)</td><td>Third-party sites (Yelp, TripAdvisor, MapQuest)</td><td class="mono" style="color:var(--blu);font-weight:700;">48.73%</td><td>Pour requêtes subjectives ("best…") : annuaires montent à <strong>46.3%</strong>. Hospitality : cite sites officiels à <strong>38.08%</strong>.</td></tr>
+        <tr><td><strong>Gemini</strong> (Google)</td><td>Brand-owned websites (sites propres)</td><td class="mono" style="color:var(--grn);font-weight:700;">52.15%</td><td>Taux de citation de sites propres le plus élevé de tous les modèles.</td></tr>
+        <tr><td><strong>Perplexity</strong></td><td>Sources niche spécialisées</td><td class="mono" style="color:var(--prp);font-weight:700;">24% niche</td><td>Pour requêtes subjectives : sources niche = 24% (Zocdoc pour santé, TripAdvisor pour hospi). Plus diversifié.</td></tr>
+        <tr><td><strong>Claude</strong> (Anthropic)</td><td>User-generated content (UGC)</td><td class="mono" style="color:var(--pnk);font-weight:700;">2-4x plus UGC</td><td>Cite l'UGC 2-4x plus que les autres. En Food & Beverage : UGC <strong>~10x plus</strong> que Gemini.</td></tr>
+    </tbody>
+</table>
+</div>
+
+<h3>Données spécifiques Food Service / Restaurants</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Métrique</th><th>Valeur</th><th>Détail</th></tr></thead>
+    <tbody>
+        <tr><td>Citations analysées (foodservice)</td><td class="mono" style="font-weight:700;">2.2M+</td><td>Sur les 17.2M totales</td></tr>
+        <tr><td>Listings (Yelp, Google, DoorDash…)</td><td class="mono" style="color:var(--blu);font-weight:700;">41.6%</td><td>Source n°1 pour la restauration</td></tr>
+        <tr><td>First-party websites</td><td class="mono" style="color:var(--grn);font-weight:700;">39.8%</td><td>Sites propres des restaurants</td></tr>
+        <tr><td>Reviews & Social media</td><td class="mono" style="color:var(--org);font-weight:700;">13.3%</td><td>Plus élevé que la moyenne (8%) — les avis resto comptent plus</td></tr>
+        <tr><td>Distinct citation sources (listings)</td><td class="mono" style="font-weight:700;">54.53%</td><td>% des URLs uniques provenant d'annuaires</td></tr>
+        <tr><td>Citations per URL (websites)</td><td class="mono" style="font-weight:700;">4.31</td><td>Chaque page de site génère en moyenne 4.31 citations</td></tr>
+    </tbody>
+</table>
+</div>
+
+<div class="note">
+    <strong>Implication pour ta webapp :</strong><br>
+    • Annuaires (41.6%) + sites propres (39.8%) = <strong>81.4%</strong> des citations IA en restauration<br>
+    • ChatGPT s'appuie surtout sur <strong>Yelp + TripAdvisor</strong> (48.73% tiers)<br>
+    • Gemini s'appuie surtout sur le <strong>site web du restaurant</strong> (52.15%)<br>
+    • Claude cite massivement les avis utilisateurs (<strong>10x plus</strong> que Gemini pour le F&B)<br>
+    • Les reviews comptent <strong>13.3%</strong> en restauration vs <strong>8%</strong> en moyenne — les avis sont un levier IA encore plus fort pour les restos
+</div>
+</div>
+
+<!-- ===================== SCHEMA.ORG ===================== -->
+<div class="sec" id="schema">
+<h2>Schema.org — Propriétés complètes pour Restaurant</h2>
+<div class="src">Source : schema.org/Restaurant — Hiérarchie : Thing → Organization → LocalBusiness → FoodEstablishment → Restaurant</div>
+
+<h3>Propriétés spécifiques FoodEstablishment / Restaurant</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Propriété</th><th>Type attendu</th><th>Description</th><th>Priorité audit</th></tr></thead>
+    <tbody>
+        <tr><td class="mono">@type</td><td>Text</td><td>"Restaurant" (pas "LocalBusiness" — être le plus spécifique possible)</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">name</td><td>Text</td><td>Nom exact du restaurant (= GBP)</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">address</td><td>PostalAddress</td><td>streetAddress, addressLocality, addressRegion, postalCode, addressCountry</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">telephone</td><td>Text</td><td>Format E.164 : "+33145678900"</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">url</td><td>URL</td><td>URL canonique du site</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">servesCuisine</td><td>Text</td><td>"Italian", "Japanese", "French" — peut être un array</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">priceRange</td><td>Text</td><td>"€", "€€", "€€€", "€€€€"</td><td style="color:var(--org);">Important</td></tr>
+        <tr><td class="mono">acceptsReservations</td><td>Boolean / URL</td><td>true ou URL de réservation (TheFork, OpenTable)</td><td style="color:var(--org);">Important</td></tr>
+        <tr><td class="mono">hasMenu</td><td>Menu / URL</td><td>Objet Menu structuré ou URL vers la page menu</td><td style="color:var(--org);">Important</td></tr>
+        <tr><td class="mono">openingHoursSpecification</td><td>OpeningHoursSpecification</td><td>Array avec dayOfWeek, opens, closes pour chaque jour</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">geo</td><td>GeoCoordinates</td><td>latitude, longitude exactes</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">image</td><td>URL / ImageObject</td><td>Photo principale du restaurant</td><td style="color:var(--org);">Important</td></tr>
+        <tr><td class="mono">logo</td><td>URL / ImageObject</td><td>Logo du restaurant</td><td style="color:var(--grn);">Recommandé</td></tr>
+        <tr><td class="mono">aggregateRating</td><td>AggregateRating</td><td>ratingValue, reviewCount, bestRating. Doit refléter les avis visibles sur la page.</td><td style="color:var(--org);">Important</td></tr>
+        <tr><td class="mono">review</td><td>Review[]</td><td>Avis individuels avec author, reviewRating, datePublished</td><td style="color:var(--grn);">Recommandé</td></tr>
+        <tr><td class="mono">sameAs</td><td>URL[]</td><td>Liens vers profils sociaux et annuaires : Facebook, Instagram, TripAdvisor, Yelp</td><td style="color:var(--org);">Important</td></tr>
+        <tr><td class="mono">description</td><td>Text</td><td>Description riche (≈160 caractères pour snippet, + longue pour les IA)</td><td style="color:var(--red);">Critique</td></tr>
+        <tr><td class="mono">paymentAccepted</td><td>Text</td><td>"Cash", "Credit Card", "Visa", "Mastercard"</td><td style="color:var(--grn);">Recommandé</td></tr>
+        <tr><td class="mono">smokingAllowed</td><td>Boolean</td><td>true / false</td><td style="color:var(--mut);">Optionnel</td></tr>
+        <tr><td class="mono">amenityFeature</td><td>LocationFeatureSpecification</td><td>Terrasse, Wi-Fi, Parking, Climatisation</td><td style="color:var(--grn);">Recommandé</td></tr>
+    </tbody>
+</table>
+</div>
+
+<h3>Structure Menu (schema.org/Menu)</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Propriété</th><th>Type</th><th>Description</th></tr></thead>
+    <tbody>
+        <tr><td class="mono">Menu.name</td><td>Text</td><td>"Menu déjeuner", "Carte du soir", "Menu brunch"</td></tr>
+        <tr><td class="mono">Menu.hasMenuSection</td><td>MenuSection[]</td><td>Sections du menu (Entrées, Plats, Desserts, Boissons)</td></tr>
+        <tr><td class="mono">MenuSection.name</td><td>Text</td><td>"Entrées", "Pizzas", "Pâtes"</td></tr>
+        <tr><td class="mono">MenuSection.hasMenuItem</td><td>MenuItem[]</td><td>Items individuels dans la section</td></tr>
+        <tr><td class="mono">MenuItem.name</td><td>Text</td><td>"Margherita", "Risotto aux cèpes"</td></tr>
+        <tr><td class="mono">MenuItem.description</td><td>Text</td><td>"Base tomate, mozzarella di bufala, basilic frais"</td></tr>
+        <tr><td class="mono">MenuItem.offers</td><td>Offer</td><td>price: "12.50", priceCurrency: "EUR"</td></tr>
+        <tr><td class="mono">MenuItem.suitableForDiet</td><td>RestrictedDiet</td><td>GlutenFreeDiet, VeganDiet, VegetarianDiet, HalalDiet, KosherDiet</td></tr>
+        <tr><td class="mono">MenuItem.nutrition</td><td>NutritionInformation</td><td>calories, fatContent, etc. (optionnel)</td></tr>
+    </tbody>
+</table>
+</div>
+
+<h3>Types complémentaires à implémenter (GEO boost)</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Type schema.org</th><th>Utilité</th><th>Impact GEO</th></tr></thead>
+    <tbody>
+        <tr><td class="mono">FAQPage</td><td>Questions/réponses structurées ("Avez-vous une terrasse ?", "Faites-vous de la livraison ?")</td><td style="color:var(--red);">■■■■■ Les LLM adorent les FAQ</td></tr>
+        <tr><td class="mono">BreadcrumbList</td><td>Navigation : Accueil > Paris > Restaurant italien > Pizza Roma</td><td style="color:var(--org);">■■■ Aide au contexte géo</td></tr>
+        <tr><td class="mono">WebSite + SearchAction</td><td>Sitelinks search box</td><td style="color:var(--grn);">■■ Bonus SERP</td></tr>
+        <tr><td class="mono">Event</td><td>Soirées spéciales, dégustations, menus spéciaux</td><td style="color:var(--grn);">■■ Signal d'activité</td></tr>
+    </tbody>
+</table>
+</div>
+
+<h3>Exemple JSON-LD complet pour un restaurant</h3>
+<div class="code"><pre><span class="cm">// JSON-LD optimisé SEO + GEO pour restaurant</span>
+{
+  <span class="key">"@context"</span>: <span class="str">"https://schema.org"</span>,
+  <span class="key">"@type"</span>: <span class="str">"Restaurant"</span>,
+  <span class="key">"name"</span>: <span class="str">"Pizza Roma"</span>,
+  <span class="key">"description"</span>: <span class="str">"Restaurant italien authentique au cœur du Marais, Paris 4e. Pizzas au feu de bois, pâtes fraîches maison et carte des vins italiens. Terrasse 30 places."</span>,
+  <span class="key">"url"</span>: <span class="str">"https://pizzaroma.fr"</span>,
+  <span class="key">"telephone"</span>: <span class="str">"+33142789012"</span>,
+  <span class="key">"servesCuisine"</span>: [<span class="str">"Italian"</span>, <span class="str">"Pizza"</span>],
+  <span class="key">"priceRange"</span>: <span class="str">"€€"</span>,
+  <span class="key">"acceptsReservations"</span>: <span class="str">"https://thefork.fr/pizza-roma"</span>,
+  <span class="key">"address"</span>: {
+    <span class="key">"@type"</span>: <span class="str">"PostalAddress"</span>,
+    <span class="key">"streetAddress"</span>: <span class="str">"12 Rue des Rosiers"</span>,
+    <span class="key">"addressLocality"</span>: <span class="str">"Paris"</span>,
+    <span class="key">"postalCode"</span>: <span class="str">"75004"</span>,
+    <span class="key">"addressCountry"</span>: <span class="str">"FR"</span>
+  },
+  <span class="key">"geo"</span>: {
+    <span class="key">"@type"</span>: <span class="str">"GeoCoordinates"</span>,
+    <span class="key">"latitude"</span>: <span class="val">48.8566</span>,
+    <span class="key">"longitude"</span>: <span class="val">2.3522</span>
+  },
+  <span class="key">"openingHoursSpecification"</span>: [
+    {
+      <span class="key">"@type"</span>: <span class="str">"OpeningHoursSpecification"</span>,
+      <span class="key">"dayOfWeek"</span>: [<span class="str">"Monday"</span>,<span class="str">"Tuesday"</span>,<span class="str">"Wednesday"</span>,<span class="str">"Thursday"</span>,<span class="str">"Friday"</span>],
+      <span class="key">"opens"</span>: <span class="str">"12:00"</span>,
+      <span class="key">"closes"</span>: <span class="str">"14:30"</span>
+    },
+    {
+      <span class="key">"@type"</span>: <span class="str">"OpeningHoursSpecification"</span>,
+      <span class="key">"dayOfWeek"</span>: [<span class="str">"Monday"</span>,<span class="str">"Tuesday"</span>,<span class="str">"Wednesday"</span>,<span class="str">"Thursday"</span>,<span class="str">"Friday"</span>,<span class="str">"Saturday"</span>],
+      <span class="key">"opens"</span>: <span class="str">"19:00"</span>,
+      <span class="key">"closes"</span>: <span class="str">"23:00"</span>
+    }
+  ],
+  <span class="key">"aggregateRating"</span>: {
+    <span class="key">"@type"</span>: <span class="str">"AggregateRating"</span>,
+    <span class="key">"ratingValue"</span>: <span class="str">"4.6"</span>,
+    <span class="key">"reviewCount"</span>: <span class="str">"342"</span>,
+    <span class="key">"bestRating"</span>: <span class="str">"5"</span>
+  },
+  <span class="key">"hasMenu"</span>: {
+    <span class="key">"@type"</span>: <span class="str">"Menu"</span>,
+    <span class="key">"name"</span>: <span class="str">"Carte"</span>,
+    <span class="key">"hasMenuSection"</span>: [
+      {
+        <span class="key">"@type"</span>: <span class="str">"MenuSection"</span>,
+        <span class="key">"name"</span>: <span class="str">"Pizzas"</span>,
+        <span class="key">"hasMenuItem"</span>: [
+          {
+            <span class="key">"@type"</span>: <span class="str">"MenuItem"</span>,
+            <span class="key">"name"</span>: <span class="str">"Margherita"</span>,
+            <span class="key">"description"</span>: <span class="str">"Tomate San Marzano, mozzarella di bufala DOP, basilic frais, huile d'olive extra vierge"</span>,
+            <span class="key">"offers"</span>: { <span class="key">"@type"</span>: <span class="str">"Offer"</span>, <span class="key">"price"</span>: <span class="str">"14.00"</span>, <span class="key">"priceCurrency"</span>: <span class="str">"EUR"</span> },
+            <span class="key">"suitableForDiet"</span>: <span class="str">"https://schema.org/VegetarianDiet"</span>
+          }
+        ]
+      }
+    ]
+  },
+  <span class="key">"image"</span>: <span class="str">"https://pizzaroma.fr/images/facade.jpg"</span>,
+  <span class="key">"logo"</span>: <span class="str">"https://pizzaroma.fr/images/logo.png"</span>,
+  <span class="key">"sameAs"</span>: [
+    <span class="str">"https://facebook.com/pizzaroma"</span>,
+    <span class="str">"https://instagram.com/pizzaroma"</span>,
+    <span class="str">"https://tripadvisor.fr/Pizza_Roma"</span>,
+    <span class="str">"https://yelp.fr/biz/pizza-roma-paris"</span>
+  ]
+}</pre></div>
+</div>
+
+<!-- ===================== APIs ===================== -->
+<div class="sec" id="apis">
+<h2>APIs Annuaires — Disponibilité technique</h2>
+<div class="src">Source : Documentation officielle de chaque plateforme — Mars 2026</div>
+
+<div class="api-grid">
+    <div class="api-card">
+        <h4>Google Business Profile API <span class="api-badge api-ok">API disponible</span> <span class="api-badge api-write">Read + Write</span></h4>
+        <p><strong>Base URL :</strong> <span class="mono">mybusinessbusinessinformation.googleapis.com/v1</span></p>
+        <p><strong>Endpoints clés :</strong></p>
+        <p class="mono" style="font-size:.72rem;margin-top:6px;color:var(--cyn);">
+            accounts.locations.list — Lister les fiches<br>
+            accounts.locations.get — Détail d'une fiche<br>
+            accounts.locations.patch — Modifier une fiche<br>
+            accounts.locations.getFoodMenus — Récupérer le menu<br>
+            accounts.locations.updateFoodMenus — Mettre à jour le menu<br>
+            accounts.locations.reviews.list — Lister les avis<br>
+            accounts.locations.reviews.updateReply — Répondre à un avis<br>
+            accounts.locations.media.list — Lister les photos<br>
+            accounts.locations.media.create — Uploader une photo<br>
+            businessProfilePerformance — Métriques (impressions, clics, appels)
+        </p>
+        <p style="margin-top:6px;"><strong>Accès :</strong> Demande formelle requise. Nécessite OAuth 2.0. Quota : dépend du projet.</p>
+        <p><strong>Limites :</strong> Pas de création de fiche ex nihilo via API (doit exister ou être claimée). Pas de modification du nom d'entreprise via API.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>Yelp Fusion API <span class="api-badge api-ok">API disponible</span> <span class="api-badge api-read">Read only</span></h4>
+        <p><strong>Base URL :</strong> <span class="mono">api.yelp.com/v3</span></p>
+        <p class="mono" style="font-size:.72rem;margin-top:6px;color:var(--cyn);">
+            /businesses/search — Recherche par nom/lieu<br>
+            /businesses/{id} — Détail (nom, note, nb avis, catégories, photos, horaires, prix)<br>
+            /businesses/{id}/reviews — 3 derniers avis (extrait)<br>
+            /businesses/matches — Match par NAP exact
+        </p>
+        <p style="margin-top:6px;"><strong>Accès :</strong> Clé API gratuite. 5 000 calls/jour gratuit.</p>
+        <p><strong>Limites :</strong> Read-only (pas de création/modification de fiche). Max 3 avis par call. Pas de réponse aux avis via API.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>Foursquare Places API <span class="api-badge api-ok">API disponible</span> <span class="api-badge api-read">Read only</span></h4>
+        <p><strong>Base URL :</strong> <span class="mono">api.foursquare.com/v3/places</span></p>
+        <p class="mono" style="font-size:.72rem;margin-top:6px;color:var(--cyn);">
+            /search — Recherche par nom/lieu/catégorie<br>
+            /{fsq_id} — Détail (nom, adresse, catégories, heures, popularité, photos, tips, prix)<br>
+            /{fsq_id}/photos — Photos du lieu<br>
+            /{fsq_id}/tips — Avis/tips des utilisateurs<br>
+            /match — Match par NAP
+        </p>
+        <p style="margin-top:6px;"><strong>Accès :</strong> Tier gratuit : 200 calls/jour. Plan payant : $200+/mois.</p>
+        <p><strong>Limites :</strong> Read-only. Important car Foursquare alimente beaucoup d'apps IA en données de POI.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>TripAdvisor Content API <span class="api-badge api-lim">Accès limité</span> <span class="api-badge api-read">Read only</span></h4>
+        <p><strong>Base URL :</strong> <span class="mono">api.tripadvisor.com/api</span></p>
+        <p class="mono" style="font-size:.72rem;margin-top:6px;color:var(--cyn);">
+            /location/search — Recherche<br>
+            /location/{id}/details — Détail (note, nb avis, classement, prix, cuisine, horaires)<br>
+            /location/{id}/reviews — Avis<br>
+            /location/{id}/photos — Photos
+        </p>
+        <p style="margin-top:6px;"><strong>Accès :</strong> Programme partenaire requis. Pas d'accès public libre. Formulaire d'application.</p>
+        <p><strong>Limites :</strong> Read-only. Accès restreint. Pas de modification possible des fiches.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>Apple Maps Connect (MapKit) <span class="api-badge api-ok">API disponible</span> <span class="api-badge api-write">Read + Write</span></h4>
+        <p><strong>URL :</strong> <span class="mono">mapsconnect.apple.com</span> + MapKit JS/Server API</p>
+        <p class="mono" style="font-size:.72rem;margin-top:6px;color:var(--cyn);">
+            Apple Business Connect — Claim & manage listing<br>
+            MapKit Server API — Search, geocode, directions<br>
+            Listings : nom, catégorie, adresse, horaires, photos, showcases
+        </p>
+        <p style="margin-top:6px;"><strong>Accès :</strong> Gratuit via Apple Business Connect (interface web). MapKit API nécessite Apple Developer Account ($99/an).</p>
+        <p><strong>Limites :</strong> Gestion via interface web principalement. API de gestion de fiches limitée. Important pour Siri et Apple Intelligence.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>Bing Places <span class="api-badge api-ok">API disponible</span> <span class="api-badge api-write">Read + Write</span></h4>
+        <p><strong>URL :</strong> <span class="mono">bingplaces.com</span> + Bing Maps API</p>
+        <p class="mono" style="font-size:.72rem;margin-top:6px;color:var(--cyn);">
+            Bing Places for Business — Claim & manage listing<br>
+            Import depuis Google Business (sync automatique possible)<br>
+            Bing Maps API — Search, geocode<br>
+            Bulk upload via CSV pour multi-locations
+        </p>
+        <p style="margin-top:6px;"><strong>Accès :</strong> Gratuit. Sync depuis GBP en 1 clic.</p>
+        <p><strong>Limites :</strong> Moins utilisé en France. Crucial pour Copilot / Bing Chat (source directe).</p>
+    </div>
+
+    <div class="api-card">
+        <h4>TheFork (LaFourchette) <span class="api-badge api-no">Pas d'API publique</span></h4>
+        <p><strong>Accès :</strong> Aucune API publique. Gestion des fiches uniquement via TheFork Manager (interface web pro).</p>
+        <p><strong>Workaround :</strong> Scraping possible (Puppeteer/Playwright) pour vérifier la présence et les données publiques. Pas de création automatisée.</p>
+        <p><strong>Importance :</strong> N°1 réservation en France. Intégré dans Google. Critique pour le marché FR.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>Pages Jaunes (SoLocal) <span class="api-badge api-no">Pas d'API publique</span></h4>
+        <p><strong>Accès :</strong> Offre "Presence Management" payante pour la gestion de fiches. Pas d'API publique.</p>
+        <p><strong>Workaround :</strong> Scraping pour audit. Création/modification manuelle uniquement.</p>
+        <p><strong>Importance :</strong> Poids SEO historique fort en France. Signal de citation classique.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>Facebook / Instagram <span class="api-badge api-ok">API disponible</span> <span class="api-badge api-write">Read + Write</span></h4>
+        <p><strong>Base URL :</strong> <span class="mono">graph.facebook.com/v19.0</span></p>
+        <p class="mono" style="font-size:.72rem;margin-top:6px;color:var(--cyn);">
+            /{page-id} — Infos page (adresse, horaires, catégorie, note)<br>
+            /{page-id}/ratings — Avis/recommandations<br>
+            /{page-id}/photos — Photos<br>
+            /{page-id}/posts — Publications<br>
+            POST /{page-id} — Modifier les infos
+        </p>
+        <p style="margin-top:6px;"><strong>Accès :</strong> Facebook App + Page Token. Review process pour permissions avancées.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>Uber Eats / Deliveroo / Just Eat <span class="api-badge api-lim">APIs partenaires</span></h4>
+        <p><strong>Accès :</strong> APIs réservées aux partenaires intégrés (POS, agrégateurs type Deliverect). Pas d'accès public.</p>
+        <p><strong>Workaround :</strong> Scraping des données publiques (nom, note, nb avis, lien) pour l'audit.</p>
+        <p><strong>Importance :</strong> Les fiches Uber Eats/Deliveroo sont indexées par Google et citées par les IA. Valent d'être auditées.</p>
+    </div>
+
+    <div class="api-card">
+        <h4>OpenAI API (pour tests GEO) <span class="api-badge api-ok">API disponible</span></h4>
+        <p><strong>Base URL :</strong> <span class="mono">api.openai.com/v1/chat/completions</span></p>
+        <p><strong>Usage :</strong> Envoyer des requêtes type "meilleur restaurant italien Paris Marais" et analyser si le restaurant client est cité dans la réponse.</p>
+        <p><strong>Modèles :</strong> gpt-4o, gpt-4o-mini. Avec web search activé pour simuler le comportement réel de ChatGPT.</p>
+        <p><strong>Coût :</strong> ~$2.50/1M tokens input (gpt-4o-mini). ~$10/1M tokens (gpt-4o).</p>
+    </div>
+
+    <div class="api-card">
+        <h4>Perplexity API (pour tests GEO) <span class="api-badge api-ok">API disponible</span></h4>
+        <p><strong>Base URL :</strong> <span class="mono">api.perplexity.ai/chat/completions</span></p>
+        <p><strong>Usage :</strong> Même principe — tester les citations. Perplexity cite toujours ses sources avec URLs.</p>
+        <p><strong>Modèles :</strong> sonar-pro, sonar. Toujours avec search activé.</p>
+        <p><strong>Coût :</strong> ~$1/1000 requêtes (sonar). $5/1000 (sonar-pro).</p>
+    </div>
+</div>
+
+<h3 style="margin-top:28px;">Résumé technique — Capacités par annuaire</h3>
+<div class="tw">
+<table>
+    <thead><tr><th>Annuaire</th><th>Read API</th><th>Write API</th><th>Avis API</th><th>Scraping</th><th>Coût API</th></tr></thead>
+    <tbody>
+        <tr><td>Google Business Profile</td><td style="color:var(--grn);">✅</td><td style="color:var(--grn);">✅</td><td style="color:var(--grn);">✅ (read + reply)</td><td>N/A</td><td>Gratuit (quotas)</td></tr>
+        <tr><td>Yelp</td><td style="color:var(--grn);">✅</td><td style="color:var(--red);">❌</td><td style="color:var(--org);">⚠️ 3 avis max</td><td>Possible</td><td>Gratuit (5K/jour)</td></tr>
+        <tr><td>Foursquare</td><td style="color:var(--grn);">✅</td><td style="color:var(--red);">❌</td><td style="color:var(--grn);">✅ tips</td><td>N/A</td><td>Free tier + payant</td></tr>
+        <tr><td>TripAdvisor</td><td style="color:var(--org);">⚠️ Partenaire</td><td style="color:var(--red);">❌</td><td style="color:var(--org);">⚠️ Partenaire</td><td>Possible</td><td>Partenariat</td></tr>
+        <tr><td>Apple Maps</td><td style="color:var(--grn);">✅ MapKit</td><td style="color:var(--org);">⚠️ Web UI</td><td style="color:var(--red);">❌</td><td>N/A</td><td>$99/an dev</td></tr>
+        <tr><td>Bing Places</td><td style="color:var(--grn);">✅</td><td style="color:var(--grn);">✅ (sync GBP)</td><td style="color:var(--red);">❌</td><td>N/A</td><td>Gratuit</td></tr>
+        <tr><td>Facebook</td><td style="color:var(--grn);">✅</td><td style="color:var(--grn);">✅</td><td style="color:var(--grn);">✅ ratings</td><td>N/A</td><td>Gratuit</td></tr>
+        <tr><td>TheFork</td><td style="color:var(--red);">❌</td><td style="color:var(--red);">❌</td><td style="color:var(--red);">❌</td><td>Possible</td><td>N/A</td></tr>
+        <tr><td>Pages Jaunes</td><td style="color:var(--red);">❌</td><td style="color:var(--red);">❌</td><td style="color:var(--red);">❌</td><td>Possible</td><td>N/A</td></tr>
+        <tr><td>Uber Eats</td><td style="color:var(--red);">❌</td><td style="color:var(--red);">❌</td><td style="color:var(--red);">❌</td><td>Possible</td><td>Partenaire only</td></tr>
+        <tr><td>OpenAI (test GEO)</td><td style="color:var(--grn);">✅</td><td>N/A</td><td>N/A</td><td>N/A</td><td>$2.50-10/1M tokens</td></tr>
+        <tr><td>Perplexity (test GEO)</td><td style="color:var(--grn);">✅</td><td>N/A</td><td>N/A</td><td>N/A</td><td>$1-5/1K requêtes</td></tr>
+    </tbody>
+</table>
+</div>
+
+</div>
+
+</div>
+
+<footer>
+    Sources : Whitespark Local Search Ranking Factors 2026 (47 experts, 187 facteurs) • Yext AI Citations Study (17.2M citations, 1.6M+ réponses) • Cheers.tech • BrightLocal • schema.org • Google Developers • Yelp Developers • Foursquare Developers • Apple MapKit • Bing Places<br>
+    Compilé en mars 2026
+</footer>
+
+<script>
+document.querySelectorAll('.nb').forEach(b=>{
+    b.addEventListener('click',()=>{
+        document.querySelectorAll('.nb').forEach(x=>x.classList.remove('on'));
+        document.querySelectorAll('.sec').forEach(x=>x.classList.remove('on'));
+        b.classList.add('on');
+        document.getElementById(b.dataset.t).classList.add('on');
+    });
+});
+</script>
+</body>
+</html>

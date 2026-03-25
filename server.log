@@ -1,0 +1,27 @@
+
+╔══════════════════════════════════════════════════╗
+║         RestauRank Backend v2.0 — Autonome       ║
+║   http://localhost:8765                          ║
+╠══════════════════════════════════════════════════╣
+║  🔑 Auth:     GET /auth/google                   ║
+║  📊 GBP:      GET /api/gbp/accounts|locations    ║
+║  ⚡ GBP:      POST /api/gbp/update-*|bulk-apply  ║
+║  🔍 CMS:      POST /api/detect-cms               ║
+║  🌐 CMS:      POST /api/cms/connect|wordpress    ║
+║  📋 Dirs:     POST /api/directories/*             ║
+║  🤖 Auto:     POST /api/autonomous-scan           ║
+║  🏠 Hub:      POST /api/scrape-gmb|scrape-photos  ║
+║  📦 CRUD:     GET|POST /api/restaurants           ║
+╚══════════════════════════════════════════════════╝
+  
+SyntaxError: Bad escaped character in JSON at position 59 (line 1 column 60)
+    at JSON.parse (<anonymous>)
+    at parse (/sessions/intelligent-awesome-shannon/mnt/commerce en ligne/node_modules/body-parser/lib/types/json.js:92:19)
+    at /sessions/intelligent-awesome-shannon/mnt/commerce en ligne/node_modules/body-parser/lib/read.js:128:18
+    at AsyncResource.runInAsyncScope (node:async_hooks:214:14)
+    at invokeCallback (/sessions/intelligent-awesome-shannon/mnt/commerce en ligne/node_modules/raw-body/index.js:238:16)
+    at done (/sessions/intelligent-awesome-shannon/mnt/commerce en ligne/node_modules/raw-body/index.js:227:7)
+    at IncomingMessage.onEnd (/sessions/intelligent-awesome-shannon/mnt/commerce en ligne/node_modules/raw-body/index.js:287:7)
+    at IncomingMessage.emit (node:events:519:28)
+    at endReadableNT (node:internal/streams/readable:1698:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:90:21)

@@ -1,0 +1,20 @@
+version: '3.8'
+
+services:
+  restaurank:
+    build: .
+    container_name: restaurank
+    restart: unless-stopped
+    ports:
+      - "${PORT:-8765}:8765"
+    volumes:
+      - restaurank_data:/data
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - DB_PATH=/data/restaurank.db
+
+volumes:
+  restaurank_data:
+    driver: local
