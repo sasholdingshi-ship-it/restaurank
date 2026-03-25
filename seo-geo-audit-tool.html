@@ -4745,6 +4745,12 @@ let googleAuth={connected:false,email:null,accessToken:null,locationName:null};
 })();
 
 async function startGoogleAuth(opts){
+    // Check if Google OAuth redirect URI is configured for this domain
+    const knownOAuthDomains=['localhost','127.0.0.1','restaurank.com','www.restaurank.com','app.restaurank.com'];
+    if(!knownOAuthDomains.some(d=>location.hostname===d||location.hostname.endsWith('.'+d))){
+        showToast('⚙️ Connexion Google en cours de configuration pour ce domaine. Utilisez le login email/mot de passe en attendant.','info',8000);
+        return;
+    }
     // Real OAuth flow via backend — POPUP mode (stays in app)
     try{
         const resp=await fetch('/auth/google');
