@@ -6976,6 +6976,122 @@ app.post('/api/real-audit', async (req, res) => {
   await Promise.allSettled(tasks);
 
   // ═════════════════════════════════════════════
+  // PHASE 2: If no website_url was provided but Google returned one,
+  // run website crawl + PageSpeed automatically
+  // ═════════════════════════════════════════════
+  const googleWebsite = audit.google?.available ? audit.google.website : null;
+  if (!website_url && googleWebsite && !audit.website?.available) {
+    console.log(`Real audit — No website_url provided, but Google returned: ${googleWebsite}. Running website crawl + PageSpeed...`);
+    const extraTasks = [];
+    const autoUrl = googleWebsite.startsWith('http') ? googleWebsite : `https://${googleWebsite}`;
+
+    // Website crawl
+    extraTasks.push((async () => {
+      try {
+        const html = await fetchPage(autoUrl);
+        const h = html.toLowerCase();
+        const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const cityNorm = city.toLowerCase();
+        const wa = {
+          available: true, url: autoUrl, _autoDetectedFromGoogle: true,
+          hasTitle: /<title[^>]*>/i.test(html),
+          titleText: (html.match(/<title[^>]*>(.*?)<\/title>/i) || [])[1] || '',
+          titleLength: 0, titleOptimized: false, titleContainsName: false, titleContainsCity: false,
+          hasMetaDesc: /name=["']description["']/i.test(html),
+          metaDescText: (html.match(/name=["']description["'][^>]*content=["'](.*?)["']/i) || [])[1] || '',
+          metaDescLength: 0,
+          hasSchemaRestaurant: /schema\.org.*restaurant/i.test(html) || /"@type"\s*:\s*"Restaurant"/i.test(html),
+          hasSchemaLocalBusiness: /"@type"\s*:\s*"LocalBusiness"/i.test(html),
+          hasAggregateRating: /aggregateRating/i.test(html),
+          hasMenuSchema: /hasMenu|MenuSection|MenuItem/i.test(html) && /schema\.org/i.test(html),
+          schemaTypes: [],
+          hasFAQ: /FAQPage/i.test(html),
+          faqCount: (html.match(/FAQPage|"Question"/gi) || []).length,
+          hasOpenGraph: /og:title/i.test(html),
+          nameOnSite: h.includes(nameNorm), cityOnSite: h.includes(cityNorm),
+          phoneOnSite: /(\+33|0[1-9])\s*[\d\s\-.]{8,}/i.test(html),
+          addressOnSite: /rue|avenue|boulevard|place|chemin/i.test(html) && h.includes(cityNorm),
+          napOnSite: false,
+          hasViewport: /viewport/i.test(html), hasCanonical: /rel=["']canonical["']/i.test(html),
+          hasHreflang: /hreflang/i.test(html), httpsRedirect: autoUrl.startsWith('https'),
+          hasRobotsTxt: false, hasSitemap: false,
+          wordCount: html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(w => w.length > 2).length,
+          imageCount: (html.match(/<img/gi) || []).length,
+          hasAltTags: /<img[^>]*alt=["'][^"']+["']/i.test(html), altTagRatio: 0,
+          headingCount: (html.match(/<h[1-3]/gi) || []).length, h1Count: (html.match(/<h1/gi) || []).length,
+          hasBookingLink: /reserv|book|commander|réserv/i.test(html),
+          hasPhoneLink: /tel:/i.test(html),
+          hasMapEmbed: /maps\.google|google\.com\/maps|maps\.apple/i.test(html),
+          hasSocialLinks: /facebook\.com|instagram\.com|twitter\.com|tiktok\.com/i.test(html),
+          socialPlatforms: [],
+          hasBlog: /blog|article|actualit/i.test(html) && (html.match(/<article/gi) || []).length > 0,
+          cms: detectCMS(html, autoUrl)
+        };
+        wa.titleLength = wa.titleText.length;
+        wa.titleContainsName = nameNorm ? wa.titleText.toLowerCase().includes(nameNorm) : false;
+        wa.titleContainsCity = cityNorm ? wa.titleText.toLowerCase().includes(cityNorm) : false;
+        wa.titleOptimized = wa.titleLength > 20 && wa.titleLength < 65 && wa.titleContainsName;
+        wa.metaDescLength = wa.metaDescText.length;
+        wa.napOnSite = wa.nameOnSite && wa.cityOnSite && wa.phoneOnSite;
+        const totalImgs = (html.match(/<img/gi) || []).length;
+        const altImgs = (html.match(/<img[^>]*alt=["'][^"']+["']/gi) || []).length;
+        wa.altTagRatio = totalImgs > 0 ? Math.round(altImgs / totalImgs * 100) : 0;
+        if (/facebook\.com/i.test(html)) wa.socialPlatforms.push('Facebook');
+        if (/instagram\.com/i.test(html)) wa.socialPlatforms.push('Instagram');
+        if (/tiktok\.com/i.test(html)) wa.socialPlatforms.push('TikTok');
+        audit.website = wa;
+        audit.cms = wa.cms || { available: false };
+        audit.cms.available = !!(wa.cms?.detected?.cms);
+        audit.sources.website = 'ok';
+      } catch(e) { audit.sources.website = `error_auto: ${e.message}`; }
+    })());
+
+    // PageSpeed
+    extraTasks.push((async () => {
+      try {
+        const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+        let psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(autoUrl)}&strategy=mobile&category=performance&category=seo&category=accessibility`;
+        if (apiKey) psiUrl += `&key=${apiKey}`;
+        const resp = await safeFetch(psiUrl, {}, 30000);
+        const data = await resp.json();
+        if (data.lighthouseResult) {
+          const cats = data.lighthouseResult.categories || {};
+          audit.performance = {
+            available: true, _autoDetectedFromGoogle: true,
+            mobileScore: Math.round((cats.performance?.score || 0) * 100),
+            seoScore: Math.round((cats.seo?.score || 0) * 100),
+            accessibilityScore: Math.round((cats.accessibility?.score || 0) * 100),
+            fcp: data.lighthouseResult.audits?.['first-contentful-paint']?.displayValue,
+            lcp: data.lighthouseResult.audits?.['largest-contentful-paint']?.displayValue,
+            cls: data.lighthouseResult.audits?.['cumulative-layout-shift']?.displayValue,
+            tbt: data.lighthouseResult.audits?.['total-blocking-time']?.displayValue
+          };
+          audit.sources.pagespeed = 'ok';
+        }
+      } catch(e) { audit.sources.pagespeed = `error_auto: ${e.message}`; }
+    })());
+
+    // Also run desktop PageSpeed
+    extraTasks.push((async () => {
+      try {
+        const apiKey = process.env.GOOGLE_PLACES_API_KEY;
+        let psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(autoUrl)}&strategy=desktop&category=performance`;
+        if (apiKey) psiUrl += `&key=${apiKey}`;
+        const resp = await safeFetch(psiUrl, {}, 30000);
+        const data = await resp.json();
+        if (data.lighthouseResult) {
+          const cats = data.lighthouseResult.categories || {};
+          if (!audit.performance) audit.performance = { available: true };
+          audit.performance.desktopScore = Math.round((cats.performance?.score || 0) * 100);
+        }
+      } catch(e) {}
+    })());
+
+    await Promise.allSettled(extraTasks);
+    console.log(`Real audit — Auto website+PageSpeed done: website=${audit.sources.website}, pagespeed=${audit.sources.pagespeed}`);
+  }
+
+  // ═════════════════════════════════════════════
   // COMPUTE REAL SCORES from collected data
   // ═════════════════════════════════════════════
   const g = audit.google;
