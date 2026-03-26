@@ -1651,15 +1651,15 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                 </div>
             </div>
             <div id="reviewsList"></div>
-            <!-- Semantic Review Analysis -->
-            <div id="reviewSemanticAnalysis" style="margin-top:20px;display:none;">
+            <!-- Semantic Review Analysis (auto-runs after scan) -->
+            <div id="reviewSemanticAnalysis" style="margin-top:20px;">
                 <div style="padding:16px;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                         <h3 style="font-size:.95rem;color:var(--txt);margin:0;">🔬 Analyse sémantique des avis</h3>
-                        <button class="btn" onclick="runReviewAnalysis()" style="background:var(--ind);border:none;color:#fff;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:.75rem;font-weight:700;" id="btnRunSemantic">Analyser</button>
+                        <button class="btn" onclick="runReviewAnalysis()" style="background:var(--ind);border:none;color:#fff;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:.75rem;font-weight:700;" id="btnRunSemantic">⟳ Relancer</button>
                     </div>
                     <div id="semanticResults" style="font-size:.8rem;color:var(--mut);">
-                        <p>Cliquez "Analyser" pour extraire les termes récurrents dans vos avis Google et vérifier s'ils correspondent à votre description GBP/site.</p>
+                        <p>L'analyse sémantique se lance automatiquement après chaque scan. Elle extrait les termes récurrents de vos avis Google et vérifie l'alignement avec votre description.</p>
                     </div>
                 </div>
             </div>
@@ -5544,15 +5544,15 @@ function renderSemanticResults(d){
     el.innerHTML=html;
 }
 
-// Show semantic analysis section when reviews tab opens
+// Show semantic analysis section when reviews tab opens — auto-render cached results
 const _origRenderReviews=renderReviews;
 renderReviews=function(){
     _origRenderReviews();
     const semEl=document.getElementById('reviewSemanticAnalysis');
     if(semEl)semEl.style.display='block';
-    // Auto-run if we have Places data and haven't analyzed yet
-    if(!window._semanticAnalysis&&currentData?._placesApiUsed){
-        setTimeout(()=>runReviewAnalysis(),500);
+    // If we already have results (from post-scan automation), render them
+    if(window._semanticAnalysis){
+        try{renderSemanticResults(window._semanticAnalysis);}catch(e){}
     }
 };
 
@@ -7537,6 +7537,36 @@ async function runPostScanAutomation(){
         }
     }catch(e){summary.reviews={ok:false,detail:e.message};}
 
+    // ── 2b. Auto-run semantic review analysis ──
+    try{
+        const placeId=currentData?.place_id||window._hubData?.place_id||'';
+        const resp=await fetchTimeout(API_BASE+'/api/analyze-reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,place_id:placeId})},15000);
+        const sData=await resp.json();
+        if(sData.success&&sData.data){
+            window._semanticAnalysis=sData.data;
+            // Auto-inject missing terms into Hub description suggestion
+            if(sData.data.missing?.length>0){
+                const hubDesc=document.getElementById('hubDescription');
+                if(hubDesc&&hubDesc.value){
+                    const descLower=hubDesc.value.toLowerCase();
+                    const toAdd=sData.data.missing.filter(t=>!descLower.includes(t)).slice(0,5);
+                    if(toAdd.length>0){
+                        window._suggestedTerms=toAdd;
+                        summary.semantic={ok:true,detail:`${sData.data.terms?.length||0} termes extraits · ${toAdd.length} à ajouter`};
+                    } else {
+                        summary.semantic={ok:true,detail:`${sData.data.terms?.length||0} termes — description alignée`};
+                    }
+                } else {
+                    summary.semantic={ok:true,detail:`${sData.data.terms?.length||0} termes extraits`};
+                }
+            } else {
+                summary.semantic={ok:true,detail:`${sData.data.reviewCount||0} avis analysés`};
+            }
+            // Render if reviews tab is visible
+            try{renderSemanticResults(sData.data);}catch(e){}
+        }
+    }catch(e){summary.semantic={ok:false,detail:e.message};}
+
     // ── 3. Auto-generate Google Post content ──
     try{
         const postContent=generateContent('gbp_posts',name,city,currentData);
@@ -7619,8 +7649,8 @@ function showAutoPilotToast(summary,elapsed){
     if(old)old.remove();
 
     const actions=Object.entries(summary).filter(([k,v])=>v&&v.ok).map(([k,v])=>{
-        const icons={hub:'🏠',reviews:'⭐',posts:'📱',directories:'📋',fixes:'🔧'};
-        const labels={hub:'Hub Central',reviews:'Avis',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations'};
+        const icons={hub:'🏠',reviews:'⭐',semantic:'🔬',posts:'📱',directories:'📋',fixes:'🔧'};
+        const labels={hub:'Hub Central',reviews:'Avis',semantic:'Analyse sémantique',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations'};
         return `<div style="display:flex;align-items:center;gap:6px;font-size:.72rem;"><span>${icons[k]||'•'}</span><span style="color:var(--txt);">${labels[k]||k}</span><span style="color:var(--grn);margin-left:auto;">${v.detail}</span></div>`;
     });
 
