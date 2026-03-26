@@ -1045,6 +1045,21 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
     </div>
 </div>
 
+<!-- AUTH: RESET PASSWORD (from email link ?reset=TOKEN) -->
+<div class="auth-screen" id="authReset">
+    <div class="auth-box">
+        <div class="auth-logo">RestauRank</div>
+        <h2>Nouveau mot de passe</h2>
+        <div class="auth-sub">Choisissez un nouveau mot de passe pour votre compte</div>
+        <div class="auth-error" id="resetError"></div>
+        <div class="auth-field"><label>Nouveau mot de passe</label><input type="password" id="resetNewPassword" placeholder="Minimum 8 caractères" oninput="updateResetPwStrength()"></div>
+        <div class="pw-bar" id="resetPwBar"><div id="resetPwFill" style="width:0;height:100%;border-radius:3px;transition:all .3s;"></div></div>
+        <div class="auth-field"><label>Confirmer le mot de passe</label><input type="password" id="resetConfirmPassword" placeholder="Retapez le mot de passe" onkeydown="if(event.key==='Enter')authResetPassword()"></div>
+        <button class="auth-btn" onclick="authResetPassword()">Réinitialiser</button>
+        <div class="auth-switch"><a onclick="showAuth('login')">← Retour à la connexion</a></div>
+    </div>
+</div>
+
 <!-- ONBOARDING WIZARD (new clients) -->
 <div class="auth-screen" id="authOnboarding" style="overflow-y:auto;">
     <div style="max-width:560px;width:92%;margin:0 auto;padding:30px 0 60px;">
@@ -2737,13 +2752,35 @@ function checkUpgradeRedirect(){
 
 // Open Stripe customer portal
 async function openBillingPortal(){
-    if(authMode!=='server'){alert('Le portail de facturation nécessite un compte serveur. En mode local, les plans sont gratuits.');return;}
+    if(authMode!=='server'){
+        // In local mode, show plan status directly
+        const plan=(currentAccount?.plan||'free').toUpperCase();
+        const modal=document.createElement('div');
+        modal.id='billingModal';
+        modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+        modal.onclick=e=>{if(e.target===modal)modal.remove();};
+        modal.innerHTML=`<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:400px;width:90%;">
+            <h3 style="margin:0 0 12px;font-size:1rem;color:var(--txt);">💳 Facturation</h3>
+            <p style="font-size:.82rem;color:var(--mut);margin-bottom:16px;">Mode démo — les plans sont gratuits. En production, le portail Stripe vous permettra de gérer votre abonnement.</p>
+            <div style="padding:12px;border-radius:10px;background:var(--s1);border:1px solid var(--bdr);margin-bottom:12px;">
+                <div style="font-size:.75rem;color:var(--mut);">Plan actuel</div>
+                <div style="font-size:1.1rem;font-weight:800;color:var(--ind);">${plan}</div>
+            </div>
+            <button onclick="this.closest('#billingModal').remove();showUpgradeModal('','starter');" style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--ind);color:#fff;cursor:pointer;font-size:.85rem;font-weight:700;">⬆️ Changer de plan</button>
+            <button onclick="this.closest('#billingModal').remove()" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid var(--bdr);background:transparent;color:var(--mut);cursor:pointer;font-size:.78rem;">Fermer</button>
+        </div>`;
+        document.body.appendChild(modal);
+        return;
+    }
     try{
         const resp=await fetch(API_BASE+'/api/subscription/portal',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken}});
         const data=await resp.json();
         if(data.portalUrl)window.open(data.portalUrl,'_blank');
-        else alert(data.error||'Portail non disponible');
-    }catch{alert('Erreur de connexion au serveur');}
+        else {
+            // No Stripe configured — show info
+            addToLog('ℹ️ Portail Stripe non configuré. Mode démo actif.');
+        }
+    }catch{addToLog('⚠️ Erreur de connexion au serveur pour le portail de facturation');}
 }
 
 // ============================================================
@@ -2914,6 +2951,70 @@ async function authForgot(){
         }catch(e){}
     }
     showAuthError('forgotError','✅ Si un compte existe, un email a été envoyé.');
+}
+
+// Reset password (from email link)
+function updateResetPwStrength(){
+    const pw=document.getElementById('resetNewPassword').value;
+    const fill=document.getElementById('resetPwFill');
+    if(!fill)return;
+    const s=pw.length<8?1:pw.length<12?2:3;
+    fill.style.width=['33%','66%','100%'][s-1];
+    fill.style.background=['#ef4444','#f59e0b','#10b981'][s-1];
+}
+async function authResetPassword(){
+    const pw=document.getElementById('resetNewPassword').value;
+    const pw2=document.getElementById('resetConfirmPassword').value;
+    if(!pw||pw.length<8)return showAuthError('resetError','Minimum 8 caractères');
+    if(pw!==pw2)return showAuthError('resetError','Les mots de passe ne correspondent pas');
+    const token=window._resetToken;
+    if(!token)return showAuthError('resetError','Lien de réinitialisation invalide');
+    try{
+        const resp=await fetch(API_BASE+'/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,newPassword:pw})});
+        const data=await resp.json();
+        if(data.success){
+            showAuthError('resetError','✅ Mot de passe réinitialisé ! Vous pouvez vous connecter.');
+            setTimeout(()=>showAuth('login'),2000);
+            window.history.replaceState({},'',window.location.pathname);
+        } else {
+            showAuthError('resetError',data.error||'Erreur — le lien a peut-être expiré');
+        }
+    }catch(e){showAuthError('resetError','Erreur de connexion au serveur');}
+}
+
+// Handle URL parameters on page load (reset, invite, upgrade)
+function handleUrlParams(){
+    const params=new URLSearchParams(window.location.search);
+    // Password reset
+    const resetToken=params.get('reset');
+    if(resetToken){
+        window._resetToken=resetToken;
+        showAuth('reset');
+        return true;
+    }
+    // Team invitation
+    const inviteToken=params.get('invite');
+    if(inviteToken){
+        handleTeamInvite(inviteToken);
+        return true;
+    }
+    return false;
+}
+async function handleTeamInvite(token){
+    try{
+        const resp=await fetch(API_BASE+'/api/team/accept-invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({token})});
+        const data=await resp.json();
+        if(data.success){
+            addToLog('✅ Invitation acceptée ! Vous avez rejoint '+data.restaurantName);
+            window.history.replaceState({},'',window.location.pathname);
+        } else {
+            addToLog('⚠️ '+data.error);
+        }
+    }catch(e){
+        // If not logged in, save invite for after login
+        window._pendingInvite=token;
+        showAuth('login');
+    }
 }
 
 async function authLogout(){
@@ -3245,7 +3346,42 @@ function gsAction(action){
 }
 
 function showAccountSettings(){
-    alert('Paramètres du compte : '+currentAccount.email+'\nPlan : '+currentAccount.plan+'\nRôle : '+currentAccount.role);
+    const acc=currentAccount||{};
+    const limits=getPlanLimits();
+    const modal=document.createElement('div');
+    modal.id='accountModal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.onclick=e=>{if(e.target===modal)modal.remove();};
+    modal.innerHTML=`<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:440px;width:92%;">
+        <h3 style="margin:0 0 18px;font-size:1.05rem;color:var(--txt);">⚙️ Mon compte</h3>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:.82rem;">
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--s1);border-radius:8px;border:1px solid var(--bdr);">
+                <span style="color:var(--mut);">Email</span><strong style="color:var(--txt);">${acc.email||'—'}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--s1);border-radius:8px;border:1px solid var(--bdr);">
+                <span style="color:var(--mut);">Nom</span><strong style="color:var(--txt);">${acc.name||'—'}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--s1);border-radius:8px;border:1px solid var(--bdr);">
+                <span style="color:var(--mut);">Plan</span><strong style="color:var(--ind);">${(acc.plan||'free').toUpperCase()}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--s1);border-radius:8px;border:1px solid var(--bdr);">
+                <span style="color:var(--mut);">Restaurants</span><strong style="color:var(--txt);">${getStoredRestaurants().length} / ${limits.restaurants}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--s1);border-radius:8px;border:1px solid var(--bdr);">
+                <span style="color:var(--mut);">Rôle</span><strong style="color:var(--txt);">${acc.role==='admin'?'👑 Admin':acc.role==='manager'?'✏️ Manager':'👤 Utilisateur'}</strong>
+            </div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
+            <button onclick="document.getElementById('accountModal').remove();switchDashTab('settings');" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.8rem;">⚙️ Paramètres</button>
+            <button onclick="document.getElementById('accountModal').remove();showUpgradeModal('','starter');" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--ind);color:#fff;cursor:pointer;font-size:.8rem;font-weight:700;">⬆️ Changer de plan</button>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+            <button onclick="document.getElementById('accountModal').remove();openBillingPortal();" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--mut);cursor:pointer;font-size:.78rem;">💳 Facturation</button>
+            <button onclick="document.getElementById('accountModal').remove();authLogout();" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.05);color:var(--red);cursor:pointer;font-size:.78rem;">🚪 Déconnexion</button>
+        </div>
+        <button onclick="this.closest('#accountModal').remove()" style="margin-top:10px;padding:6px 16px;border-radius:6px;border:1px solid var(--bdr);background:transparent;color:var(--mut);cursor:pointer;font-size:.75rem;">Fermer</button>
+    </div>`;
+    document.body.appendChild(modal);
 }
 
 // ══ ADMIN DASHBOARD ══
@@ -3404,7 +3540,7 @@ async function revokeInviteCode(id){
 }
 
 // Auto-check session on load
-document.addEventListener('DOMContentLoaded',()=>{checkSession();checkUpgradeRedirect();checkRegistrationMode();});
+document.addEventListener('DOMContentLoaded',()=>{if(!handleUrlParams()){checkSession();}checkUpgradeRedirect();checkRegistrationMode();});
 
 // ============================================================
 // SIMULATION — deterministic seed based on name+city (stable scores)
@@ -6181,7 +6317,16 @@ async function publishSocialPost(){
             alert('Erreur: '+e.message);
         }
     } else {
-        alert('Connectez Google pour publier automatiquement');
+        // Save post locally for later publishing + copy to clipboard
+        const posts=JSON.parse(localStorage.getItem('restaurank_saved_posts')||'[]');
+        posts.push({text:content,date:new Date().toISOString(),status:'draft'});
+        try{localStorage.setItem('restaurank_saved_posts',JSON.stringify(posts));}catch{}
+        // Also save to server
+        fetchTimeout(`${API_BASE}/api/posts/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:currentData?.restaurant_id||0,content,status:'draft'})},5000).catch(()=>{});
+        // Copy to clipboard
+        navigator.clipboard?.writeText(content).catch(()=>{});
+        addToLog('📝 Post sauvegardé en brouillon (copié dans le presse-papier). Connectez Google pour publier automatiquement.');
+        if(btn){btn.innerHTML='📋 Copié ! (brouillon sauvé)';setTimeout(()=>{btn.innerHTML='📤 Publier sur Google';},3000);}
     }
 }
 
@@ -6561,14 +6706,81 @@ async function testAndSaveAIKey(){
 }
 
 function exportData(){
-    const data=JSON.stringify(loadAllData());
-    const blob=new Blob([data],{type:'application/json'});
-    const url=URL.createObjectURL(blob);
-    const a=document.createElement('a');
-    a.href=url;
-    a.download='restaurank-backup.json';
-    a.click();
-    URL.revokeObjectURL(url);
+    const name=currentData?.name||storedName||'restaurant';
+    const city=currentData?.city||storedCity||'';
+    // Build export modal
+    const modal=document.createElement('div');
+    modal.id='exportModal';
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    modal.innerHTML=`<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:420px;width:90%;">
+        <h3 style="margin:0 0 16px;font-size:1rem;color:var(--txt);">📤 Exporter les données</h3>
+        <div style="display:flex;flex-direction:column;gap:10px;">
+            <button onclick="doExport('json')" style="padding:12px;border-radius:10px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.85rem;text-align:left;">
+                <strong>📋 JSON</strong> — Sauvegarde complète (restauration possible)
+            </button>
+            <button onclick="doExport('csv')" style="padding:12px;border-radius:10px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.85rem;text-align:left;">
+                <strong>📊 CSV</strong> — Tableau des scores (ouvrable dans Excel)
+            </button>
+            <button onclick="doExport('html')" style="padding:12px;border-radius:10px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.85rem;text-align:left;">
+                <strong>🌐 Rapport HTML</strong> — Rapport visuel imprimable (PDF via navigateur)
+            </button>
+        </div>
+        <button onclick="this.closest('#exportModal').remove()" style="margin-top:14px;padding:8px 20px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--mut);cursor:pointer;font-size:.8rem;">Annuler</button>
+    </div>`;
+    document.body.appendChild(modal);
+}
+function doExport(format){
+    const name=currentData?.name||storedName||'restaurant';
+    const city=currentData?.city||storedCity||'';
+    const fname=name.replace(/[^a-zA-Z0-9àâäéèêëïîôùûüÿç]/g,'_').substring(0,30);
+    document.getElementById('exportModal')?.remove();
+
+    if(format==='json'){
+        const data=JSON.stringify(loadAllData(),null,2);
+        const blob=new Blob([data],{type:'application/json'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download=`restaurank-${fname}.json`;a.click();
+        URL.revokeObjectURL(url);
+    } else if(format==='csv'){
+        // Export audit items as CSV
+        let csv='Catégorie;Item;Score;Statut;Conseil\n';
+        if(currentScores?.categories){
+            Object.values(currentScores.categories).forEach(cat=>{
+                (cat.items||[]).forEach(it=>{
+                    csv+=`"${cat.name||''}";"${it.name||''}";"${it.score||0}/10";"${it.status||''}";"${(it.tip||'').replace(/"/g,"'")}"\n`;
+                });
+            });
+        }
+        csv+=`\nScore SEO;${currentScores?.seo||0}\nScore GEO;${currentScores?.geo||0}\n`;
+        const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download=`restaurank-${fname}.csv`;a.click();
+        URL.revokeObjectURL(url);
+    } else if(format==='html'){
+        // Generate printable HTML report
+        let items='';
+        if(currentScores?.categories){
+            Object.values(currentScores.categories).forEach(cat=>{
+                items+=`<h3 style="margin-top:20px;">${cat.icon||''} ${cat.name||''}</h3><table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><th style="text-align:left;padding:6px;border-bottom:2px solid #6366f1;">Item</th><th style="padding:6px;border-bottom:2px solid #6366f1;">Score</th><th style="padding:6px;border-bottom:2px solid #6366f1;">Statut</th></tr>`;
+                (cat.items||[]).forEach(it=>{
+                    const color=it.status==='ok'?'#10b981':it.status==='warn'?'#f59e0b':'#ef4444';
+                    items+=`<tr><td style="padding:6px;border-bottom:1px solid #eee;">${it.name}</td><td style="padding:6px;text-align:center;border-bottom:1px solid #eee;">${it.score}/10</td><td style="padding:6px;text-align:center;border-bottom:1px solid #eee;color:${color};font-weight:700;">${it.status==='ok'?'✅':it.status==='warn'?'⚠️':'❌'}</td></tr>`;
+                });
+                items+='</table>';
+            });
+        }
+        const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>RestauRank — ${name}</title><style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:40px 20px;color:#1a1a2e;}h1{color:#6366f1;}h3{color:#6366f1;}.scores{display:flex;gap:40px;margin:20px 0;}.score-box{text-align:center;}.score-val{font-size:3rem;font-weight:900;}.seo{color:#6366f1;}.geo{color:#06b6d4;}@media print{body{padding:20px;}}</style></head><body>
+        <h1>📊 RestauRank — Rapport d'audit</h1>
+        <p><strong>${name}</strong> — ${city} — ${new Date().toLocaleDateString('fr-FR')}</p>
+        <div class="scores"><div class="score-box"><div class="score-val seo">${currentScores?.seo||0}</div><div>Score SEO</div></div><div class="score-box"><div class="score-val geo">${currentScores?.geo||0}</div><div>Score GEO</div></div></div>
+        ${items}
+        <hr><p style="color:#888;font-size:12px;">Généré par RestauRank — restaurank.onrender.com</p></body></html>`;
+        const blob=new Blob([html],{type:'text/html'});
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');a.href=url;a.download=`restaurank-rapport-${fname}.html`;a.click();
+        URL.revokeObjectURL(url);
+    }
+    addToLog(`📤 Export ${format.toUpperCase()} téléchargé`);
 }
 
 // Initialize panels on dashboard load
@@ -7856,34 +8068,62 @@ function checkNapConsistency(){
     const hub=getHubData();
     const container=document.getElementById('hubNapConsistency');if(!container)return;
     container.style.display='block';
+    container.innerHTML='<div style="padding:12px;color:var(--cyn);font-size:.8rem;">🔍 Vérification de la cohérence NAP...</div>';
+
     const sources=[
         {name:'Hub Central',icon:'🏠',data:hub},
-        {name:'Google Business',icon:'📊',data:{name:currentData?.name||'',phone:'',address:'',website:currentData?.websiteUrl||''}},
+        {name:'Google Business',icon:'📊',data:{name:currentData?.name||'',phone:currentData?.phone||window._hubData?.phone||'',address:currentData?.address||window._hubData?.address||'',website:currentData?.websiteUrl||window._hubData?.website||''}},
     ];
-    // Check each platform from dirCheckResults
+    // Real audit data from /api/real-audit
+    const ra=window._realAuditData;
+    if(ra){
+        if(ra._foursquareData){sources.push({name:'Foursquare',icon:'📍',data:{name:ra._foursquareData.name||'',phone:ra._foursquareData.phone||'',address:ra._foursquareData.address||'',website:ra._foursquareData.website||''}});}
+        if(ra._tripadvisorData){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:ra._tripadvisorData.name||'',phone:'',address:ra._tripadvisorData.address||'',website:''}});}
+        if(ra._yelpData){sources.push({name:'Yelp',icon:'⭐',data:{name:ra._yelpData.name||'',phone:ra._yelpData.phone||'',address:ra._yelpData.address||'',website:''}});}
+    }
+    // Also check dirCheckResults for platforms not already added
+    const dirList=typeof DIR_LIST!=='undefined'?DIR_LIST:[];
+    const addedPlatforms=sources.map(s=>s.name.toLowerCase());
     const platforms=['yelp','tripadvisor','pagesjaunes','foursquare'];
     platforms.forEach(pid=>{
-        const check=dirCheckResults[pid];
-        if(check&&check.found){
-            sources.push({name:DIR_LIST.find(d=>d.id===pid)?.name||pid,icon:DIR_LIST.find(d=>d.id===pid)?.icon||'📋',data:{name:check.title||'',phone:'',address:check.snippet||'',website:''}});
+        const check=(typeof dirCheckResults!=='undefined')?dirCheckResults[pid]:null;
+        if(check&&check.found&&!addedPlatforms.includes(pid)){
+            const dirInfo=dirList.find(d=>d.id===pid);
+            sources.push({name:dirInfo?.name||pid,icon:dirInfo?.icon||'📋',data:{name:check.title||'',phone:'',address:check.snippet||'',website:''}});
         }
     });
+    // Website data
+    if(storedWebsite&&window._realAudit){
+        sources.push({name:'Site web',icon:'🌐',data:{name:window._realAudit.siteTitle||'',phone:window._realAudit.napPhone||'',address:window._realAudit.napAddress||'',website:storedWebsite}});
+    }
 
-    let html='<div style="font-size:.82rem;font-weight:700;margin-bottom:8px;">🔍 Cohérence NAP — '+sources.length+' sources</div>';
-    html+='<table style="width:100%;border-collapse:collapse;font-size:.72rem;"><tr><th style="text-align:left;padding:6px 8px;border-bottom:1px solid var(--bdr);color:var(--mut);">Source</th><th style="padding:6px 8px;border-bottom:1px solid var(--bdr);color:var(--mut);">Nom</th><th style="padding:6px 8px;border-bottom:1px solid var(--bdr);color:var(--mut);">Tél</th><th style="padding:6px 8px;border-bottom:1px solid var(--bdr);color:var(--mut);">Adresse</th></tr>';
+    let html='<div style="font-size:.82rem;font-weight:700;margin-bottom:10px;">🔍 Cohérence NAP — '+sources.length+' sources comparées</div>';
+    html+='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.72rem;"><tr><th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Source</th><th style="padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Nom</th><th style="padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Téléphone</th><th style="padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Adresse</th><th style="padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Site</th></tr>';
     const refName=hub.name.toLowerCase().trim();
     const refPhone=(hub.phone||'').replace(/\D/g,'');
+    const refWebsite=(hub.website||'').replace(/https?:\/\/(www\.)?/,'').replace(/\/$/,'').toLowerCase();
+    let totalChecks=0,passedChecks=0;
     sources.forEach(s=>{
-        const nameMatch=s.data.name&&s.data.name.toLowerCase().trim()===refName;
-        const phoneMatch=!refPhone||!s.data.phone||(s.data.phone||'').replace(/\D/g,'')===refPhone;
-        html+=`<tr><td style="padding:6px 8px;border-bottom:1px solid var(--bdr);">${s.icon} ${s.name}</td>`;
-        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;"><span style="color:${nameMatch?'var(--grn)':'var(--red)'};">${nameMatch?'✅':'❌'}</span> ${s.data.name||'—'}</td>`;
-        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;"><span style="color:${phoneMatch?'var(--grn)':'var(--org)'};">${phoneMatch?'✅':'⚠️'}</span> ${s.data.phone||'—'}</td>`;
-        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.address||'—'}</td></tr>`;
+        const nameOk=!refName||!s.data.name||s.data.name.toLowerCase().trim().includes(refName)||refName.includes(s.data.name.toLowerCase().trim());
+        const phoneOk=!refPhone||!s.data.phone||(s.data.phone||'').replace(/\D/g,'').includes(refPhone.slice(-8));
+        const webOk=!refWebsite||!s.data.website||(s.data.website||'').replace(/https?:\/\/(www\.)?/,'').replace(/\/$/,'').toLowerCase()===refWebsite;
+        if(s.data.name){totalChecks++;if(nameOk)passedChecks++;}
+        if(s.data.phone){totalChecks++;if(phoneOk)passedChecks++;}
+        if(s.data.website){totalChecks++;if(webOk)passedChecks++;}
+        html+=`<tr style="background:${s.name==='Hub Central'?'rgba(99,102,241,.05)':'transparent'};">`;
+        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);font-weight:${s.name==='Hub Central'?'700':'400'};">${s.icon} ${s.name}</td>`;
+        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.name?`<span style="color:${nameOk?'var(--grn)':'var(--red)'};">${nameOk?'✅':'❌'}</span> ${s.data.name.substring(0,25)}`:'<span style="color:var(--mut);">—</span>'}</td>`;
+        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.phone?`<span style="color:${phoneOk?'var(--grn)':'var(--red)'};">${phoneOk?'✅':'❌'}</span> ${s.data.phone}`:'<span style="color:var(--mut);">—</span>'}</td>`;
+        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.address?s.data.address.substring(0,40):'<span style="color:var(--mut);">—</span>'}</td>`;
+        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.website?`<span style="color:${webOk?'var(--grn)':'var(--red)'};">${webOk?'✅':'❌'}</span>`:'<span style="color:var(--mut);">—</span>'}</td></tr>`;
     });
-    html+='</table>';
-    const score=Math.round(sources.filter(s=>s.data.name&&s.data.name.toLowerCase().trim()===refName).length/sources.length*100);
-    html+=`<div style="margin-top:8px;font-size:.75rem;color:${score>=80?'var(--grn)':score>=50?'var(--org)':'var(--red)'};font-weight:700;">Score cohérence NAP : ${score}% — ${score>=80?'Excellent':'Incohérences détectées, corrigez via le Hub'}</div>`;
+    html+='</table></div>';
+    const score=totalChecks>0?Math.round(passedChecks/totalChecks*100):0;
+    const scoreColor=score>=80?'var(--grn)':score>=50?'var(--org)':'var(--red)';
+    html+=`<div style="margin-top:10px;padding:10px 14px;border-radius:8px;background:${score>=80?'rgba(16,185,129,.08)':score>=50?'rgba(245,158,11,.08)':'rgba(239,68,68,.08)'};border:1px solid ${scoreColor}22;">
+        <span style="font-size:.85rem;font-weight:800;color:${scoreColor};">${score}%</span>
+        <span style="font-size:.75rem;color:var(--txt);margin-left:6px;">${score>=80?'Excellente cohérence NAP':score>=50?'Quelques incohérences détectées — corrigez via le Hub Central':'Incohérences critiques — mettez à jour vos informations sur chaque plateforme'}</span>
+    </div>`;
     container.innerHTML=html;
 }
 

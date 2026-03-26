@@ -930,6 +930,17 @@ app.post('/api/team/role', requireAuth, (req, res) => {
   res.json({ success: true });
 });
 
+// Accept team invitation (from email link ?invite=TOKEN)
+app.post('/api/team/accept-invite', requireAuth, (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token requis' });
+  const invite = db.prepare('SELECT * FROM team_members WHERE invite_token = ? AND status = ?').get(token, 'pending');
+  if (!invite) return res.status(400).json({ error: 'Invitation invalide ou expirée' });
+  const restaurant = db.prepare('SELECT name FROM restaurants WHERE id = ?').get(invite.restaurant_id);
+  db.prepare('UPDATE team_members SET account_id = ?, status = ?, invite_token = NULL WHERE id = ?').run(req.account.id, 'active', invite.id);
+  res.json({ success: true, restaurantName: restaurant?.name || 'restaurant' });
+});
+
 // ============================================================
 // LICENSE VALIDATION — server-side token check
 // ============================================================
@@ -2645,6 +2656,21 @@ app.post('/api/cms/generic/apply', async (req, res) => {
   } else if (cms_type === 'shopify') {
     if (improvements.schema_org) instructions.push({ step: 1, action: 'Aller dans Thèmes > Actions > Modifier le code > theme.liquid > avant </head>', code: `<script type="application/ld+json">${improvements.schema_org}</script>` });
     if (improvements.meta_title) instructions.push({ step: 2, action: 'Aller dans Préférences > Title et meta description', value: improvements.meta_title });
+  } else if (cms_type === 'prestashop') {
+    if (improvements.schema_org) instructions.push({ step: 1, action: 'Aller dans Apparence > Thème et logo > Avancé > Code personnalisé dans <head>', code: `<script type="application/ld+json">${improvements.schema_org}</script>` });
+    if (improvements.meta_title) instructions.push({ step: 2, action: 'Aller dans Préférences > SEO & URLs > Page d\'accueil > Meta title', value: improvements.meta_title });
+    if (improvements.meta_description) instructions.push({ step: 3, action: 'Aller dans Préférences > SEO & URLs > Page d\'accueil > Meta description', value: improvements.meta_description });
+  } else if (cms_type === 'drupal') {
+    if (improvements.schema_org) instructions.push({ step: 1, action: 'Installer le module "Schema.org Metatag" puis aller dans Configuration > Metatag > Global > Schema.org', code: improvements.schema_org });
+    if (improvements.meta_title) instructions.push({ step: 2, action: 'Aller dans Configuration > Système > Informations du site > Nom du site / Slogan', value: improvements.meta_title });
+  } else if (cms_type === 'joomla') {
+    if (improvements.schema_org) instructions.push({ step: 1, action: 'Aller dans Extensions > Templates > Modifier > index.php > avant </head>', code: `<script type="application/ld+json">${improvements.schema_org}</script>` });
+    if (improvements.meta_title) instructions.push({ step: 2, action: 'Aller dans Système > Configuration > Site > Nom du site et Méta description', value: improvements.meta_title });
+  } else {
+    // Generic fallback for unknown CMS
+    if (improvements.schema_org) instructions.push({ step: 1, action: 'Ajoutez ce code dans la section <head> de votre page d\'accueil', code: `<script type="application/ld+json">${improvements.schema_org}</script>` });
+    if (improvements.meta_title) instructions.push({ step: 2, action: 'Modifiez la balise <title> de votre page d\'accueil', value: improvements.meta_title });
+    if (improvements.meta_description) instructions.push({ step: 3, action: 'Ajoutez ou modifiez la balise <meta name="description"> dans <head>', value: improvements.meta_description });
   }
 
   res.json({ success: true, cms_type, instructions });
