@@ -3459,6 +3459,133 @@ app.post('/api/scrape-gmb', async (req, res) => {
 });
 
 // ============================================================
+// REVIEW SEMANTIC ANALYSIS — Extract recurring terms from reviews
+// ============================================================
+app.post('/api/analyze-reviews', async (req, res) => {
+  const { name, city, place_id } = req.body;
+  if (!name || !city) return res.status(400).json({ error: 'Nom et ville requis' });
+
+  const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!placesKey) return res.json({ success: true, data: { reviews: [], terms: [], matches: [], source: 'no_api_key' } });
+
+  try {
+    // Step 1: Get place_id if not provided
+    let pid = place_id;
+    if (!pid) {
+      const q = encodeURIComponent(`${name} ${city} restaurant`);
+      const searchResp = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr&type=restaurant`);
+      const searchData = await searchResp.json();
+      if (searchData.status === 'OK' && searchData.results?.length > 0) pid = searchData.results[0].place_id;
+    }
+    if (!pid) return res.json({ success: true, data: { reviews: [], terms: [], matches: [], source: 'no_place_found' } });
+
+    // Step 2: Get reviews via Place Details (language=fr for French reviews)
+    const fields = 'reviews,name,editorial_summary';
+    const [frResp, enResp] = await Promise.all([
+      fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${pid}&fields=${fields}&key=${placesKey}&language=fr&reviews_sort=newest`),
+      fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${pid}&fields=${fields}&key=${placesKey}&language=fr&reviews_sort=most_relevant`)
+    ]);
+    const frData = await frResp.json();
+    const enData = await enResp.json();
+
+    // Merge reviews (deduplicate by author)
+    const reviewMap = new Map();
+    const allReviews = [...(frData.result?.reviews || []), ...(enData.result?.reviews || [])];
+    allReviews.forEach(r => { if (!reviewMap.has(r.author_name)) reviewMap.set(r.author_name, r); });
+    const reviews = [...reviewMap.values()];
+
+    if (!reviews.length) return res.json({ success: true, data: { reviews: [], terms: [], matches: [], source: 'no_reviews' } });
+
+    // Step 3: Extract terms from review text
+    const allText = reviews.map(r => r.text || '').join(' ').toLowerCase();
+    const words = allText.split(/[\s,.!?;:()'"«»\-—–\n\r\t]+/).filter(w => w.length > 3);
+
+    // French stop words
+    const stopWords = new Set(['avec','dans','pour','plus','cette','mais','sont','tout','très','être','fait','aussi','bien','même','comme','elle','nous','vous','leur','quel','sans','sous','après','avant','entre','depuis','encore','alors','donc','quand','chez','vers','autre','autres','quelque','toute','toutes','tous','avoir','faire','peut','suis','sera','était','avait','serait','aurai','aurait','étaient','cela','ceci','celui','celle','ceux','celles','rien','dont','lequel','laquelle','lesquels','lesquelles','une','des','les','sur','par','qui','que','est','pas','lui','ces','ils','elles','son','ses','nos','vos','ont','été','aux','mes','mon','ton','déjà','trop','assez','juste','fois','jour','lieu']);
+
+    // Count word frequency
+    const freq = {};
+    words.forEach(w => {
+      if (stopWords.has(w) || w.length < 4) return;
+      freq[w] = (freq[w] || 0) + 1;
+    });
+
+    // Extract bigrams (2-word phrases) — more useful than single words
+    const bigrams = {};
+    for (let i = 0; i < words.length - 1; i++) {
+      if (stopWords.has(words[i]) || stopWords.has(words[i + 1])) continue;
+      if (words[i].length < 3 || words[i + 1].length < 3) continue;
+      const bg = words[i] + ' ' + words[i + 1];
+      bigrams[bg] = (bigrams[bg] || 0) + 1;
+    }
+
+    // Food & quality descriptors (weighted higher for restaurants)
+    const foodTerms = new Set(['frais','savoureux','délicieux','excellent','copieux','généreux','authentique','maison','artisanal','parfait','incroyable','succulent','tendre','croustillant','fondant','épicé','gourmand','raffiné','original','traditionnel','moderne','créatif','léger','onctueux','fumé','grillé','braisé','rôti','mariné','bio','local','saison','végétarien','vegan','halal','casher']);
+
+    // Sort terms by frequency, boost food terms
+    const termScores = Object.entries(freq)
+      .map(([term, count]) => ({ term, count, score: count * (foodTerms.has(term) ? 2.5 : 1), isFood: foodTerms.has(term) }))
+      .filter(t => t.count >= 2)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 30);
+
+    const bigramScores = Object.entries(bigrams)
+      .map(([term, count]) => ({ term, count, score: count * 2, isBigram: true }))
+      .filter(t => t.count >= 2)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 15);
+
+    // Step 4: Get the restaurant's GBP description and check for matches
+    const descResp = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${pid}&fields=editorial_summary&key=${placesKey}&language=fr`);
+    const descData = await descResp.json();
+    const editorialSummary = descData.result?.editorial_summary?.overview || '';
+
+    // Check which review terms appear in GBP description / editorial summary
+    const descLower = editorialSummary.toLowerCase();
+    const matched = termScores.filter(t => descLower.includes(t.term)).map(t => t.term);
+    const missing = termScores.filter(t => !descLower.includes(t.term) && t.count >= 3).map(t => t.term);
+
+    // Step 5: Sentiment by topic
+    const positiveReviews = reviews.filter(r => r.rating >= 4);
+    const negativeReviews = reviews.filter(r => r.rating <= 2);
+    const posText = positiveReviews.map(r => (r.text || '').toLowerCase()).join(' ');
+    const negText = negativeReviews.map(r => (r.text || '').toLowerCase()).join(' ');
+
+    // Topics mentioned in positive vs negative reviews
+    const topics = ['service','accueil','ambiance','prix','qualité','portion','attente','terrasse','décor','musique','propreté','menu','carte','choix','réservation','livraison','emballage','fraîcheur','cuisson','présentation'];
+    const topicAnalysis = topics.map(t => ({
+      topic: t,
+      positive: (posText.match(new RegExp(t, 'gi')) || []).length,
+      negative: (negText.match(new RegExp(t, 'gi')) || []).length
+    })).filter(t => t.positive + t.negative > 0).sort((a, b) => (b.positive + b.negative) - (a.positive + a.negative));
+
+    res.json({
+      success: true,
+      data: {
+        reviewCount: reviews.length,
+        avgRating: reviews.reduce((s, r) => s + r.rating, 0) / reviews.length,
+        terms: termScores,
+        bigrams: bigramScores,
+        matched,
+        missing,
+        topicAnalysis,
+        editorialSummary,
+        sampleReviews: reviews.slice(0, 5).map(r => ({
+          author: r.author_name,
+          rating: r.rating,
+          text: (r.text || '').substring(0, 300),
+          time: r.relative_time_description
+        })),
+        source: 'google_places_api'
+      }
+    });
+  } catch (err) {
+    console.error('Review analysis error:', err.message);
+    res.status(500).json({ error: `Erreur analyse avis: ${err.message}` });
+  }
+});
+
+// ============================================================
 // SCRAPE PHOTOS — Dedicated endpoint for photo collection
 // ============================================================
 app.post('/api/scrape-photos', async (req, res) => {

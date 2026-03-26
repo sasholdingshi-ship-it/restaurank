@@ -1651,9 +1651,21 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                 </div>
             </div>
             <div id="reviewsList"></div>
+            <!-- Semantic Review Analysis -->
+            <div id="reviewSemanticAnalysis" style="margin-top:20px;display:none;">
+                <div style="padding:16px;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                        <h3 style="font-size:.95rem;color:var(--txt);margin:0;">🔬 Analyse sémantique des avis</h3>
+                        <button class="btn" onclick="runReviewAnalysis()" style="background:var(--ind);border:none;color:#fff;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:.75rem;font-weight:700;" id="btnRunSemantic">Analyser</button>
+                    </div>
+                    <div id="semanticResults" style="font-size:.8rem;color:var(--mut);">
+                        <p>Cliquez "Analyser" pour extraire les termes récurrents dans vos avis Google et vérifier s'ils correspondent à votre description GBP/site.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    
+
     <!-- SOCIAL TAB -->
     <div class="dash-tab-content" id="tabSocial">
         <div class="social-container" style="padding:20px;max-width:900px;margin:0 auto;">
@@ -3958,10 +3970,13 @@ function generateContent(itemId,name,city,data){
         }],
 
         // --- ON-PAGE ---
-        'op_schema':()=>[{
-            icon:'🔧',label:'Schema.org JSON-LD complet',
-            content:`<code>${JSON.stringify({"@context":"https://schema.org","@type":"Restaurant","name":n,"address":{"@type":"PostalAddress","addressLocality":c,"addressCountry":"FR"},"servesCuisine":"[Type de cuisine]","priceRange":"€€","telephone":"+33[VOTRE_NUMERO]","url":"https://[votre-site].fr","image":"https://[votre-site].fr/photo-restaurant.jpg","openingHoursSpecification":[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"12:00","closes":"14:30"},{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"19:00","closes":"22:30"},{"@type":"OpeningHoursSpecification","dayOfWeek":["Saturday","Sunday"],"opens":"12:00","closes":"23:00"}],"aggregateRating":{"@type":"AggregateRating","ratingValue":"4.5","reviewCount":"150"},"hasMenu":{"@type":"Menu","url":"https://[votre-site].fr/menu"},"geo":{"@type":"GeoCoordinates","latitude":"48.XXXX","longitude":"2.XXXX"},"sameAs":["https://www.facebook.com/[page]","https://www.instagram.com/[compte]","https://www.tripadvisor.fr/[fiche]"]},null,2)}</code>`
-        }],
+        'op_schema':()=>{
+            const improvements=buildWebsiteImprovements();
+            return [{
+                icon:'🔧',label:'Schema.org JSON-LD complet (données réelles)',
+                content:`<div class="preview" style="margin-bottom:8px;"><strong>⚡ Généré automatiquement depuis vos données Google Places + Hub</strong></div><code>${improvements.schema_org}</code>`
+            }];
+        },
         'op_faq':()=>[{
             icon:'❓',label:'FAQ complète + Schema FAQPage',
             content:`<div class="preview"><strong>10 Questions/Réponses optimisées :</strong>\n\n<strong>Q: ${n} propose-t-il une terrasse ?</strong>\nR: Oui, ${n} dispose d'une terrasse agréable à ${c}, idéale pour profiter des beaux jours tout en savourant nos spécialités.\n\n<strong>Q: Peut-on réserver chez ${n} ?</strong>\nR: Absolument ! Vous pouvez réserver en ligne via notre site, par téléphone ou sur TheFork. Nous recommandons de réserver pour le dîner.\n\n<strong>Q: ${n} fait-il de la livraison ?</strong>\nR: Oui, nous proposons la livraison via [plateforme] ainsi que le click & collect directement au restaurant.\n\n<strong>Q: Y a-t-il des options végétariennes ?</strong>\nR: Notre carte propose plusieurs plats végétariens et nous pouvons adapter certains plats sur demande.\n\n<strong>Q: Quel est le budget moyen chez ${n} ?</strong>\nR: Comptez environ [XX]€ pour un repas complet (entrée + plat + dessert). Menu du midi à partir de [XX]€.</div>`
@@ -5417,6 +5432,129 @@ function markReviewReplied(idx){
         renderReviews();
     }
 }
+
+// ============================================================
+// SEMANTIC REVIEW ANALYSIS — Recurring terms + GBP match check
+// ============================================================
+async function runReviewAnalysis(){
+    const btn=document.getElementById('btnRunSemantic');
+    const results=document.getElementById('semanticResults');
+    if(!btn||!results)return;
+    btn.disabled=true;btn.textContent='⏳ Analyse...';
+    results.innerHTML='<p style="color:var(--cyn);">Récupération et analyse des avis Google en cours...</p>';
+
+    try{
+        const name=currentData?.name||storedName||'';
+        const city=currentData?.city||storedCity||'';
+        const placeId=currentData?.place_id||window._hubData?.place_id||'';
+        const resp=await fetchTimeout(API_BASE+'/api/analyze-reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,place_id:placeId})},15000);
+        const data=await resp.json();
+        if(!data.success){results.innerHTML=`<p style="color:var(--red);">❌ ${data.error||'Erreur'}</p>`;return;}
+        window._semanticAnalysis=data.data;
+        renderSemanticResults(data.data);
+    }catch(e){
+        results.innerHTML=`<p style="color:var(--red);">❌ Erreur : ${e.message}</p>`;
+    }finally{
+        btn.disabled=false;btn.textContent='Analyser';
+    }
+}
+
+function renderSemanticResults(d){
+    const el=document.getElementById('semanticResults');if(!el)return;
+
+    // Top terms word cloud
+    const topTerms=(d.terms||[]).slice(0,20);
+    const topBigrams=(d.bigrams||[]).slice(0,10);
+    const maxScore=topTerms[0]?.score||1;
+
+    let html=`<div style="margin-bottom:16px;">
+        <div style="font-weight:700;color:var(--txt);margin-bottom:8px;">📊 ${d.reviewCount||0} avis analysés — note moyenne ${(d.avgRating||0).toFixed(1)}/5</div>
+    </div>`;
+
+    // Terms cloud
+    html+=`<div style="margin-bottom:16px;">
+        <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">🏷️ Termes les plus fréquents dans vos avis</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+    topTerms.forEach(t=>{
+        const size=Math.max(0.65,Math.min(1.1,0.65+t.score/maxScore*0.5));
+        const bg=t.isFood?'rgba(16,185,129,.15)':'rgba(99,102,241,.1)';
+        const color=t.isFood?'var(--grn)':'var(--ind)';
+        html+=`<span style="display:inline-block;padding:4px 10px;border-radius:20px;background:${bg};color:${color};font-size:${size}rem;font-weight:600;white-space:nowrap;" title="${t.count}x dans les avis">${t.term} <small style="opacity:.6;">${t.count}x</small></span>`;
+    });
+    html+=`</div></div>`;
+
+    // Bigrams
+    if(topBigrams.length>0){
+        html+=`<div style="margin-bottom:16px;">
+            <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">🔗 Expressions récurrentes (2 mots)</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
+        topBigrams.forEach(t=>{
+            html+=`<span style="display:inline-block;padding:4px 10px;border-radius:20px;background:rgba(139,92,246,.1);color:var(--prp);font-size:.78rem;font-weight:600;">"${t.term}" <small style="opacity:.6;">${t.count}x</small></span>`;
+        });
+        html+=`</div></div>`;
+    }
+
+    // Match check: terms in GBP vs missing
+    if(d.matched?.length||d.missing?.length){
+        html+=`<div style="margin-bottom:16px;padding:14px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);">
+            <div style="font-weight:700;color:var(--txt);margin-bottom:10px;font-size:.85rem;">🎯 Match description GBP ↔ Avis clients</div>`;
+        if(d.matched?.length){
+            html+=`<div style="margin-bottom:8px;"><span style="color:var(--grn);font-weight:600;">✅ Termes présents dans GBP :</span> `;
+            html+=d.matched.map(t=>`<span style="background:rgba(16,185,129,.12);color:var(--grn);padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600;">${t}</span>`).join(' ');
+            html+=`</div>`;
+        }
+        if(d.missing?.length){
+            html+=`<div><span style="color:var(--org);font-weight:600;">⚠️ Termes manquants (à ajouter à votre description GBP/site) :</span><br>`;
+            html+=d.missing.slice(0,12).map(t=>`<span style="background:rgba(245,158,11,.12);color:var(--org);padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600;display:inline-block;margin:2px;">${t}</span>`).join(' ');
+            html+=`<div style="margin-top:6px;font-size:.72rem;color:var(--mut);">💡 Ces termes sont fréquemment utilisés par vos clients mais absents de votre description. Les ajouter aligne votre profil avec ce que les LLM extraient des avis.</div>`;
+            html+=`</div>`;
+        }
+        html+=`</div>`;
+    }
+
+    // Topic sentiment analysis
+    if(d.topicAnalysis?.length){
+        html+=`<div style="margin-bottom:16px;">
+            <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">📈 Analyse par thème (positif vs négatif)</div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">`;
+        d.topicAnalysis.slice(0,10).forEach(t=>{
+            const total=t.positive+t.negative;
+            const posPct=Math.round(t.positive/total*100);
+            const barColor=posPct>=70?'var(--grn)':posPct>=40?'var(--org)':'var(--red)';
+            html+=`<div style="padding:8px 10px;background:var(--s1);border-radius:8px;border:1px solid var(--bdr);">
+                <div style="font-weight:600;font-size:.78rem;color:var(--txt);margin-bottom:4px;text-transform:capitalize;">${t.topic}</div>
+                <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden;">
+                    <div style="height:100%;width:${posPct}%;background:${barColor};border-radius:3px;"></div>
+                </div>
+                <div style="font-size:.65rem;color:var(--mut);margin-top:2px;">👍 ${t.positive} / 👎 ${t.negative} (${posPct}% positif)</div>
+            </div>`;
+        });
+        html+=`</div></div>`;
+    }
+
+    // Actionable recommendation
+    html+=`<div style="padding:12px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:10px;">
+        <div style="font-weight:700;color:var(--ind);margin-bottom:6px;font-size:.82rem;">💡 Recommandation GEO</div>
+        <div style="font-size:.78rem;color:var(--txt);line-height:1.5;">
+            ${d.missing?.length>3?`<strong>Action prioritaire :</strong> Ajoutez les termes "${d.missing.slice(0,3).join('", "')}" à votre description GBP et à votre site. Quand les LLM voient ces termes dans les avis ET dans la description officielle, ils les pondèrent plus fortement dans les recommandations.`:'Votre description couvre bien les termes utilisés par vos clients.'}
+            ${d.topicAnalysis?.find(t=>t.negative>t.positive)?`<br><strong>Point d'attention :</strong> Le thème "${d.topicAnalysis.find(t=>t.negative>t.positive).topic}" a plus de mentions négatives — les LLM captent aussi les avis négatifs.`:''}
+        </div>
+    </div>`;
+
+    el.innerHTML=html;
+}
+
+// Show semantic analysis section when reviews tab opens
+const _origRenderReviews=renderReviews;
+renderReviews=function(){
+    _origRenderReviews();
+    const semEl=document.getElementById('reviewSemanticAnalysis');
+    if(semEl)semEl.style.display='block';
+    // Auto-run if we have Places data and haven't analyzed yet
+    if(!window._semanticAnalysis&&currentData?._placesApiUsed){
+        setTimeout(()=>runReviewAnalysis(),500);
+    }
+};
 
 // SEO-optimized review reply generator — includes local keywords naturally
 function generateReviewReply(idx){
@@ -6888,29 +7026,117 @@ function getRandomReferer(){
 function buildWebsiteImprovements(){
     const name=currentData?.name||storedName||'Restaurant';
     const city=currentData?.city||storedCity||'Paris';
+    const hd=window._hubData||{};
+    const hub=typeof getHubData==='function'?getHubData():{};
+
+    // Build real data from Places API + Hub
+    const phone=hub.phone||hd.phone||currentData?.phone||'';
+    const address=hub.address||hd.address||currentData?.address||'';
+    const website=hub.website||hd.website||currentData?.websiteUrl||storedWebsite||'';
+    const rating=hd.rating||currentData?.rating||null;
+    const reviewCount=hd.reviewCount||currentData?.reviewCount||null;
+    const category=hub.cuisine||hd.category||currentData?.category||'';
+    const description=hub.description||hd.description||currentData?.description||'';
+    const lat=hd.lat||currentData?.lat||null;
+    const lng=hd.lng||currentData?.lng||null;
+    const hours=hd.hours||currentData?.hours||null;
+    const mapsUrl=hd.mapsUrl||currentData?.mapsUrl||'';
+    const placeId=hd.place_id||currentData?.place_id||'';
+
+    // Parse address components
+    let streetAddress='', postalCode='', addressLocality=city;
+    if(address){
+        const pcMatch=address.match(/(\d{5})/);
+        if(pcMatch)postalCode=pcMatch[1];
+        const parts=address.split(',').map(s=>s.trim());
+        if(parts.length>=1)streetAddress=parts[0];
+        if(parts.length>=2){
+            const cityPart=parts[parts.length-1].replace(/\d{5}/,'').replace(/France/i,'').trim();
+            if(cityPart)addressLocality=cityPart;
+        }
+    }
+
+    // Determine servesCuisine from category (LLM-critical field)
+    let cuisineTypes=[];
+    const catLower=(category||'').toLowerCase();
+    const cuisineMap={'ramen':['Ramen','Japanese','Noodles'],'sushi':['Sushi','Japanese'],'pizza':['Pizza','Italian'],'burger':['Burger','American'],'bistro':['French','Bistro'],'brasserie':['French','Brasserie'],'italien':['Italian'],'japonais':['Japanese'],'chinois':['Chinese'],'indien':['Indian'],'thaï':['Thai'],'libanais':['Lebanese','Mediterranean'],'mexicain':['Mexican'],'coréen':['Korean'],'vietnamien':['Vietnamese'],'français':['French'],'méditerranéen':['Mediterranean'],'gastronomique':['Fine Dining','French'],'végétarien':['Vegetarian'],'vegan':['Vegan'],'crêperie':['Crêpes','French'],'kebab':['Kebab','Turkish'],'tapas':['Tapas','Spanish']};
+    Object.entries(cuisineMap).forEach(([key,vals])=>{if(catLower.includes(key))cuisineTypes.push(...vals);});
+    if(!cuisineTypes.length&&category)cuisineTypes=[category.replace(/^Restaurant\s*/i,'')];
+    if(!cuisineTypes.length)cuisineTypes=['Restaurant'];
+    cuisineTypes=[...new Set(cuisineTypes)];
+
+    // Build opening hours from Places API data
+    let openingHours=[];
+    if(Array.isArray(hours)){
+        const dayMap={'lundi':'Monday','mardi':'Tuesday','mercredi':'Wednesday','jeudi':'Thursday','vendredi':'Friday','samedi':'Saturday','dimanche':'Sunday'};
+        hours.forEach(h=>{
+            if(typeof h!=='string')return;
+            const dayMatch=h.match(/^(\w+)\s*:\s*(.+)/i);
+            if(!dayMatch)return;
+            const day=dayMap[dayMatch[1].toLowerCase()]||dayMatch[1];
+            const times=dayMatch[2];
+            if(times.toLowerCase().includes('fermé'))return;
+            const slots=times.split(',').map(s=>s.trim());
+            slots.forEach(slot=>{
+                const timeMatch=slot.match(/(\d{1,2}[h:]\d{2})\s*[–\-à]\s*(\d{1,2}[h:]\d{2})/);
+                if(timeMatch){
+                    const opens=timeMatch[1].replace('h',':').replace(/^(\d):/, '0$1:');
+                    const closes=timeMatch[2].replace('h',':').replace(/^(\d):/, '0$1:');
+                    openingHours.push({"@type":"OpeningHoursSpecification","dayOfWeek":day,"opens":opens,"closes":closes});
+                }
+            });
+        });
+    }
+    if(!openingHours.length){
+        openingHours=[{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"12:00","closes":"14:30"},{"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"19:00","closes":"22:30"}];
+    }
+
+    // Build the complete Schema.org (LLM-optimized)
+    const schema={"@context":"https://schema.org","@type":"Restaurant","@id":(website||`https://${name.toLowerCase().replace(/\s+/g,'-')}.fr`)+'#restaurant',"name":name};
+    if(description)schema.description=description.substring(0,200);
+    schema.servesCuisine=cuisineTypes.length===1?cuisineTypes[0]:cuisineTypes;
+    schema.address={"@type":"PostalAddress","streetAddress":streetAddress||address,"postalCode":postalCode,"addressLocality":addressLocality,"addressCountry":"FR"};
+    if(phone)schema.telephone=phone;
+    if(website)schema.url=website;
+    schema.priceRange='€€';
+    if(lat&&lng)schema.geo={"@type":"GeoCoordinates","latitude":lat,"longitude":lng};
+    schema.openingHoursSpecification=openingHours;
+    if(rating&&reviewCount)schema.aggregateRating={"@type":"AggregateRating","ratingValue":String(rating),"reviewCount":String(reviewCount),"bestRating":"5"};
+    schema.hasMenu={"@type":"Menu","url":(website?website+'/menu':'https://[votre-site].fr/menu')};
+    schema.image=website?website+'/images/restaurant.jpg':'https://[votre-site].fr/photo.jpg';
+    schema.sameAs=[mapsUrl||'https://maps.google.com/?q='+encodeURIComponent(name+' '+city),'https://www.yelp.fr/biz/[votre-fiche]','https://www.tripadvisor.fr/[votre-fiche]','https://www.instagram.com/[compte]','https://www.facebook.com/[page]'];
+    // parentOrganization for multi-site groups
+    const allRestos=Object.keys(JSON.parse(localStorage.getItem('restaurank_data')||'{}').restaurants||{});
+    if(allRestos.length>1){
+        const brandName=name.split(' ')[0];
+        schema.parentOrganization={"@type":"Organization","@id":(website||`https://${brandName.toLowerCase()}.fr`)+'#organization',"name":brandName};
+    }
+
+    // Real rating in meta description
+    const ratingText=rating?` ⭐ ${rating}/5 (${reviewCount||''} avis)`:'';
 
     return {
-        schema_org:JSON.stringify({
-            "@context":"https://schema.org",
-            "@type":"Restaurant",
-            "name":name,
-            "address":{"@type":"PostalAddress","addressLocality":city,"addressCountry":"FR"},
-            "servesCuisine":"Cuisine française",
-            "priceRange":"€€",
-            "url":currentData?.websiteUrl||storedWebsite||''
-        },null,2),
-        meta_title:`${name} — Restaurant à ${city} | Réservation en ligne`,
-        meta_description:`Découvrez ${name} à ${city}. Cuisine raffinée, produits frais et locaux. Réservez votre table en ligne. ⭐ Noté 4.5/5 sur Google.`,
+        schema_org:JSON.stringify(schema,null,2),
+        schema_jsonld:schema,
+        meta_title:`${name} — ${cuisineTypes[0]!=='Restaurant'?cuisineTypes[0]+' ':''} à ${city} | Réservation`,
+        meta_description:`${name}${address?' — '+streetAddress:''} à ${city}. ${cuisineTypes.join(', ')}. ${description?description.substring(0,80)+'.':'Cuisine authentique, produits frais.'}${ratingText}`,
         faq_page:`<h1>Questions fréquentes — ${name}</h1>
-<h2>Où se trouve ${name} ?</h2><p>${name} est situé à ${city}.</p>
-<h2>Comment réserver chez ${name} ?</h2><p>Réservez directement en ligne ou appelez-nous.</p>
-<h2>Quels sont les horaires de ${name} ?</h2><p>Nous sommes ouverts du lundi au samedi, midi et soir.</p>
-<h2>${name} propose-t-il un menu végétarien ?</h2><p>Oui, nous proposons des options végétariennes et véganes.</p>`,
-        nap_footer:`<div itemscope itemtype="https://schema.org/Restaurant">
+<h2>Où se trouve ${name} ?</h2><p>${name} est situé ${address?'au '+address:'à '+city}.</p>
+<h2>Comment réserver chez ${name} ?</h2><p>Réservez directement ${website?'<a href="'+website+'">sur notre site</a>':'en ligne'} ou appelez-nous${phone?' au '+phone:''}.</p>
+<h2>Quels sont les horaires de ${name} ?</h2><p>${Array.isArray(hours)?hours.join('. '):'Nous sommes ouverts du lundi au samedi, midi et soir.'}.</p>
+<h2>${name} propose-t-il un menu végétarien ?</h2><p>Oui, nous proposons des options végétariennes et adaptées sur demande.</p>
+<h2>Quel est le budget moyen chez ${name} ?</h2><p>Comptez environ 15-25€ pour un repas complet.</p>`,
+        nap_footer:`<footer itemscope itemtype="https://schema.org/Restaurant">
 <h2>Contactez <span itemprop="name">${name}</span></h2>
 <div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress">
-<span itemprop="addressLocality">${city}</span>, <span itemprop="addressCountry">France</span>
-</div></div>`
+<span itemprop="streetAddress">${streetAddress||'[Adresse]'}</span>,
+<span itemprop="postalCode">${postalCode||'[Code postal]'}</span>
+<span itemprop="addressLocality">${addressLocality}</span>,
+<span itemprop="addressCountry">France</span>
+</div>
+${phone?'<a itemprop="telephone" href="tel:'+phone.replace(/\s/g,'')+'">'+phone+'</a>':''}
+${website?'<a itemprop="url" href="'+website+'">'+website.replace(/https?:\/\//,'')+'</a>':''}
+</footer>`
     };
 }
 
