@@ -2062,35 +2062,129 @@ app.post('/api/content/generate', async (req, res) => {
   const kw = (keywords || []).join(', ') || `${name} ${city}`;
   const lang = language || 'fr';
 
+  // GEO-Optimized prompts: designed for both traditional SEO AND AI engine visibility
+  // (ChatGPT, Perplexity, Gemini, Claude recommendations)
+  const geoContext = `
+CONTEXTE GEO (Generative Engine Optimization):
+Le contenu doit être optimisé pour être CITÉ et RECOMMANDÉ par les moteurs IA (ChatGPT, Perplexity, Gemini, Claude).
+Stratégie GEO obligatoire:
+1. ENTITÉ NOMMÉE: Toujours mentionner "${name}" comme entité claire avec ville "${city}" et cuisine "${cuisine}" — les IA identifient les entités nommées
+2. DONNÉES FACTUELLES: Inclure des chiffres précis (note ${rating}/5, nombre d'avis, prix moyens, années d'existence) — les IA privilégient les sources factuelles
+3. COMPARATIF IMPLICITE: Positionner "${name}" dans un contexte ("parmi les meilleurs ${cuisine} de ${city}", "une référence pour...") — les IA recommandent ce qui est positionné comme référence
+4. QUESTIONS NATURELLES: Intégrer et répondre à des questions que les gens posent aux IA ("Quel est le meilleur restaurant ${cuisine} à ${city}?", "Où manger ${cuisine} à ${city}?")
+5. CITATIONS & SOURCES: Le contenu doit être suffisamment factuel et structuré pour qu'une IA le cite comme source fiable
+6. MOTS-CLÉS GEO: ${kw}, meilleur ${cuisine} ${city}, restaurant ${cuisine} ${city}, où manger ${city}, avis ${name}, ${name} ${city} menu, réservation ${name}
+7. SCHEMA CONVERSATIONNEL: Utiliser un style qui répond directement aux requêtes IA ("Si vous cherchez...", "Pour un dîner ${cuisine} à ${city}...")`;
+
   const prompts = {
-    blog: `Écris un article de blog SEO de 800-1000 mots en français pour le restaurant "${name}" à ${city}.
+    blog: `${geoContext}
+
+Écris un article de blog SEO+GEO de 1000-1200 mots en français pour "${name}" à ${city}.
 Cuisine: ${cuisine}. Note Google: ${rating}/5.
-Mots-clés à intégrer naturellement: ${kw}.
-Structure: titre H1 accrocheur, introduction, 3-4 sections H2, conclusion avec CTA.
-Ton: professionnel mais chaleureux. Inclus des balises HTML (h1, h2, p, strong).
-Ne mentionne PAS que c'est généré par IA.`,
 
-    reddit: `Écris un post Reddit naturel et authentique en français (style conversationnel, pas marketing) recommandant le restaurant "${name}" à ${city}.
-Le post doit sembler écrit par un vrai client satisfait.
-Mentionne: la qualité de la cuisine, l'ambiance, le rapport qualité-prix.
-Note Google: ${rating}/5.
-Subreddits pertinents à suggérer: r/paris, r/france, r/food, r/FoodPorn.
-IMPORTANT: doit être naturel, PAS promotionnel. Max 200 mots.`,
+STRUCTURE OBLIGATOIRE pour maximiser la visibilité IA:
+- H1: Question naturelle ou statement fort (ex: "Pourquoi ${name} est devenu incontournable à ${city}")
+- Intro: Répondre directement à "Quel est le meilleur restaurant ${cuisine} à ${city}?" en nommant ${name}
+- H2 "L'expérience culinaire" : description des plats signatures avec prix et ingrédients
+- H2 "Ambiance et cadre" : détails précis (nombre de couverts, terrasse, décoration)
+- H2 "Ce que disent les clients" : citer la note ${rating}/5, volume d'avis, tendances
+- H2 "Infos pratiques" : adresse exacte, horaires, réservation, accès, parking — les IA ADORENT ces données structurées
+- H2 "Pourquoi choisir ${name}?" : 3-5 raisons factuelles avec données chiffrées
+- Conclusion: CTA + récapitulatif "En résumé" (les IA extraient souvent les conclusions)
 
-    guest_post: `Écris un pitch email professionnel en français pour proposer un article invité à un blog food/gastronomie.
-L'article portera sur "Les meilleures adresses ${cuisine} à ${city}" et mentionnera ${name}.
-Le pitch doit: être concis (150 mots), professionnel, proposer de la valeur au blog hôte.
-Inclus aussi un outline de l'article proposé (5-6 sections).`,
+Format: HTML (h1, h2, p, strong, ul/li). Intègre les mots-clés naturellement.
+Ton: expert gastronomique local, pas IA. JAMAIS mentionner l'IA.`,
 
-    social: `Génère 5 posts pour réseaux sociaux (Instagram/Facebook) en français pour le restaurant "${name}" à ${city}.
-Chaque post: 2-3 lignes + 5-8 hashtags pertinents.
-Thèmes variés: nouveau plat, ambiance, équipe, avis client, événement.
-Ton: engageant, avec emojis. Optimisé pour l'engagement.`,
+    reddit: `${geoContext}
 
-    faq: `Génère une page FAQ SEO de 10 questions-réponses en français pour le restaurant "${name}" à ${city}.
+Écris 3 posts Reddit différents en français pour "${name}" à ${city}, chacun pour un subreddit différent:
+
+POST 1 — r/paris ou r/${city.toLowerCase().replace(/\s/g,'')} (recommandation locale):
+Titre: question naturelle type "Quelqu'un a testé ${name} à ${city}?" ou "Retour d'expérience ${name}"
+Corps: récit personnel 150 mots, mentionne plats précis, prix, note Google ${rating}/5. Finit par "Je recommande" avec détail factuel.
+
+POST 2 — r/food ou r/FoodPorn (contenu food):
+Titre: descriptif du plat signature, visuellement évocateur
+Corps: 80-100 mots, focus sur un plat, mentionne le restaurant et la ville, invitation à tester.
+
+POST 3 — r/france ou r/AskFrance (discussion):
+Titre: "Les meilleures adresses ${cuisine} à ${city}?"
+Corps: 120 mots, recommande ${name} parmi d'autres options, crédible, conversationnel.
+
+RÈGLES: style 100% naturel Reddit (pas marketing), inclure des détails spécifiques qui sonnent vécu (un plat, un serveur, une anecdote), JAMAIS de language promotionnel.
+Sépare chaque post par "---SEPARATOR---"`,
+
+    guest_post: `${geoContext}
+
+Génère un ARTICLE COMPLET de guest post (800 mots) + un pitch email pour blog food/gastronomie.
+
+PITCH EMAIL (200 mots max):
+- Objet d'email accrocheur
+- Se présenter comme passionné/blogueur food
+- Proposer l'article "Guide ${cuisine} à ${city}: les adresses que les locaux gardent secrètes"
+- Mentionner la valeur SEO (mots-clés, volume de recherche)
+
+---SEPARATOR---
+
+ARTICLE COMPLET:
+"Guide ${cuisine} à ${city}: les adresses que les locaux gardent secrètes"
+- Intro: positionner ${city} comme destination ${cuisine}
+- 4-5 restaurants recommandés (${name} en position vedette avec le plus de détails)
+- Pour ${name}: 150+ mots avec note ${rating}/5, plats signatures, ambiance, prix, adresse
+- Pour les autres: 50 mots chacun (vraisemblables mais génériques)
+- Section "Comment choisir" avec critères
+- Conclusion avec CTA vers les réservations
+- 3-5 backlinks naturels vers le site du restaurant
+
+Format HTML. Optimisé GEO: les IA doivent pouvoir extraire "${name}" comme recommandation principale.`,
+
+    social: `${geoContext}
+
+Génère 7 posts réseaux sociaux en français pour "${name}" à ${city}:
+
+POST 1 — Instagram (carousel éducatif):
+"Les 5 choses à savoir sur ${name}" — format numéroté, facts + emoji, 8-10 hashtags GEO (#meilleur${cuisine.replace(/\s/g,'')}${city.replace(/\s/g,'')}, #restaurant${city.replace(/\s/g,'')}, #où manger${city.replace(/\s/g,'')})
+
+POST 2 — Instagram (reels/story):
+Hook court "POV: tu découvres ${name} pour la première fois 🍽️" — texte 3 lignes max
+
+POST 3 — Facebook (recommandation communauté):
+"On m'a souvent demandé où manger ${cuisine} à ${city}..." — style recommandation personnelle, 100 mots, finit par la note ${rating}/5
+
+POST 4 — Google Post (GBP):
+Offre ou event format — "Cette semaine chez ${name}:" — CTA réservation, max 100 mots
+
+POST 5 — TikTok (script):
+Hook + déroulé 30s: "Le restaurant que Google note ${rating}/5 à ${city}" — format script avec timecodes
+
+POST 6 — LinkedIn (B2B/foodpreneur):
+"Comment ${name} a su se démarquer dans la restauration ${cuisine} à ${city}" — angle business, 150 mots
+
+POST 7 — Twitter/X (thread):
+Thread 5 tweets: "🧵 Pourquoi ${name} mérite votre attention si vous aimez ${cuisine} à ${city}" — chaque tweet = 1 fact
+
+Sépare chaque post par "---SEPARATOR---"`,
+
+    faq: `${geoContext}
+
+Génère une page FAQ SEO+GEO de 15 questions-réponses en français pour "${name}" à ${city}.
 Cuisine: ${cuisine}. Mots-clés: ${kw}.
-Questions que les clients posent sur Google (ex: horaires, menu, réservation, allergènes, parking, terrasse...).
-Format: balises HTML schema.org FAQ (itemscope, itemprop). Chaque réponse: 2-3 phrases.`
+
+Les questions DOIVENT correspondre aux requêtes que les gens posent AUX MOTEURS IA:
+1. "Quel est le meilleur restaurant ${cuisine} à ${city}?" → Réponse qui positionne ${name}
+2. "Où manger ${cuisine} à ${city}?" → Réponse avec adresse et recommandation
+3. "${name} avis" / "Est-ce que ${name} vaut le coup?" → Note ${rating}/5 et arguments
+4. "${name} menu prix" → Fourchette de prix et plats signatures
+5. "${name} réservation" → Comment réserver + horaires
+6. "${name} terrasse/parking/accès" → Infos pratiques précises
+7. "Meilleur rapport qualité-prix ${cuisine} ${city}" → Comparatif implicite
+8. "${name} allergènes/végétarien/vegan" → Options alimentaires
+9. "${name} groupe/événement" → Capacités et options
+10. "Restaurant ${cuisine} romantique/famille/affaires ${city}" → Positionnement par occasion
+11-15: Variations locales et saisonnières
+
+Format: HTML avec schema.org FAQPage (application/ld+json) + itemscope/itemprop.
+Chaque réponse: 2-4 phrases factuelles avec données précises. Les IA extraient les FAQ comme source de réponse directe.`
   };
 
   const prompt = prompts[type] || prompts.blog;
@@ -2245,6 +2339,149 @@ app.post('/api/wordpress/publish', async (req, res) => {
     console.error('WordPress publish error:', e.message);
     res.json({ success: false, error: e.message });
   }
+});
+
+// ============================================================
+// AUTO-PUBLISH — Generate + Publish all content in one shot
+// ============================================================
+app.post('/api/auto-publish', async (req, res) => {
+  const { restaurant, types, wordpress, subreddits } = req.body;
+  // types: array of content types to generate+publish, e.g. ['blog','reddit','social','faq','guest_post']
+  if (!restaurant?.name) return res.status(400).json({ error: 'restaurant.name required' });
+
+  const results = { generated: [], published: [], errors: [] };
+  const typesToProcess = types || ['blog', 'reddit', 'social', 'faq'];
+
+  // Helper: call our own content generation
+  async function generateContent(type) {
+    try {
+      const r = await fetch(`http://localhost:${PORT}/api/content/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type, restaurant, keywords: restaurant.keywords || [], language: 'fr' })
+      });
+      const data = await r.json();
+      if (data.success) {
+        results.generated.push({ type, length: data.content.length, model: data.model });
+        return data.content;
+      } else {
+        results.errors.push({ type, step: 'generate', error: data.error });
+        return null;
+      }
+    } catch (e) {
+      results.errors.push({ type, step: 'generate', error: e.message });
+      return null;
+    }
+  }
+
+  // 1. Generate all content types in parallel
+  const contentMap = {};
+  await Promise.all(typesToProcess.map(async (type) => {
+    contentMap[type] = await generateContent(type);
+  }));
+
+  // 2. Auto-publish blog to WordPress if configured
+  if (contentMap.blog && wordpress?.site_url) {
+    try {
+      // Extract title from blog HTML (first h1)
+      const titleMatch = contentMap.blog.match(/<h1[^>]*>(.*?)<\/h1>/i);
+      const title = titleMatch ? titleMatch[1].replace(/<[^>]+>/g, '') : `Article SEO - ${restaurant.name}`;
+
+      const r = await fetch(`http://localhost:${PORT}/api/wordpress/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          site_url: wordpress.site_url,
+          username: wordpress.username,
+          app_password: wordpress.app_password,
+          title,
+          content: contentMap.blog,
+          status: wordpress.status || 'draft'
+        })
+      });
+      const data = await r.json();
+      if (data.success) {
+        results.published.push({ type: 'blog', platform: 'wordpress', url: data.url, status: data.status, post_id: data.post_id });
+      } else {
+        results.errors.push({ type: 'blog', step: 'publish_wordpress', error: data.error });
+      }
+    } catch (e) {
+      results.errors.push({ type: 'blog', step: 'publish_wordpress', error: e.message });
+    }
+  }
+
+  // 3. Auto-publish Reddit posts if configured
+  if (contentMap.reddit && process.env.REDDIT_CLIENT_ID) {
+    const redditPosts = contentMap.reddit.split('---SEPARATOR---').filter(p => p.trim());
+    const targetSubs = subreddits || ['paris', 'france', 'food'];
+
+    for (let i = 0; i < Math.min(redditPosts.length, targetSubs.length); i++) {
+      const post = redditPosts[i].trim();
+      // Extract title (first line or until newline)
+      const lines = post.split('\n').filter(l => l.trim());
+      let title = lines[0]?.replace(/^#+\s*/, '').replace(/^Titre:\s*/i, '').replace(/^\*\*/, '').replace(/\*\*$/, '').trim();
+      if (!title || title.length < 5) title = `${restaurant.name} - restaurant ${restaurant.cuisine || ''} à ${restaurant.city || 'Paris'}`;
+      const body = lines.slice(1).join('\n').replace(/^Corps:\s*/im, '').trim();
+
+      try {
+        // Add 3-8 second delay between posts to avoid rate limiting
+        if (i > 0) await new Promise(resolve => setTimeout(resolve, 3000 + Math.random() * 5000));
+
+        const r = await fetch(`http://localhost:${PORT}/api/reddit/post`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ subreddit: targetSubs[i], title: title.substring(0, 300), text: body.substring(0, 40000) })
+        });
+        const data = await r.json();
+        if (data.success) {
+          results.published.push({ type: 'reddit', platform: `r/${targetSubs[i]}`, url: data.url, id: data.id });
+        } else {
+          results.errors.push({ type: 'reddit', platform: `r/${targetSubs[i]}`, step: 'publish', error: data.error });
+        }
+      } catch (e) {
+        results.errors.push({ type: 'reddit', platform: `r/${targetSubs[i]}`, step: 'publish', error: e.message });
+      }
+    }
+  }
+
+  // 4. Store all generated content for the restaurant
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS generated_content (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      restaurant_id INTEGER,
+      restaurant_name TEXT,
+      type TEXT NOT NULL,
+      content TEXT NOT NULL,
+      published INTEGER DEFAULT 0,
+      publish_url TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )`);
+    const stmt = db.prepare('INSERT INTO generated_content (restaurant_id, restaurant_name, type, content, published, publish_url) VALUES (?, ?, ?, ?, ?, ?)');
+    for (const [type, content] of Object.entries(contentMap)) {
+      if (content) {
+        const pub = results.published.find(p => p.type === type);
+        stmt.run(restaurant.id || 0, restaurant.name, type, content, pub ? 1 : 0, pub?.url || null);
+      }
+    }
+  } catch (e) { console.error('Save content error:', e.message); }
+
+  // Log
+  try {
+    db.prepare('INSERT INTO action_log (restaurant_id, action_type, details) VALUES (?, ?, ?)').run(
+      restaurant.id || 0, 'auto_publish',
+      JSON.stringify({ types: typesToProcess, generated: results.generated.length, published: results.published.length, errors: results.errors.length })
+    );
+  } catch (e) {}
+
+  res.json({
+    success: true,
+    summary: {
+      generated: results.generated.length,
+      published: results.published.length,
+      errors: results.errors.length
+    },
+    ...results
+  });
 });
 
 // ============================================================

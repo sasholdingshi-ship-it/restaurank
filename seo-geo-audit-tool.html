@@ -8695,28 +8695,43 @@ async function renderStatsTab(){
         </div>
     </div>`;
 
-    // ── Content Automation Engine ──
+    // ── Content Automation Engine (GEO-Optimized) ──
     html+=`<div class="chart-section" id="contentAutoSection">
-        <h3 class="chart-title">🚀 Automatisation SEO — Création de contenu & Link Building</h3>
+        <h3 class="chart-title">🚀 Automatisation GEO+SEO — Contenu, Backlinks & Publication</h3>
+        <p style="font-size:.78rem;color:var(--mut);margin:0 0 16px;line-height:1.5;">
+            Contenu optimisé pour Google <b>ET</b> les moteurs IA (ChatGPT, Perplexity, Gemini). Mots-clés GEO intégrés automatiquement.
+        </p>
         <div style="background:var(--s1);border-radius:10px;border:1px solid var(--bdr);padding:20px;">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
-                <button onclick="generateBlogPost()" class="auto-btn-full" style="padding:14px;font-size:.82rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    📝 Générer un article de blog SEO
+            <!-- Main CTA: Auto-Publish Everything -->
+            <button onclick="autoPublishAll()" id="btnAutoPublish" class="auto-btn-full" style="width:100%;padding:18px;font-size:.95rem;background:linear-gradient(135deg,#f59e0b,#d97706,#b45309);border:none;color:#fff;border-radius:12px;cursor:pointer;font-weight:700;margin-bottom:16px;box-shadow:0 4px 15px rgba(245,158,11,.3);letter-spacing:.3px;">
+                ⚡ TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post
+            </button>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
+                <button onclick="generateBlogPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    📝 Blog GEO
                 </button>
-                <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:14px;font-size:.82rem;background:linear-gradient(135deg,#ff4500,#ff6b35);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    🤖 Créer un post Reddit optimisé
+                <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#ff4500,#ff6b35);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    🤖 Reddit x3
                 </button>
-                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:14px;font-size:.82rem;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    ✍️ Guest post / Article invité
+                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    ✍️ Guest Post
                 </button>
-                <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:14px;font-size:.82rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    ⚡ Tout générer en 1 clic
+                <button onclick="generateSocialPosts()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#ec4899,#be185d);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    📱 Social x7
+                </button>
+                <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#14b8a6,#0d9488);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    ❓ FAQ GEO x15
+                </button>
+                <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#64748b,#475569);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    🔄 Tout régénérer
                 </button>
             </div>
             <div id="contentAutoResults" style="display:none;"></div>
-            <div style="font-size:.72rem;color:var(--mut);line-height:1.6;">
-                <strong>Stratégie automatique :</strong> articles de blog optimisés pour vos mots-clés, posts Reddit naturels avec mentions,
-                articles invités pour link building, contenu pour directories et forums gastronomiques.
+            <div id="autoPublishLog" style="display:none;background:var(--bg);border-radius:8px;padding:12px;margin-top:12px;max-height:300px;overflow-y:auto;font-size:.75rem;font-family:monospace;"></div>
+            <div style="font-size:.72rem;color:var(--mut);line-height:1.6;margin-top:12px;">
+                <strong>Stratégie GEO :</strong> Chaque contenu est optimisé avec des entités nommées, données factuelles, questions naturelles et mots-clés conversationnels
+                pour être cité par ChatGPT, Perplexity et Gemini en plus du SEO Google classique. Les posts Reddit utilisent 3 subreddits différents avec un style naturel.
+                Les articles de blog intègrent des sections "Infos pratiques" que les IA adorent citer.
             </div>
         </div>
     </div>`;
@@ -9216,6 +9231,145 @@ async function publishBlogPost(){
         const d=await r.json();
         alert(d.success?'✅ Article publié sur le site !':'❌ Erreur : '+(d.error||'voir console'));
     }catch(e){alert('Erreur de publication : '+e.message);}
+}
+
+async function generateFAQContent(){
+    const results=document.getElementById('contentAutoResults');
+    if(!results)return;
+    results.style.display='block';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA de la FAQ GEO (15 questions)...</div>';
+    try{
+        const data=await _callContentAPI('faq');
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
+        results.innerHTML=_contentCard('faqContent','FAQ GEO (15 Q&A + Schema.org)','❓',data.content.replace(/\n/g,'<br>'),'');
+        results.innerHTML+=`<div style="font-size:.65rem;color:var(--mut);">Généré via ${data.model||'IA'} · Optimisé pour citation par ChatGPT/Perplexity</div>`;
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
+}
+
+// ── AUTO-PUBLISH ALL — Generate + Publish everything in 1 click ──
+async function autoPublishAll(){
+    const results=document.getElementById('contentAutoResults');
+    const log=document.getElementById('autoPublishLog');
+    if(!results||!log)return;
+    results.style.display='block';
+    log.style.display='block';
+    log.innerHTML='';
+
+    const btn=document.getElementById('btnAutoPublish');
+    if(btn){btn.disabled=true;btn.style.opacity='.5';btn.innerHTML='⏳ Publication automatique en cours...';}
+
+    function addLog(msg,type='info'){
+        const colors={info:'var(--mut)',success:'var(--grn)',error:'var(--red)',warning:'var(--org)'};
+        const time=new Date().toLocaleTimeString('fr');
+        log.innerHTML+=`<div style="color:${colors[type]||colors.info};margin-bottom:4px;">[${time}] ${msg}</div>`;
+        log.scrollTop=log.scrollHeight;
+    }
+
+    const resto=_getRestoContext();
+    addLog(`🎯 Restaurant: ${resto.name} à ${resto.city} (${resto.cuisine})`);
+    addLog(`🔑 Mots-clés GEO: ${resto.keywords?.join(', ')||'auto-détectés'}`);
+    addLog('───────────────────────────────────');
+
+    // Check which services are configured
+    addLog('🔍 Vérification des services configurés...');
+    let services={};
+    try{
+        const s=await fetchTimeout(`${API_BASE}/api/services/status`,{},5000);
+        services=(await s.json())?.services||{};
+    }catch(e){}
+
+    const hasAI=services.openai?.configured||services.anthropic?.configured;
+    const hasReddit=services.reddit?.configured;
+    const hasWP=!!window._wpCredentials?.site_url;
+
+    addLog(hasAI?'✅ IA configurée ('+((services.openai?.configured?'OpenAI':'')+(services.anthropic?.configured?' Anthropic':''))+')':'❌ Aucune clé IA — génération impossible','success');
+    addLog(hasReddit?'✅ Reddit configuré — publication auto possible':'⚠️ Reddit non configuré — génération sans publication',hasReddit?'success':'warning');
+    addLog(hasWP?'✅ WordPress configuré — publication auto possible':'⚠️ WordPress non configuré — génération sans publication',hasWP?'success':'warning');
+    addLog('───────────────────────────────────');
+
+    if(!hasAI){
+        addLog('❌ Impossible sans clé IA. Ajoutez OPENAI_API_KEY ou ANTHROPIC_API_KEY.','error');
+        if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='⚡ TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post';}
+        return;
+    }
+
+    // Build the request
+    const body={
+        restaurant:resto,
+        types:['blog','reddit','social','faq','guest_post'],
+        subreddits:['paris','france','food']
+    };
+    if(hasWP) body.wordpress=window._wpCredentials;
+
+    addLog('🚀 Lancement de la génération + publication automatique...');
+    results.innerHTML='<div style="text-align:center;padding:30px;color:var(--mut);font-size:.85rem;">⚡ Génération IA GEO en cours pour 5 types de contenu...<br><span style="font-size:.72rem;">Blog + Reddit x3 + Social x7 + FAQ x15 + Guest Post</span></div>';
+
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/auto-publish`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(body)
+        },120000); // 2 min timeout
+        const data=await r.json();
+
+        if(!data.success){
+            addLog('❌ Erreur: '+(data.error||'inconnue'),'error');
+            results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;
+            return;
+        }
+
+        addLog('───────────────────────────────────');
+        addLog(`📊 RÉSULTATS:`);
+        addLog(`   ✅ ${data.summary.generated} contenus générés`,'success');
+        addLog(`   🚀 ${data.summary.published} contenus publiés`,'success');
+        if(data.summary.errors>0) addLog(`   ⚠️ ${data.summary.errors} erreurs`,'warning');
+
+        // Show generated content
+        data.generated?.forEach(g=>{
+            addLog(`   ✅ ${g.type}: ${g.length} caractères via ${g.model}`,'success');
+        });
+
+        // Show published content
+        data.published?.forEach(p=>{
+            addLog(`   🚀 ${p.type} publié sur ${p.platform}${p.url?' → '+p.url:''}`,'success');
+        });
+
+        // Show errors
+        data.errors?.forEach(e=>{
+            addLog(`   ⚠️ ${e.type} (${e.step}): ${e.error}`,'warning');
+        });
+
+        // Display all generated content as cards
+        let allHtml='<div style="margin-top:16px;">';
+        const typeLabels={blog:{title:'Article Blog GEO',icon:'📝'},reddit:{title:'Posts Reddit x3',icon:'🤖'},social:{title:'Posts Sociaux x7',icon:'📱'},faq:{title:'FAQ GEO x15',icon:'❓'},guest_post:{title:'Guest Post + Pitch',icon:'✍️'}};
+
+        // Re-fetch each content for display (auto-publish stores them but we need to show)
+        for(const type of ['blog','reddit','social','faq','guest_post']){
+            const lbl=typeLabels[type]||{title:type,icon:'📄'};
+            const gen=data.generated?.find(g=>g.type===type);
+            if(gen){
+                try{
+                    const cr=await _callContentAPI(type);
+                    if(cr.success){
+                        const pub=data.published?.find(p=>p.type===type);
+                        const pubBadge=pub?`<span style="background:var(--grn);color:#fff;padding:2px 8px;border-radius:4px;font-size:.65rem;margin-left:8px;">✅ Publié sur ${pub.platform}</span>`:'';
+                        allHtml+=_contentCard('ap_'+type,lbl.title+pubBadge,lbl.icon,cr.content.replace(/\n/g,'<br>'),'');
+                    }
+                }catch(e){}
+            }
+        }
+        allHtml+='</div>';
+        results.innerHTML=allHtml;
+
+        addLog('───────────────────────────────────');
+        addLog('✅ Publication automatique GEO terminée !','success');
+
+    }catch(e){
+        addLog('❌ Erreur fatale: '+e.message,'error');
+        results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;
+    }finally{
+        if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='⚡ TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post';}
+    }
 }
 
 function copyToClip(text){
