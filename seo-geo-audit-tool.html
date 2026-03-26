@@ -1165,16 +1165,16 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
     <div class="admin-stats" id="adminStats"></div>
 
     <!-- INVITE CODES MANAGEMENT -->
-    <div style="background:var(--srf);border:1px solid var(--brd);border-radius:10px;padding:16px;margin-bottom:20px;">
+    <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:20px;">
         <h3 style="font-size:.9rem;margin:0 0 12px;">🎟️ Codes d'invitation</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px;">
             <div style="flex:1;min-width:180px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Email (optionnel)</label>
-                <input type="email" id="invEmailFor" placeholder="client@email.com (ou vide = tout le monde)" style="width:100%;padding:6px 10px;border:1px solid var(--brd);border-radius:6px;background:var(--bg);color:var(--fg);font-size:.75rem;">
+                <input type="email" id="invEmailFor" placeholder="client@email.com (ou vide = tout le monde)" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
             </div>
             <div style="min-width:100px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Plan offert</label>
-                <select id="invPlan" style="width:100%;padding:6px 10px;border:1px solid var(--brd);border-radius:6px;background:var(--bg);color:var(--fg);font-size:.75rem;">
+                <select id="invPlan" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
                     <option value="free">Free</option>
                     <option value="starter">Starter</option>
                     <option value="pro" selected>Pro</option>
@@ -1183,11 +1183,11 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
             </div>
             <div style="min-width:80px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Utilisations</label>
-                <input type="number" id="invMaxUses" value="1" min="1" max="100" style="width:100%;padding:6px 10px;border:1px solid var(--brd);border-radius:6px;background:var(--bg);color:var(--fg);font-size:.75rem;">
+                <input type="number" id="invMaxUses" value="1" min="1" max="100" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
             </div>
             <div style="min-width:80px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Expire (jours)</label>
-                <input type="number" id="invExpDays" value="7" min="1" max="365" style="width:100%;padding:6px 10px;border:1px solid var(--brd);border-radius:6px;background:var(--bg);color:var(--fg);font-size:.75rem;">
+                <input type="number" id="invExpDays" value="7" min="1" max="365" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
             </div>
             <button onclick="createInviteCode()" style="padding:6px 16px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem;white-space:nowrap;">➕ Générer un code</button>
         </div>
@@ -2565,18 +2565,18 @@ function showUpgradeModal(reason,suggestedPlan){
     const modal=document.createElement('div');
     modal.id='upgradeModal';
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:10000;';
-    modal.innerHTML=`<div style="background:var(--card);border:1px solid var(--brd);border-radius:16px;padding:28px;max-width:480px;width:90%;color:var(--txt);">
+    modal.innerHTML=`<div style="background:var(--card);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:480px;width:90%;color:var(--txt);">
         <h2 style="margin:0 0 8px;font-size:1.2rem;">🔒 Fonctionnalité limitée</h2>
         <p style="color:var(--mut);margin:0 0 18px;font-size:.9rem;">${reason}</p>
         <h3 style="margin:0 0 12px;font-size:1rem;color:var(--cyn);">Passez à un plan supérieur</h3>
         <div style="display:grid;gap:8px;">
-            ${plans.map(([k,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:${k===suggestedPlan?'rgba(108,99,255,.15)':'var(--bg)'};border:1px solid ${k===suggestedPlan?'var(--ind)':'var(--brd)'};border-radius:10px;cursor:pointer;" onclick="selectUpgradePlan('${k}')">
+            ${plans.map(([k,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:${k===suggestedPlan?'rgba(108,99,255,.15)':'var(--bg)'};border:1px solid ${k===suggestedPlan?'var(--ind)':'var(--bdr)'};border-radius:10px;cursor:pointer;" onclick="selectUpgradePlan('${k}')">
                 <div><strong>${v.label}</strong><span style="color:var(--mut);font-size:.75rem;margin-left:8px;">${v.restaurants} resto${v.restaurants>1?'s':''} · ${v.scansPerDay>100?'∞':v.scansPerDay} scans/j · ${v.directories} annuaires${v.autoApply?' · auto-apply':''}</span></div>
                 <strong style="color:var(--cyn);">${v.price}€/m</strong>
             </div>`).join('')}
         </div>
         <div style="display:flex;gap:10px;margin-top:18px;">
-            <button onclick="document.getElementById('upgradeModal').remove()" style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--brd);border-radius:8px;color:var(--mut);cursor:pointer;">Plus tard</button>
+            <button onclick="document.getElementById('upgradeModal').remove()" style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;color:var(--mut);cursor:pointer;">Plus tard</button>
             <button onclick="handleUpgrade()" id="upgradeBtn" style="flex:1;padding:10px;background:var(--ind);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;">Passer au ${plan.label}</button>
         </div>
     </div>`;
@@ -2592,7 +2592,7 @@ function selectUpgradePlan(plan){
     document.querySelectorAll('#upgradeModal div[onclick^="selectUpgradePlan"]').forEach(d=>{
         const isPlan=d.getAttribute('onclick').includes("'"+plan+"'");
         d.style.background=isPlan?'rgba(108,99,255,.15)':'var(--bg)';
-        d.style.borderColor=isPlan?'var(--ind)':'var(--brd)';
+        d.style.borderColor=isPlan?'var(--ind)':'var(--bdr)';
     });
 }
 
@@ -3295,7 +3295,7 @@ async function loadInviteCodes(){
         return;
     }
     container.innerHTML=`<table style="width:100%;border-collapse:collapse;font-size:.73rem;">
-        <thead><tr style="border-bottom:1px solid var(--brd);color:var(--mut);text-align:left;">
+        <thead><tr style="border-bottom:1px solid var(--bdr);color:var(--mut);text-align:left;">
             <th style="padding:6px 8px;">Code</th><th style="padding:6px 8px;">Email</th><th style="padding:6px 8px;">Plan</th>
             <th style="padding:6px 8px;">Utilisé</th><th style="padding:6px 8px;">Expire</th><th style="padding:6px 8px;">Statut</th><th style="padding:6px 8px;text-align:right;">Actions</th>
         </tr></thead>
@@ -3303,7 +3303,7 @@ async function loadInviteCodes(){
             const expired=c.expires_at&&new Date(c.expires_at)<new Date();
             const full=c.max_uses>0&&c.used_count>=c.max_uses;
             const active=c.is_active&&!expired&&!full;
-            return `<tr style="border-bottom:1px solid var(--brd);">
+            return `<tr style="border-bottom:1px solid var(--bdr);">
                 <td style="padding:6px 8px;font-family:monospace;font-weight:700;color:${active?'var(--cyn)':'var(--mut)'};">${c.code}</td>
                 <td style="padding:6px 8px;color:var(--mut);">${c.email_for||'Tout le monde'}</td>
                 <td style="padding:6px 8px;"><span class="ub-plan ${c.plan||'free'}" style="font-size:.6rem;">${(c.plan||'free').toUpperCase()}</span></td>
@@ -5345,7 +5345,7 @@ function renderReviews(){
         const tab=document.getElementById('tabReviews');
         if(tab) tab.innerHTML=`<div style="text-align:center;padding:60px 20px;">
             <div style="font-size:3rem;margin-bottom:16px;">🔒</div>
-            <h3 style="color:var(--fg);margin-bottom:8px;">Gestion des avis — Plan Starter+</h3>
+            <h3 style="color:var(--txt);margin-bottom:8px;">Gestion des avis — Plan Starter+</h3>
             <p style="color:var(--mut);margin-bottom:20px;">Répondez automatiquement aux avis Google, suivez votre note moyenne et détectez les tendances.</p>
             <button class="btn" onclick="showUpgradeModal('${reviewCheck.reason}','starter')" style="background:var(--ind);border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:700;">⬆ Passer au plan Starter</button>
         </div>`;
@@ -5603,7 +5603,7 @@ function renderTeam(){
     if(!teamCheck.allowed){
         tab.innerHTML=`<div style="text-align:center;padding:60px 20px;">
             <div style="font-size:3rem;margin-bottom:16px;">🔒</div>
-            <h3 style="color:var(--fg);margin-bottom:8px;">Gestion d'équipe — Plan Starter+</h3>
+            <h3 style="color:var(--txt);margin-bottom:8px;">Gestion d'équipe — Plan Starter+</h3>
             <p style="color:var(--mut);margin-bottom:20px;">Invitez vos collaborateurs, attribuez des rôles (propriétaire, manager, viewer) et contrôlez les accès par restaurant.</p>
             <button class="btn" onclick="showUpgradeModal('${teamCheck.reason}','starter')" style="background:var(--ind);border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:700;">⬆ Passer au plan Starter</button>
         </div>`;
@@ -5622,16 +5622,16 @@ function renderTeam(){
         </p>
 
         <!-- Invite form -->
-        <div style="background:var(--srf);border-radius:10px;padding:16px;margin-bottom:20px;border:1px solid var(--brd);">
+        <div style="background:var(--s1);border-radius:10px;padding:16px;margin-bottom:20px;border:1px solid var(--bdr);">
             <h3 style="font-size:.85rem;font-weight:700;margin-bottom:12px;">📨 Inviter un membre</h3>
             <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
                 <div style="flex:1;min-width:200px;">
                     <label style="font-size:.7rem;color:var(--mut);display:block;margin-bottom:4px;">Email</label>
-                    <input type="email" id="teamInviteEmail" placeholder="collegue@email.com" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--bg);color:var(--fg);font-size:.8rem;">
+                    <input type="email" id="teamInviteEmail" placeholder="collegue@email.com" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt);font-size:.8rem;">
                 </div>
                 <div style="min-width:120px;">
                     <label style="font-size:.7rem;color:var(--mut);display:block;margin-bottom:4px;">Rôle</label>
-                    <select id="teamInviteRole" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--bg);color:var(--fg);font-size:.8rem;">
+                    <select id="teamInviteRole" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt);font-size:.8rem;">
                         <option value="viewer">👁 Viewer</option>
                         <option value="manager">✏️ Manager</option>
                         <option value="owner">👑 Owner</option>
@@ -5639,8 +5639,8 @@ function renderTeam(){
                 </div>
                 <div style="min-width:160px;">
                     <label style="font-size:.7rem;color:var(--mut);display:block;margin-bottom:4px;">Restaurants</label>
-                    <select id="teamInviteRestaurants" multiple style="width:100%;padding:6px 12px;border-radius:6px;border:1px solid var(--brd);background:var(--bg);color:var(--fg);font-size:.8rem;min-height:36px;">
-                        <option value="__all" selected>Tous</option>
+                    <select id="teamInviteRestaurants" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt);font-size:.8rem;">
+                        <option value="__all" selected>Tous les restaurants</option>
                         ${restNames.map(n=>`<option value="${n}">${n}</option>`).join('')}
                     </select>
                 </div>
@@ -5658,10 +5658,10 @@ function renderTeam(){
         </div>
 
         <!-- Members table -->
-        <div style="background:var(--srf);border-radius:10px;overflow:hidden;border:1px solid var(--brd);">
+        <div style="background:var(--s1);border-radius:10px;overflow:hidden;border:1px solid var(--bdr);">
             <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
                 <thead>
-                    <tr style="border-bottom:1px solid var(--brd);text-align:left;">
+                    <tr style="border-bottom:1px solid var(--bdr);text-align:left;">
                         <th style="padding:10px 12px;color:var(--mut);font-weight:600;">Membre</th>
                         <th style="padding:10px 12px;color:var(--mut);font-weight:600;">Rôle</th>
                         <th style="padding:10px 12px;color:var(--mut);font-weight:600;">Restaurants</th>
@@ -5670,8 +5670,8 @@ function renderTeam(){
                     </tr>
                 </thead>
                 <tbody>
-                    <tr style="border-bottom:1px solid var(--brd);">
-                        <td style="padding:10px 12px;color:var(--fg);font-weight:600;">
+                    <tr style="border-bottom:1px solid var(--bdr);">
+                        <td style="padding:10px 12px;color:var(--txt);font-weight:600;">
                             ${currentUser.email} <span style="font-size:.6rem;background:var(--ind);color:#fff;padding:1px 6px;border-radius:4px;margin-left:4px;">Vous</span>
                         </td>
                         <td style="padding:10px 12px;">👑 Owner</td>
@@ -5679,8 +5679,8 @@ function renderTeam(){
                         <td style="padding:10px 12px;"><span style="color:var(--grn);font-weight:700;">● Actif</span></td>
                         <td style="padding:10px 12px;text-align:right;color:var(--mut);">—</td>
                     </tr>
-                    ${members.map((m,i)=>`<tr style="border-bottom:1px solid var(--brd);">
-                        <td style="padding:10px 12px;color:var(--fg);">${m.email}</td>
+                    ${members.map((m,i)=>`<tr style="border-bottom:1px solid var(--bdr);">
+                        <td style="padding:10px 12px;color:var(--txt);">${m.email}</td>
                         <td style="padding:10px 12px;">${m.role==='owner'?'👑 Owner':m.role==='manager'?'✏️ Manager':'👁 Viewer'}</td>
                         <td style="padding:10px 12px;color:var(--mut);">${m.restaurants==='__all'?'Tous':m.restaurants}</td>
                         <td style="padding:10px 12px;"><span style="color:${m.status==='active'?'var(--grn)':'#f59e0b'};font-weight:700;">● ${m.status==='active'?'Actif':'Invité'}</span></td>

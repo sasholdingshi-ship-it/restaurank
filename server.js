@@ -3220,11 +3220,11 @@ app.post('/api/scrape-gmb', async (req, res) => {
   if (!name || !city) return res.status(400).json({ error: 'Nom et ville requis' });
 
   try {
-    // Scrape Google Maps search results page
+    // Try Google Search (not Maps — Maps is a SPA and returns empty HTML)
     const q = encodeURIComponent(`${name} ${city} restaurant`);
-    const url = `https://www.google.com/maps/search/${q}`;
-    const html = await fetchPage(url);
-    const h = html || '';
+    const searchUrl = `https://www.google.com/search?q=${q}`;
+    let h = '';
+    try { h = await fetchPage(searchUrl) || ''; } catch(e) { h = ''; }
 
     const result = {
       name: name,
@@ -3341,12 +3341,57 @@ app.post('/api/scrape-gmb', async (req, res) => {
           });
         }
 
+        // Extract description from meta or first meaningful paragraph
+        if (!result.description) {
+          const metaDesc = siteHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{20,})/i);
+          if (metaDesc) result.description = metaDesc[1].substring(0, 750).trim();
+        }
+        if (!result.description) {
+          const ogDesc = siteHtml.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']{20,})/i);
+          if (ogDesc) result.description = ogDesc[1].substring(0, 750).trim();
+        }
+
+        // Extract category from title or content
+        if (!result.category) {
+          const titleMatch = siteHtml.match(/<title[^>]*>([^<]+)/i);
+          if (titleMatch) {
+            const title = titleMatch[1];
+            const cuisineWords = ['ramen','sushi','pizza','burger','bistro','brasserie','italien','japonais','chinois','indien','thaï','libanais','mexicain','coréen','vietnamien','français','méditerranéen','gastronomique','végétarien','vegan','crêperie','pâtisserie','boulangerie','traiteur','kebab','tapas'];
+            const found = cuisineWords.filter(w => title.toLowerCase().includes(w));
+            if (found.length > 0) result.category = 'Restaurant ' + found[0].charAt(0).toUpperCase() + found[0].slice(1);
+          }
+        }
+
+        // Extract srcset and background images too
+        const srcsetRegex = /srcset=["']([^"']+)/gi;
+        let srcsetMatch;
+        while ((srcsetMatch = srcsetRegex.exec(siteHtml)) !== null) {
+          const urls = srcsetMatch[1].split(',').map(s => s.trim().split(/\s+/)[0]).filter(u => u.match(/\.(jpg|jpeg|png|webp)/i));
+          urls.forEach(u => {
+            let imgUrl = u;
+            if (imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
+            else if (imgUrl.startsWith('/')) imgUrl = new URL(imgUrl, normalized).href;
+            if (imgUrl.startsWith('http') && !imgUrl.includes('icon') && !imgUrl.includes('logo')) result.photos.push(imgUrl);
+          });
+        }
+        const bgRegex = /background(?:-image)?:\s*url\(["']?([^"')]+(?:\.jpg|\.jpeg|\.png|\.webp)[^"')]*)/gi;
+        let bgMatch;
+        while ((bgMatch = bgRegex.exec(siteHtml)) !== null) {
+          let imgUrl = bgMatch[1];
+          if (imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
+          else if (imgUrl.startsWith('/')) imgUrl = new URL(imgUrl, normalized).href;
+          if (imgUrl.startsWith('http')) result.photos.push(imgUrl);
+        }
+
         result.websiteUrl = normalized;
         result.photos = [...new Set(result.photos)].slice(0, 50);
       } catch (e) {
         console.warn('Website scrape error:', e.message);
       }
     }
+
+    // Use name/city as fallback category if nothing found
+    if (!result.category) result.category = 'Restaurant';
 
     logAction(0, 'scrape_gmb', 'hub', 'system', 'success', { name, city }, { photosFound: result.photos.length, hasPhone: !!result.phone });
     res.json({ success: true, data: result });
