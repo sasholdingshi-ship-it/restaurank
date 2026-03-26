@@ -2896,14 +2896,22 @@ async function onAuthSuccess(){
     document.getElementById('landing').style.paddingTop='54px';
     try{
         const store=await loadAllDataFromServer();
-        if(store&&store.restaurants&&Object.keys(store.restaurants).length>0){
+        if(store&&store.restaurants){
+            const restoKeys=Object.keys(store.restaurants);
             _serverDataCache=store;
             renderHistory();
-            // Auto-reload last restaurant → go directly to dashboard
-            const lastKey=store.lastRestaurantKey||Object.keys(store.restaurants)[0];
-            if(lastKey&&store.restaurants[lastKey]){
-                await loadRestaurant(lastKey);
-                return; // loadRestaurant shows dashboard
+
+            if(restoKeys.length>1){
+                // MULTI-SITES → group dashboard directement
+                openGroupDash();
+                return;
+            } else if(restoKeys.length===1){
+                // UN SEUL RESTO → dashboard directement
+                const lastKey=store.lastRestaurantKey||restoKeys[0];
+                if(lastKey&&store.restaurants[lastKey]){
+                    await loadRestaurant(lastKey);
+                    return;
+                }
             }
         }
     }catch(e){console.warn('Server load after login failed',e);}
