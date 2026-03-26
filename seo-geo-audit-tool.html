@@ -1365,6 +1365,14 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         <div class="confirm-map" id="confirmMap"></div>
         <div class="confirm-info">
             <div class="confirm-resto-name" id="confirmName">—</div>
+            <div id="confirmAPIResult" style="display:none;padding:12px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;margin:8px 0 12px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    <span style="font-size:1.1rem;" id="confirmAPIIcon">📍</span>
+                    <span style="font-weight:700;color:var(--txt);" id="confirmAPIName">—</span>
+                </div>
+                <div style="font-size:.82rem;color:var(--mut);line-height:1.6;" id="confirmAPIDetails">Chargement...</div>
+                <div id="confirmAPIWarning" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(255,150,0,.1);border-radius:8px;font-size:.78rem;color:#f90;">⚠️ Ce n'est pas le bon ? Modifiez votre recherche pour être plus précis (ex: ajoutez le quartier ou l'adresse).</div>
+            </div>
             <p style="font-size:.85rem;color:var(--mut);margin:4px 0 12px;">Vérifiez sur Google Maps que l'adresse et les photos correspondent à votre établissement :</p>
             <div style="font-size:.82rem;font-weight:700;color:var(--txt);margin-bottom:8px;">🔍 Vérifier sur les plateformes :</div>
             <div class="confirm-links" id="confirmLinks"></div>
@@ -3642,11 +3650,61 @@ function searchRestaurant(){
     showScreen('confirmation');
     const query=encodeURIComponent(`restaurant ${name} ${city}`);
     const qs=encodeURIComponent(`${name} ${city}`);
-    document.getElementById('confirmSub').textContent=`La carte montre "${name}" à ${city}. Vérifiez que c'est le bon.`;
+    document.getElementById('confirmSub').textContent=`Vérifiez que c'est le bon restaurant avant de lancer l'audit.`;
     document.getElementById('confirmName').textContent=`${name} — ${city}`;
     document.getElementById('confirmMap').innerHTML=`<iframe src="https://www.google.com/maps?q=${query}&output=embed&z=16" allowfullscreen loading="lazy" style="width:100%;height:100%;border:none;"></iframe>`;
     const ld=document.getElementById('confirmLinks');ld.innerHTML='';
     VERIFY_PLATFORMS.forEach(p=>{const a=document.createElement('a');a.className='confirm-link';a.href=p.url(qs);a.target='_blank';a.rel='noopener';a.innerHTML=`${p.icon} ${p.name}`;ld.appendChild(a);});
+
+    // Call Google Places API to show the EXACT restaurant that will be audited
+    const apiPanel=document.getElementById('confirmAPIResult');
+    const apiName=document.getElementById('confirmAPIName');
+    const apiDetails=document.getElementById('confirmAPIDetails');
+    const apiWarning=document.getElementById('confirmAPIWarning');
+    if(apiPanel){
+        apiPanel.style.display='';
+        apiName.textContent='Recherche en cours...';
+        apiDetails.innerHTML='<span style="color:var(--cyn);">⏳ Interrogation de l\'API Google Places...</span>';
+        apiWarning.style.display='none';
+
+        fetch(API_BASE+'/api/google-places-preview',{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({name,city})
+        }).then(r=>r.json()).then(data=>{
+            if(data.success&&data.place){
+                const p=data.place;
+                window._confirmedPlace=p; // Store for audit
+                apiName.textContent=p.name||name;
+                const stars='★'.repeat(Math.round(p.rating||0))+'☆'.repeat(5-Math.round(p.rating||0));
+                apiDetails.innerHTML=`
+                    <div><strong>📍 Adresse:</strong> ${p.address||'Non disponible'}</div>
+                    <div><strong>⭐ Note:</strong> ${p.rating||'?'}/5 ${stars} (${p.reviewCount||0} avis)</div>
+                    ${p.phone?'<div><strong>📞 Tél:</strong> '+p.phone+'</div>':''}
+                    ${p.website?'<div><strong>🌐 Site:</strong> <a href="'+p.website+'" target="_blank" style="color:var(--cyn);">'+p.website+'</a></div>':''}
+                    ${p.category?'<div><strong>🍽️ Type:</strong> '+p.category+'</div>':''}
+                    <div style="margin-top:6px;font-size:.72rem;color:var(--mut);">Place ID: ${p.place_id||'?'}</div>
+                `;
+                // Check if name matches closely
+                const nameMatch=p.name&&p.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]);
+                if(!nameMatch){
+                    apiWarning.style.display='';
+                    apiWarning.textContent=`⚠️ Le résultat Google "${p.name}" ne correspond peut-être pas à "${name}". Modifiez votre recherche (ajoutez le quartier, l'adresse ou le numéro de rue).`;
+                }
+                // Auto-fill website if not provided
+                if(!storedWebsite&&p.website){
+                    storedWebsite=p.website;
+                    const siteInput=document.getElementById('inWebsite');
+                    if(siteInput)siteInput.value=p.website;
+                }
+            } else {
+                apiName.textContent=name;
+                apiDetails.innerHTML='<span style="color:#f66;">❌ Restaurant non trouvé via Google Places API. L\'audit utilisera les données disponibles.</span>';
+            }
+        }).catch(e=>{
+            apiName.textContent=name;
+            apiDetails.innerHTML='<span style="color:var(--mut);">API non disponible — l\'audit cherchera le restaurant automatiquement.</span>';
+        });
+    }
 }
 function launchFullAudit(){startScan(storedName,storedCity);}
 
@@ -7313,7 +7371,7 @@ async function autoCheckAllPlatforms(){
 // Store claim data (legacy fallback)
 let dirClaimData={};
 
-// AI Agent: automate ONE platform via Puppeteer
+// AI Agent: automate ONE platform (server handles Puppeteer vs guided fallback)
 async function aiAgentAutoOne(platId){
     const name=currentData?.name||storedName||'Restaurant';
     const city=currentData?.city||storedCity||'Paris';
@@ -7322,43 +7380,59 @@ async function aiAgentAutoOne(platId){
     const address=currentData?.address||window._hubData?.address||'';
 
     // Set working state
-    dirAgentResults[platId]={status:'working',progress:10,currentStep:'Lancement du navigateur…'};
+    dirAgentResults[platId]={status:'working',progress:10,currentStep:'Connexion en cours…'};
     renderDirAutoGrid();
-    agentLogAppend(`🤖 Agent lancé pour ${DIR_LIST.find(d=>d.id===platId)?.name||platId}…`);
+    agentLogAppend(`🔗 Connexion ${DIR_LIST.find(d=>d.id===platId)?.name||platId}…`);
 
     try{
         const resp=await fetch(API_BASE+'/api/directories/auto-do',{method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({platform:platId,name,city,website,phone,address})});
         const data=await resp.json();
         if(data.success){
-            dirAgentResults[platId]={status:data.status,steps:data.steps,finalUrl:data.finalUrl,message:data.message};
+            dirAgentResults[platId]={status:data.status,steps:data.steps,finalUrl:data.finalUrl,message:data.message,found:data.found};
             if(data.status==='automated'){
                 platformStatus[platId]='done';
                 agentLogAppend(`✅ ${platId} automatisé avec succès`);
             } else {
-                agentLogAppend(`⚠ ${platId}: vérification humaine requise (CAPTCHA/téléphone)`);
+                agentLogAppend(`📋 ${platId}: ${data.found?'fiche trouvée':'instructions prêtes'} — cliquez Ouvrir`);
             }
         } else {
-            dirAgentResults[platId]={status:'error',steps:data.steps||[],message:data.error};
-            agentLogAppend(`❌ ${platId}: ${data.error}`);
+            // Server returned error — use /api/directories/auto-claim as fallback
+            try{
+                const resp2=await fetch(API_BASE+'/api/directories/auto-claim',{method:'POST',headers:{'Content-Type':'application/json'},
+                    body:JSON.stringify({platform:platId,name,city,website})});
+                const data2=await resp2.json();
+                if(data2.success){
+                    dirClaimData[platId]=data2;
+                    dirAgentResults[platId]={status:'needs_verification',steps:(data2.instructions||[]).map((s,i)=>({step:s,needsManual:true,url:i===0?data2.url:''})),finalUrl:data2.url};
+                    agentLogAppend(`📋 ${platId}: instructions disponibles`);
+                } else {
+                    dirAgentResults[platId]={status:'error',steps:[{step:'Erreur serveur',detail:data.error||'Inconnu',needsManual:true}],message:data.error};
+                    agentLogAppend(`❌ ${platId}: ${data.error}`);
+                }
+            }catch(e2){
+                dirAgentResults[platId]={status:'error',steps:[{step:'Erreur serveur',detail:data.error||'Inconnu',needsManual:true}],message:data.error};
+                agentLogAppend(`❌ ${platId}: ${data.error}`);
+            }
         }
     }catch(e){
-        dirAgentResults[platId]={status:'error',steps:[{step:'Erreur réseau',detail:e.message,needsManual:true}],message:e.message};
-        // Fallback: use old claim system
+        // Network error — use /api/directories/auto-claim as fallback
         try{
             const resp2=await fetch(API_BASE+'/api/directories/auto-claim',{method:'POST',headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({platform:platId,name,city,website})});
             const data2=await resp2.json();
             if(data2.success){
                 dirClaimData[platId]=data2;
-                dirAgentResults[platId]={status:'needs_verification',steps:[{step:'Fallback: instructions prêtes'}],finalUrl:data2.url};
-                agentLogAppend(`📋 ${platId}: fallback → instructions disponibles`);
+                dirAgentResults[platId]={status:'needs_verification',steps:(data2.instructions||[]).map((s,i)=>({step:s,needsManual:true,url:i===0?data2.url:''})),finalUrl:data2.url};
+                agentLogAppend(`📋 ${platId}: instructions disponibles (fallback)`);
             }
-        }catch(e2){}
+        }catch(e2){
+            dirAgentResults[platId]={status:'error',steps:[{step:'Erreur réseau',detail:e.message,needsManual:true}],message:e.message};
+        }
     }
     renderDirAutoGrid();
     saveAllData();
-    addToLog('🤖 Agent IA: '+platId+' → '+(dirAgentResults[platId]?.status||'done'));
+    addToLog('🔗 '+platId+' → '+(dirAgentResults[platId]?.status||'done'));
 }
 
 // AI Agent: automate ALL platforms sequentially

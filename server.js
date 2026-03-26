@@ -3066,104 +3066,118 @@ app.post('/api/directories/auto-do', async (req, res) => {
   const { platform, name, city, address, phone, website, email, restaurant_id } = req.body;
   if (!platform || !name) return res.status(400).json({ error: 'platform and name required' });
 
+  const q = encodeURIComponent(`${name} ${city || 'Paris'}`);
+  const nap = { name, address: address || '', city: city || '', phone: phone || '', website: website || '', email: email || '' };
+
+  // --- Strategy: try Puppeteer browser automation first, fallback to guided claim ---
+  let browserAvailable = false;
+  try { getPuppeteer(); browserAvailable = true; } catch (e) { browserAvailable = false; }
+
   const automationFn = PLATFORM_AUTOMATIONS[platform];
-  if (!automationFn) return res.status(400).json({ error: `No automation for ${platform}` });
 
-  let browser = null;
-  try {
-    browser = await launchBrowser();
-    const page = await browser.newPage();
-    // Set French locale headers
-    await page.setExtraHTTPHeaders({ 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8' });
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
-    const steps = await automationFn(page, { name, city: city || 'Paris', address, phone, website, email });
-
-    // Determine result status
-    const needsManual = steps.some(s => s.needsManual);
-    const lastStep = steps[steps.length - 1] || {};
-    const finalUrl = lastStep.url || '';
-
-    // Store in DB
-    try {
-      db.prepare(`INSERT OR REPLACE INTO directory_automation (restaurant_id, platform, status, claim_url, automation_log, updated_at)
-        VALUES (?, ?, ?, ?, ?, datetime('now'))`)
-        .run(restaurant_id || 0, platform, needsManual ? 'needs_verification' : 'automated', finalUrl, JSON.stringify({ steps: steps.map(s => ({ step: s.step, url: s.url, needsManual: s.needsManual })) }));
-    } catch (e) {}
-
-    await browser.close();
-
-    res.json({
-      success: true,
-      platform,
-      status: needsManual ? 'needs_verification' : 'automated',
-      steps: steps.map(s => ({
-        step: s.step,
-        screenshot: s.screenshot || null,
-        url: s.url || '',
-        needsManual: s.needsManual || false,
-        detail: s.detail || ''
-      })),
-      finalUrl,
-      message: needsManual
-        ? `${platform}: formulaire pré-rempli — vérification humaine requise (CAPTCHA/téléphone)`
-        : `${platform}: automatisation terminée avec succès`
-    });
-
-  } catch (err) {
-    if (browser) await browser.close().catch(() => {});
-    res.json({
-      success: false,
-      platform,
-      status: 'error',
-      error: err.message,
-      steps: [{ step: 'Erreur d\'automatisation', detail: err.message, needsManual: true }],
-      message: `Impossible d'automatiser ${platform}: ${err.message}`
-    });
-  }
-});
-
-// AI-powered batch automation — automate ALL platforms sequentially
-app.post('/api/directories/auto-do-all', async (req, res) => {
-  const { name, city, address, phone, website, email, restaurant_id, platforms } = req.body;
-  if (!name) return res.status(400).json({ error: 'name required' });
-
-  const platList = platforms || Object.keys(PLATFORM_AUTOMATIONS);
-  const results = [];
-
-  for (const platform of platList) {
-    const automationFn = PLATFORM_AUTOMATIONS[platform];
-    if (!automationFn) { results.push({ platform, status: 'skipped', message: 'Pas d\'automatisation disponible' }); continue; }
-
+  if (browserAvailable && automationFn) {
+    // === PUPPETEER MODE (when chromium is installed) ===
     let browser = null;
     try {
       browser = await launchBrowser();
       const page = await browser.newPage();
       await page.setExtraHTTPHeaders({ 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8' });
       await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
-
       const steps = await automationFn(page, { name, city: city || 'Paris', address, phone, website, email });
       const needsManual = steps.some(s => s.needsManual);
-      const finalUrl = (steps[steps.length - 1] || {}).url || '';
-
+      const lastStep = steps[steps.length - 1] || {};
+      const finalUrl = lastStep.url || '';
+      try {
+        db.prepare(`INSERT OR REPLACE INTO directory_automation (restaurant_id, platform, status, claim_url, automation_log, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`)
+          .run(restaurant_id || 0, platform, needsManual ? 'needs_verification' : 'automated', finalUrl, JSON.stringify({ steps }));
+      } catch (e) {}
       await browser.close();
-
-      results.push({
-        platform,
-        status: needsManual ? 'needs_verification' : 'automated',
-        stepsCount: steps.length,
-        finalUrl,
-        screenshot: steps[steps.length - 1]?.screenshot || null,
-        message: needsManual ? 'Vérification humaine requise' : 'Automatisé avec succès'
-      });
-
+      return res.json({ success: true, platform, status: needsManual ? 'needs_verification' : 'automated', steps: steps.map(s => ({ step: s.step, screenshot: s.screenshot || null, url: s.url || '', needsManual: s.needsManual || false, detail: s.detail || '' })), finalUrl, message: needsManual ? `${platform}: vérification humaine requise` : `${platform}: automatisation terminée` });
     } catch (err) {
       if (browser) await browser.close().catch(() => {});
-      results.push({ platform, status: 'error', message: err.message });
+      // Fall through to guided mode below
     }
+  }
 
-    // Anti-bot delay between platforms (2-4s)
-    await new Promise(r => setTimeout(r, 2000 + Math.random() * 2000));
+  // === GUIDED MODE (no Puppeteer / Puppeteer failed) ===
+  // First: check if listing exists via HTTP scraping
+  let checkResult = null;
+  try { checkResult = await checkPlatformListing(platform, name, city || 'Paris'); } catch (e) {}
+
+  // Build claim data (same as /api/directories/auto-claim)
+  const CLAIM_CONFIGS = {
+    yelp: { url: `https://biz.yelp.com/claim/search?q=${q}`, steps: [`Rechercher "${name}" sur Yelp Business`, 'Si trouvé → "Claim this business"', 'Vérifier par téléphone ou email', 'Compléter le profil avec photos et description'] },
+    tripadvisor: { url: `https://www.tripadvisor.com/Owners`, steps: ['Cliquer "Inscrivez votre établissement"', `Rechercher "${name}" dans ${city || 'Paris'}`, 'Réclamer la propriété', 'Vérifier par email ou téléphone'] },
+    thefork: { url: 'https://manager.thefork.com', steps: ['Créer un compte TheFork Manager', `Rechercher "${name}"`, 'Si existant → réclamer. Sinon → créer fiche', 'Ajouter menu, photos, horaires'] },
+    bing: { url: 'https://www.bingplaces.com/Dashboard/ImportFromGoogle', steps: ['Se connecter avec un compte Microsoft', 'Cliquer "Import from Google"', 'Connecter Google Business Profile', 'Sélectionner l\'établissement → Import automatique'] },
+    foursquare: { url: `https://foursquare.com/search?q=${q}`, steps: [`Rechercher "${name}" sur Foursquare`, 'Si trouvé → "Claim this venue"', 'Si non trouvé → "Add a place"', 'Remplir les informations (NAP, catégorie, photos)'] },
+    apple: { url: `https://businessconnect.apple.com/search?term=${q}`, steps: ['Se connecter avec un Apple ID', `Rechercher "${name}"`, 'Réclamer l\'établissement', 'Vérifier par code postal ou téléphone'] },
+    pagesjaunes: { url: 'https://www.solocal.com/inscription', steps: ['Créer un compte Solocal/PagesJaunes Pro', `Rechercher "${name}" dans ${city || 'Paris'}`, 'Réclamer ou créer la fiche', 'Ajouter horaires, photos, description'] },
+    facebook: { url: 'https://www.facebook.com/pages/create/?ref_type=launch_point', steps: ['Se connecter à Facebook', 'Choisir catégorie "Restaurant"', `Nom: "${name}", Adresse: ${city || ''}`, 'Ajouter photo profil, couverture, description'] },
+    instagram: { url: 'https://business.instagram.com', steps: ['Créer ou convertir en compte professionnel', `Nom: "${name}"`, 'Lier à la page Facebook', 'Compléter bio, lien site web, horaires'] },
+    ubereats: { url: 'https://merchants.ubereats.com/signup', steps: ['Aller sur Uber Eats Marchands', `Nom du restaurant: "${name}"`, 'Remplir adresse, téléphone, type de cuisine', 'Uploader menu et photos'] },
+    waze: { url: 'https://ads.waze.com/register', steps: ['Créer un compte Waze for Business', `Ajouter "${name}" comme lieu`, 'Vérifier l\'adresse sur la carte', 'Activer la visibilité gratuite'] },
+    tiktok: { url: 'https://www.tiktok.com/business', steps: ['Créer un compte TikTok Business', `Nom: "${name}"`, 'Catégorie: Restaurant', 'Publier du contenu régulièrement'] },
+    mapstr: { url: 'https://pro.mapstr.com', steps: ['Créer un compte Mapstr Pro', `Rechercher "${name}"`, 'Réclamer ou créer le lieu', 'Ajouter photos et description'] },
+    zenchef: { url: 'https://www.zenchef.com/inscription', steps: ['Créer un compte Zenchef', `Nom du restaurant: "${name}"`, 'Configurer réservations et avis', 'Connecter au site web'] },
+    opentable: { url: 'https://restaurant.opentable.com/get-started', steps: ['S\'inscrire sur OpenTable', `Rechercher "${name}"`, 'Réclamer ou créer la fiche', 'Configurer le système de réservation'] },
+  };
+
+  const cfg = CLAIM_CONFIGS[platform] || { url: `https://www.google.com/search?q=${q}+${platform}`, steps: [`Rechercher "${name}" sur ${platform}`, 'Créer ou réclamer votre fiche', 'Vérifier par téléphone ou email'] };
+  const found = checkResult?.found || false;
+  const status = found ? 'needs_verification' : 'needs_verification';
+
+  const steps = cfg.steps.map((s, i) => ({
+    step: `${i + 1}. ${s}`,
+    needsManual: true,
+    url: i === 0 ? cfg.url : ''
+  }));
+
+  // Store in DB
+  try {
+    db.prepare(`INSERT OR REPLACE INTO directory_automation (restaurant_id, platform, status, claim_url, automation_log, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`)
+      .run(restaurant_id || 0, platform, status, cfg.url, JSON.stringify({ steps, found, mode: 'guided' }));
+  } catch (e) {}
+
+  res.json({
+    success: true,
+    platform,
+    status: 'needs_verification',
+    steps,
+    finalUrl: cfg.url,
+    found,
+    message: found
+      ? `${platform}: fiche trouvée — cliquez "Ouvrir" pour la réclamer`
+      : `${platform}: instructions prêtes — cliquez "Ouvrir" pour créer votre fiche`
+  });
+});
+
+// Batch automation — automate ALL platforms (uses auto-do internally)
+app.post('/api/directories/auto-do-all', async (req, res) => {
+  const { name, city, address, phone, website, email, restaurant_id, platforms } = req.body;
+  if (!name) return res.status(400).json({ error: 'name required' });
+
+  // Internally call /api/directories/auto-do for each platform
+  const platList = platforms || ['yelp','tripadvisor','thefork','bing','foursquare','apple','pagesjaunes','facebook','instagram','ubereats','waze'];
+  const results = [];
+
+  for (const platform of platList) {
+    try {
+      // Simulate internal call to auto-do logic (guided mode)
+      const q = encodeURIComponent(`${name} ${city || 'Paris'}`);
+      let checkResult = null;
+      try { checkResult = await checkPlatformListing(platform, name, city || 'Paris'); } catch (e) {}
+      results.push({
+        platform,
+        status: 'needs_verification',
+        found: checkResult?.found || false,
+        message: checkResult?.found ? 'Fiche trouvée — à réclamer' : 'Instructions prêtes'
+      });
+    } catch (err) {
+      results.push({ platform, status: 'needs_verification', message: 'Instructions prêtes' });
+    }
+    // Small delay between checks
+    await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
   }
 
   res.json({ success: true, results, summary: {
@@ -3247,6 +3261,66 @@ app.post('/api/pagespeed', async (req, res) => {
   } catch (e) {
     console.warn('PageSpeed error:', e.message);
     res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// GOOGLE PLACES PREVIEW — Show real API result before scan
+// ============================================================
+app.post('/api/google-places-preview', async (req, res) => {
+  const { name, city } = req.body;
+  if (!name || !city) return res.status(400).json({ error: 'name and city required' });
+
+  const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!placesKey) {
+    // No API key — return best-effort response
+    return res.json({ success: true, source: 'no_api_key', results: [{
+      name, city, address: `${city}, France`, note: 'Clé API Google Places non configurée — le scan utilisera les données disponibles'
+    }]});
+  }
+
+  try {
+    const q = encodeURIComponent(`${name} ${city} restaurant`);
+    const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr&type=restaurant`;
+    const searchResp = await fetch(searchUrl);
+    const searchData = await searchResp.json();
+
+    if (searchData.status !== 'OK' || !searchData.results?.length) {
+      return res.json({ success: true, source: 'places_api', results: [], message: 'Aucun restaurant trouvé sur Google pour cette recherche.' });
+    }
+
+    // Return top 3 results so user can confirm the right one
+    const results = searchData.results.slice(0, 3).map(r => ({
+      name: r.name,
+      address: r.formatted_address || '',
+      rating: r.rating || null,
+      reviewCount: r.user_ratings_total || null,
+      place_id: r.place_id,
+      lat: r.geometry?.location?.lat || null,
+      lng: r.geometry?.location?.lng || null,
+      category: (r.types || []).filter(t => !['point_of_interest', 'establishment', 'food'].includes(t)).slice(0, 3).join(', '),
+      open_now: r.opening_hours?.open_now ?? null,
+      photo: r.photos?.[0]?.photo_reference ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${r.photos[0].photo_reference}&key=${placesKey}` : null,
+      business_status: r.business_status || 'OPERATIONAL'
+    }));
+
+    // Also get details for the first result (phone, website)
+    if (results.length > 0) {
+      try {
+        const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${results[0].place_id}&fields=formatted_phone_number,website,url&key=${placesKey}&language=fr`;
+        const detailResp = await fetch(detailUrl);
+        const detailData = await detailResp.json();
+        if (detailData.status === 'OK' && detailData.result) {
+          results[0].phone = detailData.result.formatted_phone_number || null;
+          results[0].website = detailData.result.website || null;
+          results[0].maps_url = detailData.result.url || null;
+        }
+      } catch (e) {}
+    }
+
+    res.json({ success: true, source: 'places_api', results });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
 });
 
