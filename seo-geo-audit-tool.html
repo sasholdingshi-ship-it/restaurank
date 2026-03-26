@@ -4418,12 +4418,23 @@ function startScan(name,city){
                 currentData._pageSpeedReal=true;
                 console.log('✅ PageSpeed réel intégré:',window._pageSpeed.score+'/100');
             }
-            // Merge Hub data (photos, phone, address etc)
+            // Merge Hub data (photos, phone, address, Places API data etc)
             if(window._hubData){
                 const hd=window._hubData;
                 if(hd.photos?.length) currentData.photoCount=Math.max(currentData.photoCount||0,hd.photos.length);
                 if(hd.rating) currentData.rating=hd.rating;
                 if(hd.reviewCount) currentData.reviewCount=hd.reviewCount;
+                if(hd.phone) currentData.phone=hd.phone;
+                if(hd.address) currentData.address=hd.address;
+                if(hd.website) currentData.website=hd.website;
+                if(hd.category) currentData.category=hd.category;
+                if(hd.hours) currentData.hours=hd.hours;
+                if(hd.place_id) currentData.place_id=hd.place_id;
+                if(hd.reviews?.length) currentData._googleReviews=hd.reviews;
+                if(hd.priceLevel!==undefined) currentData.priceLevel=hd.priceLevel;
+                if(hd.businessStatus) currentData.businessStatus=hd.businessStatus;
+                if(hd.mapsUrl) currentData.mapsUrl=hd.mapsUrl;
+                if(hd.source==='google_places_api') currentData._placesApiUsed=true;
                 currentData._hubScraped=true;
             }
             // Inject CMS detection results into audit data
@@ -7137,7 +7148,7 @@ function checkNapConsistency(){
 function renderHubSources(){
     const grid=document.getElementById('hubSourceGrid');if(!grid)return;
     const sources=[
-        {icon:'📊',name:'Google Business',status:googleAuth?.connected?'ok':'err',label:googleAuth?.connected?'Connecté':'Non connecté'},
+        {icon:'📊',name:'Google Places',status:currentData?._placesApiUsed?'ok':window._hubData?.source==='google_places_api'?'ok':googleAuth?.connected?'ok':'err',label:currentData?._placesApiUsed?'✅ Places API':window._hubData?.source==='google_places_api'?'✅ Places API':googleAuth?.connected?'Connecté':'Non connecté'},
         {icon:'🌐',name:'Site web',status:storedWebsite?'ok':'err',label:storedWebsite||'Pas de site'},
         {icon:'🔍',name:'Audit SEO',status:window._realAudit?'ok':currentData?'warn':'err',label:window._realAudit?'Données réelles':currentData?'Données simulées':'Non lancé'},
         {icon:'📸',name:'Photos',status:hubPhotos.length>10?'ok':hubPhotos.length>0?'warn':'err',label:hubPhotos.length+' photos'},

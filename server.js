@@ -3219,69 +3219,142 @@ app.post('/api/scrape-gmb', async (req, res) => {
   const { name, city, place_id } = req.body;
   if (!name || !city) return res.status(400).json({ error: 'Nom et ville requis' });
 
+  const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+  const result = {
+    name, city, phone: null, address: null, website: null, rating: null,
+    reviewCount: null, hours: null, category: null, photos: [], description: null,
+    place_id: null, lat: null, lng: null, source: 'unknown'
+  };
+
   try {
-    // Try Google Search (not Maps — Maps is a SPA and returns empty HTML)
-    const q = encodeURIComponent(`${name} ${city} restaurant`);
-    const searchUrl = `https://www.google.com/search?q=${q}`;
-    let h = '';
-    try { h = await fetchPage(searchUrl) || ''; } catch(e) { h = ''; }
+    // ═══════════════════════════════════════════════════════════
+    // STRATEGY 1: Google Places API (primary — reliable + complete)
+    // ═══════════════════════════════════════════════════════════
+    if (placesKey) {
+      let placeData = null;
+      let foundPlaceId = place_id || null;
 
-    const result = {
-      name: name,
-      city: city,
-      // Extract phone from various patterns
-      phone: null,
-      address: null,
-      website: null,
-      rating: null,
-      reviewCount: null,
-      hours: null,
-      category: null,
-      photos: [],
-      description: null,
-      source: 'google_maps_scrape'
-    };
+      // Step A: Find place_id via Text Search (if not provided)
+      if (!foundPlaceId) {
+        const q = encodeURIComponent(`${name} ${city} restaurant`);
+        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr&type=restaurant`;
+        const searchResp = await fetch(searchUrl);
+        const searchData = await searchResp.json();
+        if (searchData.status === 'OK' && searchData.results && searchData.results.length > 0) {
+          foundPlaceId = searchData.results[0].place_id;
+          // Store basic data from text search as fallback
+          const ts = searchData.results[0];
+          result.address = ts.formatted_address || null;
+          result.rating = ts.rating || null;
+          result.reviewCount = ts.user_ratings_total || null;
+          result.lat = ts.geometry?.location?.lat || null;
+          result.lng = ts.geometry?.location?.lng || null;
+          if (ts.photos && ts.photos.length > 0) {
+            result.photos = ts.photos.slice(0, 10).map(p =>
+              `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`
+            );
+          }
+        } else {
+          console.warn('Places Text Search: no results for', name, city, 'status:', searchData.status);
+        }
+      }
 
-    // Try to extract data from the HTML (Google Maps embeds data in JS)
-    // Phone
-    const phoneMatch = h.match(/(\+33[\s\d\-.]{8,15}|0[1-9][\s\d\-.]{8,12})/);
-    if (phoneMatch) result.phone = phoneMatch[1].replace(/[\s\-.]/g, '').trim();
+      // Step B: Get full details via Place Details
+      if (foundPlaceId) {
+        const fields = 'name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,opening_hours,reviews,photos,types,editorial_summary,geometry,business_status,url,price_level';
+        const detailUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${foundPlaceId}&fields=${fields}&key=${placesKey}&language=fr`;
+        const detailResp = await fetch(detailUrl);
+        const detailData = await detailResp.json();
 
-    // Rating
-    const ratingMatch = h.match(/(\d[.,]\d)\s*(?:étoiles|stars|sur\s*5)/i) || h.match(/"ratingValue"\s*:\s*"?(\d[.,]\d)/);
-    if (ratingMatch) result.rating = parseFloat(ratingMatch[1].replace(',', '.'));
+        if (detailData.status === 'OK' && detailData.result) {
+          placeData = detailData.result;
+          result.place_id = foundPlaceId;
+          result.source = 'google_places_api';
 
-    // Review count
-    const rcMatch = h.match(/(\d[\d\s]*)\s*(?:avis|reviews|commentaires)/i);
-    if (rcMatch) result.reviewCount = parseInt(rcMatch[1].replace(/\s/g, ''));
+          // Name (use Google's version — more official)
+          if (placeData.name) result.name = placeData.name;
 
-    // Address patterns
-    const addrMatch = h.match(/(\d+[,\s]+(?:rue|avenue|boulevard|place|impasse|chemin|allée|passage)[^"<]{5,60})/i);
-    if (addrMatch) result.address = addrMatch[1].trim();
+          // Address
+          if (placeData.formatted_address) result.address = placeData.formatted_address;
 
-    // Photo URLs (Google CDN patterns)
-    const photoRegex = /https:\/\/lh[35]\.googleusercontent\.com\/[a-zA-Z0-9\-_\/=]{20,}/g;
-    const photoMatches = h.match(photoRegex) || [];
-    result.photos = [...new Set(photoMatches)].slice(0, 30);
+          // Phone
+          result.phone = placeData.formatted_phone_number || placeData.international_phone_number || null;
 
-    // Website URL
-    const webMatch = h.match(/(?:Site\s*web|Website)\s*[:\s]*(?:<[^>]*>)?(?:https?:\/\/)?([a-zA-Z0-9][a-zA-Z0-9\-.]+\.[a-zA-Z]{2,})/i);
-    if (webMatch) result.website = webMatch[1];
+          // Website
+          if (placeData.website) result.website = placeData.website;
 
-    // Category
-    const catMatch = h.match(/"category"\s*:\s*"([^"]+)"/i) || h.match(/Restaurant\s+([a-zàâéèêëïîôùûüÿç\s]+)/i);
-    if (catMatch) result.category = catMatch[1].trim();
+          // Rating + reviews count
+          if (placeData.rating) result.rating = placeData.rating;
+          if (placeData.user_ratings_total) result.reviewCount = placeData.user_ratings_total;
 
-    // Also try the website directly for more data
-    let siteData = null;
+          // Category from types
+          if (placeData.types && placeData.types.length > 0) {
+            const typeMap = {
+              'restaurant':'Restaurant','cafe':'Café','bar':'Bar','bakery':'Boulangerie',
+              'meal_delivery':'Livraison repas','meal_takeaway':'Vente à emporter',
+              'night_club':'Club/Bar de nuit','food':'Alimentation'
+            };
+            const mainType = placeData.types.find(t => typeMap[t]) || placeData.types[0];
+            result.category = typeMap[mainType] || mainType.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+          }
+
+          // Hours
+          if (placeData.opening_hours) {
+            result.hours = placeData.opening_hours.weekday_text || null;
+            result.hoursStructured = placeData.opening_hours.periods || null;
+          }
+
+          // Description / editorial summary
+          if (placeData.editorial_summary && placeData.editorial_summary.overview) {
+            result.description = placeData.editorial_summary.overview;
+          }
+
+          // Photos (up to 10 — each costs 1 API call when accessed)
+          if (placeData.photos && placeData.photos.length > 0) {
+            result.photos = placeData.photos.slice(0, 10).map(p =>
+              `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`
+            );
+          }
+
+          // Reviews (first 5 from Google)
+          if (placeData.reviews && placeData.reviews.length > 0) {
+            result.reviews = placeData.reviews.slice(0, 5).map(r => ({
+              author: r.author_name,
+              rating: r.rating,
+              text: r.text,
+              time: r.relative_time_description,
+              profilePhoto: r.profile_photo_url
+            }));
+          }
+
+          // Coordinates
+          if (placeData.geometry && placeData.geometry.location) {
+            result.lat = placeData.geometry.location.lat;
+            result.lng = placeData.geometry.location.lng;
+          }
+
+          // Google Maps URL
+          if (placeData.url) result.mapsUrl = placeData.url;
+
+          // Price level (0-4)
+          if (placeData.price_level !== undefined) result.priceLevel = placeData.price_level;
+
+          // Business status
+          if (placeData.business_status) result.businessStatus = placeData.business_status;
+        }
+      }
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // STRATEGY 2: Website scraping (complement — always runs if URL available)
+    // ═══════════════════════════════════════════════════════════
     const websiteUrl = result.website || req.body.website_url;
     if (websiteUrl) {
       try {
         const normalized = websiteUrl.startsWith('http') ? websiteUrl : `https://${websiteUrl}`;
         const siteHtml = await fetchPage(normalized);
-        const sl = siteHtml.toLowerCase();
 
-        // Extract photos from website
+        // Extract photos from website (complement Google photos)
         const imgRegex = /<img[^>]+src=["']([^"']+(?:\.jpg|\.jpeg|\.png|\.webp)[^"']*)/gi;
         let imgMatch;
         while ((imgMatch = imgRegex.exec(siteHtml)) !== null) {
@@ -3292,24 +3365,24 @@ app.post('/api/scrape-gmb', async (req, res) => {
             result.photos.push(imgUrl);
           }
         }
-        // Deduplicate photos
-        result.photos = [...new Set(result.photos)].slice(0, 50);
 
-        // Extract phone from website if not found
+        // Phone from website (if Places didn't have it)
         if (!result.phone) {
           const sitePhone = siteHtml.match(/(?:tel:|tél|téléphone|phone)[^0-9+]*(\+33[\s\d\-.]{8,15}|0[1-9][\s\d\-.]{8,12})/i);
           if (sitePhone) result.phone = sitePhone[1].replace(/[\s\-.]/g, '').trim();
         }
 
-        // Extract address from website if not found
+        // Address from website (if Places didn't have it)
         if (!result.address) {
           const siteAddr = siteHtml.match(/(\d+[,\s]+(?:rue|avenue|boulevard|place|impasse|chemin|allée)[^<"]{5,80})/i);
           if (siteAddr) result.address = siteAddr[1].trim();
         }
 
-        // Extract hours from website (common patterns)
-        const hoursPatterns = siteHtml.match(/(?:horaires|heures d'ouverture|opening hours)[^<]{0,500}/i);
-        if (hoursPatterns) result.hours = hoursPatterns[0].substring(0, 300).trim();
+        // Hours from website (if Places didn't have them)
+        if (!result.hours) {
+          const hoursPatterns = siteHtml.match(/(?:horaires|heures d'ouverture|opening hours)[^<]{0,500}/i);
+          if (hoursPatterns) result.hours = hoursPatterns[0].substring(0, 300).trim();
+        }
 
         // Schema.org structured data
         const schemaMatch = siteHtml.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi);
@@ -3341,7 +3414,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
           });
         }
 
-        // Extract description from meta or first meaningful paragraph
+        // Description from meta (if Places didn't have editorial_summary)
         if (!result.description) {
           const metaDesc = siteHtml.match(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']{20,})/i);
           if (metaDesc) result.description = metaDesc[1].substring(0, 750).trim();
@@ -3351,7 +3424,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
           if (ogDesc) result.description = ogDesc[1].substring(0, 750).trim();
         }
 
-        // Extract category from title or content
+        // Category from title (if Places didn't provide one)
         if (!result.category) {
           const titleMatch = siteHtml.match(/<title[^>]*>([^<]+)/i);
           if (titleMatch) {
@@ -3362,42 +3435,26 @@ app.post('/api/scrape-gmb', async (req, res) => {
           }
         }
 
-        // Extract srcset and background images too
-        const srcsetRegex = /srcset=["']([^"']+)/gi;
-        let srcsetMatch;
-        while ((srcsetMatch = srcsetRegex.exec(siteHtml)) !== null) {
-          const urls = srcsetMatch[1].split(',').map(s => s.trim().split(/\s+/)[0]).filter(u => u.match(/\.(jpg|jpeg|png|webp)/i));
-          urls.forEach(u => {
-            let imgUrl = u;
-            if (imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
-            else if (imgUrl.startsWith('/')) imgUrl = new URL(imgUrl, normalized).href;
-            if (imgUrl.startsWith('http') && !imgUrl.includes('icon') && !imgUrl.includes('logo')) result.photos.push(imgUrl);
-          });
-        }
-        const bgRegex = /background(?:-image)?:\s*url\(["']?([^"')]+(?:\.jpg|\.jpeg|\.png|\.webp)[^"')]*)/gi;
-        let bgMatch;
-        while ((bgMatch = bgRegex.exec(siteHtml)) !== null) {
-          let imgUrl = bgMatch[1];
-          if (imgUrl.startsWith('//')) imgUrl = 'https:' + imgUrl;
-          else if (imgUrl.startsWith('/')) imgUrl = new URL(imgUrl, normalized).href;
-          if (imgUrl.startsWith('http')) result.photos.push(imgUrl);
-        }
-
         result.websiteUrl = normalized;
-        result.photos = [...new Set(result.photos)].slice(0, 50);
       } catch (e) {
-        console.warn('Website scrape error:', e.message);
+        console.warn('Website scrape complement error:', e.message);
       }
     }
 
-    // Use name/city as fallback category if nothing found
+    // Deduplicate photos + cap at 50
+    result.photos = [...new Set(result.photos)].slice(0, 50);
+
+    // Fallback category
     if (!result.category) result.category = 'Restaurant';
 
-    logAction(0, 'scrape_gmb', 'hub', 'system', 'success', { name, city }, { photosFound: result.photos.length, hasPhone: !!result.phone });
+    // If no Places key configured, mark source
+    if (!placesKey) result.source = 'website_scrape_only';
+
+    logAction(0, 'scrape_gmb', 'hub', 'system', 'success', { name, city, source: result.source }, { photosFound: result.photos.length, hasPhone: !!result.phone, hasAddress: !!result.address, hasRating: !!result.rating });
     res.json({ success: true, data: result });
   } catch (err) {
-    console.error('GMB scrape error:', err.message);
-    res.status(500).json({ error: `Erreur scraping: ${err.message}` });
+    console.error('GMB/Places error:', err.message);
+    res.status(500).json({ error: `Erreur récupération données: ${err.message}` });
   }
 });
 
@@ -4637,35 +4694,18 @@ app.post('/api/onboard', requireAuth, async (req, res) => {
   // ── STEP 2-5: Run in parallel for speed ──
   const parallelTasks = [];
 
-  // STEP 2: Scrape Google Maps (public data)
+  // STEP 2: Google Places data (via unified /api/scrape-gmb endpoint)
   parallelTasks.push((async () => {
     try {
-      const q = encodeURIComponent(`${name} ${city} restaurant`);
-      // Try Google Places API first
-      const placesKey = process.env.GOOGLE_PLACES_API_KEY;
-      if (placesKey) {
-        const placesUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr`;
-        const pResp = await fetch(placesUrl);
-        const pData = await pResp.json();
-        if (pData.results && pData.results[0]) {
-          const place = pData.results[0];
-          // Get details
-          const detUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${place.place_id}&fields=name,formatted_address,formatted_phone_number,website,rating,user_ratings_total,opening_hours,reviews,photos,types&key=${placesKey}&language=fr`;
-          const dResp = await fetch(detUrl);
-          const dData = await dResp.json();
-          results.gmb_data = dData.result || place;
-          step('google_places', 'ok');
-          return;
-        }
-      }
-      // Fallback: scrape GMB endpoint
-      const body = JSON.stringify({ name, city });
+      const body = JSON.stringify({ name, city, website_url: website });
       const sResp = await fetch(`http://localhost:${PORT}/api/scrape-gmb`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body
       });
       const sData = await sResp.json();
-      if (sData.success) { results.gmb_data = sData.data; step('google_scrape', 'ok'); }
-      else step('google_scrape', sData.error || 'no data');
+      if (sData.success) {
+        results.gmb_data = sData.data;
+        step(sData.data.source === 'google_places_api' ? 'google_places' : 'google_scrape', 'ok');
+      } else step('google_data', sData.error || 'no data');
     } catch (e) { step('google_data', e.message); }
   })());
 
