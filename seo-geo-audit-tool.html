@@ -3913,10 +3913,65 @@ function generateContent(itemId,name,city,data){
             icon:'📅',label:'Liens de réservation à configurer',
             content:`<div class="preview"><strong>Réservation en ligne pour ${n} :</strong>\n\n🥇 <strong>Option 1 : TheFork (recommandé)</strong>\n→ Inscription gratuite sur thefork.fr/restaurant-manager\n→ Lien de réservation apparaît directement dans Google\n→ Commission uniquement sur les clients TheFork\n\n🥈 <strong>Option 2 : Widget site web</strong>\n→ Intégrez un formulaire de réservation sur votre site\n→ Ajoutez le lien dans GBP → "Réserver"\n\n🥉 <strong>Option 3 : WhatsApp Business</strong>\n→ Créez un lien wa.me/33[VOTRE_NUMERO]\n→ Ajoutez-le comme lien de commande dans GBP\n\n<strong>Configuration GBP :</strong>\n→ business.google.com → Infos\n→ "Liens" → "Réservation" → Ajoutez votre URL\n→ "Commande en ligne" → Ajoutez votre URL</div>`
         }],
-        'gbp_desc':()=>[{
-            icon:'📝',label:'Description GBP optimisée (750 car.)',
-            content:`<div class="preview">${n} — votre restaurant au cœur de ${c}. Cuisine authentique préparée avec des produits frais et de saison. Découvrez nos spécialités maison dans une ambiance chaleureuse et conviviale.\n\nTerrasse agréable aux beaux jours, service attentionné et cadre soigné. Idéal pour un déjeuner d'affaires, un dîner en amoureux ou un repas entre amis.\n\nMenu varié : entrées, plats signatures, desserts maison. Options végétariennes disponibles. Carte des vins sélectionnés avec soin.\n\nRéservation recommandée. Ouvert midi et soir. Livraison et click & collect disponibles.\n\n📍 ${c} | Réservez dès maintenant !</div>`
-        }],
+        'gbp_desc':()=>{
+            // Smart GBP Description Generator — uses real data + semantic analysis
+            const hub=window._hubData||{};const sem=window._semanticAnalysis||{};const d=currentData||{};
+            const cuisine=hub.category||d.cuisine||'';
+            const addr=hub.address||d.address||c;
+            const quartier=(addr.match(/\d{5}\s+(.+)/)||[])[1]||c;
+            const rating=hub.rating||d.rating||0;const revCount=hub.reviewCount||d.reviewCount||0;
+            const hours=hub.hours||d.hours||'';
+            // Extract top keywords from semantic analysis
+            const topTerms=(sem.terms||[]).slice(0,8).map(t=>t.term||t);
+            const topBigrams=(sem.bigrams||[]).slice(0,4).map(b=>b.bigram||b);
+            const missing=(sem.missing||[]).slice(0,5);
+            // Detect cuisine type
+            const cuisineMap={'japonais':['sushi','ramen','yakitori'],'italien':['pizza','pasta','risotto'],'français':['bistrot','brasserie','gastronomique'],'chinois':['dim sum','cantonais','wok'],'indien':['curry','tandoori','naan'],'mexicain':['tacos','burrito','guacamole'],'libanais':['mezze','falafel','houmous'],'thaï':['pad thai','curry vert','tom yam']};
+            let cuisineLabel=cuisine.replace(/restaurant\s*/i,'').trim()||'';
+            let specialties=topTerms.filter(t=>!['restaurant','service','prix','personnel','endroit','place','fois','très'].includes(t)).slice(0,5);
+            // Build optimized description
+            let desc=`${n}`;
+            if(cuisineLabel)desc+=`, restaurant ${cuisineLabel.toLowerCase()}`;
+            desc+=` au cœur de ${quartier}`;
+            if(specialties.length>0)desc+=`. Découvrez ${specialties.length>2?'nos spécialités : ':'notre spécialité : '}${specialties.slice(0,3).join(', ')}`;
+            desc+=`. Cuisine authentique préparée avec des produits frais et de saison`;
+            if(topBigrams.length>0)desc+=`. Nos clients apprécient particulièrement ${topBigrams.slice(0,2).map(b=>'notre '+b).join(' et ')}`;
+            desc+=`.\n\n`;
+            if(rating>=4.0)desc+=`Noté ${rating}/5 par ${revCount}+ avis Google. `;
+            desc+=`Ambiance chaleureuse et conviviale, service attentionné. `;
+            desc+=`Idéal pour un déjeuner d'affaires, un dîner en amoureux ou un repas entre amis.\n\n`;
+            desc+=`Menu varié : entrées, plats signatures, desserts maison. `;
+            if(specialties.length>3)desc+=`À la carte : ${specialties.slice(3).join(', ')}. `;
+            desc+=`Options végétariennes disponibles. Carte des vins sélectionnés.\n\n`;
+            if(hours)desc+=`${hours.includes('7j')||hours.includes('7/')?'Ouvert 7j/7':'Ouvert midi et soir'}. `;
+            desc+=`Réservation recommandée. Terrasse disponible.`;
+            desc+=`\n\n📍 ${quartier}${quartier!==c?' — '+c:''} | Réservez dès maintenant !`;
+            // Truncate to 750 chars
+            if(desc.length>750)desc=desc.substring(0,747)+'...';
+            const charCount=desc.length;
+            // Build cross-check
+            let crossCheck='';
+            if(missing.length>0)crossCheck=`\n\n⚠️ <strong>Mots-clés manquants</strong> (trouvés dans vos avis mais absents de la description) :\n${missing.map(m=>'• <code>'+m+'</code>').join('\n')}\n→ Intégrez-les naturellement dans la description`;
+            // Build local keyword suggestions
+            const kwBase=[`restaurant ${c.toLowerCase()}`,`restaurant ${cuisineLabel||''} ${c.toLowerCase()}`.trim()];
+            if(quartier&&quartier!==c)kwBase.push(`restaurant ${quartier.toLowerCase()}`,`restaurant ${cuisineLabel||''} ${quartier.toLowerCase()}`.trim());
+            const kwIntent=['meilleur','bon','pas cher','livraison','terrasse','ouvert dimanche','brunch','menu midi','réservation','proche','à emporter','groupe','romantique','famille'];
+            const kwLocal=kwIntent.map(i=>`${i} restaurant ${c.toLowerCase()}`).concat(kwIntent.slice(0,6).map(i=>`${cuisineLabel||'restaurant'} ${i} ${c.toLowerCase()}`));
+            const kwCuisine=Object.entries(cuisineMap).filter(([k])=>cuisineLabel.toLowerCase().includes(k)).flatMap(([,v])=>v.map(s=>`${s} ${c.toLowerCase()}`));
+            const allKw=[...new Set([...kwBase,...kwCuisine,...kwLocal,...specialties.map(s=>`${s} ${c.toLowerCase()}`)])].filter(Boolean).slice(0,30);
+            // Check which keywords appear in description
+            const descLower=desc.toLowerCase();
+            const kwInDesc=allKw.filter(k=>descLower.includes(k.split(' ')[0]));
+            const kwMissing=allKw.filter(k=>!descLower.includes(k.split(' ')[0]));
+            const kwCoverage=Math.round(kwInDesc.length/Math.max(allKw.length,1)*100);
+            return [{
+                icon:'📝',label:`Description GBP optimisée SEO (${charCount}/750 car.)`,
+                content:`<div class="preview"><strong>⚡ Générée automatiquement depuis vos données Google Places + analyse sémantique</strong>\n\n<textarea style="width:100%;height:180px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:.85rem;resize:vertical;" onclick="this.select()">${desc}</textarea>\n\n<strong>${charCount}/750 caractères</strong> — ${charCount>=600?'✅ Longueur optimale':'⚠️ Ajoutez du contenu pour atteindre 600+ car.'}\n\n<strong>Mots-clés SEO intégrés :</strong> ${specialties.map(s=>'<code>'+s+'</code>').join(' ')}\n${topBigrams.length>0?'<strong>Expressions clés :</strong> '+topBigrams.map(b=>'<code>'+b+'</code>').join(' '):''}\n${crossCheck}\n\n<strong>Où coller :</strong>\n→ <a href="https://business.google.com" target="_blank">business.google.com</a> → Infos → Description</div>`
+            },{
+                icon:'🔑',label:`Suggestions keywords locaux (${allKw.length} mots-clés)`,
+                content:`<div class="preview"><strong>🔍 Analyse de mots-clés locaux pour ${n} à ${c}</strong>\n\n<strong>Couverture keywords dans la description :</strong> <span style="color:${kwCoverage>=60?'var(--grn)':kwCoverage>=30?'var(--wrn)':'var(--err)'}">${kwCoverage}%</span>\n\n<strong>📌 Mots-clés primaires (à intégrer en priorité) :</strong>\n${kwBase.map(k=>`• <code>${k}</code> ${descLower.includes(k.split(' ')[0])?'✅':'❌'}`).join('\n')}\n\n<strong>🎯 Mots-clés d'intention locale :</strong>\n${kwLocal.slice(0,12).map(k=>`• <code>${k}</code>`).join('\n')}\n\n${kwCuisine.length>0?'<strong>🍽️ Mots-clés cuisine :</strong>\n'+kwCuisine.slice(0,6).map(k=>`• <code>${k}</code>`).join('\n')+'\n':''}\n${specialties.length>0?'<strong>⭐ Mots-clés issus des avis clients :</strong>\n'+specialties.map(k=>`• <code>${k}</code> — mentionné fréquemment dans vos avis`).join('\n')+'\n':''}\n${kwMissing.length>0?'\n<strong>⚠️ Mots-clés à intégrer</strong> (absents de la description) :\n'+kwMissing.slice(0,8).map(k=>`• <code>${k}</code>`).join('\n')+'\n→ Intégrez-les dans la description GBP, le site web et les posts Google':''}\n\n<strong>💡 Où utiliser ces mots-clés :</strong>\n→ Description GBP (750 car. max)\n→ Google Posts (1x/semaine minimum)\n→ Réponses aux avis (mentionnez la cuisine + le quartier)\n→ Site web : title, meta description, contenu H1/H2\n→ FAQ sur le site et Q&A Google\n→ Profils annuaires (Yelp, TripAdvisor, TheFork)</div>`
+            }];
+        },
         'gbp_photos':()=>[{
             icon:'📸',label:'Checklist photos à prendre',
             content:`<div class="preview"><strong>Photos prioritaires à prendre :</strong>\n\n1. 🏠 Façade de jour (angle large)\n2. 🌙 Façade de nuit (éclairée)\n3. 🪑 Intérieur — salle principale\n4. ☀️ Terrasse (si applicable)\n5-15. 🍽️ Vos 10 meilleurs plats (vue plongeante + angle 45°)\n16. 👨‍🍳 L'équipe / le chef\n17. 🍷 Bar / carte des vins\n18. 🎂 Desserts signatures\n19-25. 📱 Ambiance (détails déco, dressage, clients)\n\n<strong>Noms de fichiers SEO :</strong>\n• ${n.toLowerCase().replace(/\s+/g,'-')}-facade-${c.toLowerCase().replace(/\s+/g,'-')}.jpg\n• ${n.toLowerCase().replace(/\s+/g,'-')}-plat-signature.jpg\n• ${n.toLowerCase().replace(/\s+/g,'-')}-terrasse.jpg</div>`
@@ -3928,10 +3983,39 @@ function generateContent(itemId,name,city,data){
             icon:'🎉',label:'Google Post — Événement',
             content:`<div class="preview"><strong>Post type — Événement :</strong>\n\n✨ Soirée spéciale chez ${n} !\n\n[Jour] prochain, venez profiter de [description événement] dans une ambiance unique.\n\nMenu spécial à partir de [prix]€.\nPlaces limitées — réservez vite !\n\n📍 ${c}\n📞 [votre numéro]</div>`
         }],
-        'gbp_menu':()=>[{
-            icon:'📋',label:'Structure de menu optimisée',
-            content:`<div class="preview"><strong>Structure recommandée pour GBP :</strong>\n\n📌 ENTRÉES\n• [Nom du plat] — [prix]€\n  Description en 1 ligne avec ingrédients\n• [Nom du plat] — [prix]€\n  Description en 1 ligne avec ingrédients\n\n📌 PLATS\n• [Plat signature ⭐] — [prix]€\n  Description détaillée (c'est votre star)\n• [Nom du plat] — [prix]€\n  Description en 1 ligne\n\n📌 DESSERTS\n• [Dessert maison] — [prix]€\n  Description appétissante\n\n📌 BOISSONS\n• Carte des vins à partir de [prix]€\n• Cocktails signatures [prix]€\n\n💡 Chaque plat avec nom + prix + description = Google AI recommande vos plats spécifiquement</div>`
-        }],
+        'gbp_menu':()=>{
+            const improvements=buildWebsiteImprovements();
+            const topDishes=improvements.top_dishes||[];
+            return [{
+                icon:'📋',label:'Structure de menu optimisée (données réelles)',
+                content:`<div class="preview"><strong>⚡ Structure recommandée pour GBP :</strong>${topDishes.length>0?'\n\n<strong>Plats détectés dans vos avis :</strong> '+topDishes.map(d=>'<code>'+d+'</code>').join(' '):''}
+
+📌 ENTRÉES
+• ${topDishes[0]||'[Nom du plat]'} — [prix]€
+  Description en 1 ligne avec ingrédients
+• ${topDishes[1]||'[Nom du plat]'} — [prix]€
+  Description en 1 ligne avec ingrédients
+
+📌 PLATS
+• ${topDishes[2]||'[Plat signature ⭐]'} — [prix]€
+  Description détaillée (c'est votre star)
+• ${topDishes[3]||'[Nom du plat]'} — [prix]€
+  Description en 1 ligne
+
+📌 DESSERTS
+• ${topDishes[4]||'[Dessert maison]'} — [prix]€
+  Description appétissante
+
+📌 BOISSONS
+• Carte des vins à partir de [prix]€
+• Cocktails signatures [prix]€
+
+💡 Chaque plat avec nom + prix + description = Google AI recommande vos plats spécifiquement</div>`
+            },{
+                icon:'🔧',label:'Schema.org Menu JSON-LD (à intégrer sur le site)',
+                content:`<div class="preview"><strong>⚡ Schema Menu généré depuis vos avis clients</strong>\n\nCe schema permet à Google et aux IA de recommander vos plats spécifiquement :\n\n<textarea style="width:100%;height:200px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:.8rem;font-family:monospace;resize:vertical;" onclick="this.select()">${improvements.menu_schema}</textarea>\n\n<strong>Comment intégrer :</strong>\n→ Ajoutez ce JSON-LD dans le <code>&lt;head&gt;</code> de votre page menu\n→ Ou intégrez-le dans le schema Restaurant principal\n\n⚠️ Remplacez <code>[prix]</code> par les vrais prix de vos plats\n💡 RestauRank l'intègre déjà dans le schema.org complet (item "Schema.org")</div>`
+            }];
+        },
 
         // --- REVIEWS ---
         'rev_rating':()=>[{
@@ -4083,10 +4167,31 @@ function generateContent(itemId,name,city,data){
         }],
 
         // --- NEW GEO ADVANCED ---
-        'g_entity':()=>[{
-            icon:'🏛️',label:'Plan Entity SEO complet',
-            content:`<div class="preview"><strong>Entity SEO pour ${n} à ${c} :</strong>\n\n🎯 L'objectif : que Google reconnaisse "${n}" comme une ENTITÉ unique dans son Knowledge Graph\n\n1️⃣ <strong>schema.org sameAs</strong> (le plus important) :\nLiez TOUS vos profils dans le JSON-LD :\n"sameAs": ["URL GBP", "URL Yelp", "URL TripAdvisor", "URL Instagram", "URL Facebook"]\n\n2️⃣ <strong>Wikidata</strong> :\nCréez une entrée sur wikidata.org pour ${n}\n→ Type : restaurant (Q11707)\n→ Ajoutez : localisation, cuisine, site web, coordonnées\n\n3️⃣ <strong>NAP 100% cohérent</strong> :\nLe Knowledge Graph relie les entités par cohérence textuelle\n\n4️⃣ <strong>Backlinks locaux</strong> :\nOffice de tourisme, mairie, guides → ancre texte = "${n}"\n\n5️⃣ <strong>Recherche de marque</strong> :\nPlus les gens cherchent "${n}" sur Google, plus l'entité est forte</div>`
-        }],
+        'g_entity':()=>{
+            const hub=window._hubData||{};const d=currentData||{};const sem=window._semanticAnalysis||{};
+            const cuisine=hub.category||d.cuisine||'';const cuisineLabel=cuisine.replace(/restaurant\s*/i,'').trim().toLowerCase()||'';
+            const addr=hub.address||d.address||c;const phone=hub.phone||d.phone||'';
+            const website=hub.website||d.websiteUrl||'';const rating=hub.rating||d.rating||0;
+            const placeId=hub.place_id||d.place_id||'';
+            const topTerms=(sem.terms||[]).slice(0,5).map(t=>t.term||t);
+            // Entity strength signals
+            const signals=[];
+            if(placeId)signals.push({s:'Google Place ID',v:'✅',tip:'Identifiant unique Google'});
+            else signals.push({s:'Google Place ID',v:'❌',tip:'Lancez un audit pour le détecter'});
+            if(website)signals.push({s:'Site web',v:'✅',tip:website}); else signals.push({s:'Site web',v:'❌',tip:'Essentiel pour l\'entité'});
+            if(rating>=4.0)signals.push({s:'Avis Google',v:`✅ ${rating}/5`,tip:'Signal de confiance fort'}); else signals.push({s:'Avis Google',v:'⚠️',tip:'Visez 4.0+ pour le Knowledge Graph'});
+            if(phone)signals.push({s:'Téléphone',v:'✅',tip:phone}); else signals.push({s:'Téléphone',v:'❌',tip:'Ajoutez le numéro partout'});
+            const sigHtml=signals.map(s=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bdr);"><span>${s.s}</span><span>${s.v} <small style="color:var(--t2)">${s.tip}</small></span></div>`).join('');
+            // Wikidata JSON
+            const wikidata=`{\n  "type": "item",\n  "labels": { "fr": { "language": "fr", "value": "${n}" } },\n  "descriptions": { "fr": { "language": "fr", "value": "Restaurant${cuisineLabel?' '+cuisineLabel:''} à ${c}" } },\n  "claims": {\n    "P31": [{ "value": "Q11707" }],\n    "P17": [{ "value": "Q142" }],\n    "P131": [{ "value": "${c}" }]\n    ${website?',"P856": [{ "value": "'+website+'" }]':''}\n    ${phone?',"P1329": [{ "value": "'+phone+'" }]':''}\n  }\n}`;
+            return [{
+                icon:'🏛️',label:'Audit Entity SEO — Signaux d\'entité',
+                content:`<div class="preview"><strong>🔍 Audit Entity SEO pour ${n} à ${c}</strong>\n\n<strong>Signaux d'entité détectés :</strong>\n${sigHtml}\n\n<strong>Score entité estimé :</strong> <span style="font-size:1.2em;color:${signals.filter(s=>s.v.includes('✅')).length>=3?'var(--grn)':'var(--wrn)'}">${signals.filter(s=>s.v.includes('✅')).length}/${signals.length}</span>\n\n<strong>🎯 Actions pour renforcer l'entité "${n}" :</strong>\n\n1️⃣ <strong>Schema.org sameAs</strong> — liez TOUS vos profils :\n<code>"sameAs": [\n  "https://maps.google.com/?cid=${placeId||'[PLACE_ID]'}",\n  "https://www.yelp.fr/biz/[id]",\n  "https://www.tripadvisor.fr/[id]",\n  "https://www.instagram.com/[compte]",\n  "https://www.facebook.com/[page]"\n]</code>\n\n2️⃣ <strong>Cohérence NAP</strong> — même nom/adresse/tél partout\n\n3️⃣ <strong>Backlinks locaux</strong> — office de tourisme, mairie, guides, blogs culinaires\n→ Ancre texte = "<code>${n}</code>" (pas "cliquez ici")\n\n4️⃣ <strong>Recherche de marque</strong> — encouragez les clients à chercher "${n}" sur Google</div>`
+            },{
+                icon:'📚',label:'Wikidata — Créer l\'entrée (données pré-remplies)',
+                content:`<div class="preview"><strong>Créez ${n} sur Wikidata pour le Knowledge Graph :</strong>\n\n1. Allez sur <a href="https://www.wikidata.org/wiki/Special:NewItem" target="_blank">wikidata.org → Créer un élément</a>\n2. Remplissez :\n\n<strong>Label :</strong> <code>${n}</code>\n<strong>Description :</strong> <code>Restaurant${cuisineLabel?' '+cuisineLabel:''} à ${c}, France</code>\n<strong>Also known as :</strong> <code>${n.toLowerCase()}</code>\n\n3. Ajoutez les propriétés :\n• <strong>P31</strong> (nature) = <code>Q11707</code> (restaurant)\n• <strong>P17</strong> (pays) = <code>Q142</code> (France)\n• <strong>P131</strong> (localisation) = <code>${c}</code>\n${website?'• <strong>P856</strong> (site web) = <code>'+website+'</code>\n':''}\n${phone?'• <strong>P1329</strong> (téléphone) = <code>'+phone+'</code>\n':''}\n${cuisineLabel?'• <strong>P2012</strong> (cuisine) = <code>'+cuisineLabel+'</code>\n':''}\n\n<strong>Données JSON :</strong>\n<textarea style="width:100%;height:100px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:6px;padding:8px;font-size:.8rem;" onclick="this.select()">${wikidata}</textarea>\n\n💡 L'entrée Wikidata renforce considérablement votre visibilité dans le Knowledge Graph Google et dans les moteurs IA (Gemini, ChatGPT, Perplexity)</div>`
+            }];
+        },
         'g_voice':()=>[{
             icon:'🎙️',label:'FAQ optimisée recherche vocale',
             content:`<div class="preview"><strong>Questions vocales type pour ${n} :</strong>\n\nLes gens demandent à Siri/Google :\n\n• "OK Google, est-ce que ${n} à ${c} a une terrasse ?"\n• "Siri, quel est le numéro de ${n} ?"\n• "Quels sont les horaires de ${n} ?"\n• "Est-ce que ${n} livre ?"\n• "C'est quoi la spécialité de ${n} ?"\n\n<strong>FAQ à créer (réponses courtes 40-50 mots) :</strong>\n\nQ: "${n} a-t-il une terrasse ?" → R: "Oui, ${n} dispose d'une terrasse de [X] places..."\nQ: "Quels sont les horaires de ${n} ?" → R: "${n} est ouvert du [jour] au [jour] de [h] à [h]..."\nQ: "Quel est le budget moyen chez ${n} ?" → R: "Le menu du midi est à [X]€..."\nQ: "${n} accepte-t-il les réservations ?" → R: "Oui, réservez au [tel] ou sur TheFork..."\n\n<strong>GBP Q&A :</strong> Pré-remplissez ces 20 questions sur votre fiche Google Maps</div>`
@@ -4099,10 +4204,45 @@ function generateContent(itemId,name,city,data){
             icon:'🔗',label:'Plan backlinks locaux',
             content:`<div class="preview"><strong>10 sources de backlinks locaux pour ${n} à ${c} :</strong>\n\n1. <strong>Office de tourisme de ${c}</strong> → annuaire restaurants\n2. <strong>Mairie / CCI</strong> → répertoire des commerces\n3. <strong>Petit Futé</strong> → soumettez votre fiche\n4. <strong>Lonely Planet</strong> → guide de ${c}\n5. <strong>Blogueurs food de ${c}</strong> → invitation dégustation\n6. <strong>Hotels voisins</strong> → recommandation croisée\n7. <strong>Producteurs locaux</strong> → page partenaires\n8. <strong>Journal local</strong> → article/communiqué\n9. <strong>Associations commerçants</strong> → site du quartier\n10. <strong>Événements food</strong> → page participants\n\n📧 <strong>Email type :</strong>\n"Bonjour, nous sommes ${n}, restaurant à ${c}. Pourriez-vous nous ajouter à votre répertoire/annuaire en ligne ? Voici notre fiche : [lien site]."</div>`
         }],
-        'g_qa':()=>[{
-            icon:'❓',label:'20 Q&A Google à pré-remplir',
-            content:`<div class="preview"><strong>20 Questions Google Business pour ${n} :</strong>\n\n1. "${n} a-t-il une terrasse ?" → "Oui, ..."\n2. "Peut-on réserver chez ${n} ?" → "Oui, par téléphone ou TheFork..."\n3. "Quel est le budget moyen chez ${n} ?" → "Menu midi [X]€, carte [X-X]€..."\n4. "${n} fait-il de la livraison ?" → "..."\n5. "Y a-t-il un parking près de ${n} ?" → "..."\n6. "${n} est-il ouvert le dimanche ?" → "..."\n7. "Le restaurant est-il accessible PMR ?" → "..."\n8. "Peut-on venir en groupe chez ${n} ?" → "Oui, ..."\n9. "${n} propose-t-il un menu végétarien ?" → "..."\n10. "Quel est le plat signature de ${n} ?" → "..."\n11. "Le wifi est-il disponible ?" → "..."\n12. "${n} accepte-t-il les chèques ?" → "..."\n13. "Y a-t-il un menu enfant ?" → "..."\n14. "Peut-on privatiser ${n} ?" → "..."\n15. "D'où viennent vos produits ?" → "..."\n16. "${n} a-t-il la climatisation ?" → "..."\n17. "Le restaurant est-il adapté aux poussettes ?" → "..."\n18. "Proposez-vous des plats sans gluten ?" → "..."\n19. "Quelle est la spécialité de ${n} ?" → "..."\n20. "Comment se garer près de ${n} ?" → "..."\n\n💡 Posez depuis un autre compte Google, répondez en tant que propriétaire</div>`
-        }],
+        'g_qa':()=>{
+            // Smart Q&A Generator — uses real data for complete answers
+            const hub=window._hubData||{};const d=currentData||{};const sem=window._semanticAnalysis||{};
+            const addr=hub.address||d.address||c;const phone=hub.phone||d.phone||'[votre numéro]';
+            const hours=hub.hours||d.hours||'midi et soir';const website=hub.website||d.websiteUrl||'';
+            const rating=hub.rating||d.rating||0;const cuisine=hub.category||d.cuisine||'';
+            const cuisineLabel=cuisine.replace(/restaurant\s*/i,'').trim().toLowerCase()||'gastronomique';
+            const topTerms=(sem.terms||[]).slice(0,5).map(t=>t.term||t);
+            const priceLevel=hub.priceLevel||d.priceLevel||'';
+            const priceTxt=priceLevel==='PRICE_LEVEL_INEXPENSIVE'?'10-20€':priceLevel==='PRICE_LEVEL_MODERATE'?'15-35€':priceLevel==='PRICE_LEVEL_EXPENSIVE'?'30-60€':'15-40€';
+            // Build Q&A with real answers
+            const qas=[
+                {q:`${n} a-t-il une terrasse ?`,a:`Oui, ${n} dispose d'une terrasse agréable${addr?' à '+addr.split(',')[0]:''}. Idéale aux beaux jours pour profiter de notre cuisine ${cuisineLabel} en plein air.`},
+                {q:`Peut-on réserver chez ${n} ?`,a:`Oui, la réservation est possible par téléphone au ${phone}${website?', sur notre site '+website:''}, ou via TheFork/Google. Recommandée le weekend.`},
+                {q:`Quel est le budget moyen chez ${n} ?`,a:`Le budget moyen est de ${priceTxt} par personne chez ${n}. Nous proposons un excellent rapport qualité-prix pour notre cuisine ${cuisineLabel} à ${c}.`},
+                {q:`${n} fait-il de la livraison ?`,a:`${n} propose la livraison via nos partenaires (Uber Eats, Deliveroo). Vous pouvez aussi commander en click & collect directement.`},
+                {q:`${n} est-il ouvert le dimanche ?`,a:`${hours.toLowerCase().includes('dimanche')||hours.includes('7j')?'Oui, '+n+' est ouvert le dimanche. ':'Consultez nos horaires actuels : '}${hours}. N'hésitez pas à appeler le ${phone} pour confirmer.`},
+                {q:`Y a-t-il un parking près de ${n} ?`,a:`Plusieurs options de stationnement sont disponibles à proximité de ${n} : parkings publics et places en voirie dans le quartier${addr?' de '+addr.split(',')[0]:''}.`},
+                {q:`Le restaurant ${n} est-il accessible PMR ?`,a:`${n} est accessible aux personnes à mobilité réduite. Notre entrée et notre salle sont de plain-pied. N'hésitez pas à nous contacter au ${phone} pour toute question.`},
+                {q:`Peut-on venir en groupe chez ${n} ?`,a:`Oui, ${n} accueille les groupes ! Nous pouvons organiser des repas de groupe, anniversaires et événements privés. Contactez-nous au ${phone} pour réserver.`},
+                {q:`${n} propose-t-il des options végétariennes ?`,a:`Oui, notre carte propose des options végétariennes${topTerms.some(t=>['vegan','végétalien'].includes(t))?' et véganes':''}. Notre chef s'adapte à vos régimes alimentaires. Demandez au serveur !`},
+                {q:`Quel est le plat signature de ${n} ?`,a:`${topTerms.length>0?'Nos clients recommandent particulièrement : '+topTerms.slice(0,3).join(', ')+'. ':'Notre chef propose des spécialités '+cuisineLabel+' uniques. '}Découvrez notre carte complète sur place ou en ligne.`},
+                {q:`Le wifi est-il disponible chez ${n} ?`,a:`Oui, le wifi gratuit est disponible pour tous nos clients chez ${n}. Demandez le code d'accès à votre serveur.`},
+                {q:`Y a-t-il un menu enfant chez ${n} ?`,a:`Oui, ${n} propose un menu enfant adapté aux plus petits. Chaises hautes disponibles. Nous sommes un restaurant familial à ${c}.`},
+                {q:`Peut-on privatiser ${n} pour un événement ?`,a:`Oui, ${n} est disponible pour la privatisation : anniversaires, séminaires, événements d'entreprise. Contactez-nous au ${phone} pour un devis personnalisé.`},
+                {q:`D'où viennent les produits de ${n} ?`,a:`Chez ${n}, nous travaillons avec des producteurs locaux et de saison. Notre chef sélectionne les meilleurs ingrédients pour une cuisine ${cuisineLabel} authentique à ${c}.`},
+                {q:`Proposez-vous des plats sans gluten ?`,a:`Oui, ${n} propose des options sans gluten. Signalez votre allergie au serveur, notre équipe s'adaptera pour vous offrir une expérience culinaire sûre et savoureuse.`},
+                {q:`Comment se garer près de ${n} ?`,a:`Parking public à proximité de ${n}${addr?' ('+addr.split(',')[0]+')':''}. Places en voirie disponibles dans les rues adjacentes. Transport en commun : métro/bus à quelques minutes à pied.`},
+                {q:`${n} accepte-t-il les tickets restaurant ?`,a:`Oui, ${n} accepte les titres-restaurant (Ticket Restaurant, Swile, Edenred, etc.) ainsi que les cartes bancaires et espèces.`},
+                {q:`Quelle est la spécialité culinaire de ${n} ?`,a:`${n} est spécialisé en cuisine ${cuisineLabel}${topTerms.length>0?'. Nos plats les plus appréciés : '+topTerms.slice(0,3).join(', '):''}. ${rating>=4?'Noté '+rating+'/5 sur Google.':''} Venez découvrir notre carte à ${c} !`},
+                {q:`${n} propose-t-il un brunch ?`,a:`Renseignez-vous sur notre offre brunch en nous contactant au ${phone}. ${n} vous accueille dans un cadre convivial à ${c}.`},
+                {q:`Quels sont les horaires de ${n} ?`,a:`${n} est ouvert ${hours}. Pour toute information, appelez-nous au ${phone}. Réservation recommandée le weekend.`}
+            ];
+            let qaHtml=qas.map((qa,i)=>`<div style="margin-bottom:10px;padding:8px;background:var(--s1);border-radius:6px;"><strong>Q${i+1}:</strong> "${qa.q}"\n<span style="color:var(--grn);">→</span> "${qa.a}"</div>`).join('');
+            return [{
+                icon:'❓',label:`20 Q&A Google prêtes à poster (données réelles)`,
+                content:`<div class="preview"><strong>⚡ Q&A générées depuis vos données Google Places + analyse sémantique</strong>\n\n${qaHtml}\n\n💡 <strong>Mode d'emploi :</strong>\n1. Connectez-vous avec un <strong>autre compte Google</strong> (pas le propriétaire)\n2. Sur votre fiche Google Maps → "Questions et réponses"\n3. Posez chaque question ci-dessus\n4. Reconnectez-vous en tant que <strong>propriétaire</strong>\n5. Répondez à chaque question avec la réponse fournie\n\n⚠️ <strong>Ne postez pas tout d'un coup</strong> — 3-5 Q&A par semaine pour paraître naturel</div>`
+            }];
+        },
 
         // --- NOUVEAUX ---
         'op_canonical':()=>[{
@@ -7159,7 +7299,24 @@ function buildWebsiteImprovements(){
     if(lat&&lng)schema.geo={"@type":"GeoCoordinates","latitude":lat,"longitude":lng};
     schema.openingHoursSpecification=openingHours;
     if(rating&&reviewCount)schema.aggregateRating={"@type":"AggregateRating","ratingValue":String(rating),"reviewCount":String(reviewCount),"bestRating":"5"};
-    schema.hasMenu={"@type":"Menu","url":(website?website+'/menu':'https://[votre-site].fr/menu')};
+    // Build detailed Menu schema with MenuSections (LLM-critical for food recommendations)
+    const sem=window._semanticAnalysis||{};
+    const topDishes=(sem.terms||[]).filter(t=>{const w=(t.term||t).toLowerCase();return!['restaurant','service','prix','personnel','endroit','place','fois','très','bien','bon','bonne','nous','tout','comme','plus','avec','pour','dans','mais','aussi'].includes(w);}).slice(0,8).map(t=>t.term||t);
+    const menuUrl=website?website+'/menu':'https://[votre-site].fr/menu';
+    const menuSchema={"@type":"Menu","@id":menuUrl+"#menu","name":"Carte de "+name,"url":menuUrl,"hasMenuSection":[
+        {"@type":"MenuSection","name":"Entrées","hasMenuItem":[
+            {"@type":"MenuItem","name":topDishes[0]||"Entrée du jour","description":"Préparé(e) avec des produits frais de saison","offers":{"@type":"Offer","priceCurrency":"EUR","price":"[prix]"}},
+            {"@type":"MenuItem","name":topDishes[1]||"Salade composée","description":"Produits du marché","offers":{"@type":"Offer","priceCurrency":"EUR","price":"[prix]"}}
+        ]},
+        {"@type":"MenuSection","name":"Plats","hasMenuItem":[
+            {"@type":"MenuItem","name":topDishes[2]||"Plat signature","description":"Notre spécialité — à ne pas manquer","offers":{"@type":"Offer","priceCurrency":"EUR","price":"[prix]"}},
+            {"@type":"MenuItem","name":topDishes[3]||"Plat du jour","description":"Changement quotidien selon le marché","offers":{"@type":"Offer","priceCurrency":"EUR","price":"[prix]"}}
+        ]},
+        {"@type":"MenuSection","name":"Desserts","hasMenuItem":[
+            {"@type":"MenuItem","name":topDishes[4]||"Dessert maison","description":"Fait maison chaque jour","offers":{"@type":"Offer","priceCurrency":"EUR","price":"[prix]"}}
+        ]}
+    ]};
+    schema.hasMenu=menuSchema;
     schema.image=website?website+'/images/restaurant.jpg':'https://[votre-site].fr/photo.jpg';
     schema.sameAs=[mapsUrl||'https://maps.google.com/?q='+encodeURIComponent(name+' '+city),'https://www.yelp.fr/biz/[votre-fiche]','https://www.tripadvisor.fr/[votre-fiche]','https://www.instagram.com/[compte]','https://www.facebook.com/[page]'];
     // parentOrganization for multi-site groups
@@ -7193,7 +7350,10 @@ function buildWebsiteImprovements(){
 </div>
 ${phone?'<a itemprop="telephone" href="tel:'+phone.replace(/\s/g,'')+'">'+phone+'</a>':''}
 ${website?'<a itemprop="url" href="'+website+'">'+website.replace(/https?:\/\//,'')+'</a>':''}
-</footer>`
+</footer>`,
+        menu_schema:JSON.stringify(menuSchema,null,2),
+        menu_schema_jsonld:menuSchema,
+        top_dishes:topDishes
     };
 }
 
