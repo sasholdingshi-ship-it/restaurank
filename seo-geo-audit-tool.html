@@ -3239,41 +3239,76 @@ async function obStartScan(){
         }
     })();
 
-    // Trigger the FULL onboard endpoint (does everything in 1 call)
+    // Trigger REAL AUDIT — same endpoint as startScan uses
     let scanDone=false;
     try{
         window._obScanName=name;
         window._obScanCity=city;
         window._obScanWebsite=website;
-        // Call unified onboard endpoint
-        const obResp=await fetch(API_BASE+'/api/onboard',{
-            method:'POST',
-            headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},
-            body:JSON.stringify({name,city,website})
-        }).catch(()=>null);
-        if(obResp&&obResp.ok){
-            const obData=await obResp.json();
+        storedName=name;storedCity=city;storedWebsite=website||'';
+
+        // 1. Call real-audit (runs ALL APIs in parallel on server)
+        const [realAuditResp, onboardResp, dirResp] = await Promise.allSettled([
+            fetch(API_BASE+'/api/real-audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,website_url:website||null})}).catch(()=>null),
+            fetch(API_BASE+'/api/onboard',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({name,city,website})}).catch(()=>null),
+            fetch(API_BASE+'/api/directories/auto-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city})}).catch(()=>null)
+        ]);
+
+        // 2. Process real-audit results
+        let realData=null;
+        if(realAuditResp.status==='fulfilled'&&realAuditResp.value&&realAuditResp.value.ok){
+            const rData=await realAuditResp.value.json();
+            if(rData.success){
+                realData=rData.audit;
+                window._realAuditData=rData.audit;
+                window._realAuditDetails=rData.details;
+                window._realAuditSources=rData.sources;
+                // Store hub data from Google Places
+                if(rData.details?.google?.available){
+                    const g=rData.details.google;
+                    window._hubData={name:g.name,city,phone:g.phone,address:g.address,website:g.website,rating:g.rating,reviewCount:g.reviewCount,photos:g.photos?.map(p=>p.url)||[],hours:g.hours,place_id:g.place_id,mapsUrl:g.mapsUrl,priceLevel:g.priceLevel,reviews:g.reviews,source:'google_places_api'};
+                }
+                console.log('✅ REAL AUDIT (onboard):',Object.entries(rData.sources||{}).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '),'—',rData.duration+'ms');
+            }
+        }
+
+        // 3. Process onboard data
+        if(onboardResp.status==='fulfilled'&&onboardResp.value&&onboardResp.value.ok){
+            const obData=await onboardResp.value.json();
             window._onboardData=obData;
-            // Merge real data into currentData
-            if(obData.gmb_data)window._hubData=obData.gmb_data;
+            if(obData.gmb_data&&!window._hubData)window._hubData=obData.gmb_data;
             if(obData.website_audit)window._realAudit=obData.website_audit;
             if(obData.ai_content)window._aiOnboardPack=obData.ai_content;
             if(obData.cms_detected)window._cmsDetected=obData.cms_detected;
             if(obData.directories)window._dirResults=obData.directories;
-            console.log('✅ Onboard complet:',obData.steps_completed?.length,'étapes OK en',obData.duration_ms+'ms');
         }
-        // Generate simulated data as baseline, then override with real data
-        const fakePlace={name,formatted_address:city,geometry:{location:{lat:()=>48.86,lng:()=>2.35}},rating:0,user_ratings_total:0,reviews:[]};
-        confirmedPlace=fakePlace;
-        currentData=generateAuditData(name,city);
+
+        // 4. Process directory results
+        if(dirResp.status==='fulfilled'&&dirResp.value&&dirResp.value.ok){
+            const dData=await dirResp.value.json();
+            if(dData.success&&dData.results){
+                dData.results.forEach(r=>{if(platformStatus[r.platform]!=='done')dirCheckResults[r.platform]=r;});
+            }
+        }
+
+        // 5. Build currentData from REAL data (never from generateAuditData)
+        confirmedPlace={name,formatted_address:city,geometry:{location:{lat:()=>48.86,lng:()=>2.35}},rating:window._hubData?.rating||0,user_ratings_total:window._hubData?.reviewCount||0,reviews:[]};
+        if(realData){
+            currentData=_prepareRealData(realData,name,city);
+            console.log('✅ USING REAL DATA for onboard dashboard');
+        } else {
+            // Even fallback uses empty/null — no fake data
+            currentData=_prepareRealData({name,city,_auditSource:'pending'},name,city);
+            console.warn('⚠️ Real audit API unavailable — showing empty data (no fakes)');
+        }
         if(website)currentData.website=website;
         currentScores=computeScores(currentData);
         scanDone=true;
     }catch(e){
-        // Fallback: generate simulated data
-        const fakePlace={name,formatted_address:city,geometry:{location:{lat:()=>48.86,lng:()=>2.35}},rating:0,user_ratings_total:0,reviews:[]};
-        confirmedPlace=fakePlace;
-        currentData=generateAuditData(name,city);
+        console.warn('Onboard error:',e);
+        // Fallback: empty real data structure — NO fake data
+        confirmedPlace={name,formatted_address:city,geometry:{location:{lat:()=>48.86,lng:()=>2.35}},rating:0,user_ratings_total:0,reviews:[]};
+        currentData=_prepareRealData({name,city,_auditSource:'error'},name,city);
         if(website)currentData.website=website;
         currentScores=computeScores(currentData);
         scanDone=true;
@@ -4757,10 +4792,11 @@ function startScan(name,city){
 
     // ══════════════════════════════════════════════════════
     // REAL AUDIT — single call that runs ALL APIs in parallel on server
+    // Store as promise so animation callback can AWAIT it
     // ══════════════════════════════════════════════════════
     window._realAuditData = null;
     window._realAuditDetails = null;
-    fetchTimeout(API_BASE+'/api/real-audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,website_url:storedWebsite||null})},45000)
+    window._realAuditPromise = fetchTimeout(API_BASE+'/api/real-audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,website_url:storedWebsite||null})},45000)
     .then(r=>r.json()).then(data=>{
         if(data.success){
             window._realAuditData=data.audit;
@@ -4778,32 +4814,44 @@ function startScan(name,city){
                 console.log('CMS détecté:',detectedCMS.detected.cms);
             }
         }
-    }).catch(e=>console.warn('Real audit error:',e));
+        return data;
+    }).catch(e=>{console.warn('Real audit error:',e);return null;});
 
     // Also trigger directory auto-check in background (for the directory grid UI)
-    fetchTimeout(API_BASE+'/api/directories/auto-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city})},30000)
+    window._dirScanPromise = fetchTimeout(API_BASE+'/api/directories/auto-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city})},30000)
     .then(r=>r.json()).then(data=>{
         if(data.success&&data.results){
             data.results.forEach(r=>{if(platformStatus[r.platform]!=='done')dirCheckResults[r.platform]=r;});
             console.log('Directory scan:',data.results.filter(r=>r.found).length+'/'+data.results.length+' trouvés');
         }
-    }).catch(e=>console.warn('Directory scan error:',e));
+        return data;
+    }).catch(e=>{console.warn('Directory scan error:',e);return null;});
 
     function next(){
         if(cur>0){const p=document.getElementById(`step${cur-1}`);p.classList.remove('active');p.classList.add('done');p.querySelector('.step-icon').innerHTML='✓';}
-        if(cur>=filteredSteps.length){bar.style.width='100%';setTimeout(()=>{
+        if(cur>=filteredSteps.length){bar.style.width='100%';setTimeout(async()=>{
             // ══════════════════════════════════════════════
-            // USE REAL AUDIT DATA (from /api/real-audit)
-            // Falls back to generateAuditData() only if API failed
+            // WAIT for real audit to complete before showing dashboard
+            // This ensures we ALWAYS use real data, never fake fallback
             // ══════════════════════════════════════════════
+            if(!window._realAuditData && window._realAuditPromise){
+                try{
+                    const lastStep=document.getElementById(`step${filteredSteps.length-1}`);
+                    if(lastStep){lastStep.querySelector('.step-text small').textContent='Finalisation des résultats API...';}
+                    await window._realAuditPromise;
+                }catch(e){}
+            }
+            // Also wait for directory scan
+            if(window._dirScanPromise){try{await window._dirScanPromise;}catch(e){}}
+
             if(window._realAuditData){
                 // Real data — replace null values with safe defaults for scoring
                 currentData = _prepareRealData(window._realAuditData, name, city);
                 console.log('✅ USING REAL AUDIT DATA — sources:', Object.entries(window._realAuditSources||{}).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '));
             } else {
-                // Fallback: old generated data (should rarely happen)
-                currentData = generateAuditData(name,city);
-                console.warn('⚠️ Real audit not available — using default data');
+                // Fallback: empty real structure — NO fake data ever
+                currentData = _prepareRealData({name,city,_auditSource:'api_unavailable'}, name, city);
+                console.warn('⚠️ Real audit API unavailable — showing empty data (no fakes)');
             }
             // Inject CMS detection results
             if(detectedCMS&&detectedCMS.detected){currentData.detectedCMS=detectedCMS.detected;currentData.websiteUrl=storedWebsite;currentData.seoAnalysis=detectedCMS.seoAnalysis||{};}
@@ -7433,10 +7481,10 @@ async function runFullAutonomous(){
     await runAutoStep('audit','running','Analyse en cours…');
     progress(5);
     try{
-        if(!currentData||!currentData.hasPrimaryCategory===undefined){
-            const name=currentData?.name||storedName||'Restaurant';
-            const city=currentData?.city||storedCity||'Paris';
-            currentData=generateAuditData(name,city);
+        if(!currentData){
+            const name=storedName||'Restaurant';
+            const city=storedCity||'Paris';
+            currentData=_prepareRealData({name,city,_auditSource:'auto_run'},name,city);
         }
         currentScores=computeScores(currentData);
         try{renderDashboard();}catch(e){}
