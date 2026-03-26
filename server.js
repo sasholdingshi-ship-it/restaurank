@@ -5834,6 +5834,615 @@ app.get('/api/agent/run/:id', (req, res) => {
 });
 
 // ============================================================
+// REAL AUDIT — Comprehensive audit using ALL available APIs
+// ============================================================
+app.post('/api/real-audit', async (req, res) => {
+  const { name, city, website_url, place_id } = req.body;
+  if (!name || !city) return res.status(400).json({ error: 'Nom et ville requis' });
+
+  const startTime = Date.now();
+  const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+  const foursquareKey = process.env.FOURSQUARE_API_KEY;
+  const tripadvisorKey = process.env.TRIPADVISOR_API_KEY;
+  const yelpKey = process.env.YELP_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  // Result structure — every field tracks its source
+  const audit = {
+    restaurant: { name, city },
+    sources: {}, // which APIs returned data
+    // === Google Places data ===
+    google: { available: false },
+    // === Website audit data ===
+    website: { available: false },
+    // === Directory presence ===
+    directories: { available: false },
+    // === PageSpeed ===
+    performance: { available: false },
+    // === CMS detection ===
+    cms: { available: false },
+    // === TripAdvisor ===
+    tripadvisor: { available: false },
+    // === Foursquare ===
+    foursquare: { available: false },
+    // === Yelp ===
+    yelp: { available: false },
+    // === AI Visibility ===
+    aiVisibility: { available: false },
+    // === Computed scores (from real data only) ===
+    scores: {}
+  };
+
+  // Helper: safe fetch with timeout
+  const safeFetch = async (url, opts = {}, ms = 15000) => {
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), ms);
+    try {
+      const r = await fetch(url, { ...opts, signal: ctrl.signal });
+      return r;
+    } finally { clearTimeout(t); }
+  };
+
+  // ═════════════════════════════════════════════
+  // Run ALL API calls in parallel
+  // ═════════════════════════════════════════════
+  const tasks = [];
+
+  // 1. GOOGLE PLACES API — full business data
+  if (placesKey) {
+    tasks.push((async () => {
+      try {
+        let foundPlaceId = place_id || null;
+
+        // Find place_id
+        if (!foundPlaceId) {
+          const q = encodeURIComponent(`${name} ${city} restaurant`);
+          const searchResp = await safeFetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr&type=restaurant`);
+          const searchData = await searchResp.json();
+          if (searchData.status === 'OK' && searchData.results?.length > 0) {
+            foundPlaceId = searchData.results[0].place_id;
+          }
+        }
+
+        if (foundPlaceId) {
+          const fields = 'name,formatted_address,formatted_phone_number,international_phone_number,website,rating,user_ratings_total,opening_hours,reviews,photos,types,editorial_summary,geometry,business_status,url,price_level';
+          const detailResp = await safeFetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${foundPlaceId}&fields=${fields}&key=${placesKey}&language=fr`);
+          const detailData = await detailResp.json();
+
+          if (detailData.status === 'OK' && detailData.result) {
+            const p = detailData.result;
+            audit.google = {
+              available: true,
+              place_id: foundPlaceId,
+              name: p.name,
+              address: p.formatted_address,
+              phone: p.formatted_phone_number || p.international_phone_number,
+              website: p.website,
+              rating: p.rating,
+              reviewCount: p.user_ratings_total,
+              priceLevel: p.price_level,
+              businessStatus: p.business_status,
+              mapsUrl: p.url,
+              lat: p.geometry?.location?.lat,
+              lng: p.geometry?.location?.lng,
+              // Categories
+              types: p.types || [],
+              primaryCategory: p.types?.[0]?.replace(/_/g, ' ') || null,
+              secondaryCategories: (p.types || []).slice(1).filter(t => !['point_of_interest', 'establishment', 'food'].includes(t)),
+              // Description
+              description: p.editorial_summary?.overview || null,
+              descriptionLength: (p.editorial_summary?.overview || '').length,
+              // Hours
+              hoursComplete: !!(p.opening_hours?.weekday_text?.length >= 7),
+              hours: p.opening_hours?.weekday_text || null,
+              isOpenNow: p.opening_hours?.open_now,
+              // Photos
+              photoCount: p.photos?.length || 0,
+              photos: (p.photos || []).slice(0, 10).map(ph => ({
+                url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ph.photo_reference}&key=${placesKey}`,
+                attributions: ph.html_attributions
+              })),
+              // Reviews (Google returns up to 5)
+              reviews: (p.reviews || []).map(r => ({
+                author: r.author_name,
+                rating: r.rating,
+                text: r.text,
+                time: r.relative_time_description,
+                timestamp: r.time
+              })),
+              // Derived: review response rate (check if owner replied)
+              ownerResponseCount: (p.reviews || []).filter(r => r.author_url && r.text?.length > 0).length // approximation
+            };
+            audit.sources.google = 'ok';
+            audit.restaurant.name = p.name || name; // Use Google's official name
+          }
+        }
+        if (!audit.google.available) audit.sources.google = 'no_results';
+      } catch(e) {
+        audit.sources.google = `error: ${e.message}`;
+        console.warn('Real audit — Google Places error:', e.message);
+      }
+    })());
+  } else {
+    audit.sources.google = 'no_api_key';
+  }
+
+  // 2. WEBSITE AUDIT — real crawl
+  if (website_url) {
+    tasks.push((async () => {
+      try {
+        const normalized = website_url.startsWith('http') ? website_url : `https://${website_url}`;
+        const html = await fetchPage(normalized);
+        const h = html.toLowerCase();
+        const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const cityNorm = city.toLowerCase();
+
+        const wa = {
+          available: true,
+          url: normalized,
+          // Title
+          hasTitle: /<title[^>]*>/i.test(html),
+          titleText: (html.match(/<title[^>]*>(.*?)<\/title>/i) || [])[1] || '',
+          titleLength: 0,
+          titleOptimized: false,
+          titleContainsName: false,
+          titleContainsCity: false,
+          // Meta description
+          hasMetaDesc: /name=["']description["']/i.test(html),
+          metaDescText: (html.match(/name=["']description["'][^>]*content=["'](.*?)["']/i) || [])[1] || '',
+          metaDescLength: 0,
+          // Schema.org
+          hasSchemaRestaurant: /schema\.org.*restaurant/i.test(html) || /"@type"\s*:\s*"Restaurant"/i.test(html),
+          hasSchemaLocalBusiness: /"@type"\s*:\s*"LocalBusiness"/i.test(html),
+          hasAggregateRating: /aggregateRating/i.test(html),
+          hasMenuSchema: /hasMenu|MenuSection|MenuItem/i.test(html) && /schema\.org/i.test(html),
+          schemaTypes: [],
+          // FAQ
+          hasFAQ: /FAQPage/i.test(html),
+          faqCount: (html.match(/FAQPage|"Question"/gi) || []).length,
+          // Open Graph
+          hasOpenGraph: /og:title/i.test(html),
+          ogTitle: (html.match(/property=["']og:title["'][^>]*content=["'](.*?)["']/i) || [])[1] || '',
+          ogImage: (html.match(/property=["']og:image["'][^>]*content=["'](.*?)["']/i) || [])[1] || '',
+          // NAP on site
+          nameOnSite: h.includes(nameNorm),
+          cityOnSite: h.includes(cityNorm),
+          phoneOnSite: /(\+33|0[1-9])\s*[\d\s\-.]{8,}/i.test(html),
+          addressOnSite: /rue|avenue|boulevard|place|chemin/i.test(html) && h.includes(cityNorm),
+          napOnSite: false,
+          // Technical SEO
+          hasViewport: /viewport/i.test(html),
+          hasCanonical: /rel=["']canonical["']/i.test(html),
+          hasHreflang: /hreflang/i.test(html),
+          httpsRedirect: normalized.startsWith('https'),
+          hasRobotsTxt: false,
+          hasSitemap: false,
+          // Content
+          wordCount: html.replace(/<[^>]+>/g, ' ').split(/\s+/).filter(w => w.length > 2).length,
+          imageCount: (html.match(/<img/gi) || []).length,
+          hasAltTags: /<img[^>]*alt=["'][^"']+["']/i.test(html),
+          altTagRatio: 0,
+          headingCount: (html.match(/<h[1-3]/gi) || []).length,
+          h1Count: (html.match(/<h1/gi) || []).length,
+          // CTA/Links
+          hasBookingLink: /reserv|book|commander|réserv/i.test(html),
+          hasPhoneLink: /tel:/i.test(html),
+          hasMapEmbed: /maps\.google|google\.com\/maps|maps\.apple/i.test(html),
+          hasSocialLinks: /facebook\.com|instagram\.com|twitter\.com|tiktok\.com/i.test(html),
+          socialPlatforms: [],
+          // Blog
+          hasBlog: /blog|article|actualit/i.test(html) && (html.match(/<article/gi) || []).length > 0,
+          // CMS
+          cms: detectCMS(html, normalized)
+        };
+
+        // Computed fields
+        wa.titleLength = wa.titleText.length;
+        wa.titleContainsName = nameNorm ? wa.titleText.toLowerCase().includes(nameNorm) : false;
+        wa.titleContainsCity = cityNorm ? wa.titleText.toLowerCase().includes(cityNorm) : false;
+        wa.titleOptimized = wa.titleLength > 20 && wa.titleLength < 65 && wa.titleContainsName;
+        wa.metaDescLength = wa.metaDescText.length;
+        wa.napOnSite = wa.nameOnSite && wa.cityOnSite && wa.phoneOnSite;
+        const totalImgs = (html.match(/<img/gi) || []).length;
+        const altImgs = (html.match(/<img[^>]*alt=["'][^"']+["']/gi) || []).length;
+        wa.altTagRatio = totalImgs > 0 ? Math.round(altImgs / totalImgs * 100) : 0;
+
+        // Social platforms detected
+        if (/facebook\.com/i.test(html)) wa.socialPlatforms.push('Facebook');
+        if (/instagram\.com/i.test(html)) wa.socialPlatforms.push('Instagram');
+        if (/tiktok\.com/i.test(html)) wa.socialPlatforms.push('TikTok');
+        if (/twitter\.com|x\.com/i.test(html)) wa.socialPlatforms.push('Twitter/X');
+        if (/linkedin\.com/i.test(html)) wa.socialPlatforms.push('LinkedIn');
+        if (/youtube\.com/i.test(html)) wa.socialPlatforms.push('YouTube');
+
+        // Schema types found
+        const schemaMatches = html.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi) || [];
+        schemaMatches.forEach(s => {
+          try {
+            const jsonStr = s.replace(/<\/?script[^>]*>/gi, '');
+            const json = JSON.parse(jsonStr);
+            const schemas = Array.isArray(json) ? json : [json];
+            schemas.forEach(sc => { if (sc['@type']) wa.schemaTypes.push(sc['@type']); });
+          } catch(e) {}
+        });
+
+        // Robots.txt + Sitemap
+        const parsedUrl = new URL(normalized);
+        const baseUrl = `${parsedUrl.protocol}//${parsedUrl.hostname}`;
+        try {
+          const robotsHtml = await fetchPage(`${baseUrl}/robots.txt`);
+          wa.hasRobotsTxt = robotsHtml && robotsHtml.length > 10 && !robotsHtml.includes('<html');
+          wa.hasSitemap = robotsHtml.toLowerCase().includes('sitemap');
+        } catch(e) {}
+        if (!wa.hasSitemap) {
+          try {
+            const sitemapHtml = await fetchPage(`${baseUrl}/sitemap.xml`);
+            wa.hasSitemap = sitemapHtml && (sitemapHtml.includes('<urlset') || sitemapHtml.includes('<sitemapindex'));
+          } catch(e) {}
+        }
+
+        audit.website = wa;
+        audit.cms = wa.cms || { available: false };
+        audit.cms.available = !!(wa.cms?.detected?.cms);
+        audit.sources.website = 'ok';
+      } catch(e) {
+        audit.sources.website = `error: ${e.message}`;
+        console.warn('Real audit — Website error:', e.message);
+      }
+    })());
+  } else {
+    audit.sources.website = 'no_url';
+  }
+
+  // 3. PAGESPEED — real Core Web Vitals
+  if (website_url) {
+    tasks.push((async () => {
+      try {
+        const normalized = website_url.startsWith('http') ? website_url : `https://${website_url}`;
+        const apiKey = process.env.GOOGLE_PLACES_API_KEY; // Same Google project
+        let psiUrl = `https://www.googleapis.com/pagespeedonline/v5/runPagespeed?url=${encodeURIComponent(normalized)}&strategy=mobile&category=performance&category=seo&category=accessibility`;
+        if (apiKey) psiUrl += `&key=${apiKey}`;
+        const resp = await safeFetch(psiUrl, {}, 30000);
+        const data = await resp.json();
+        if (data.lighthouseResult) {
+          const cats = data.lighthouseResult.categories || {};
+          audit.performance = {
+            available: true,
+            mobileScore: Math.round((cats.performance?.score || 0) * 100),
+            seoScore: Math.round((cats.seo?.score || 0) * 100),
+            accessibilityScore: Math.round((cats.accessibility?.score || 0) * 100),
+            fcp: data.lighthouseResult.audits?.['first-contentful-paint']?.displayValue,
+            lcp: data.lighthouseResult.audits?.['largest-contentful-paint']?.displayValue,
+            cls: data.lighthouseResult.audits?.['cumulative-layout-shift']?.displayValue,
+            tbt: data.lighthouseResult.audits?.['total-blocking-time']?.displayValue
+          };
+          audit.sources.pagespeed = 'ok';
+        }
+      } catch(e) {
+        audit.sources.pagespeed = `error: ${e.message}`;
+      }
+    })());
+  }
+
+  // 4. FOURSQUARE — venue data
+  if (foursquareKey) {
+    tasks.push((async () => {
+      try {
+        const params = new URLSearchParams({ query: name, near: city, categories: '13065', limit: '3' });
+        const resp = await safeFetch(`https://api.foursquare.com/v3/places/search?${params}`, {
+          headers: { 'Authorization': foursquareKey, 'Accept': 'application/json' }
+        });
+        const data = await resp.json();
+        if (data.results?.length > 0) {
+          const p = data.results[0];
+          audit.foursquare = {
+            available: true,
+            found: true,
+            fsq_id: p.fsq_id,
+            name: p.name,
+            address: p.location?.formatted_address,
+            categories: p.categories?.map(c => c.name),
+            phone: p.tel,
+            website: p.website,
+            rating: p.rating,
+            verified: p.verified || false
+          };
+          audit.sources.foursquare = 'ok';
+        } else {
+          audit.foursquare = { available: true, found: false };
+          audit.sources.foursquare = 'not_found';
+        }
+      } catch(e) {
+        audit.sources.foursquare = `error: ${e.message}`;
+      }
+    })());
+  } else {
+    audit.sources.foursquare = 'no_api_key';
+  }
+
+  // 5. TRIPADVISOR — location + details
+  if (tripadvisorKey) {
+    tasks.push((async () => {
+      try {
+        const resp = await safeFetch(`https://api.content.tripadvisor.com/api/v1/location/search?searchQuery=${encodeURIComponent(name + ' ' + city)}&category=restaurants&language=fr&key=${tripadvisorKey}`);
+        const data = await resp.json();
+        if (data.data?.length > 0) {
+          const loc = data.data[0];
+          // Get details for reviews/rating
+          let details = {};
+          try {
+            const detResp = await safeFetch(`https://api.content.tripadvisor.com/api/v1/location/${loc.location_id}/details?language=fr&key=${tripadvisorKey}`);
+            details = await detResp.json();
+          } catch(e) {}
+          // Get reviews
+          let reviews = [];
+          try {
+            const revResp = await safeFetch(`https://api.content.tripadvisor.com/api/v1/location/${loc.location_id}/reviews?language=fr&key=${tripadvisorKey}`);
+            const revData = await revResp.json();
+            reviews = (revData.data || []).slice(0, 5);
+          } catch(e) {}
+
+          audit.tripadvisor = {
+            available: true,
+            found: true,
+            location_id: loc.location_id,
+            name: loc.name || details.name,
+            address: loc.address_obj?.address_string || details.address_obj?.address_string,
+            rating: parseFloat(details.rating) || null,
+            reviewCount: parseInt(details.num_reviews) || null,
+            rankingString: details.ranking_data?.ranking_string || null,
+            priceLevel: details.price_level || null,
+            cuisine: details.cuisine?.map(c => c.localized_name) || [],
+            url: details.web_url || `https://www.tripadvisor.com/Restaurant_Review-${loc.location_id}`,
+            reviews: reviews.map(r => ({
+              rating: r.rating,
+              title: r.title,
+              text: r.text?.substring(0, 300),
+              date: r.published_date,
+              tripType: r.trip_type
+            })),
+            hasOwnerResponse: reviews.some(r => r.owner_response),
+            ownerResponseRate: reviews.length > 0 ? Math.round(reviews.filter(r => r.owner_response).length / reviews.length * 100) : null
+          };
+          audit.sources.tripadvisor = 'ok';
+        } else {
+          audit.tripadvisor = { available: true, found: false };
+          audit.sources.tripadvisor = 'not_found';
+        }
+      } catch(e) {
+        audit.sources.tripadvisor = `error: ${e.message}`;
+      }
+    })());
+  } else {
+    audit.sources.tripadvisor = 'no_api_key';
+  }
+
+  // 6. YELP — business data
+  if (yelpKey) {
+    tasks.push((async () => {
+      try {
+        const resp = await safeFetch(`https://api.yelp.com/v3/businesses/search?term=${encodeURIComponent(name)}&location=${encodeURIComponent(city)}&categories=restaurants&limit=3`, {
+          headers: { 'Authorization': `Bearer ${yelpKey}` }
+        });
+        const data = await resp.json();
+        if (data.businesses?.length > 0) {
+          const b = data.businesses[0];
+          audit.yelp = {
+            available: true,
+            found: true,
+            id: b.id,
+            name: b.name,
+            rating: b.rating,
+            reviewCount: b.review_count,
+            phone: b.display_phone,
+            address: b.location?.display_address?.join(', '),
+            categories: b.categories?.map(c => c.title),
+            url: b.url,
+            isClaimed: b.is_claimed,
+            imageUrl: b.image_url,
+            priceLevel: b.price
+          };
+          audit.sources.yelp = 'ok';
+        } else {
+          audit.yelp = { available: true, found: false };
+          audit.sources.yelp = 'not_found';
+        }
+      } catch(e) {
+        audit.sources.yelp = `error: ${e.message}`;
+      }
+    })());
+  } else {
+    audit.sources.yelp = 'no_api_key';
+  }
+
+  // ═════════════════════════════════════════════
+  // Wait for all parallel API calls
+  // ═════════════════════════════════════════════
+  await Promise.allSettled(tasks);
+
+  // ═════════════════════════════════════════════
+  // COMPUTE REAL SCORES from collected data
+  // ═════════════════════════════════════════════
+  const g = audit.google;
+  const w = audit.website;
+  const perf = audit.performance;
+  const ta = audit.tripadvisor;
+  const fsq = audit.foursquare;
+  const ylp = audit.yelp;
+
+  // Build the flat audit data object that the frontend scoring engine expects
+  const realData = {
+    name: g.available ? g.name : name,
+    city,
+    _auditSource: 'real',
+    _sources: audit.sources,
+    _apiTimestamp: new Date().toISOString(),
+    _auditDuration: Date.now() - startTime,
+
+    // === GBP / Google Places (REAL) ===
+    hasPrimaryCategory: g.available ? !!(g.types?.length > 0) : null,
+    primaryCategorySpecific: g.available ? !['restaurant', 'food', 'establishment'].includes(g.types?.[0]) : null,
+    secondaryCategories: g.available ? (g.secondaryCategories?.length || 0) : null,
+    descriptionLength: g.available ? (g.descriptionLength || 0) : null,
+    photoCount: g.available ? (g.photoCount || 0) : null,
+    hoursComplete: g.available ? (g.hoursComplete || false) : null,
+    specialHours: null, // Can't check via Places API
+    attributeCount: null, // Can't check via Places API
+    postsPerMonth: null, // Can't check via Places API (GBP only)
+    menuUploaded: w.available ? (w.hasMenuSchema || false) : null,
+    menuStructured: w.available ? (w.hasMenuSchema || false) : null,
+    bookingLink: w.available ? (w.hasBookingLink || false) : null,
+    place_id: g.available ? g.place_id : null,
+    mapsUrl: g.available ? g.mapsUrl : null,
+
+    // === Reviews (REAL — multi-platform) ===
+    rating: g.available ? g.rating : null,
+    reviewCount: g.available ? g.reviewCount : null,
+    recentReviewsPerMonth: null, // Can't determine from Places API alone
+    responseRate: null, // Can't determine from Places API (GBP only)
+    platformsWithReviews: [
+      g.available && g.reviewCount > 0 ? 'Google' : null,
+      ta.available && ta.found && ta.reviewCount > 0 ? 'TripAdvisor' : null,
+      ylp.available && ylp.found && ylp.reviewCount > 0 ? 'Yelp' : null,
+      fsq.available && fsq.found && fsq.rating ? 'Foursquare' : null
+    ].filter(Boolean).length,
+    _reviewsByPlatform: {
+      google: g.available ? { rating: g.rating, count: g.reviewCount, reviews: g.reviews } : null,
+      tripadvisor: ta.available && ta.found ? { rating: ta.rating, count: ta.reviewCount, reviews: ta.reviews, ranking: ta.rankingString } : null,
+      yelp: ylp.available && ylp.found ? { rating: ylp.rating, count: ylp.reviewCount, isClaimed: ylp.isClaimed } : null,
+      foursquare: fsq.available && fsq.found ? { rating: fsq.rating } : null
+    },
+
+    // === Citations / Directories (REAL) ===
+    napConsistency: _computeNapConsistency(g, w, fsq, ylp, ta),
+    directoryPresence: [
+      g.available && g.place_id ? 1 : 0,
+      ta.available && ta.found ? 1 : 0,
+      ylp.available && ylp.found ? 1 : 0,
+      fsq.available && fsq.found ? 1 : 0,
+    ].reduce((a, b) => a + b, 0),
+    listingCompleteness: _computeListingCompleteness(g, ta, ylp, fsq),
+
+    // === SEO Website (REAL from crawl) ===
+    hasSchemaRestaurant: w.available ? w.hasSchemaRestaurant : null,
+    schemaComplete: w.available ? (w.hasSchemaRestaurant && w.hasAggregateRating) : null,
+    hasFAQ: w.available ? w.hasFAQ : null,
+    faqCount: w.available ? w.faqCount : null,
+    titleOptimized: w.available ? w.titleOptimized : null,
+    hasTitle: w.available ? w.hasTitle : null,
+    mobileSpeed: perf.available ? perf.mobileScore : null,
+    contentRichness: w.available ? Math.min(10, Math.round(w.wordCount / 200)) : null,
+    napOnSite: w.available ? w.napOnSite : null,
+
+    // === SEO On-Page (REAL from crawl) ===
+    hasMetaDesc: w.available ? w.hasMetaDesc : null,
+    metaDescLength: w.available ? w.metaDescLength : null,
+    hasOpenGraph: w.available ? w.hasOpenGraph : null,
+    hasPhoneLink: w.available ? w.hasPhoneLink : null,
+    hasMapEmbed: w.available ? w.hasMapEmbed : null,
+    hasSocialLinks: w.available ? w.hasSocialLinks : null,
+    hasSitemap: w.available ? w.hasSitemap : null,
+    hasRobotsTxt: w.available ? w.hasRobotsTxt : null,
+    hasBookingLink: w.available ? w.hasBookingLink : null,
+    hasCanonical: w.available ? w.hasCanonical : null,
+    hasAltTags: w.available ? w.hasAltTags : null,
+    headingCount: w.available ? w.headingCount : null,
+    hasHreflang: w.available ? w.hasHreflang : null,
+    httpsRedirect: w.available ? w.httpsRedirect : null,
+
+    // === IA visibility (requires separate check — marked as unavailable if not checked) ===
+    citedByChatGPT: 'unknown',
+    citedByPerplexity: 'unknown',
+    citedByGemini: 'unknown',
+    citedByClaude: 'unknown',
+    bestOfListings: null,
+    inAIOverviews: 'unknown',
+
+    // === Directory-specific (REAL) ===
+    yelpOptimized: ylp.available && ylp.found ? (ylp.isClaimed ? 7 : 4) : (ylp.available ? 0 : null),
+    foursquarePresent: fsq.available ? (fsq.found || false) : null,
+    foursquareOptimized: fsq.available && fsq.found,
+
+    // === Social / UGC ===
+    ugcPresence: null, // Would need social media API access
+    socialScore: w.available ? (w.socialPlatforms?.length || 0) * 2 : null,
+    brandMentions: null,
+
+    // === GEO advanced ===
+    hasWikipedia: null,
+    localBacklinks: null,
+    gbpQACount: null, // GBP API only
+    contentFreshness: null,
+    hasBlog: w.available ? w.hasBlog : null,
+
+    // === Extra real data for frontend ===
+    _google: g.available ? g : null,
+    _website: w.available ? w : null,
+    _performance: perf.available ? perf : null,
+    _tripadvisor: ta.available && ta.found ? ta : null,
+    _foursquare: fsq.available && fsq.found ? fsq : null,
+    _yelp: ylp.available && ylp.found ? ylp : null,
+
+    // Source flags
+    _pendingGBP: true, // Full GBP API (posts, Q&A, attributes) not available yet
+    _pendingAI: true, // AI visibility not checked in this call
+    _realAuditComplete: true
+  };
+
+  audit.scores = realData;
+  audit.duration = Date.now() - startTime;
+
+  console.log(`✅ Real audit completed for "${name}" in ${audit.duration}ms — Sources: ${Object.entries(audit.sources).filter(([k,v]) => v === 'ok').map(([k]) => k).join(', ') || 'none'}`);
+
+  res.json({ success: true, audit: realData, sources: audit.sources, duration: audit.duration, details: { google: g, website: w, performance: perf, tripadvisor: ta, foursquare: fsq, yelp: ylp } });
+});
+
+// Helper: compute NAP consistency across platforms
+function _computeNapConsistency(g, w, fsq, ylp, ta) {
+  const names = [], phones = [], addresses = [];
+  if (g.available) { names.push(g.name); if (g.phone) phones.push(g.phone.replace(/[\s\-.()]/g, '')); if (g.address) addresses.push(g.address); }
+  if (fsq.available && fsq.found) { names.push(fsq.name); if (fsq.phone) phones.push(fsq.phone.replace(/[\s\-.()]/g, '')); if (fsq.address) addresses.push(fsq.address); }
+  if (ylp.available && ylp.found) { names.push(ylp.name); if (ylp.phone) phones.push(ylp.phone.replace(/[\s\-.()]/g, '')); if (ylp.address) addresses.push(ylp.address); }
+  if (ta.available && ta.found) { names.push(ta.name); if (ta.address) addresses.push(ta.address); }
+
+  if (names.length < 2) return null;
+
+  let score = 0, checks = 0;
+  // Name consistency
+  const nameNorm = names.map(n => n.toLowerCase().trim());
+  const nameMatch = nameNorm.every(n => n === nameNorm[0]);
+  score += nameMatch ? 100 : 50; checks++;
+  // Phone consistency
+  if (phones.length >= 2) { const phoneMatch = phones.every(p => p === phones[0]); score += phoneMatch ? 100 : 30; checks++; }
+  // Address consistency (fuzzy)
+  if (addresses.length >= 2) { const first = addresses[0].toLowerCase(); const allSimilar = addresses.every(a => first.includes(a.toLowerCase().split(',')[0]) || a.toLowerCase().includes(first.split(',')[0])); score += allSimilar ? 100 : 40; checks++; }
+
+  return checks > 0 ? Math.round(score / checks) : null;
+}
+
+// Helper: compute listing completeness
+function _computeListingCompleteness(g, ta, ylp, fsq) {
+  const platforms = [
+    { available: g.available, hasPhone: !!g.phone, hasAddress: !!g.address, hasPhotos: g.photoCount > 0, hasDesc: g.descriptionLength > 0 },
+    { available: ta.available && ta.found, hasPhone: false, hasAddress: !!ta.address, hasPhotos: false, hasDesc: false },
+    { available: ylp.available && ylp.found, hasPhone: !!ylp.phone, hasAddress: !!ylp.address, hasPhotos: !!ylp.imageUrl, hasDesc: false },
+    { available: fsq.available && fsq.found, hasPhone: !!fsq.phone, hasAddress: !!fsq.address, hasPhotos: false, hasDesc: false },
+  ].filter(p => p.available);
+
+  if (platforms.length === 0) return null;
+
+  const scores = platforms.map(p => {
+    let s = 25; // Base: exists
+    if (p.hasPhone) s += 25;
+    if (p.hasAddress) s += 25;
+    if (p.hasPhotos || p.hasDesc) s += 25;
+    return s;
+  });
+
+  return Math.round(scores.reduce((a, b) => a + b, 0) / scores.length);
+}
+
+// ============================================================
 // START SERVER
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

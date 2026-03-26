@@ -1390,6 +1390,8 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         </div>
         <button class="gauth-btn connect" id="gauthBtn" onclick="startGoogleAuth()">Connecter Google</button>
     </div>
+    <!-- DATA SOURCES BANNER -->
+    <div id="dataSources" style="display:none;margin:0 16px 12px;padding:10px 14px;background:rgba(0,255,200,.06);border:1px solid rgba(0,255,200,.15);border-radius:10px;font-size:.78rem;color:var(--txt2);"></div>
     <!-- GETTING STARTED CHECKLIST -->
     <div class="gs-checklist" id="gsChecklist" style="display:none;margin:0 16px 12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
@@ -3409,6 +3411,25 @@ document.addEventListener('DOMContentLoaded',()=>{checkSession();checkUpgradeRed
 // ============================================================
 let storedName='',storedCity='';
 function _seedHash(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return Math.abs(h);}
+// Prepare real audit data for the scoring engine
+// null = "couldn't check" → score as 0 but mark as unavailable
+function _prepareRealData(raw, name, city) {
+    const d = { ...raw, name, city };
+    // For scoring: null → 0/false (pessimistic default), but keep _isNull flag
+    const boolFields = ['hasPrimaryCategory','primaryCategorySpecific','hoursComplete','specialHours','menuUploaded','menuStructured','bookingLink','hasSchemaRestaurant','schemaComplete','hasFAQ','titleOptimized','hasTitle','napOnSite','hasMetaDesc','hasOpenGraph','hasPhoneLink','hasMapEmbed','hasSocialLinks','hasSitemap','hasRobotsTxt','hasBookingLink','hasCanonical','hasAltTags','hasHreflang','httpsRedirect','foursquarePresent','foursquareOptimized','hasBlog','hasWikipedia','contentFreshness'];
+    const numFields = ['secondaryCategories','descriptionLength','photoCount','attributeCount','postsPerMonth','rating','reviewCount','recentReviewsPerMonth','responseRate','platformsWithReviews','napConsistency','directoryPresence','listingCompleteness','faqCount','mobileSpeed','contentRichness','metaDescLength','headingCount','yelpOptimized','ugcPresence','socialScore','brandMentions','localBacklinks','gbpQACount','bestOfListings'];
+    d._nullFields = [];
+    boolFields.forEach(f => { if (d[f] === null || d[f] === undefined) { d._nullFields.push(f); d[f] = false; } });
+    numFields.forEach(f => { if (d[f] === null || d[f] === undefined) { d._nullFields.push(f); d[f] = 0; } });
+    // String fields with defaults
+    if (!d.citedByChatGPT || d.citedByChatGPT === 'unknown') d.citedByChatGPT = 'not';
+    if (!d.citedByPerplexity || d.citedByPerplexity === 'unknown') d.citedByPerplexity = 'not';
+    if (!d.citedByGemini || d.citedByGemini === 'unknown') d.citedByGemini = 'not';
+    if (!d.citedByClaude || d.citedByClaude === 'unknown') d.citedByClaude = 'not';
+    if (!d.inAIOverviews || d.inAIOverviews === 'unknown') d.inAIOverviews = 'no';
+    return d;
+}
+
 function generateAuditData(name,city){
     const seed=_seedHash((name+city).toLowerCase());
     let _si=seed;
@@ -3718,6 +3739,26 @@ function renderDashboard(){
     const s=currentScores;
     const circum=2*Math.PI*52;
 
+    // Data sources banner — show what's real
+    const srcBanner=document.getElementById('dataSources');
+    if(srcBanner && currentData){
+        const isReal = currentData._auditSource === 'real' || currentData._realAuditComplete;
+        if(isReal){
+            const sources = window._realAuditSources || currentData._sources || {};
+            const badges = [];
+            const ok = (k,label,icon) => { if(sources[k]==='ok') badges.push(`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:rgba(0,255,150,.12);border-radius:6px;margin:2px;"><span style="color:#0f8">${icon}</span> ${label}</span>`); };
+            const miss = (k,label,icon) => { if(sources[k]!=='ok') badges.push(`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:rgba(255,100,100,.1);border-radius:6px;margin:2px;color:#f66;"><span>${icon}</span> ${label}</span>`); };
+            ok('google','Google Places','📍'); ok('website','Site Web','🌐'); ok('pagespeed','PageSpeed','⚡'); ok('foursquare','Foursquare','📌'); ok('tripadvisor','TripAdvisor','🦉'); ok('yelp','Yelp','⭐');
+            miss('google','Google Places','📍'); miss('website','Site Web','🌐'); miss('foursquare','Foursquare','📌'); miss('tripadvisor','TripAdvisor','🦉'); miss('yelp','Yelp','⭐');
+            const nullCount = (currentData._nullFields||[]).length;
+            srcBanner.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-weight:600;color:var(--cyn);">📊 Données réelles</span><span style="color:var(--mut);font-size:.7rem;">${currentData._auditDuration ? '('+Math.round(currentData._auditDuration/1000)+'s)' : ''}</span></div><div style="display:flex;flex-wrap:wrap;gap:2px;">${badges.join('')}</div>${nullCount > 0 ? '<div style="margin-top:6px;color:var(--mut);font-size:.7rem;">'+nullCount+' critères non vérifiables sans accès GBP complet — scorés à 0 par défaut</div>' : ''}`;
+            srcBanner.style.display='';
+        } else {
+            srcBanner.innerHTML='<span style="color:#f80;">⚠️ Données par défaut — aucune API n\'a répondu. Relancez le scan avec une URL de site web.</span>';
+            srcBanner.style.display='';
+        }
+    }
+
     // Module badge
     const badge=document.getElementById('moduleBadge');
     if(badge){
@@ -3813,7 +3854,29 @@ function renderDashboard(){
             actionHtml=`<div class="action-btn${isDone?' done':''}" onclick="event.stopPropagation();showAction('${item.id}')"><div class="action-btn-icon">${isDone?'✓':'⚡'}</div><div class="action-btn-content"><div class="action-btn-title">${isDone?'✓ Appliqué — ':'Améliorer auto : '}${item.action.title}</div><div class="action-btn-desc">${isDone?'Cliquez pour revoir le contenu généré':'Contenu prêt à copier-coller — cliquez pour générer'}</div></div><div class="action-btn-arrow">→</div></div>`;
         }
 
-        html+=`<div class="audit-item${autoOpen}" onclick="this.classList.toggle('open')"><div class="audit-header"><div class="audit-status ${sc}">${si}</div><div class="audit-name">${item.name}<br><small style="font-size:.7rem;color:var(--mut);font-weight:400;">${item.factor}</small></div><div class="audit-score" style="color:${item.score>=7?'var(--grn)':item.score>=4?'var(--org)':'var(--red)'}">${item.score}/10</div><div class="audit-arrow">▼</div></div><div class="audit-body"><div class="audit-desc">${item.desc}</div><div class="tip-box"><div class="tip-label ${item.tip.label}">${item.tip.label==='action'?'✓ OK':item.tip.label==='warning'?'⚠ AMÉLIORATION':item.tip.label==='critical'?'🔴 CRITIQUE':'ℹ INFO'} — ${item.tip.title}</div><div class="tip-text">${item.tip.text}</div>${impH}</div>${actionHtml}</div></div>`;
+        // Data source indicator for real audit
+        let srcTag='';
+        if(currentData&&currentData._realAuditComplete){
+            const nulls=currentData._nullFields||[];
+            // Map item IDs to their key data fields
+            const fieldMap={
+                gbp_cat_primary:['hasPrimaryCategory'],gbp_secondary:['secondaryCategories'],gbp_desc:['descriptionLength'],gbp_photos:['photoCount'],gbp_hours:['hoursComplete'],
+                gbp_attr:['attributeCount'],gbp_posts:['postsPerMonth'],gbp_menu:['menuUploaded'],gbp_booking:['bookingLink'],
+                rev_google:['rating','reviewCount'],rev_response:['responseRate'],rev_recent:['recentReviewsPerMonth'],rev_multi:['platformsWithReviews'],
+                cit_nap:['napConsistency'],cit_dirs:['directoryPresence'],cit_complete:['listingCompleteness'],
+                seo_schema:['hasSchemaRestaurant'],seo_faq:['hasFAQ'],seo_title:['titleOptimized','hasTitle'],seo_speed:['mobileSpeed'],seo_content:['contentRichness'],seo_nap:['napOnSite'],
+                seo_meta:['hasMetaDesc'],seo_og:['hasOpenGraph'],seo_tel:['hasPhoneLink'],seo_map:['hasMapEmbed'],seo_social:['hasSocialLinks'],seo_sitemap:['hasSitemap'],
+                geo_chatgpt:['citedByChatGPT'],geo_perp:['citedByPerplexity'],geo_gemini:['citedByGemini'],geo_claude:['citedByClaude'],
+                g_yelp:['yelpOptimized'],g_fsq:['foursquarePresent'],g_ugc:['ugcPresence'],g_aio:['inAIOverviews'],g_social:['socialScore'],g_brand:['brandMentions'],
+                g_wiki:['hasWikipedia'],g_backlinks:['localBacklinks'],g_qa:['gbpQACount'],g_fresh:['contentFreshness'],g_blog:['hasBlog']
+            };
+            const deps=fieldMap[item.id]||[];
+            const isUnavailable=deps.length>0&&deps.every(f=>nulls.includes(f));
+            if(isUnavailable) srcTag='<span style="font-size:.6rem;padding:1px 5px;border-radius:4px;background:rgba(255,150,0,.15);color:#f90;margin-left:6px;vertical-align:middle;">non vérifiable</span>';
+            else srcTag='<span style="font-size:.6rem;padding:1px 5px;border-radius:4px;background:rgba(0,255,150,.1);color:#0f8;margin-left:6px;vertical-align:middle;">vérifié</span>';
+        }
+
+        html+=`<div class="audit-item${autoOpen}" onclick="this.classList.toggle('open')"><div class="audit-header"><div class="audit-status ${sc}">${si}</div><div class="audit-name">${item.name}${srcTag}<br><small style="font-size:.7rem;color:var(--mut);font-weight:400;">${item.factor}</small></div><div class="audit-score" style="color:${item.score>=7?'var(--grn)':item.score>=4?'var(--org)':'var(--red)'}">${item.score}/10</div><div class="audit-arrow">▼</div></div><div class="audit-body"><div class="audit-desc">${item.desc}</div><div class="tip-box"><div class="tip-label ${item.tip.label}">${item.tip.label==='action'?'✓ OK':item.tip.label==='warning'?'⚠ AMÉLIORATION':item.tip.label==='critical'?'🔴 CRITIQUE':'ℹ INFO'} — ${item.tip.title}</div><div class="tip-text">${item.tip.text}</div>${impH}</div>${actionHtml}</div></div>`;
     });
 
     html+='</div>';
@@ -4556,32 +4619,32 @@ function startScan(name,city){
     // Helper: fetch with 20s timeout to avoid blocking the scan
     function fetchTimeout(url,opts={},ms=20000){const ctrl=new AbortController();const t=setTimeout(()=>ctrl.abort(),ms);return fetch(url,{...opts,signal:ctrl.signal}).finally(()=>clearTimeout(t));}
 
-    // Trigger autonomous scan in background (CMS detection + directory prep)
-    if(storedWebsite){
-        fetchTimeout(API_BASE+'/api/autonomous-scan',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_name:name,city,website_url:storedWebsite,user_id:googleAuth.userId||0})})
-        .then(r=>r.json()).then(data=>{
-            if(data.success){
-                autonomousScanResult=data;
-                if(data.cms&&data.cms.detected){detectedCMS=data.cms;console.log('CMS détecté:',data.cms.detected.cms,'—',data.cms.detected.confidence+'%');}
+    // ══════════════════════════════════════════════════════
+    // REAL AUDIT — single call that runs ALL APIs in parallel on server
+    // ══════════════════════════════════════════════════════
+    window._realAuditData = null;
+    window._realAuditDetails = null;
+    fetchTimeout(API_BASE+'/api/real-audit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,website_url:storedWebsite||null})},45000)
+    .then(r=>r.json()).then(data=>{
+        if(data.success){
+            window._realAuditData=data.audit;
+            window._realAuditDetails=data.details;
+            window._realAuditSources=data.sources;
+            console.log('✅ REAL AUDIT completed in '+data.duration+'ms — Sources: '+Object.entries(data.sources).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '));
+            // Store hub data from Google Places details
+            if(data.details?.google?.available){
+                const g=data.details.google;
+                window._hubData={name:g.name,city,phone:g.phone,address:g.address,website:g.website,rating:g.rating,reviewCount:g.reviewCount,photos:g.photos?.map(p=>p.url)||[],hours:g.hours,place_id:g.place_id,mapsUrl:g.mapsUrl,priceLevel:g.priceLevel,businessStatus:g.businessStatus,reviews:g.reviews,source:'google_places_api'};
             }
-        }).catch(e=>console.warn('Autonomous scan error:',e));
-        // Also trigger real website audit
-        fetchTimeout(API_BASE+'/api/audit-website',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:storedWebsite,name,city})})
-        .then(r=>r.json()).then(data=>{
-            if(data.success&&data.audit){window._realAudit=data.audit;console.log('✅ Audit réel du site terminé');}
-        }).catch(e=>console.warn('Website audit error:',e));
-        // Also scrape GMB + website for Hub Central data
-        fetchTimeout(API_BASE+'/api/scrape-gmb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,website_url:storedWebsite})})
-        .then(r=>r.json()).then(data=>{
-            if(data.success&&data.data){window._hubData=data.data;console.log('✅ Hub data scraped:',data.data.photos?.length||0,'photos');}
-        }).catch(e=>console.warn('Hub scrape error:',e));
-        // PageSpeed Insights — real Core Web Vitals
-        fetchTimeout(API_BASE+'/api/pagespeed',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:storedWebsite})})
-        .then(r=>r.json()).then(data=>{
-            if(data.success){window._pageSpeed=data;console.log('✅ PageSpeed:',data.score+'/100');}
-        }).catch(e=>console.warn('PageSpeed error:',e));
-    }
-    // Also trigger directory auto-check in background (parallel)
+            // Store CMS from website audit
+            if(data.details?.website?.available&&data.details.website.cms?.detected){
+                detectedCMS=data.details.website.cms;
+                console.log('CMS détecté:',detectedCMS.detected.cms);
+            }
+        }
+    }).catch(e=>console.warn('Real audit error:',e));
+
+    // Also trigger directory auto-check in background (for the directory grid UI)
     fetchTimeout(API_BASE+'/api/directories/auto-check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city})},30000)
     .then(r=>r.json()).then(data=>{
         if(data.success&&data.results){
@@ -4593,84 +4656,21 @@ function startScan(name,city){
     function next(){
         if(cur>0){const p=document.getElementById(`step${cur-1}`);p.classList.remove('active');p.classList.add('done');p.querySelector('.step-icon').innerHTML='✓';}
         if(cur>=filteredSteps.length){bar.style.width='100%';setTimeout(()=>{
-            currentData=generateAuditData(name,city);
-            // Merge real website audit data if available
-            if(window._realAudit){
-                const ra=window._realAudit;
-                if(ra.hasTitle!==undefined) currentData.hasTitle=ra.hasTitle;
-                if(ra.titleOptimized!==undefined) currentData.titleOptimized=ra.titleOptimized;
-                if(ra.hasSchemaRestaurant!==undefined) currentData.hasSchemaRestaurant=ra.hasSchemaRestaurant;
-                if(ra.schemaComplete!==undefined) currentData.schemaComplete=ra.schemaComplete;
-                if(ra.hasFAQ!==undefined) currentData.hasFAQ=ra.hasFAQ;
-                if(ra.faqCount!==undefined) currentData.faqCount=ra.faqCount;
-                if(ra.napOnSite!==undefined) currentData.napOnSite=ra.napOnSite;
-                if(ra.hasOpenGraph!==undefined) currentData.hasOpenGraph=ra.hasOpenGraph;
-                if(ra.hasBookingLink!==undefined) currentData.hasBookingLink=ra.hasBookingLink;
-                if(ra.hasPhoneLink!==undefined) currentData.hasPhoneLink=ra.hasPhoneLink;
-                if(ra.hasSocialLinks!==undefined) currentData.hasSocialLinks=ra.hasSocialLinks;
-                if(ra.hasViewport!==undefined) currentData.hasViewport=ra.hasViewport;
-                if(ra.imageCount!==undefined) currentData.imageCount=ra.imageCount;
-                if(ra.hasMetaDesc!==undefined) currentData.hasMetaDesc=ra.hasMetaDesc;
-                if(ra.metaDescLength!==undefined) currentData.metaDescLength=ra.metaDescLength;
-                if(ra.hasMapEmbed!==undefined) currentData.hasMapEmbed=ra.hasMapEmbed;
-                if(ra.hasCanonical!==undefined) currentData.hasCanonical=ra.hasCanonical;
-                if(ra.wordCount) currentData.contentRichness=Math.min(10,Math.round(ra.wordCount/200));
-                // Additional real fields from crawl
-                if(ra.hasAltTags!==undefined) currentData.hasAltTags=ra.hasAltTags;
-                if(ra.headingCount!==undefined) currentData.headingCount=ra.headingCount;
-                if(ra.hasHreflang!==undefined) currentData.hasHreflang=ra.hasHreflang;
-                if(ra.httpsRedirect!==undefined) currentData.httpsRedirect=ra.httpsRedirect;
-                if(ra.hasSitemap!==undefined) currentData.hasSitemap=ra.hasSitemap;
-                if(ra.hasRobotsTxt!==undefined) currentData.hasRobotsTxt=ra.hasRobotsTxt;
-                if(ra.hasAggregateRating!==undefined) currentData.hasAggregateRating=ra.hasAggregateRating;
-                if(ra.hasMenu!==undefined&&ra.hasMenu) currentData.menuUploaded=true;
-                if(ra.imageCount) currentData.photoCount=Math.max(currentData.photoCount||0,ra.imageCount);
-                currentData._auditSource='real';
-                currentData._pendingGBP=true; // Still waiting for GBP API
-                console.log('✅ Audit réel intégré — données site web réelles');
+            // ══════════════════════════════════════════════
+            // USE REAL AUDIT DATA (from /api/real-audit)
+            // Falls back to generateAuditData() only if API failed
+            // ══════════════════════════════════════════════
+            if(window._realAuditData){
+                // Real data — replace null values with safe defaults for scoring
+                currentData = _prepareRealData(window._realAuditData, name, city);
+                console.log('✅ USING REAL AUDIT DATA — sources:', Object.entries(window._realAuditSources||{}).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '));
+            } else {
+                // Fallback: old generated data (should rarely happen)
+                currentData = generateAuditData(name,city);
+                console.warn('⚠️ Real audit not available — using default data');
             }
-            // Merge PageSpeed data if available
-            if(window._pageSpeed&&window._pageSpeed.score!==undefined){
-                currentData.mobileSpeed=window._pageSpeed.score;
-                currentData._pageSpeedReal=true;
-                console.log('✅ PageSpeed réel intégré:',window._pageSpeed.score+'/100');
-            }
-            // Merge Hub data (photos, phone, address, Places API data etc)
-            if(window._hubData){
-                const hd=window._hubData;
-                if(hd.photos?.length) currentData.photoCount=Math.max(currentData.photoCount||0,hd.photos.length);
-                if(hd.rating) currentData.rating=hd.rating;
-                if(hd.reviewCount) currentData.reviewCount=hd.reviewCount;
-                if(hd.phone) currentData.phone=hd.phone;
-                if(hd.address) currentData.address=hd.address;
-                if(hd.website) currentData.website=hd.website;
-                if(hd.category) currentData.category=hd.category;
-                if(hd.hours) currentData.hours=hd.hours;
-                if(hd.place_id) currentData.place_id=hd.place_id;
-                if(hd.reviews?.length) currentData._googleReviews=hd.reviews;
-                if(hd.priceLevel!==undefined) currentData.priceLevel=hd.priceLevel;
-                if(hd.businessStatus) currentData.businessStatus=hd.businessStatus;
-                if(hd.mapsUrl) currentData.mapsUrl=hd.mapsUrl;
-                if(hd.source==='google_places_api') currentData._placesApiUsed=true;
-                currentData._hubScraped=true;
-            }
-            // Inject CMS detection results into audit data
+            // Inject CMS detection results
             if(detectedCMS&&detectedCMS.detected){currentData.detectedCMS=detectedCMS.detected;currentData.websiteUrl=storedWebsite;currentData.seoAnalysis=detectedCMS.seoAnalysis||{};}
-            if(autonomousScanResult&&autonomousScanResult.directories){
-                currentData.directoryStatus=autonomousScanResult.directories;
-                // Wire directory scan results to citation audit items
-                const dirs=autonomousScanResult.directories;
-                const foundCount=Object.values(dirs).filter(d=>d.status==='found'||d.status==='connected').length;
-                const checkedCount=Object.values(dirs).length;
-                if(checkedCount>0){
-                    currentData.directoryPresence=foundCount;
-                    currentData.listingCompleteness=Math.round(foundCount/checkedCount*100);
-                    currentData._directoriesReal=true;
-                    // Check Yelp/Foursquare specifically
-                    if(dirs.yelp)currentData.yelpOptimized=dirs.yelp.status==='found'||dirs.yelp.status==='connected'?6:0;
-                    if(dirs.foursquare){currentData.foursquarePresent=dirs.foursquare.status==='found'||dirs.foursquare.status==='connected';currentData.foursquareOptimized=currentData.foursquarePresent;}
-                }
-            }
             currentScores=computeScores(currentData);activeMainTab=defaultTab;activeCategory=defaultCat;
             document.getElementById('dashResto').innerHTML=`📍 ${name} — ${city}${storedWebsite?' · <span style="color:var(--cyn);font-size:.78rem;">'+storedWebsite+'</span>':''}`;
             showScreen('dashboard');renderDashboard();saveAllData();
