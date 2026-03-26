@@ -3273,10 +3273,9 @@ app.post('/api/google-places-preview', async (req, res) => {
 
   const placesKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!placesKey) {
-    // No API key — return best-effort response
-    return res.json({ success: true, source: 'no_api_key', results: [{
-      name, city, address: `${city}, France`, note: 'Clé API Google Places non configurée — le scan utilisera les données disponibles'
-    }]});
+    // No API key — return best-effort response with place field for client compat
+    const fallback = { name, city, address: `${city}, France`, note: 'Clé API Google Places non configurée — le scan utilisera les données disponibles' };
+    return res.json({ success: true, source: 'no_api_key', place: fallback, results: [fallback] });
   }
 
   try {
@@ -3318,7 +3317,7 @@ app.post('/api/google-places-preview', async (req, res) => {
       } catch (e) {}
     }
 
-    res.json({ success: true, source: 'places_api', results });
+    res.json({ success: true, source: 'places_api', place: results[0] || null, results });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

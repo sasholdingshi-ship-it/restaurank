@@ -2611,7 +2611,7 @@ function fetchTimeout(url,opts={},ms=20000){const ctrl=new AbortController();con
 // PLAN LIMITS — client-side enforcement
 // ============================================================
 const PLAN_LIMITS={
-    free:{restaurants:1,scansPerDay:1,autoApply:false,directories:3,reviews:false,team:0,price:0,label:'Free'},
+    free:{restaurants:1,scansPerDay:3,autoApply:false,directories:3,reviews:false,team:0,price:0,label:'Free'},
     starter:{restaurants:1,scansPerDay:5,autoApply:true,directories:5,reviews:true,team:1,price:29,label:'Starter'},
     pro:{restaurants:3,scansPerDay:999,autoApply:true,directories:11,reviews:true,team:3,price:79,label:'Pro'},
     premium:{restaurants:10,scansPerDay:999,autoApply:true,directories:11,reviews:true,team:10,price:149,label:'Premium'},
