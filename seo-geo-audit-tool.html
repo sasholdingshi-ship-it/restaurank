@@ -9053,149 +9053,161 @@ function renderBacklinks(data){
 // ============================================================
 // CONTENT AUTOMATION ENGINE — Blog, Reddit, Guest Posts, Link Building
 // ============================================================
+// Helper: get restaurant context for content gen
+function _getRestoContext(){
+    return {
+        id:currentData?.restaurant_id||0,
+        name:currentData?.name||'Restaurant',
+        city:currentData?.city||'Paris',
+        cuisine:currentData?.category||'restaurant',
+        rating:currentData?.rating||window._hubData?.rating||0,
+        address:window._hubData?.address||currentData?.address||'',
+        phone:window._hubData?.phone||'',
+        website:window._hubData?.website||storedWebsite||'',
+        keywords:window._gscData?.queries?.slice(0,5).map(q=>q.query)||[]
+    };
+}
+
+// Real API call to generate content via OpenAI/Claude backend
+async function _callContentAPI(type){
+    const resto=_getRestoContext();
+    const r=await fetchTimeout(`${API_BASE}/api/content/generate`,{
+        method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({type,restaurant:resto,keywords:resto.keywords,language:'fr'})
+    },45000);
+    return r.json();
+}
+
+function _contentCard(id,title,icon,content,actions=''){
+    return `<div style="background:var(--s2);border-radius:10px;padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-weight:700;color:var(--txt);">${icon} ${title}</span>
+            <div style="display:flex;gap:6px;">${actions}
+            <button onclick="copyToClip(document.getElementById('${id}').innerText)" style="padding:4px 12px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📋 Copier</button></div>
+        </div>
+        <div id="${id}" style="font-size:.78rem;color:var(--txt);line-height:1.7;max-height:350px;overflow-y:auto;background:var(--s1);padding:12px;border-radius:8px;">${content}</div>
+    </div>`;
+}
+
 async function generateBlogPost(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération de l\'article de blog SEO...</div>';
-
-    const name=currentData?.name||'Restaurant';
-    const city=currentData?.city||'Paris';
-    const cuisine=currentData?.category||'restaurant';
-    const rating=currentData?.rating||window._hubData?.rating||4;
-    const keywords=window._gscData?.queries?.slice(0,5).map(q=>q.query)||[`${name} ${city}`,`meilleur ${cuisine} ${city}`,`restaurant ${city}`];
-
-    const article=_generateBlogContent(name,city,cuisine,rating,keywords);
-    results.innerHTML=`<div style="background:var(--s2);border-radius:10px;padding:16px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <span style="font-weight:700;color:var(--txt);">📝 Article de blog SEO</span>
-            <div><button onclick="copyToClip(document.getElementById('blogContent').textContent)" style="padding:4px 12px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;margin-right:6px;">📋 Copier</button>
-            <button onclick="publishBlogPost()" style="padding:4px 12px;background:var(--grn);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">🚀 Publier sur le site</button></div>
-        </div>
-        <div id="blogContent" style="font-size:.78rem;color:var(--txt);line-height:1.7;max-height:300px;overflow-y:auto;white-space:pre-wrap;background:var(--s1);padding:12px;border-radius:8px;">${article}</div>
-    </div>`;
-}
-
-function _generateBlogContent(name,city,cuisine,rating,keywords){
-    const kw=keywords.join(', ');
-    return `<h1>${name} : Le Guide Complet ${new Date().getFullYear()} — Avis, Menu & Réservation</h1>
-
-<p><strong>${name}</strong>, situé au cœur de <strong>${city}</strong>, est l'une des adresses incontournables pour les amateurs de ${cuisine}. Avec une note de <strong>${rating}/5</strong> sur Google, ce restaurant a su conquérir les papilles des Parisiens et des touristes.</p>
-
-<h2>Pourquoi ${name} se démarque à ${city} ?</h2>
-
-<p>Dans un quartier réputé pour sa diversité gastronomique, ${name} tire son épingle du jeu grâce à une cuisine authentique, des produits frais sélectionnés avec soin et un service irréprochable. Les clients réguliers apprécient particulièrement l'ambiance chaleureuse et les portions généreuses.</p>
-
-<h2>Notre avis sur ${name}</h2>
-
-<p>Après plusieurs visites, nous pouvons confirmer que ${name} mérite sa réputation. Le rapport qualité-prix est excellent, et chaque plat est préparé avec une attention aux détails qui fait la différence. Si vous recherchez un ${cuisine} de qualité à ${city}, c'est l'adresse à retenir.</p>
-
-<h2>Informations pratiques</h2>
-
-<p>📍 <strong>Adresse :</strong> ${window._hubData?.address||city}<br>
-📞 <strong>Téléphone :</strong> ${window._hubData?.phone||'Voir Google Maps'}<br>
-🌐 <strong>Site web :</strong> ${window._hubData?.website||storedWebsite||''}<br>
-⭐ <strong>Note Google :</strong> ${rating}/5</p>
-
-<p><em>Mots-clés : ${kw}</em></p>
-
-<p>---<br><em>Article généré automatiquement par RestauRank — Optimisation SEO locale pour restaurants.</em></p>`;
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA de l\'article de blog SEO...</div>';
+    try{
+        const data=await _callContentAPI('blog');
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
+        const publishBtn=`<button onclick="publishBlogPost()" style="padding:4px 12px;background:var(--grn);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">🚀 Publier</button>`;
+        const wpBtn=`<button onclick="publishToWordPress()" style="padding:4px 12px;background:#21759b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📰 WordPress</button>`;
+        results.innerHTML=_contentCard('blogContent','Article de blog SEO','📝',data.content,publishBtn+wpBtn);
+        results.innerHTML+=`<div style="font-size:.65rem;color:var(--mut);margin-top:-8px;margin-bottom:8px;">Généré via ${data.model||'IA'} · ${data.tokens||0} caractères</div>`;
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
 }
 
 async function generateRedditPost(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-
-    const name=currentData?.name||'Restaurant';
-    const city=currentData?.city||'Paris';
-    const rating=currentData?.rating||window._hubData?.rating||4;
-
-    const subreddits=['paris','france','food','FoodPorn','restaurant','AskCulinary'];
-    const post=`**Trouvé une pépite à ${city} — ${name}**
-
-Salut tout le monde ! Je suis tombé sur ${name} par hasard en me baladant dans ${city} et wow... C'est clairement mon nouveau coup de cœur.
-
-La cuisine est top (${rating}/5 sur Google d'ailleurs), l'ambiance est super chill et les prix sont honnêtes pour la qualité. Le personnel est adorable et le cadre vraiment sympa.
-
-Si quelqu'un connaît d'autres bonnes adresses dans le coin, je suis preneur !
-
-PS: Leur site web c'est ${window._hubData?.website||storedWebsite||'[site web]'} pour ceux qui veulent checker le menu avant.
-
----
-*Quels subreddits cibler :* ${subreddits.map(s=>`r/${s}`).join(', ')}`;
-
-    results.innerHTML=`<div style="background:var(--s2);border-radius:10px;padding:16px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <span style="font-weight:700;color:var(--txt);">🤖 Post Reddit</span>
-            <button onclick="copyToClip(document.getElementById('redditContent').textContent)" style="padding:4px 12px;background:#ff4500;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📋 Copier</button>
-        </div>
-        <div id="redditContent" style="font-size:.78rem;color:var(--txt);line-height:1.7;max-height:250px;overflow-y:auto;white-space:pre-wrap;background:var(--s1);padding:12px;border-radius:8px;">${post}</div>
-        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
-            ${subreddits.map(s=>`<a href="https://reddit.com/r/${s}/submit" target="_blank" style="padding:3px 10px;background:rgba(255,69,0,.1);border:1px solid rgba(255,69,0,.2);border-radius:6px;font-size:.68rem;color:#ff4500;text-decoration:none;">r/${s} →</a>`).join('')}
-        </div>
-    </div>`;
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA du post Reddit...</div>';
+    try{
+        const data=await _callContentAPI('reddit');
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
+        const subreddits=['paris','france','food','FoodPorn','restaurant'];
+        const postBtns=subreddits.map(s=>`<button onclick="postToReddit('${s}')" style="padding:3px 10px;background:rgba(255,69,0,.1);border:1px solid rgba(255,69,0,.3);border-radius:6px;font-size:.68rem;color:#ff4500;cursor:pointer;">🚀 r/${s}</button>`).join('');
+        results.innerHTML=_contentCard('redditContent','Post Reddit','🤖',data.content.replace(/\n/g,'<br>'),'');
+        results.innerHTML+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-8px;margin-bottom:8px;">${postBtns}</div>`;
+        results.innerHTML+=`<div style="font-size:.65rem;color:var(--mut);">Généré via ${data.model||'IA'}</div>`;
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
 }
 
 async function generateGuestPost(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA du pitch guest post...</div>';
+    try{
+        const data=await _callContentAPI('guest_post');
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
+        results.innerHTML=_contentCard('guestContent','Pitch Guest Post / Link Building','✍️',data.content.replace(/\n/g,'<br>'),'');
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
+}
 
-    const name=currentData?.name||'Restaurant';
-    const city=currentData?.city||'Paris';
-    const cuisine=currentData?.category||'restaurant';
-
-    const pitch=`Objet : Proposition d'article — Les meilleures adresses ${cuisine} à ${city}
-
-Bonjour,
-
-Je rédige actuellement un guide gastronomique sur les meilleures adresses de ${city}, et je souhaiterais publier un article invité sur votre site/blog.
-
-L'article porterait sur « Les ${cuisine}s incontournables à ${city} en ${new Date().getFullYear()} » et mentionnerait naturellement ${name} parmi les adresses recommandées, avec un lien vers leur site.
-
-L'article serait :
-• 100% original et optimisé SEO
-• ~800-1200 mots
-• Accompagné de photos libres de droits
-• Prêt à publier dans la semaine
-
-Seriez-vous intéressé(e) par cette collaboration ?
-
-Bien cordialement,
-[Votre nom]
-
----
-Sites cibles pour guest posting :
-• Blogs food/gastronomie locaux
-• Sites touristiques (${city})
-• Annuaires restaurants
-• Magazines en ligne
-• Forums culinaires`;
-
-    results.innerHTML=`<div style="background:var(--s2);border-radius:10px;padding:16px;margin-bottom:12px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-            <span style="font-weight:700;color:var(--txt);">✍️ Pitch Guest Post / Link Building</span>
-            <button onclick="copyToClip(document.getElementById('guestContent').textContent)" style="padding:4px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📋 Copier</button>
-        </div>
-        <div id="guestContent" style="font-size:.78rem;color:var(--txt);line-height:1.7;max-height:300px;overflow-y:auto;white-space:pre-wrap;background:var(--s1);padding:12px;border-radius:8px;">${pitch}</div>
-    </div>`;
+async function generateSocialPosts(){
+    const results=document.getElementById('contentAutoResults');
+    if(!results)return;
+    results.style.display='block';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA des posts sociaux...</div>';
+    try{
+        const data=await _callContentAPI('social');
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
+        results.innerHTML=_contentCard('socialContent','Posts Instagram/Facebook','📱',data.content.replace(/\n/g,'<br>'),'');
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
 }
 
 async function generateAllSEOContent(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⚡ Génération de tout le contenu SEO en cours...</div>';
-    await generateBlogPost();
-    const blogHtml=results.innerHTML;
-    await generateRedditPost();
-    const redditHtml=results.innerHTML;
-    await generateGuestPost();
-    results.innerHTML=blogHtml+redditHtml+results.innerHTML;
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⚡ Génération IA de tout le contenu SEO... (peut prendre 30-60 secondes)</div>';
+
+    let allHtml='';
+    const types=[{fn:_callContentAPI,type:'blog',title:'Article de blog SEO',icon:'📝',id:'blogAll'},
+                 {fn:_callContentAPI,type:'reddit',title:'Post Reddit',icon:'🤖',id:'redditAll'},
+                 {fn:_callContentAPI,type:'guest_post',title:'Pitch Guest Post',icon:'✍️',id:'guestAll'},
+                 {fn:_callContentAPI,type:'social',title:'Posts Sociaux',icon:'📱',id:'socialAll'},
+                 {fn:_callContentAPI,type:'faq',title:'FAQ SEO (Schema.org)',icon:'❓',id:'faqAll'}];
+
+    for(const t of types){
+        try{
+            results.innerHTML=`<div style="text-align:center;padding:20px;color:var(--mut);">⚡ Génération : ${t.title}... (${types.indexOf(t)+1}/${types.length})</div>`+allHtml;
+            const data=await t.fn(t.type);
+            if(data.success) allHtml+=_contentCard(t.id,t.title,t.icon,data.content.replace(/\n/g,'<br>'),'');
+            else allHtml+=`<div style="padding:8px;color:var(--org);font-size:.75rem;">⚠️ ${t.title}: ${data.error}</div>`;
+        }catch(e){allHtml+=`<div style="padding:8px;color:var(--red);font-size:.75rem;">❌ ${t.title}: ${e.message}</div>`;}
+    }
+    results.innerHTML=allHtml;
 }
 
+// Real Reddit posting via backend API
+async function postToReddit(subreddit){
+    const content=document.getElementById('redditContent')?.innerText||document.getElementById('redditAll')?.innerText;
+    if(!content)return alert('Aucun contenu Reddit à poster.');
+    const name=currentData?.name||'Restaurant';
+    const city=currentData?.city||'Paris';
+    const title=`${name} à ${city} — une belle découverte`;
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/reddit/post`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subreddit,title,text:content})},15000);
+        const d=await r.json();
+        if(d.success){alert(`✅ Posté sur r/${subreddit} !\n${d.url}`);if(d.url)window.open(d.url,'_blank');}
+        else alert(`❌ Reddit: ${d.error}`);
+    }catch(e){alert('Erreur Reddit: '+e.message);}
+}
+
+// Real WordPress publishing via backend API
+async function publishToWordPress(){
+    const content=document.getElementById('blogContent')?.innerHTML||document.getElementById('blogAll')?.innerHTML;
+    if(!content)return alert('Aucun contenu blog à publier.');
+    // Check if WordPress credentials are stored
+    const wpCreds=window._wpCredentials||{};
+    if(!wpCreds.site_url){
+        const url=prompt('URL WordPress (ex: https://monsite.fr):');
+        const user=prompt('Nom d\'utilisateur WordPress:');
+        const pass=prompt('Mot de passe d\'application WordPress:');
+        if(!url||!user||!pass)return;
+        wpCreds.site_url=url;wpCreds.username=user;wpCreds.app_password=pass;
+        window._wpCredentials=wpCreds;
+    }
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/wordpress/publish`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...wpCreds,title:`${currentData?.name||'Restaurant'} — Guide complet`,content,status:'draft'})},15000);
+        const d=await r.json();
+        if(d.success){alert(`✅ Article créé en brouillon sur WordPress !\n${d.edit_url}`);if(d.edit_url)window.open(d.edit_url,'_blank');}
+        else alert(`❌ WordPress: ${d.error}`);
+    }catch(e){alert('Erreur WordPress: '+e.message);}
+}
+
+// Real CMS publishing
 async function publishBlogPost(){
+    if(detectedCMS?.detected?.cms==='wordpress') return publishToWordPress();
     if(!detectedCMS||!detectedCMS.detected){alert('CMS non détecté — connectez d\'abord votre site web dans l\'onglet IA Dispatch.');return;}
     const content=document.getElementById('blogContent')?.innerHTML;
     if(!content)return;
@@ -9214,6 +9226,37 @@ function copyToClip(text){
         document.body.appendChild(toast);
         setTimeout(()=>toast.remove(),2000);
     });
+}
+
+// ============================================================
+// API KEYS SETTINGS — UI for configuring backend services
+// ============================================================
+async function loadServiceStatus(){
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/services/status`,{},5000);
+        const d=await r.json();
+        if(d.success)window._serviceStatus=d.services;
+        return d.services;
+    }catch(e){return {};}
+}
+
+async function saveApiKey(service,key,extra){
+    const userId=currentAccount?.id;
+    if(!userId)return alert('Connectez-vous d\'abord.');
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/keys`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId,service,api_key:key,extra})},5000);
+        const d=await r.json();
+        if(d.success){
+            showToast(`✅ Clé ${service} sauvegardée !`);
+            loadServiceStatus();
+        }else alert('Erreur: '+d.error);
+    }catch(e){alert('Erreur: '+e.message);}
+}
+
+function showToast(msg){
+    const t=document.createElement('div');t.textContent=msg;
+    t.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--grn);color:#fff;padding:8px 16px;border-radius:8px;font-size:.8rem;z-index:99999;';
+    document.body.appendChild(t);setTimeout(()=>t.remove(),3000);
 }
 
 // ============================================================

@@ -2041,6 +2041,290 @@ app.post('/api/backlinks', async (req, res) => {
 });
 
 // ============================================================
+// CONTENT GENERATION — Real AI content via OpenAI / Anthropic
+// ============================================================
+app.post('/api/content/generate', async (req, res) => {
+  const { type, restaurant, keywords, tone, language } = req.body;
+  // type: 'blog', 'reddit', 'guest_post', 'social', 'faq'
+  if (!type || !restaurant?.name) return res.status(400).json({ error: 'type and restaurant.name required' });
+
+  const openaiKey = process.env.OPENAI_API_KEY;
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+
+  if (!openaiKey && !anthropicKey) {
+    return res.json({ success: false, error: 'Aucune clé API IA configurée. Ajoutez OPENAI_API_KEY ou ANTHROPIC_API_KEY dans les variables d\'environnement.' });
+  }
+
+  const name = restaurant.name;
+  const city = restaurant.city || 'Paris';
+  const cuisine = restaurant.cuisine || 'restaurant';
+  const rating = restaurant.rating || '';
+  const kw = (keywords || []).join(', ') || `${name} ${city}`;
+  const lang = language || 'fr';
+
+  const prompts = {
+    blog: `Écris un article de blog SEO de 800-1000 mots en français pour le restaurant "${name}" à ${city}.
+Cuisine: ${cuisine}. Note Google: ${rating}/5.
+Mots-clés à intégrer naturellement: ${kw}.
+Structure: titre H1 accrocheur, introduction, 3-4 sections H2, conclusion avec CTA.
+Ton: professionnel mais chaleureux. Inclus des balises HTML (h1, h2, p, strong).
+Ne mentionne PAS que c'est généré par IA.`,
+
+    reddit: `Écris un post Reddit naturel et authentique en français (style conversationnel, pas marketing) recommandant le restaurant "${name}" à ${city}.
+Le post doit sembler écrit par un vrai client satisfait.
+Mentionne: la qualité de la cuisine, l'ambiance, le rapport qualité-prix.
+Note Google: ${rating}/5.
+Subreddits pertinents à suggérer: r/paris, r/france, r/food, r/FoodPorn.
+IMPORTANT: doit être naturel, PAS promotionnel. Max 200 mots.`,
+
+    guest_post: `Écris un pitch email professionnel en français pour proposer un article invité à un blog food/gastronomie.
+L'article portera sur "Les meilleures adresses ${cuisine} à ${city}" et mentionnera ${name}.
+Le pitch doit: être concis (150 mots), professionnel, proposer de la valeur au blog hôte.
+Inclus aussi un outline de l'article proposé (5-6 sections).`,
+
+    social: `Génère 5 posts pour réseaux sociaux (Instagram/Facebook) en français pour le restaurant "${name}" à ${city}.
+Chaque post: 2-3 lignes + 5-8 hashtags pertinents.
+Thèmes variés: nouveau plat, ambiance, équipe, avis client, événement.
+Ton: engageant, avec emojis. Optimisé pour l'engagement.`,
+
+    faq: `Génère une page FAQ SEO de 10 questions-réponses en français pour le restaurant "${name}" à ${city}.
+Cuisine: ${cuisine}. Mots-clés: ${kw}.
+Questions que les clients posent sur Google (ex: horaires, menu, réservation, allergènes, parking, terrasse...).
+Format: balises HTML schema.org FAQ (itemscope, itemprop). Chaque réponse: 2-3 phrases.`
+  };
+
+  const prompt = prompts[type] || prompts.blog;
+
+  try {
+    let content = '';
+
+    if (openaiKey) {
+      // Use OpenAI GPT-4
+      const resp = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${openaiKey}` },
+        body: JSON.stringify({
+          model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+          messages: [
+            { role: 'system', content: 'Tu es un expert en SEO local et marketing digital pour restaurants. Tu génères du contenu optimisé, naturel et engageant.' },
+            { role: 'user', content: prompt }
+          ],
+          max_tokens: 2000,
+          temperature: 0.8
+        })
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+      content = data.choices?.[0]?.message?.content || '';
+    } else if (anthropicKey) {
+      // Use Claude
+      const resp = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': anthropicKey,
+          'anthropic-version': '2023-06-01'
+        },
+        body: JSON.stringify({
+          model: process.env.ANTHROPIC_MODEL || 'claude-sonnet-4-20250514',
+          max_tokens: 2000,
+          messages: [{ role: 'user', content: prompt }]
+        })
+      });
+      const data = await resp.json();
+      if (data.error) throw new Error(data.error.message);
+      content = data.content?.[0]?.text || '';
+    }
+
+    // Log generation
+    try {
+      db.prepare('INSERT INTO action_log (restaurant_id, action_type, details) VALUES (?, ?, ?)').run(
+        restaurant.id || 0, `content_${type}`, JSON.stringify({ name, city, type, length: content.length })
+      );
+    } catch (e) {}
+
+    res.json({ success: true, type, content, model: openaiKey ? 'openai' : 'anthropic', tokens: content.length });
+  } catch (e) {
+    console.error('Content generation error:', e.message);
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// REDDIT — OAuth + Post Submission
+// ============================================================
+// Reddit OAuth app: https://www.reddit.com/prefs/apps
+app.post('/api/reddit/post', async (req, res) => {
+  const { subreddit, title, text } = req.body;
+  const clientId = process.env.REDDIT_CLIENT_ID;
+  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+  const username = process.env.REDDIT_USERNAME;
+  const password = process.env.REDDIT_PASSWORD;
+
+  if (!clientId || !clientSecret || !username || !password) {
+    return res.json({ success: false, error: 'Reddit API non configurée. Ajoutez REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USERNAME, REDDIT_PASSWORD dans les variables d\'environnement.', needsConfig: true });
+  }
+
+  try {
+    // Step 1: Get access token via password grant
+    const authResp = await fetch('https://www.reddit.com/api/v1/access_token', {
+      method: 'POST',
+      headers: {
+        'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'RestauRank/1.0'
+      },
+      body: `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
+    });
+    const authData = await authResp.json();
+    if (!authData.access_token) throw new Error('Reddit auth failed: ' + JSON.stringify(authData));
+
+    // Step 2: Submit post
+    const postResp = await fetch('https://oauth.reddit.com/api/submit', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${authData.access_token}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'RestauRank/1.0'
+      },
+      body: `sr=${encodeURIComponent(subreddit)}&kind=self&title=${encodeURIComponent(title)}&text=${encodeURIComponent(text)}&api_type=json`
+    });
+    const postData = await postResp.json();
+
+    if (postData.json?.errors?.length > 0) {
+      throw new Error(postData.json.errors.map(e => e[1]).join(', '));
+    }
+
+    const postUrl = postData.json?.data?.url || '';
+    res.json({ success: true, url: postUrl, id: postData.json?.data?.id });
+  } catch (e) {
+    console.error('Reddit post error:', e.message);
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// WORDPRESS — Real REST API blog post publishing
+// ============================================================
+app.post('/api/wordpress/publish', async (req, res) => {
+  const { site_url, username, app_password, title, content, status, categories, tags } = req.body;
+  if (!site_url || !username || !app_password) {
+    return res.json({ success: false, error: 'WordPress credentials required (site_url, username, app_password)' });
+  }
+
+  try {
+    const wpUrl = site_url.replace(/\/$/, '');
+    const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+
+    const resp = await fetch(`${wpUrl}/wp-json/wp/v2/posts`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${auth}`
+      },
+      body: JSON.stringify({
+        title: title || 'Article SEO RestauRank',
+        content: content || '',
+        status: status || 'draft', // 'draft' or 'publish'
+        categories: categories || [],
+        tags: tags || []
+      })
+    });
+
+    const data = await resp.json();
+    if (data.code) throw new Error(data.message || data.code);
+
+    res.json({
+      success: true,
+      post_id: data.id,
+      url: data.link,
+      status: data.status,
+      edit_url: `${wpUrl}/wp-admin/post.php?post=${data.id}&action=edit`
+    });
+  } catch (e) {
+    console.error('WordPress publish error:', e.message);
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// API KEYS MANAGEMENT — Store/retrieve per user
+// ============================================================
+try {
+  db.exec(`CREATE TABLE IF NOT EXISTS api_keys (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    service TEXT NOT NULL,
+    api_key TEXT NOT NULL,
+    extra JSON,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, service)
+  )`);
+} catch (e) {}
+
+app.get('/api/keys', (req, res) => {
+  const userId = req.query.user_id;
+  if (!userId) return res.status(400).json({ error: 'user_id required' });
+  try {
+    const keys = db.prepare('SELECT service, created_at FROM api_keys WHERE user_id = ?').all(userId);
+    // Return service names only, not actual keys (security)
+    const services = {};
+    keys.forEach(k => { services[k.service] = { configured: true, since: k.created_at }; });
+    res.json({ success: true, services });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.post('/api/keys', (req, res) => {
+  const { user_id, service, api_key, extra } = req.body;
+  if (!user_id || !service || !api_key) return res.status(400).json({ error: 'user_id, service, api_key required' });
+  try {
+    db.prepare(`INSERT INTO api_keys (user_id, service, api_key, extra) VALUES (?, ?, ?, ?)
+      ON CONFLICT(user_id, service) DO UPDATE SET api_key = ?, extra = ?`)
+      .run(user_id, service, api_key, JSON.stringify(extra || {}), api_key, JSON.stringify(extra || {}));
+
+    // Also set as env var for current session
+    const envMap = {
+      openai: 'OPENAI_API_KEY',
+      anthropic: 'ANTHROPIC_API_KEY',
+      reddit_client_id: 'REDDIT_CLIENT_ID',
+      reddit_client_secret: 'REDDIT_CLIENT_SECRET',
+      reddit_username: 'REDDIT_USERNAME',
+      reddit_password: 'REDDIT_PASSWORD',
+      moz_access_id: 'MOZ_ACCESS_ID',
+      moz_secret_key: 'MOZ_SECRET_KEY',
+      google_places: 'GOOGLE_PLACES_API_KEY'
+    };
+    if (envMap[service]) process.env[envMap[service]] = api_key;
+
+    res.json({ success: true, service });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+// Load saved API keys into env on startup
+try {
+  const savedKeys = db.prepare('SELECT service, api_key FROM api_keys').all();
+  const envMap = { openai: 'OPENAI_API_KEY', anthropic: 'ANTHROPIC_API_KEY', reddit_client_id: 'REDDIT_CLIENT_ID', reddit_client_secret: 'REDDIT_CLIENT_SECRET', reddit_username: 'REDDIT_USERNAME', reddit_password: 'REDDIT_PASSWORD', moz_access_id: 'MOZ_ACCESS_ID', moz_secret_key: 'MOZ_SECRET_KEY', google_places: 'GOOGLE_PLACES_API_KEY' };
+  savedKeys.forEach(k => { if (envMap[k.service] && k.api_key) process.env[envMap[k.service]] = k.api_key; });
+  if (savedKeys.length > 0) console.log(`Loaded ${savedKeys.length} API keys from DB`);
+} catch (e) {}
+
+// Check which services are configured
+app.get('/api/services/status', (req, res) => {
+  res.json({
+    success: true,
+    services: {
+      openai: { configured: !!process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' },
+      anthropic: { configured: !!process.env.ANTHROPIC_API_KEY },
+      reddit: { configured: !!(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_USERNAME) },
+      moz: { configured: !!(process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) },
+      google_places: { configured: !!process.env.GOOGLE_PLACES_API_KEY },
+      google_oauth: { configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) },
+      gsc: { configured: !!(process.env.GOOGLE_CLIENT_ID) } // same OAuth, just needs webmasters scope
+    }
+  });
+});
+
+// ============================================================
 // CMS DETECTION — Detect WordPress, Webflow, Wix, Squarespace, Shopify
 // ============================================================
 const http = require('http');
