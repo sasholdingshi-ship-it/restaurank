@@ -5952,9 +5952,21 @@ function renderReviews(){
         </div>`;
         return;
     }
-    // Try to load real reviews, fall back to demo
+    // Try to load real reviews: 1) GBP API  2) Real audit (Google Places)  3) Demo
     if(!window._currentReviews&&googleAuth?.connected){
         fetchRealReviews().then(ok=>{if(ok)renderReviews();});
+    }
+    // Load from real audit data (Google Places returns up to 5 reviews)
+    if(!window._currentReviews&&window._realAuditDetails?.google?.reviews?.length>0){
+        window._currentReviews=window._realAuditDetails.google.reviews.map(r=>({author:r.author||'Anonyme',rating:r.rating||5,text:r.text||'',replied:false,time:r.time||'',source:'google_places'}));
+        window._reviewsSource='google_places';
+    }
+    // Load from TripAdvisor reviews (only if not already merged)
+    if(window._realAuditDetails?.tripadvisor?.reviews?.length>0&&!window._taMerged){
+        const taRevs=window._realAuditDetails.tripadvisor.reviews.map(r=>({author:r.title||'TripAdvisor',rating:r.rating||4,text:r.text||r.title||'',replied:false,source:'tripadvisor'}));
+        if(window._currentReviews){window._currentReviews=[...window._currentReviews,...taRevs];}
+        else{window._currentReviews=taRevs;window._reviewsSource='tripadvisor';}
+        window._taMerged=true;
     }
     const data=window._currentReviews||[
         {author:'Marie D.',rating:5,text:'Excellente cuisine, personnel très accueillant !',replied:false},
@@ -5965,7 +5977,7 @@ function renderReviews(){
         {author:'Emma V.',rating:5,text:'Le meilleur ramen de Paris ! Ambiance top.',replied:false},
     ];
     window._currentReviews=data;
-    const isDemo=window._reviewsSource!=='google';
+    const isDemo=!window._reviewsSource;
     const unanswered=data.filter(r=>!r.replied).length;
     const list=document.getElementById('reviewsList');
 
@@ -5982,23 +5994,33 @@ function renderReviews(){
         <div style="font-size:.7rem;color:var(--mut);">Réponses optimisées SEO local — inclut mots-clés + nom ville</div>
     </div>`;
 
-    list.innerHTML=headerHtml+data.map((r,i)=>`
-        <div class="review-item" style="${r.replied?'opacity:.6;':''}">
+    // Update stat cards with real data
+    const avgR=data.length>0?(data.reduce((s,r)=>s+r.rating,0)/data.length).toFixed(1):'—';
+    const respRate=data.length>0?Math.round(data.filter(r=>r.replied).length/data.length*100)+'%':'—';
+    const avgNum=parseFloat(avgR);
+    const sentEmoji=avgNum>=4.5?'😍':avgNum>=4?'😊':avgNum>=3?'😐':'😟';
+    try{document.getElementById('reviewCount').textContent=data.length;document.getElementById('avgRating').textContent=avgR;document.getElementById('responseRate').textContent=respRate;document.getElementById('sentiment').textContent=sentEmoji;}catch(e){}
+
+    list.innerHTML=headerHtml+data.map((r,i)=>{
+        const srcBadge=r.source==='google_places'?'<span style="font-size:.55rem;padding:1px 5px;border-radius:4px;background:rgba(66,133,244,.12);color:#4285f4;font-weight:600;margin-left:4px;">Google</span>':r.source==='tripadvisor'?'<span style="font-size:.55rem;padding:1px 5px;border-radius:4px;background:rgba(52,224,161,.12);color:#34e0a1;font-weight:600;margin-left:4px;">TripAdvisor</span>':r.source==='yelp'?'<span style="font-size:.55rem;padding:1px 5px;border-radius:4px;background:rgba(255,26,26,.12);color:#ff1a1a;font-weight:600;margin-left:4px;">Yelp</span>':'';
+        const timeBadge=r.time?`<span style="font-size:.6rem;color:var(--mut);margin-left:6px;">${r.time}</span>`:'';
+        return `<div class="review-item" style="${r.replied?'opacity:.6;':''}">
             <div class="review-avatar" style="background:${r.rating>=4?'rgba(16,185,129,.15)':r.rating===3?'rgba(245,158,11,.15)':'rgba(239,68,68,.15)'};">${r.author[0]}</div>
             <div class="review-content">
                 <div class="review-header">
-                    <div class="review-author">${r.author} ${r.replied?'<span style="font-size:.6rem;color:var(--grn);font-weight:700;">✓ RÉPONDU</span>':''}</div>
-                    <div class="review-rating">${'⭐'.repeat(r.rating)}${'☆'.repeat(5-r.rating)}</div>
+                    <div class="review-author">${r.author}${srcBadge}${timeBadge} ${r.replied?'<span style="font-size:.6rem;color:var(--grn);font-weight:700;">✓ RÉPONDU</span>':''}</div>
+                    <div class="review-rating">${'⭐'.repeat(Math.min(r.rating,5))}${'☆'.repeat(Math.max(0,5-r.rating))}</div>
                 </div>
-                <div class="review-text">${r.text}</div>
-                <div class="review-reply-preview" style="display:none;margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);font-size:.72rem;color:var(--txt);line-height:1.4;"></div>
-                <div style="display:flex;gap:6px;margin-top:6px;">
+                <div class="review-text">${r.text||'<em style="color:var(--mut);">Pas de texte</em>'}</div>
+                <div class="review-reply-preview" id="replyPreview${i}" style="display:none;margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);font-size:.72rem;color:var(--txt);line-height:1.4;"></div>
+                <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
                     <button class="review-reply-btn" onclick="generateReviewReply(${i})">💬 ${r.replied?'Régénérer':'Répondre avec IA'}</button>
                     ${!r.replied?`<button class="review-reply-btn" onclick="markReviewReplied(${i})" style="background:rgba(16,185,129,.1);color:var(--grn);">✓ Déjà répondu</button>`:''}
+                    ${r.source==='google_places'&&!r.replied?`<button class="review-reply-btn" onclick="openGoogleReviewReply(${i})" style="background:rgba(66,133,244,.1);color:#4285f4;">📤 Répondre sur Google</button>`:''}
                 </div>
             </div>
-        </div>
-    `).join('');
+        </div>`;
+    }).join('');
 }
 
 function markReviewReplied(idx){
@@ -6006,6 +6028,22 @@ function markReviewReplied(idx){
         window._currentReviews[idx].replied=true;
         renderReviews();
     }
+}
+
+function openGoogleReviewReply(idx){
+    // Generate reply first if not already shown
+    const preview=document.getElementById('replyPreview'+idx);
+    if(!preview||!preview.textContent){generateReviewReply(idx);}
+    // Copy reply to clipboard + open GBP
+    const text=preview?.textContent||'';
+    if(text)navigator.clipboard.writeText(text).catch(()=>{});
+    const placeId=currentData?.place_id||window._hubData?.place_id||'';
+    if(placeId){
+        window.open(`https://business.google.com/reviews?place_id=${placeId}`,'_blank');
+    } else {
+        window.open('https://business.google.com/','_blank');
+    }
+    addToLog('📤 Réponse copiée — ouvrez Google Business Profile pour coller votre réponse');
 }
 
 // ============================================================
@@ -8074,13 +8112,17 @@ function checkNapConsistency(){
         {name:'Hub Central',icon:'🏠',data:hub},
         {name:'Google Business',icon:'📊',data:{name:currentData?.name||'',phone:currentData?.phone||window._hubData?.phone||'',address:currentData?.address||window._hubData?.address||'',website:currentData?.websiteUrl||window._hubData?.website||''}},
     ];
-    // Real audit data from /api/real-audit
-    const ra=window._realAuditData;
-    if(ra){
-        if(ra._foursquareData){sources.push({name:'Foursquare',icon:'📍',data:{name:ra._foursquareData.name||'',phone:ra._foursquareData.phone||'',address:ra._foursquareData.address||'',website:ra._foursquareData.website||''}});}
-        if(ra._tripadvisorData){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:ra._tripadvisorData.name||'',phone:'',address:ra._tripadvisorData.address||'',website:''}});}
-        if(ra._yelpData){sources.push({name:'Yelp',icon:'⭐',data:{name:ra._yelpData.name||'',phone:ra._yelpData.phone||'',address:ra._yelpData.address||'',website:''}});}
-    }
+    // Real audit data from /api/real-audit (details stored in window._realAuditDetails)
+    const det=window._realAuditDetails||{};
+    if(det.foursquare?.available&&det.foursquare?.found){sources.push({name:'Foursquare',icon:'📍',data:{name:det.foursquare.name||'',phone:det.foursquare.phone||'',address:det.foursquare.address||'',website:det.foursquare.website||''}});}
+    if(det.tripadvisor?.available&&det.tripadvisor?.found){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:det.tripadvisor.name||'',phone:'',address:det.tripadvisor.address||'',website:''}});}
+    if(det.yelp?.available&&det.yelp?.found){sources.push({name:'Yelp',icon:'⭐',data:{name:det.yelp.name||'',phone:det.yelp.phone||'',address:det.yelp.address||'',website:''}});}
+    // Fallback to _foursquare/_tripadvisor/_yelp from currentData (old format)
+    const ra=window._realAuditData||currentData||{};
+    if(!det.foursquare&&ra._foursquare){sources.push({name:'Foursquare',icon:'📍',data:{name:ra._foursquare.name||'',phone:ra._foursquare.phone||'',address:ra._foursquare.address||'',website:ra._foursquare.website||''}});}
+    if(!det.tripadvisor&&ra._tripadvisor){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:ra._tripadvisor.name||'',phone:'',address:ra._tripadvisor.address||'',website:''}});}
+    if(!det.yelp&&ra._yelp){sources.push({name:'Yelp',icon:'⭐',data:{name:ra._yelp.name||'',phone:ra._yelp.phone||'',address:ra._yelp.address||'',website:''}});}
+
     // Also check dirCheckResults for platforms not already added
     const dirList=typeof DIR_LIST!=='undefined'?DIR_LIST:[];
     const addedPlatforms=sources.map(s=>s.name.toLowerCase());
@@ -8534,12 +8576,95 @@ async function renderStatsTab(){
     html+=`<div class="chart-section">
         <h3 class="chart-title">🎯 Classements mots-clés (Top 10)</h3>
         <table class="keyword-table"><thead><tr><th>Mot-clé</th><th>Langue</th><th>Popularité</th><th>Position Google</th><th style="text-align:center;">Évolution</th><th>Concurrents</th></tr></thead><tbody>`;
-    keywords.forEach(k=>{
+    keywords.forEach((k,i)=>{
         const badgeClass=k.pop==='Élevée'?'badge-high':k.pop==='Moyenne'?'badge-medium':'badge-low';
-        html+=`<tr><td><strong>${k.kw}</strong></td><td>${k.lang}</td><td><span class="badge-pop ${badgeClass}">${k.pop}</span></td><td>#${k.pos}</td><td style="text-align:center;font-weight:700;">${k.change}</td><td>${k.comp}</td></tr>`;
+        html+=`<tr><td><strong>${k.kw}</strong></td><td>${k.lang}</td><td><span class="badge-pop ${badgeClass}">${k.pop}</span></td><td>#${k.pos}</td><td style="text-align:center;font-weight:700;">${k.change}</td><td>${k.comp}</td><td><button onclick="removeKeyword(${i})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:.75rem;">✕</button></td></tr>`;
     });
-    html+=`</tbody></table></div>`;
+    html+=`</tbody></table>
+        <div style="display:flex;gap:8px;margin-top:12px;align-items:center;">
+            <input type="text" id="newKeywordInput" placeholder="Ajouter un mot-clé (ex: restaurant italien Paris)" style="flex:1;padding:8px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:.8rem;">
+            <select id="newKeywordPop" style="padding:8px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:.8rem;">
+                <option value="Élevée">Élevée</option><option value="Moyenne" selected>Moyenne</option><option value="Faible">Faible</option>
+            </select>
+            <button onclick="addKeyword()" style="padding:8px 16px;background:var(--ind);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.8rem;font-weight:600;">+ Ajouter</button>
+        </div>
+    </div>`;
+
+    // ── PageSpeed / Performance section (from real audit) ──
+    const perf=window._realAuditDetails?.performance;
+    const webData=window._realAuditDetails?.website;
+    if(perf?.available||webData){
+        html+=`<div class="chart-section"><h3 class="chart-title">⚡ Performance du site (PageSpeed)</h3>`;
+        if(perf?.available){
+            const mob=perf.mobile||{};const desk=perf.desktop||{};
+            const renderGauge=(label,score)=>{
+                const s=score||0;const color=s>=90?'var(--grn)':s>=50?'var(--org)':'var(--red)';
+                return `<div style="text-align:center;"><div style="width:70px;height:70px;border-radius:50%;border:4px solid ${color};display:flex;align-items:center;justify-content:center;margin:0 auto 6px;">
+                    <span style="font-size:1.2rem;font-weight:700;color:${color};">${s}</span></div><div style="font-size:.72rem;color:var(--mut);">${label}</div></div>`;
+            };
+            html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                <div style="padding:16px;background:var(--s1);border-radius:10px;border:1px solid var(--bdr);">
+                    <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:12px;">📱 Mobile</div>
+                    <div style="display:flex;justify-content:space-around;">${renderGauge('Perf.',mob.performance)}${renderGauge('A11y',mob.accessibility)}${renderGauge('SEO',mob.seo)}</div>
+                    ${mob.fcp?`<div style="margin-top:12px;font-size:.72rem;color:var(--mut);display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                        <span>FCP: ${mob.fcp}</span><span>LCP: ${mob.lcp||'—'}</span><span>CLS: ${mob.cls||'—'}</span><span>TBT: ${mob.tbt||'—'}</span></div>`:''}
+                </div>
+                <div style="padding:16px;background:var(--s1);border-radius:10px;border:1px solid var(--bdr);">
+                    <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:12px;">🖥️ Desktop</div>
+                    <div style="display:flex;justify-content:space-around;">${renderGauge('Perf.',desk.performance)}${renderGauge('A11y',desk.accessibility)}${renderGauge('SEO',desk.seo)}</div>
+                    ${desk.fcp?`<div style="margin-top:12px;font-size:.72rem;color:var(--mut);display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                        <span>FCP: ${desk.fcp}</span><span>LCP: ${desk.lcp||'—'}</span><span>CLS: ${desk.cls||'—'}</span><span>TBT: ${desk.tbt||'—'}</span></div>`:''}
+                </div>
+            </div>`;
+        } else {
+            html+=`<div style="padding:16px;background:var(--s1);border-radius:10px;text-align:center;color:var(--mut);font-size:.82rem;">Pas de données PageSpeed disponibles. <a href="https://pagespeed.web.dev" target="_blank" style="color:var(--ind);">Tester manuellement</a></div>`;
+        }
+        html+=`</div>`;
+    }
+
+    // ── AI Visibility section ──
+    const ai=window._realAuditDetails?.aiVisibility;
+    if(ai?.available&&ai?.mentioned!==undefined){
+        html+=`<div class="chart-section"><h3 class="chart-title">🤖 Visibilité IA (ChatGPT / Claude / Gemini)</h3>
+            <div style="padding:16px;background:var(--s1);border-radius:10px;border:1px solid var(--bdr);">
+                <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">
+                    <div style="width:60px;height:60px;border-radius:50%;background:${ai.mentioned?'rgba(16,185,129,.15)':'rgba(239,68,68,.15)'};display:flex;align-items:center;justify-content:center;font-size:1.5rem;">${ai.mentioned?'✅':'❌'}</div>
+                    <div><div style="font-weight:700;font-size:.95rem;color:var(--txt);">${ai.mentioned?'Votre restaurant est mentionné par les IA':'Non trouvé dans les réponses IA'}</div>
+                    <div style="font-size:.78rem;color:var(--mut);">Basé sur un test avec le prompt : "${name} ${currentData?.city||''}"</div></div>
+                </div>
+                ${ai.response?`<div style="padding:10px;background:var(--s2);border-radius:8px;font-size:.78rem;color:var(--txt);line-height:1.5;max-height:120px;overflow-y:auto;border:1px solid var(--bdr);">${ai.response.substring(0,500)}${ai.response.length>500?'...':''}</div>`:''}
+                ${ai.error?`<div style="font-size:.75rem;color:var(--org);margin-top:8px;">⚠️ ${ai.error}</div>`:''}
+            </div>
+        </div>`;
+    }
+
     container.innerHTML=html;
+}
+
+// ============================================================
+// KEYWORD MANAGEMENT
+// ============================================================
+async function addKeyword(){
+    const input=document.getElementById('newKeywordInput');
+    const pop=document.getElementById('newKeywordPop');
+    if(!input||!input.value.trim())return;
+    const rid=currentData?.restaurant_id||1;
+    try{
+        await fetchTimeout(`${API_BASE}/api/keywords`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,keyword:input.value.trim(),language:'FR',popularity:pop?.value||'Moyenne'})},5000);
+        input.value='';
+        renderStatsTab();
+    }catch(e){console.warn('Add keyword error:',e);}
+}
+async function removeKeyword(idx){
+    const rid=currentData?.restaurant_id||1;
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/keywords?restaurant_id=${rid}`,{},5000);
+        const j=await r.json();
+        if(j.success&&j.keywords[idx]){
+            await fetchTimeout(`${API_BASE}/api/keywords/${j.keywords[idx].id}`,{method:'DELETE'},5000);
+            renderStatsTab();
+        }
+    }catch(e){console.warn('Remove keyword error:',e);}
 }
 
 // ============================================================
