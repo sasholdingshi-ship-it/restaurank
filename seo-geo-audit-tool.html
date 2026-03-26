@@ -5753,8 +5753,8 @@ function renderTeam(){
         tab.innerHTML=`<div style="text-align:center;padding:60px 20px;">
             <div style="font-size:3rem;margin-bottom:16px;">🔒</div>
             <h3 style="color:var(--txt);margin-bottom:8px;">Gestion d'équipe — Plan Starter+</h3>
-            <p style="color:var(--mut);margin-bottom:20px;">Invitez vos collaborateurs, attribuez des rôles (propriétaire, manager, viewer) et contrôlez les accès par restaurant.</p>
-            <button class="btn" onclick="showUpgradeModal('${teamCheck.reason}','starter')" style="background:var(--ind);border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:700;">⬆ Passer au plan Starter</button>
+            <p style="color:var(--mut);margin-bottom:20px;">Invitez vos collaborateurs, attribuez des rôles et contrôlez les accès par restaurant.</p>
+            <button class="btn" onclick="showUpgradeModal('${teamCheck.reason}','starter')" style="background:var(--ind);border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:700;">Passer au plan Starter</button>
         </div>`;
         return;
     }
@@ -5764,82 +5764,118 @@ function renderTeam(){
     const restaurants=getStoredRestaurants();
     const restNames=restaurants.map(r=>r.name);
 
-    tab.innerHTML=`
-        <h2 style="font-size:1rem;font-weight:800;margin-bottom:16px;">👥 Gestion d'équipe</h2>
-        <p style="color:var(--mut);font-size:.8rem;margin-bottom:20px;">
-            ${members.length}/${limits.team} membres · Plan <strong>${limits.label}</strong>
-        </p>
+    // Shared input styles
+    const inputStyle='width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--txt);font-size:.82rem;box-sizing:border-box;outline:none;transition:border .2s;';
 
-        <!-- Invite form -->
-        <div style="background:var(--s1);border-radius:10px;padding:16px;margin-bottom:20px;border:1px solid var(--bdr);">
-            <h3 style="font-size:.85rem;font-weight:700;margin-bottom:12px;">📨 Inviter un membre</h3>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;">
-                <div style="flex:1;min-width:200px;">
-                    <label style="font-size:.7rem;color:var(--mut);display:block;margin-bottom:4px;">Email</label>
-                    <input type="email" id="teamInviteEmail" placeholder="collegue@email.com" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt);font-size:.8rem;">
-                </div>
-                <div style="min-width:120px;">
-                    <label style="font-size:.7rem;color:var(--mut);display:block;margin-bottom:4px;">Rôle</label>
-                    <select id="teamInviteRole" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt);font-size:.8rem;">
-                        <option value="viewer">👁 Viewer</option>
+    tab.innerHTML=`
+        <div style="max-width:700px;margin:0 auto;padding:16px 0;">
+
+        <!-- Header -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+            <div>
+                <h2 style="font-size:1.1rem;font-weight:800;color:var(--txt);margin:0 0 4px 0;">Gestion d'équipe</h2>
+                <div style="font-size:.78rem;color:var(--mut);">${members.length + 1} membre${members.length>0?'s':''} · Plan <strong style="color:var(--ind);">${limits.label}</strong> · max ${limits.team}</div>
+            </div>
+        </div>
+
+        <!-- Roles explanation cards -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;">
+            <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:1.5rem;margin-bottom:6px;">👑</div>
+                <div style="font-weight:700;font-size:.8rem;color:var(--txt);margin-bottom:4px;">Propriétaire</div>
+                <div style="font-size:.68rem;color:var(--mut);line-height:1.4;">Accès total, facturation, gestion équipe</div>
+            </div>
+            <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:1.5rem;margin-bottom:6px;">✏️</div>
+                <div style="font-weight:700;font-size:.8rem;color:var(--txt);margin-bottom:4px;">Manager</div>
+                <div style="font-size:.68rem;color:var(--mut);line-height:1.4;">Audit, améliorations auto, gestion avis</div>
+            </div>
+            <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:1.5rem;margin-bottom:6px;">👁</div>
+                <div style="font-weight:700;font-size:.8rem;color:var(--txt);margin-bottom:4px;">Lecteur</div>
+                <div style="font-size:.68rem;color:var(--mut);line-height:1.4;">Consultation des scores et rapports</div>
+            </div>
+        </div>
+
+        <!-- Invite form — vertical stacked layout -->
+        <div style="background:var(--s1);border-radius:12px;padding:20px;margin-bottom:24px;border:1px solid var(--bdr);">
+            <h3 style="font-size:.9rem;font-weight:700;color:var(--txt);margin:0 0 16px 0;">Inviter un collaborateur</h3>
+
+            <div style="margin-bottom:12px;">
+                <label style="font-size:.72rem;color:var(--mut);display:block;margin-bottom:5px;font-weight:600;">Adresse email</label>
+                <input type="email" id="teamInviteEmail" placeholder="nom@entreprise.com" style="${inputStyle}" onfocus="this.style.borderColor='var(--ind)'" onblur="this.style.borderColor='var(--bdr)'">
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                <div>
+                    <label style="font-size:.72rem;color:var(--mut);display:block;margin-bottom:5px;font-weight:600;">Rôle</label>
+                    <select id="teamInviteRole" style="${inputStyle}">
+                        <option value="viewer">👁 Lecteur</option>
                         <option value="manager">✏️ Manager</option>
-                        <option value="owner">👑 Owner</option>
+                        <option value="owner">👑 Propriétaire</option>
                     </select>
                 </div>
-                <div style="min-width:160px;">
-                    <label style="font-size:.7rem;color:var(--mut);display:block;margin-bottom:4px;">Restaurants</label>
-                    <select id="teamInviteRestaurants" style="width:100%;padding:8px 12px;border-radius:6px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt);font-size:.8rem;">
+                <div>
+                    <label style="font-size:.72rem;color:var(--mut);display:block;margin-bottom:5px;font-weight:600;">Accès restaurant</label>
+                    <select id="teamInviteRestaurants" style="${inputStyle}">
                         <option value="__all" selected>Tous les restaurants</option>
                         ${restNames.map(n=>`<option value="${n}">${n}</option>`).join('')}
                     </select>
                 </div>
-                <button onclick="inviteTeamMember()" style="padding:8px 20px;border-radius:6px;background:var(--ind);color:#fff;border:none;cursor:pointer;font-weight:700;font-size:.8rem;white-space:nowrap;" ${members.length>=limits.team?'disabled title="Limite atteinte"':''}>
-                    ➕ Inviter
-                </button>
             </div>
+
+            <button onclick="inviteTeamMember()" style="width:100%;padding:12px;border-radius:8px;background:var(--ind);color:#fff;border:none;cursor:pointer;font-weight:700;font-size:.85rem;transition:opacity .2s;" ${members.length>=limits.team?'disabled style="opacity:.5;cursor:not-allowed;"':''} onmouseover="this.style.opacity='.85'" onmouseout="this.style.opacity='1'">
+                Envoyer l'invitation
+            </button>
+            ${members.length>=limits.team?`<div style="text-align:center;font-size:.7rem;color:var(--org);margin-top:8px;">Limite de ${limits.team} membres atteinte. <a href="#" onclick="event.preventDefault();showUpgradeModal('Limite team','pro')" style="color:var(--ind);text-decoration:underline;">Passer au plan supérieur</a></div>`:''}
         </div>
 
-        <!-- Roles legend -->
-        <div style="display:flex;gap:16px;margin-bottom:16px;font-size:.7rem;color:var(--mut);">
-            <span>👑 <strong>Owner</strong> — accès total + facturation</span>
-            <span>✏️ <strong>Manager</strong> — audit + auto-apply + avis</span>
-            <span>👁 <strong>Viewer</strong> — lecture seule</span>
+        <!-- Members list — card-based instead of table -->
+        <div>
+            <h3 style="font-size:.9rem;font-weight:700;color:var(--txt);margin:0 0 12px 0;">Membres de l'équipe</h3>
+
+            <!-- Owner card (you) -->
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--s1);border:1px solid var(--bdr);border-radius:10px;margin-bottom:8px;">
+                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--ind),var(--prp));display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;font-weight:700;flex-shrink:0;">${(currentUser.email||'U')[0].toUpperCase()}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:.82rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                        ${currentUser.email}
+                        <span style="font-size:.6rem;background:var(--ind);color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;">Vous</span>
+                    </div>
+                    <div style="font-size:.7rem;color:var(--mut);margin-top:2px;">👑 Propriétaire · Tous les restaurants</div>
+                </div>
+                <div style="flex-shrink:0;">
+                    <span style="font-size:.72rem;color:var(--grn);font-weight:700;">● Actif</span>
+                </div>
+            </div>
+
+            <!-- Invited members cards -->
+            ${members.map((m,i)=>`
+            <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--s1);border:1px solid var(--bdr);border-radius:10px;margin-bottom:8px;">
+                <div style="width:38px;height:38px;border-radius:50%;background:${m.role==='owner'?'linear-gradient(135deg,#f59e0b,#ef4444)':m.role==='manager'?'linear-gradient(135deg,var(--grn),var(--cyn))':'linear-gradient(135deg,var(--s3),var(--s4))'};display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;font-weight:700;flex-shrink:0;">${m.email[0].toUpperCase()}</div>
+                <div style="flex:1;min-width:0;">
+                    <div style="font-size:.82rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.email}</div>
+                    <div style="font-size:.7rem;color:var(--mut);margin-top:2px;">
+                        ${m.role==='owner'?'👑 Propriétaire':m.role==='manager'?'✏️ Manager':'👁 Lecteur'}
+                        · ${m.restaurants==='__all'?'Tous les restaurants':m.restaurants}
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;">
+                    <span style="font-size:.72rem;color:${m.status==='active'?'var(--grn)':'#f59e0b'};font-weight:700;">● ${m.status==='active'?'Actif':'En attente'}</span>
+                    <button onclick="removeTeamMember(${i})" style="background:none;border:1px solid rgba(239,68,68,.2);color:#ef4444;cursor:pointer;font-size:.7rem;font-weight:600;padding:4px 10px;border-radius:6px;transition:background .2s;" onmouseover="this.style.background='rgba(239,68,68,.1)'" onmouseout="this.style.background='none'">Retirer</button>
+                </div>
+            </div>
+            `).join('')}
+
+            ${members.length===0?`
+            <div style="text-align:center;padding:40px 20px;background:var(--s1);border:1px dashed var(--bdr);border-radius:10px;margin-top:8px;">
+                <div style="font-size:2rem;margin-bottom:10px;opacity:.5;">👥</div>
+                <div style="font-size:.82rem;color:var(--mut);">Aucun collaborateur pour l'instant</div>
+                <div style="font-size:.72rem;color:var(--mut);margin-top:4px;">Invitez votre équipe pour collaborer sur vos restaurants</div>
+            </div>
+            `:''}
         </div>
 
-        <!-- Members table -->
-        <div style="background:var(--s1);border-radius:10px;overflow:hidden;border:1px solid var(--bdr);">
-            <table style="width:100%;border-collapse:collapse;font-size:.8rem;">
-                <thead>
-                    <tr style="border-bottom:1px solid var(--bdr);text-align:left;">
-                        <th style="padding:10px 12px;color:var(--mut);font-weight:600;">Membre</th>
-                        <th style="padding:10px 12px;color:var(--mut);font-weight:600;">Rôle</th>
-                        <th style="padding:10px 12px;color:var(--mut);font-weight:600;">Restaurants</th>
-                        <th style="padding:10px 12px;color:var(--mut);font-weight:600;">Statut</th>
-                        <th style="padding:10px 12px;color:var(--mut);font-weight:600;text-align:right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="border-bottom:1px solid var(--bdr);">
-                        <td style="padding:10px 12px;color:var(--txt);font-weight:600;">
-                            ${currentUser.email} <span style="font-size:.6rem;background:var(--ind);color:#fff;padding:1px 6px;border-radius:4px;margin-left:4px;">Vous</span>
-                        </td>
-                        <td style="padding:10px 12px;">👑 Owner</td>
-                        <td style="padding:10px 12px;color:var(--mut);">Tous</td>
-                        <td style="padding:10px 12px;"><span style="color:var(--grn);font-weight:700;">● Actif</span></td>
-                        <td style="padding:10px 12px;text-align:right;color:var(--mut);">—</td>
-                    </tr>
-                    ${members.map((m,i)=>`<tr style="border-bottom:1px solid var(--bdr);">
-                        <td style="padding:10px 12px;color:var(--txt);">${m.email}</td>
-                        <td style="padding:10px 12px;">${m.role==='owner'?'👑 Owner':m.role==='manager'?'✏️ Manager':'👁 Viewer'}</td>
-                        <td style="padding:10px 12px;color:var(--mut);">${m.restaurants==='__all'?'Tous':m.restaurants}</td>
-                        <td style="padding:10px 12px;"><span style="color:${m.status==='active'?'var(--grn)':'#f59e0b'};font-weight:700;">● ${m.status==='active'?'Actif':'Invité'}</span></td>
-                        <td style="padding:10px 12px;text-align:right;">
-                            <button onclick="removeTeamMember(${i})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:.75rem;font-weight:600;">✕ Retirer</button>
-                        </td>
-                    </tr>`).join('')}
-                </tbody>
-            </table>
-            ${members.length===0?`<div style="text-align:center;padding:30px;color:var(--mut);font-size:.8rem;">Aucun membre invité. Ajoutez votre premier collaborateur ci-dessus.</div>`:''}
         </div>
     `;
 }
