@@ -5880,7 +5880,33 @@ function handleAgentEvent(ev){
     case 'run_completed':
       if(agentSSE)try{agentSSE.close();}catch(e){}
       agentSSE=null;
-      showAgentResults(ev.report);
+      // Use report from event, or fetch from server if missing
+      if(ev.report && ev.report.scores){
+        showAgentResults(ev.report);
+      } else {
+        // Fallback: fetch full run data from server
+        fetch(`${API_BASE}/api/agent/run/${agentCurrentRunId}`).then(r=>r.json()).then(data=>{
+          if(data.success){
+            const items=data.items||[];
+            const good=items.filter(i=>i.status==='good');
+            const issues=items.filter(i=>i.status!=='good');
+            const byCategory={};
+            items.forEach(i=>{
+              if(!byCategory[i.category])byCategory[i.category]={total:0,good:0};
+              byCategory[i.category].total++;
+              if(i.status==='good')byCategory[i.category].good++;
+            });
+            showAgentResults({
+              scores:ev.final_scores?{seo_score:ev.final_scores.seo,geo_score:ev.final_scores.geo}:{seo_score:0,geo_score:0},
+              issues_found:issues.length,
+              auto_generated:items.filter(i=>i.generated_content).length,
+              manual_actions:issues.filter(i=>!i.auto_fixable).length,
+              by_category:byCategory,
+              items
+            });
+          } else showAgentResults(ev.report||{});
+        }).catch(()=>showAgentResults(ev.report||{}));
+      }
       break;
     case 'run_failed':
       if(agentSSE)try{agentSSE.close();}catch(e){}

@@ -7364,8 +7364,38 @@ async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeRe
   db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
     .run('completed', 'done', runId);
 
+  // Fetch the full report from DB for the run_completed event
+  let fullReport = {};
+  try {
+    const runRow = db.prepare('SELECT * FROM agent_runs WHERE id = ?').get(runId);
+    if (runRow) {
+      const items = db.prepare('SELECT * FROM agent_run_items WHERE run_id = ?').all(runId);
+      items.forEach(i => { try { i.generated_content = JSON.parse(i.generated_content); } catch(e) {} });
+      try { fullReport = JSON.parse(runRow.analysis) || {}; } catch(e) {}
+      // Build report object for the client
+      const goodItems = items.filter(i => i.status === 'good');
+      const issueItems = items.filter(i => i.status !== 'good');
+      const byCategory = {};
+      items.forEach(i => {
+        if (!byCategory[i.category]) byCategory[i.category] = { total: 0, good: 0, issues: 0 };
+        byCategory[i.category].total++;
+        if (i.status === 'good') byCategory[i.category].good++;
+        else byCategory[i.category].issues++;
+      });
+      fullReport = {
+        scores: { seo_score: finalScores.seo, geo_score: finalScores.geo },
+        issues_found: issueItems.length,
+        auto_generated: items.filter(i => i.generated_content).length,
+        manual_actions: issueItems.filter(i => !i.auto_fixable).length,
+        by_category: byCategory,
+        total_items: items.length,
+        items
+      };
+    }
+  } catch(e) { console.error('Report build error:', e.message); }
+
   agentEmit(runId, { type: 'step', message: `🏁 Terminé — SEO ${finalScores.seo}/100, GEO ${finalScores.geo}/100`, progress: 100 });
-  agentEmit(runId, { type: 'run_completed', verification, final_scores: finalScores, progress: 100 });
+  agentEmit(runId, { type: 'run_completed', report: fullReport, verification, final_scores: finalScores, progress: 100 });
   return verification;
 }
 
