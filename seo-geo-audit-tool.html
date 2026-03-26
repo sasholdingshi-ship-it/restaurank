@@ -5558,41 +5558,62 @@ renderReviews=function(){
 
 // SEO-optimized review reply generator — includes local keywords naturally
 function generateReviewReply(idx){
-    const reviews=window._currentReviews||[
-        {author:'Marie D.',rating:5,text:'Excellente cuisine, personnel très accueillant !'},
-        {author:'Jean P.',rating:4,text:'Bon restaurant, légèrement bruyant.'},
-        {author:'Sophie M.',rating:5,text:'Un délice à chaque fois !'},
-        {author:'Pierre L.',rating:3,text:'Service un peu lent mais bonne qualité.'},
-    ];
+    const reviews=window._currentReviews||[];
+    if(!reviews.length)return;
     const r=reviews[idx]||reviews[0];
-    const name=currentData?.name||'notre restaurant';
-    const city=currentData?.city||'Paris';
-    const cuisine=currentData?.cuisine||'gastronomique';
-    const firstName=r.author.split(' ')[0];
+    const name=currentData?.name||storedName||'notre restaurant';
+    const city=currentData?.city||storedCity||'Paris';
+    const hd=window._hubData||{};
+    const hub=typeof getHubData==='function'?getHubData():{};
 
-    // Extract keywords from review text for natural SEO inclusion
+    // ── SEO GBP STRATEGY ──
+    // Google recommande des réponses qui incluent :
+    // 1. Nom du restaurant (entity signal)
+    // 2. Ville/quartier (local signal)
+    // 3. Type de cuisine / spécialité (category signal)
+    // 4. Mots-clés des avis clients (semantic matching)
+    // 5. Variété naturelle (pas de template identique)
+
+    const cuisine=hub.cuisine||hd.category||currentData?.category||'';
+    const cuisineLabel=cuisine.replace(/^Restaurant\s*/i,'').toLowerCase()||'de qualité';
+    const address=hub.address||hd.address||currentData?.address||'';
+    const quartier=address.match(/(\d{5})\s*(\w+)/)?RegExp.$2:city;
+    const firstName=r.author.split(/[\s.]/)[0];
+
+    // Extract keywords from the review + inject semantic analysis terms
     const keywords=extractReviewKeywords(r.text);
+    const semanticTerms=(window._semanticAnalysis?.terms||[]).slice(0,5).map(t=>t.term);
+    const signature=semanticTerms.length>0?semanticTerms.slice(0,2).join(' et '):'';
+
+    // Pick a random specialty to mention (varies each reply = natural)
+    const specialties=[cuisineLabel,'nos plats faits maison','nos produits frais','notre carte de saison','notre cuisine artisanale'].filter(Boolean);
+    const spec=specialties[idx%specialties.length]||cuisineLabel;
+
     let reply='';
 
     if(r.rating>=4){
+        // ★★★★-★★★★★ : Réponse positive — ancre les mots-clés SEO + entités
         const templates=[
-            `Merci beaucoup ${firstName} pour votre avis ! Toute l'équipe de ${name} à ${city} est ravie que vous ayez apprécié ${keywords.mention||'votre expérience'}. Notre chef s'efforce chaque jour de proposer une cuisine ${cuisine} authentique. Au plaisir de vous accueillir à nouveau dans notre restaurant à ${city} !`,
-            `${firstName}, un grand merci pour ce retour ! Chez ${name}, restaurant ${cuisine} à ${city}, nous mettons tout en œuvre pour offrir ${keywords.mention||'un moment exceptionnel'}. Votre satisfaction est notre meilleur compliment. À très bientôt !`,
-            `Merci ${firstName} ! Votre avis nous touche. L'équipe de ${name} travaille avec passion pour proposer ${keywords.mention||'une expérience unique'} dans notre restaurant de ${city}. Nous serons ravis de vous retrouver ! 🍽️`,
+            `Merci ${firstName} pour ce bel avis sur ${name} ! Nous sommes ravis que ${keywords.mention||'votre repas'} vous ait plu. Notre équipe à ${city} met un point d'honneur à proposer ${spec} chaque jour. ${signature?'Nos clients apprécient particulièrement '+signature+'. ':''}Au plaisir de vous revoir chez ${name} !`,
+            `${firstName}, votre retour fait chaud au cœur de toute l'équipe de ${name} à ${quartier}. ${keywords.mention?'Nous sommes heureux que '+keywords.mention+' ait été à la hauteur. ':''}Notre cuisine ${cuisineLabel} évolue au fil des saisons — revenez découvrir nos nouveautés ! 🍽️`,
+            `Un grand merci ${firstName} ! Chez ${name}, restaurant ${cuisineLabel} à ${city}, chaque détail compte : ${keywords.positive||'de la qualité des produits'}${signature?' à '+signature:''}. Votre satisfaction est notre plus belle récompense. À très bientôt dans notre restaurant !`,
+            `Merci beaucoup ${firstName} ! ${name} à ${city} existe grâce à des clients comme vous. ${keywords.mention?keywords.mention.charAt(0).toUpperCase()+keywords.mention.slice(1)+', c\'est notre signature. ':''}N'hésitez pas à revenir goûter ${spec} — notre chef a toujours des surprises !`,
         ];
-        reply=templates[Math.floor(Math.random()*templates.length)];
+        reply=templates[idx%templates.length];
     } else if(r.rating===3){
+        // ★★★ : Réponse équilibrée — reconnaît + valorise + invite retour
         const templates=[
-            `Merci ${firstName} pour votre retour sur ${name} à ${city}. Nous sommes heureux que ${keywords.positive||'la qualité'} vous ait plu. Concernant ${keywords.negative||'votre remarque'}, nous travaillons activement à nous améliorer. Notre restaurant ${cuisine} à ${city} évolue constamment — revenez découvrir les changements !`,
-            `${firstName}, merci pour votre honnêteté. Chez ${name}, chaque avis nous aide à progresser. Nous prenons en compte ${keywords.negative||'vos retours'} pour offrir une meilleure expérience dans notre restaurant ${cuisine} à ${city}. Donnez-nous l'occasion de vous surprendre !`,
+            `Merci ${firstName} pour votre retour sur ${name} à ${city}. ${keywords.positive?'Nous sommes contents que '+keywords.positive+' vous ait plu. ':''}${keywords.negative?'Concernant '+keywords.negative+', ':''}nous travaillons chaque jour à améliorer l'expérience dans notre restaurant ${cuisineLabel}. Votre avis nous aide à progresser — donnez-nous l'occasion de vous surprendre !`,
+            `${firstName}, merci pour votre honnêteté. Chez ${name}, restaurant ${cuisineLabel} à ${quartier}, chaque retour client est précieux. ${keywords.negative?'Nous prenons note concernant '+keywords.negative+' et avons déjà mis en place des ajustements. ':''}Revenez bientôt découvrir les changements !`,
         ];
-        reply=templates[Math.floor(Math.random()*templates.length)];
+        reply=templates[idx%templates.length];
     } else {
+        // ★-★★ : Réponse empathique — pas défensif, invite au contact direct
         const templates=[
-            `${firstName}, nous sommes sincèrement désolés. Ce n'est pas l'expérience que nous souhaitons offrir chez ${name} à ${city}. Nous prenons ${keywords.negative||'votre retour'} très au sérieux et avons mis en place des améliorations. Notre équipe serait honorée de vous accueillir à nouveau dans notre restaurant ${cuisine} pour rectifier le tir.`,
-            `Merci ${firstName} d'avoir partagé votre expérience. Chez ${name}, restaurant ${cuisine} à ${city}, la satisfaction client est notre priorité. Nous avons pris des mesures suite à votre retour. Contactez-nous directement et nous vous offrirons une expérience à la hauteur.`,
+            `${firstName}, merci d'avoir pris le temps de nous écrire. Ce n'est pas le niveau d'expérience que nous visons chez ${name} à ${city}. ${keywords.negative?'Nous prenons très au sérieux votre remarque sur '+keywords.negative+'. ':''}Notre équipe a mis en place des actions concrètes. Contactez-nous directement — nous aimerions vous offrir une expérience à la hauteur de notre cuisine ${cuisineLabel}.`,
+            `Nous sommes sincèrement désolés ${firstName}. Chez ${name}, restaurant ${cuisineLabel} à ${quartier}, la satisfaction de nos clients est notre priorité absolue. ${keywords.negative?'Votre retour sur '+keywords.negative+' a été transmis à toute l\'équipe. ':''}Nous serions honorés de vous accueillir à nouveau pour rectifier le tir.`,
         ];
-        reply=templates[Math.floor(Math.random()*templates.length)];
+        reply=templates[idx%templates.length];
     }
 
     // Show reply inline + copy
@@ -8025,18 +8046,20 @@ async function renderGooglePostsList(){
     }
     
     let html='';
-    posts.forEach(p=>{
+    posts.forEach((p,idx)=>{
         const badge=p.status==='Publié'?'style="background:rgba(16,185,129,.15);color:var(--grn);"':'style="background:rgba(249,115,22,.15);color:var(--org);"';
         const dateStr=p.date?new Date(p.date).toLocaleDateString('fr-FR'):'';
-        html+=`<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;">
+        const editId=p.id||idx;
+        const safeText=p.text.replace(/'/g,"\\'").replace(/\n/g,' ');
+        html+=`<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;" data-post-id="${editId}">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
                 <span style="font-size:.75rem;color:var(--mut);">${dateStr}</span>
                 <span ${badge} style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:3px;">${p.status}</span>
             </div>
             <p style="font-size:.8rem;margin:6px 0;">${p.text}</p>
             <div style="display:flex;gap:6px;margin-top:8px;">
-                <button style="flex:1;padding:4px;border:none;border-radius:4px;background:var(--ind);color:#fff;font-size:.65rem;cursor:pointer;" onclick="editGooglePost(${p.id||0})">Éditer</button>
-                <button style="flex:1;padding:4px;border:none;border-radius:4px;background:var(--s3);color:var(--txt);font-size:.65rem;cursor:pointer;" onclick="duplicateGooglePost('${p.text.replace(/'/g,"\\'")}')">Dupliquer</button>
+                <button style="flex:1;padding:4px;border:none;border-radius:4px;background:var(--ind);color:#fff;font-size:.65rem;cursor:pointer;" onclick="editGooglePost(${editId})">Éditer</button>
+                <button style="flex:1;padding:4px;border:none;border-radius:4px;background:var(--s3);color:var(--txt);font-size:.65rem;cursor:pointer;" onclick="duplicateGooglePost('${safeText}')">Dupliquer</button>
             </div>
         </div>`;
     });
@@ -8155,39 +8178,37 @@ async function saveAiSettings(){
     }catch(e){addToLog('💾 Paramètres IA sauvegardés (local uniquement)');};
 }
 
-function generateSocialContent(){
-    const type=document.getElementById('postType')?.value||'news';
-    const name=currentData?.name||'Restaurant';
-    const postTypes={news:'Découvrez notre nouveau menu printemps ! 🌸',offer:'Offre spéciale cette semaine : -20% sur tous les plats du jour 🏷️',event:'Grand événement ce weekend ! 🎉',seasonal:'Nouvelles spécialités de printemps 🥗',promo:'Profitez de notre happy hour 🍷'};
-    const textarea=document.getElementById('socialContent');
-    if(textarea)textarea.value=(postTypes[type]||postTypes.news)+` ${name}`;
-}
-
-async function publishSocialPost(){
-    const content=document.getElementById('socialContent')?.value;
-    if(!content){alert('Entrez un contenu');return;}
-    const rid=currentData?.restaurant_id||1;
-    const type=document.getElementById('postType')?.value||'news';
-    try{
-        await fetchTimeout(`${API_BASE}/api/posts/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,post_type:type,content:content,status:'published'})},5000);
-    }catch(e){}
-    addToLog(`📱 Google Post publié: "${content.substring(0,50)}..."`);
-    document.getElementById('socialContent').value='';
-    renderGooglePostsList();
-}
+// generateSocialContent() and publishSocialPost() defined above (line ~5681/5720) — no duplicate here
 
 function editGooglePost(id){
-    if(!id)return;
-    const posts=window._googlePosts||[];
-    const post=posts.find(p=>p.id===id);
-    if(!post){alert('Post introuvable');return;}
-    const newContent=prompt('Modifier le contenu du post :',post.content||'');
+    // id can be a DB id or 0 for demo posts — use the textarea to edit
+    const postCards=document.querySelectorAll('#googlePostsList > div');
+    let postText='';
+    // Find post text from rendered cards
+    postCards.forEach((card,i)=>{
+        const p=card.querySelector('p');
+        if(p && (id===i || (id>0 && card.dataset.postId==id))){
+            postText=p.textContent;
+        }
+    });
+    if(!postText){
+        // Fallback: just open the textarea pre-filled
+        const ta=document.getElementById('socialContent');
+        if(ta){ta.focus();showToast('Écrivez votre post dans le champ ci-dessus','info',3000);}
+        return;
+    }
+    const newContent=prompt('Modifier le contenu du post :',postText);
     if(newContent===null)return;
-    post.content=newContent;
-    const rid=currentData?.restaurant_id||1;
-    fetchTimeout(`${API_BASE}/api/posts/google/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:newContent})},5000).catch(()=>{});
-    renderGooglePostsList();
-    addToLog('✏️ Google Post #'+id+' modifié');
+    // If real DB id, update server
+    if(id>0){
+        const rid=currentData?.restaurant_id||1;
+        fetchTimeout(`${API_BASE}/api/posts/google/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:newContent})},5000).catch(()=>{});
+    }
+    // For demo posts, just duplicate to textarea for republishing
+    const ta=document.getElementById('socialContent');
+    if(ta)ta.value=newContent;
+    addToLog('✏️ Post modifié — publiez la version mise à jour');
+    showToast('Post copié dans l\'éditeur — modifiez et publiez !','info',4000);
 }
 function duplicateGooglePost(text){const ta=document.getElementById('socialContent');if(ta){ta.value=text;switchDashTab('social');}}
 async function schedulePost(){

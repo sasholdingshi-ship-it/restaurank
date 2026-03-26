@@ -1225,16 +1225,25 @@ try {
 // ============================================================
 // GOOGLE OAUTH2
 // ============================================================
-let _oauth2Client = null;
-function getOAuth2Client() {
-  if (!_oauth2Client) {
-    _oauth2Client = new (getGoogle()).auth.OAuth2(
-      process.env.GOOGLE_CLIENT_ID,
-      process.env.GOOGLE_CLIENT_SECRET,
-      process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback'
-    );
+// Dynamic redirect URI — auto-detect from request or env
+function getRedirectUri(req) {
+  if (req) {
+    const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.headers.host;
+    if (host && !host.includes('localhost')) {
+      return `${proto}://${host}/auth/google/callback`;
+    }
   }
-  return _oauth2Client;
+  return process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/auth/google/callback`;
+}
+
+function getOAuth2Client(req) {
+  const redirectUri = getRedirectUri(req);
+  return new (getGoogle()).auth.OAuth2(
+    process.env.GOOGLE_CLIENT_ID,
+    process.env.GOOGLE_CLIENT_SECRET,
+    redirectUri
+  );
 }
 
 const SCOPES = [
@@ -1244,11 +1253,13 @@ const SCOPES = [
 
 // Auth: Start OAuth flow
 app.get('/auth/google', (req, res) => {
-  const url = getOAuth2Client().generateAuthUrl({
+  const client = getOAuth2Client(req);
+  const url = client.generateAuthUrl({
     access_type: 'offline',
     scope: SCOPES,
     prompt: 'consent'
   });
+  console.log('OAuth redirect URI:', getRedirectUri(req));
   res.json({ url });
 });
 
@@ -1256,11 +1267,12 @@ app.get('/auth/google', (req, res) => {
 app.get('/auth/google/callback', async (req, res) => {
   try {
     const { code } = req.query;
-    const { tokens } = await getOAuth2Client().getToken(code);
-    getOAuth2Client().setCredentials(tokens);
+    const client = getOAuth2Client(req);
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
 
     // Get user email
-    const oauth2 = getGoogle().oauth2({ version: 'v2', auth: getOAuth2Client() });
+    const oauth2 = getGoogle().oauth2({ version: 'v2', auth: client });
     const { data: userInfo } = await oauth2.userinfo.get();
 
     // Store/update user
@@ -1311,13 +1323,13 @@ app.get('/auth/google/callback', async (req, res) => {
 // ============================================================
 // MIDDLEWARE — Auth helper
 // ============================================================
-function getAuthClient(userId) {
+function getAuthClient(userId, req) {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
   if (!user || !user.google_tokens) return null;
   const client = new (getGoogle()).auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
-    process.env.GOOGLE_REDIRECT_URI
+    getRedirectUri(req)
   );
   const tokens = JSON.parse(user.google_tokens);
   client.setCredentials(tokens);
