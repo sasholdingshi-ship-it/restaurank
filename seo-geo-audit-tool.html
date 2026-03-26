@@ -8676,15 +8676,48 @@ async function renderStatsTab(){
     });
     html+=`</div>`;
 
-    // ── GBP Performance (recherches, vues) — requires GBP API ──
-    html+=`<div class="chart-section">
-        <h3 class="chart-title">📊 Performance Google Business Profile</h3>
-        <div style="padding:20px;background:var(--s1);border-radius:10px;border:1px solid var(--bdr);text-align:center;">
-            <div style="font-size:2rem;margin-bottom:10px;">🔒</div>
-            <div style="font-weight:600;color:var(--txt);margin-bottom:6px;">Recherches, vues Maps & actions — API GBP requise</div>
-            <div style="font-size:.78rem;color:var(--mut);line-height:1.5;">Les statistiques de recherches Google, vues Maps, appels et itinéraires nécessitent l'accès à l'API Google Business Profile.<br>
-            <span style="color:var(--org);font-weight:600;">Demande en cours — ticket #6569000040778 (soumis le 22/03/2026)</span></div>
-            <div style="margin-top:12px;font-size:.72rem;color:var(--mut);">En attendant, vos scores SEO et GEO sont calculés à partir de données réelles (Google Places, crawl site web, scan annuaires).</div>
+    // ── Google Search Console — Interactive Performance Chart ──
+    html+=`<div class="chart-section" id="gscSection">
+        <h3 class="chart-title">📊 Google Search Console — Performance</h3>
+        <div id="gscChart" style="background:var(--s1);border-radius:10px;border:1px solid var(--bdr);overflow:hidden;">
+            <div style="padding:20px;text-align:center;">
+                <div style="font-size:1.5rem;margin-bottom:8px;">⏳</div>
+                <div style="color:var(--mut);font-size:.82rem;">Chargement des données Search Console...</div>
+            </div>
+        </div>
+    </div>`;
+
+    // ── Backlinks Section ──
+    html+=`<div class="chart-section" id="backlinksSection">
+        <h3 class="chart-title">🔗 Profil de backlinks</h3>
+        <div id="backlinksContainer" style="background:var(--s1);border-radius:10px;border:1px solid var(--bdr);padding:20px;">
+            <div style="text-align:center;color:var(--mut);font-size:.82rem;">⏳ Analyse des backlinks en cours...</div>
+        </div>
+    </div>`;
+
+    // ── Content Automation Engine ──
+    html+=`<div class="chart-section" id="contentAutoSection">
+        <h3 class="chart-title">🚀 Automatisation SEO — Création de contenu & Link Building</h3>
+        <div style="background:var(--s1);border-radius:10px;border:1px solid var(--bdr);padding:20px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+                <button onclick="generateBlogPost()" class="auto-btn-full" style="padding:14px;font-size:.82rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    📝 Générer un article de blog SEO
+                </button>
+                <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:14px;font-size:.82rem;background:linear-gradient(135deg,#ff4500,#ff6b35);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    🤖 Créer un post Reddit optimisé
+                </button>
+                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:14px;font-size:.82rem;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    ✍️ Guest post / Article invité
+                </button>
+                <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:14px;font-size:.82rem;background:linear-gradient(135deg,#f59e0b,#d97706);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    ⚡ Tout générer en 1 clic
+                </button>
+            </div>
+            <div id="contentAutoResults" style="display:none;"></div>
+            <div style="font-size:.72rem;color:var(--mut);line-height:1.6;">
+                <strong>Stratégie automatique :</strong> articles de blog optimisés pour vos mots-clés, posts Reddit naturels avec mentions,
+                articles invités pour link building, contenu pour directories et forums gastronomiques.
+            </div>
         </div>
     </div>`;
 
@@ -8754,6 +8787,433 @@ async function renderStatsTab(){
     }
 
     container.innerHTML=html;
+
+    // Async: load GSC data + backlinks in parallel
+    loadGSCChart();
+    loadBacklinks();
+}
+
+// ============================================================
+// GOOGLE SEARCH CONSOLE — Interactive Chart
+// ============================================================
+async function loadGSCChart(){
+    const container=document.getElementById('gscChart');
+    if(!container)return;
+    const userId=currentAccount?.id;
+    const websiteUrl=storedWebsite||currentData?.websiteUrl||window._hubData?.website||'';
+
+    // Try real GSC API
+    if(userId){
+        try{
+            const r=await fetchTimeout(`${API_BASE}/api/gsc/performance`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId,website_url:websiteUrl,days:90})},15000);
+            const data=await r.json();
+            if(data.success&&data.daily?.length>0){
+                window._gscData=data;
+                renderGSCChart(data);
+                return;
+            }
+            if(data.needsAuth||data.needsReauth){
+                container.innerHTML=`<div style="padding:20px;text-align:center;">
+                    <div style="font-size:1.5rem;margin-bottom:8px;">🔐</div>
+                    <div style="font-weight:600;color:var(--txt);margin-bottom:6px;">Connectez Google Search Console</div>
+                    <div style="font-size:.78rem;color:var(--mut);margin-bottom:12px;">Autorisez l'accès à Search Console pour voir vos vraies données de performance (clics, impressions, position).</div>
+                    <button onclick="connectGSC()" style="padding:10px 24px;background:var(--ind);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">🔗 Connecter Google Search Console</button>
+                </div>`;
+                return;
+            }
+        }catch(e){console.warn('GSC load error:',e);}
+    }
+
+    // No real data — show connect prompt
+    container.innerHTML=`<div style="padding:20px;text-align:center;">
+        <div style="font-size:1.5rem;margin-bottom:8px;">📊</div>
+        <div style="font-weight:600;color:var(--txt);margin-bottom:6px;">Google Search Console</div>
+        <div style="font-size:.78rem;color:var(--mut);margin-bottom:12px;">Connectez votre compte Google pour afficher les données de performance réelles : clics, impressions, CTR et position moyenne.</div>
+        <button onclick="connectGSC()" style="padding:10px 24px;background:var(--ind);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">🔗 Connecter Google</button>
+    </div>`;
+}
+
+function connectGSC(){
+    // Use existing Google OAuth flow — it now includes webmasters.readonly scope
+    fetchTimeout(`${API_BASE}/auth/google`,{},5000).then(r=>r.json()).then(d=>{
+        if(d.url)window.open(d.url,'_blank','width=600,height=700');
+    }).catch(e=>console.warn('GSC auth error:',e));
+}
+
+function renderGSCChart(data){
+    const container=document.getElementById('gscChart');
+    if(!container||!data)return;
+    const {daily,totals,queries,pages}=data;
+
+    // Metric toggles
+    const metrics=[
+        {key:'clicks',label:'Clics',color:'#4285f4',active:true},
+        {key:'impressions',label:'Impressions',color:'#a855f7',active:true},
+        {key:'ctr',label:'CTR',color:'#10b981',active:false},
+        {key:'position',label:'Position moy.',color:'#f59e0b',active:false}
+    ];
+    window._gscMetrics=metrics;
+
+    // Summary cards
+    let html=`<div style="padding:16px 20px 0;">
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+            ${metrics.map((m,i)=>`<div onclick="toggleGSCMetric(${i})" class="gsc-metric-card ${m.active?'active':''}" id="gscMetric${i}" style="padding:10px;border-radius:8px;cursor:pointer;border:2px solid ${m.active?m.color:'var(--bdr)'};background:${m.active?m.color+'11':'var(--s2)'};transition:all .2s;">
+                <div style="font-size:.65rem;color:${m.color};font-weight:600;text-transform:uppercase;">${m.label}</div>
+                <div style="font-size:1.3rem;font-weight:700;color:var(--txt);">${m.key==='clicks'?totals.clicks.toLocaleString('fr-FR'):m.key==='impressions'?totals.impressions.toLocaleString('fr-FR'):m.key==='ctr'?totals.ctr+'%':totals.position}</div>
+            </div>`).join('')}
+        </div>
+    </div>`;
+
+    // SVG Chart
+    html+=`<div style="padding:0 20px 16px;"><canvas id="gscCanvas" width="800" height="280" style="width:100%;height:280px;"></canvas></div>`;
+
+    // Top Queries table
+    if(queries?.length>0){
+        html+=`<div style="padding:0 20px 16px;">
+            <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:8px;">🎯 Top requêtes de recherche</div>
+            <table style="width:100%;border-collapse:collapse;font-size:.75rem;">
+                <thead><tr style="border-bottom:1px solid var(--bdr);">
+                    <th style="text-align:left;padding:6px;color:var(--mut);">Requête</th>
+                    <th style="text-align:right;padding:6px;color:#4285f4;">Clics</th>
+                    <th style="text-align:right;padding:6px;color:#a855f7;">Impressions</th>
+                    <th style="text-align:right;padding:6px;color:#10b981;">CTR</th>
+                    <th style="text-align:right;padding:6px;color:#f59e0b;">Position</th>
+                </tr></thead><tbody>
+                ${queries.slice(0,10).map(q=>`<tr style="border-bottom:1px solid rgba(255,255,255,.03);">
+                    <td style="padding:6px;color:var(--txt);font-weight:500;">${q.query}</td>
+                    <td style="text-align:right;padding:6px;color:var(--txt);">${q.clicks}</td>
+                    <td style="text-align:right;padding:6px;color:var(--txt);">${q.impressions.toLocaleString('fr-FR')}</td>
+                    <td style="text-align:right;padding:6px;color:var(--txt);">${q.ctr}%</td>
+                    <td style="text-align:right;padding:6px;color:var(--txt);">${q.position}</td>
+                </tr>`).join('')}
+            </tbody></table>
+        </div>`;
+    }
+
+    container.innerHTML=html;
+
+    // Draw chart on canvas
+    setTimeout(()=>drawGSCCanvas(daily,metrics),50);
+}
+
+function toggleGSCMetric(idx){
+    const m=window._gscMetrics;if(!m||!m[idx])return;
+    m[idx].active=!m[idx].active;
+    const card=document.getElementById('gscMetric'+idx);
+    if(card){
+        card.style.borderColor=m[idx].active?m[idx].color:'var(--bdr)';
+        card.style.background=m[idx].active?m[idx].color+'11':'var(--s2)';
+        card.classList.toggle('active',m[idx].active);
+    }
+    drawGSCCanvas(window._gscData.daily,m);
+}
+
+function drawGSCCanvas(daily,metrics){
+    const canvas=document.getElementById('gscCanvas');
+    if(!canvas||!daily?.length)return;
+    const ctx=canvas.getContext('2d');
+    const dpr=window.devicePixelRatio||1;
+    canvas.width=canvas.offsetWidth*dpr;
+    canvas.height=280*dpr;
+    ctx.scale(dpr,dpr);
+    const W=canvas.offsetWidth,H=280;
+    const pad={t:20,r:20,b:40,l:50};
+    const cW=W-pad.l-pad.r,cH=H-pad.t-pad.b;
+
+    ctx.clearRect(0,0,W,H);
+
+    // Background grid
+    ctx.strokeStyle='rgba(255,255,255,.05)';
+    ctx.lineWidth=1;
+    for(let i=0;i<=5;i++){
+        const y=pad.t+cH*(i/5);
+        ctx.beginPath();ctx.moveTo(pad.l,y);ctx.lineTo(W-pad.r,y);ctx.stroke();
+    }
+
+    // Date labels (x axis)
+    ctx.fillStyle='rgba(255,255,255,.3)';
+    ctx.font='10px sans-serif';
+    ctx.textAlign='center';
+    const step=Math.max(1,Math.floor(daily.length/8));
+    daily.forEach((d,i)=>{
+        if(i%step===0||i===daily.length-1){
+            const x=pad.l+(i/(daily.length-1))*cW;
+            const label=d.date.slice(5); // MM-DD
+            ctx.fillText(label,x,H-pad.b+16);
+        }
+    });
+
+    // Draw each active metric as a line
+    const activeMetrics=metrics.filter(m=>m.active);
+    activeMetrics.forEach(metric=>{
+        const vals=daily.map(d=>d[metric.key]);
+        const max=Math.max(...vals)||1;
+        const min=metric.key==='position'?Math.min(...vals):0;
+        const range=metric.key==='position'?max-min||1:max;
+
+        ctx.strokeStyle=metric.color;
+        ctx.lineWidth=2;
+        ctx.lineJoin='round';
+        ctx.beginPath();
+        vals.forEach((v,i)=>{
+            const x=pad.l+(i/(vals.length-1))*cW;
+            let y;
+            if(metric.key==='position'){
+                // Position: lower is better, invert axis
+                y=pad.t+((v-min)/range)*cH;
+            }else{
+                y=pad.t+cH-(v/range)*cH;
+            }
+            if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+        });
+        ctx.stroke();
+
+        // Fill area under line
+        ctx.globalAlpha=0.08;
+        ctx.fillStyle=metric.color;
+        const lastX=pad.l+((vals.length-1)/(vals.length-1))*cW;
+        ctx.lineTo(lastX,pad.t+cH);ctx.lineTo(pad.l,pad.t+cH);ctx.closePath();ctx.fill();
+        ctx.globalAlpha=1;
+
+        // Y-axis label for this metric
+        ctx.fillStyle=metric.color;
+        ctx.font='bold 9px sans-serif';
+        ctx.textAlign='left';
+        ctx.fillText(metric.label+': '+Math.round(max),pad.l+4,pad.t+12+(activeMetrics.indexOf(metric)*12));
+    });
+}
+
+// ============================================================
+// BACKLINKS — Load & Display
+// ============================================================
+async function loadBacklinks(){
+    const container=document.getElementById('backlinksContainer');
+    if(!container)return;
+    const websiteUrl=storedWebsite||currentData?.websiteUrl||window._hubData?.website||'';
+    if(!websiteUrl){
+        container.innerHTML=`<div style="text-align:center;color:var(--mut);font-size:.82rem;">Aucun site web détecté — ajoutez une URL de site web pour analyser les backlinks.</div>`;
+        return;
+    }
+
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/backlinks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({website_url:websiteUrl})},15000);
+        const data=await r.json();
+        if(data.success){
+            window._backlinkData=data;
+            renderBacklinks(data);
+        }else{
+            container.innerHTML=`<div style="text-align:center;color:var(--org);font-size:.82rem;">⚠️ Impossible d'analyser les backlinks : ${data.error||'erreur inconnue'}</div>`;
+        }
+    }catch(e){
+        container.innerHTML=`<div style="text-align:center;color:var(--mut);font-size:.82rem;">Analyse des backlinks indisponible — le serveur n'a pas répondu.</div>`;
+    }
+}
+
+function renderBacklinks(data){
+    const container=document.getElementById('backlinksContainer');
+    if(!container)return;
+
+    let html=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px;">
+        <div style="padding:14px;background:var(--s2);border-radius:10px;text-align:center;">
+            <div style="font-size:1.5rem;font-weight:700;color:var(--ind);">${(data.totalLinks||0).toLocaleString('fr-FR')}</div>
+            <div style="font-size:.7rem;color:var(--mut);">Backlinks totaux</div>
+        </div>
+        <div style="padding:14px;background:var(--s2);border-radius:10px;text-align:center;">
+            <div style="font-size:1.5rem;font-weight:700;color:#10b981;">${(data.uniqueDomains||0).toLocaleString('fr-FR')}</div>
+            <div style="font-size:.7rem;color:var(--mut);">Domaines référents</div>
+        </div>
+        <div style="padding:14px;background:var(--s2);border-radius:10px;text-align:center;">
+            <div style="font-size:1.5rem;font-weight:700;color:${data.domainAuthority>=50?'var(--grn)':data.domainAuthority>=20?'var(--org)':'var(--red)'};">${data.domainAuthority||'—'}</div>
+            <div style="font-size:.7rem;color:var(--mut);">Domain Authority</div>
+        </div>
+    </div>`;
+
+    // Top referring domains
+    if(data.topLinks?.length>0){
+        html+=`<div style="margin-bottom:12px;"><div style="font-weight:600;font-size:.78rem;color:var(--txt);margin-bottom:6px;">🌐 Domaines référents</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${data.topLinks.slice(0,15).map(d=>`<span style="padding:3px 10px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;font-size:.7rem;color:var(--cyn);">${d}</span>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    // Top anchors
+    if(data.anchors?.length>0){
+        html+=`<div><div style="font-weight:600;font-size:.78rem;color:var(--txt);margin-bottom:6px;">⚓ Textes d'ancrage principaux</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                ${data.anchors.slice(0,10).map(a=>`<span style="padding:3px 10px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:6px;font-size:.7rem;color:var(--ind);">"${a}"</span>`).join('')}
+            </div>
+        </div>`;
+    }
+
+    html+=`<div style="margin-top:12px;font-size:.65rem;color:var(--mut);">Source: ${data.source||'analyse'} · Domaine: ${data.domain}</div>`;
+    container.innerHTML=html;
+}
+
+// ============================================================
+// CONTENT AUTOMATION ENGINE — Blog, Reddit, Guest Posts, Link Building
+// ============================================================
+async function generateBlogPost(){
+    const results=document.getElementById('contentAutoResults');
+    if(!results)return;
+    results.style.display='block';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération de l\'article de blog SEO...</div>';
+
+    const name=currentData?.name||'Restaurant';
+    const city=currentData?.city||'Paris';
+    const cuisine=currentData?.category||'restaurant';
+    const rating=currentData?.rating||window._hubData?.rating||4;
+    const keywords=window._gscData?.queries?.slice(0,5).map(q=>q.query)||[`${name} ${city}`,`meilleur ${cuisine} ${city}`,`restaurant ${city}`];
+
+    const article=_generateBlogContent(name,city,cuisine,rating,keywords);
+    results.innerHTML=`<div style="background:var(--s2);border-radius:10px;padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-weight:700;color:var(--txt);">📝 Article de blog SEO</span>
+            <div><button onclick="copyToClip(document.getElementById('blogContent').textContent)" style="padding:4px 12px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;margin-right:6px;">📋 Copier</button>
+            <button onclick="publishBlogPost()" style="padding:4px 12px;background:var(--grn);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">🚀 Publier sur le site</button></div>
+        </div>
+        <div id="blogContent" style="font-size:.78rem;color:var(--txt);line-height:1.7;max-height:300px;overflow-y:auto;white-space:pre-wrap;background:var(--s1);padding:12px;border-radius:8px;">${article}</div>
+    </div>`;
+}
+
+function _generateBlogContent(name,city,cuisine,rating,keywords){
+    const kw=keywords.join(', ');
+    return `<h1>${name} : Le Guide Complet ${new Date().getFullYear()} — Avis, Menu & Réservation</h1>
+
+<p><strong>${name}</strong>, situé au cœur de <strong>${city}</strong>, est l'une des adresses incontournables pour les amateurs de ${cuisine}. Avec une note de <strong>${rating}/5</strong> sur Google, ce restaurant a su conquérir les papilles des Parisiens et des touristes.</p>
+
+<h2>Pourquoi ${name} se démarque à ${city} ?</h2>
+
+<p>Dans un quartier réputé pour sa diversité gastronomique, ${name} tire son épingle du jeu grâce à une cuisine authentique, des produits frais sélectionnés avec soin et un service irréprochable. Les clients réguliers apprécient particulièrement l'ambiance chaleureuse et les portions généreuses.</p>
+
+<h2>Notre avis sur ${name}</h2>
+
+<p>Après plusieurs visites, nous pouvons confirmer que ${name} mérite sa réputation. Le rapport qualité-prix est excellent, et chaque plat est préparé avec une attention aux détails qui fait la différence. Si vous recherchez un ${cuisine} de qualité à ${city}, c'est l'adresse à retenir.</p>
+
+<h2>Informations pratiques</h2>
+
+<p>📍 <strong>Adresse :</strong> ${window._hubData?.address||city}<br>
+📞 <strong>Téléphone :</strong> ${window._hubData?.phone||'Voir Google Maps'}<br>
+🌐 <strong>Site web :</strong> ${window._hubData?.website||storedWebsite||''}<br>
+⭐ <strong>Note Google :</strong> ${rating}/5</p>
+
+<p><em>Mots-clés : ${kw}</em></p>
+
+<p>---<br><em>Article généré automatiquement par RestauRank — Optimisation SEO locale pour restaurants.</em></p>`;
+}
+
+async function generateRedditPost(){
+    const results=document.getElementById('contentAutoResults');
+    if(!results)return;
+    results.style.display='block';
+
+    const name=currentData?.name||'Restaurant';
+    const city=currentData?.city||'Paris';
+    const rating=currentData?.rating||window._hubData?.rating||4;
+
+    const subreddits=['paris','france','food','FoodPorn','restaurant','AskCulinary'];
+    const post=`**Trouvé une pépite à ${city} — ${name}**
+
+Salut tout le monde ! Je suis tombé sur ${name} par hasard en me baladant dans ${city} et wow... C'est clairement mon nouveau coup de cœur.
+
+La cuisine est top (${rating}/5 sur Google d'ailleurs), l'ambiance est super chill et les prix sont honnêtes pour la qualité. Le personnel est adorable et le cadre vraiment sympa.
+
+Si quelqu'un connaît d'autres bonnes adresses dans le coin, je suis preneur !
+
+PS: Leur site web c'est ${window._hubData?.website||storedWebsite||'[site web]'} pour ceux qui veulent checker le menu avant.
+
+---
+*Quels subreddits cibler :* ${subreddits.map(s=>`r/${s}`).join(', ')}`;
+
+    results.innerHTML=`<div style="background:var(--s2);border-radius:10px;padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-weight:700;color:var(--txt);">🤖 Post Reddit</span>
+            <button onclick="copyToClip(document.getElementById('redditContent').textContent)" style="padding:4px 12px;background:#ff4500;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📋 Copier</button>
+        </div>
+        <div id="redditContent" style="font-size:.78rem;color:var(--txt);line-height:1.7;max-height:250px;overflow-y:auto;white-space:pre-wrap;background:var(--s1);padding:12px;border-radius:8px;">${post}</div>
+        <div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">
+            ${subreddits.map(s=>`<a href="https://reddit.com/r/${s}/submit" target="_blank" style="padding:3px 10px;background:rgba(255,69,0,.1);border:1px solid rgba(255,69,0,.2);border-radius:6px;font-size:.68rem;color:#ff4500;text-decoration:none;">r/${s} →</a>`).join('')}
+        </div>
+    </div>`;
+}
+
+async function generateGuestPost(){
+    const results=document.getElementById('contentAutoResults');
+    if(!results)return;
+    results.style.display='block';
+
+    const name=currentData?.name||'Restaurant';
+    const city=currentData?.city||'Paris';
+    const cuisine=currentData?.category||'restaurant';
+
+    const pitch=`Objet : Proposition d'article — Les meilleures adresses ${cuisine} à ${city}
+
+Bonjour,
+
+Je rédige actuellement un guide gastronomique sur les meilleures adresses de ${city}, et je souhaiterais publier un article invité sur votre site/blog.
+
+L'article porterait sur « Les ${cuisine}s incontournables à ${city} en ${new Date().getFullYear()} » et mentionnerait naturellement ${name} parmi les adresses recommandées, avec un lien vers leur site.
+
+L'article serait :
+• 100% original et optimisé SEO
+• ~800-1200 mots
+• Accompagné de photos libres de droits
+• Prêt à publier dans la semaine
+
+Seriez-vous intéressé(e) par cette collaboration ?
+
+Bien cordialement,
+[Votre nom]
+
+---
+Sites cibles pour guest posting :
+• Blogs food/gastronomie locaux
+• Sites touristiques (${city})
+• Annuaires restaurants
+• Magazines en ligne
+• Forums culinaires`;
+
+    results.innerHTML=`<div style="background:var(--s2);border-radius:10px;padding:16px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <span style="font-weight:700;color:var(--txt);">✍️ Pitch Guest Post / Link Building</span>
+            <button onclick="copyToClip(document.getElementById('guestContent').textContent)" style="padding:4px 12px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📋 Copier</button>
+        </div>
+        <div id="guestContent" style="font-size:.78rem;color:var(--txt);line-height:1.7;max-height:300px;overflow-y:auto;white-space:pre-wrap;background:var(--s1);padding:12px;border-radius:8px;">${pitch}</div>
+    </div>`;
+}
+
+async function generateAllSEOContent(){
+    const results=document.getElementById('contentAutoResults');
+    if(!results)return;
+    results.style.display='block';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⚡ Génération de tout le contenu SEO en cours...</div>';
+    await generateBlogPost();
+    const blogHtml=results.innerHTML;
+    await generateRedditPost();
+    const redditHtml=results.innerHTML;
+    await generateGuestPost();
+    results.innerHTML=blogHtml+redditHtml+results.innerHTML;
+}
+
+async function publishBlogPost(){
+    if(!detectedCMS||!detectedCMS.detected){alert('CMS non détecté — connectez d\'abord votre site web dans l\'onglet IA Dispatch.');return;}
+    const content=document.getElementById('blogContent')?.innerHTML;
+    if(!content)return;
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/cms/${detectedCMS.detected.cms}/apply`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({website_url:storedWebsite||currentData?.websiteUrl,tasks:[{type:'create_blog_post',title:`${currentData?.name||'Restaurant'} — Guide complet`,content}]})},15000);
+        const d=await r.json();
+        alert(d.success?'✅ Article publié sur le site !':'❌ Erreur : '+(d.error||'voir console'));
+    }catch(e){alert('Erreur de publication : '+e.message);}
+}
+
+function copyToClip(text){
+    navigator.clipboard?.writeText(text).then(()=>{
+        const toast=document.createElement('div');
+        toast.textContent='✅ Copié !';
+        toast.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--grn);color:#fff;padding:8px 16px;border-radius:8px;font-size:.8rem;z-index:99999;';
+        document.body.appendChild(toast);
+        setTimeout(()=>toast.remove(),2000);
+    });
 }
 
 // ============================================================

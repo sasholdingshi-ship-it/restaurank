@@ -1259,7 +1259,8 @@ function getOAuth2Client(req) {
 
 const SCOPES = [
   'https://www.googleapis.com/auth/business.manage',
-  'https://www.googleapis.com/auth/userinfo.email'
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/webmasters.readonly'
 ];
 
 // Auth: Start OAuth flow
@@ -1822,6 +1823,220 @@ app.get('/api/gbp/categories/search', async (req, res) => {
     res.json(data.categories || []);
   } catch (err) {
     res.status(500).json({ error: err.message });
+  }
+});
+
+// ============================================================
+// GOOGLE SEARCH CONSOLE — Performance data (clicks, impressions, CTR, position)
+// ============================================================
+app.post('/api/gsc/performance', async (req, res) => {
+  const { user_id, site_url, days } = req.body;
+  if (!user_id) return res.status(400).json({ error: 'user_id required' });
+
+  const auth = getAuthClient(user_id, req);
+  if (!auth) return res.json({ success: false, error: 'Google non connecté', needsAuth: true });
+
+  try {
+    const google = getGoogle();
+    const searchconsole = google.searchconsole({ version: 'v1', auth });
+
+    // If no site_url provided, list all sites first
+    let targetSite = site_url;
+    if (!targetSite) {
+      const sitesResp = await searchconsole.sites.list();
+      const sites = sitesResp.data.siteEntry || [];
+      if (sites.length === 0) return res.json({ success: false, error: 'Aucun site vérifié dans Search Console', sites: [] });
+      // Auto-pick the first site (or match restaurant URL)
+      targetSite = sites[0].siteUrl;
+      // Try to match restaurant website
+      const restoUrl = req.body.website_url;
+      if (restoUrl) {
+        const match = sites.find(s => restoUrl.includes(s.siteUrl.replace(/^(sc-domain:|https?:\/\/)/, '').replace(/\/$/, '')));
+        if (match) targetSite = match.siteUrl;
+      }
+    }
+
+    const numDays = days || 90;
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - numDays);
+    const fmt = d => d.toISOString().slice(0, 10);
+
+    // Fetch daily performance data
+    const perfResp = await searchconsole.searchanalytics.query({
+      siteUrl: targetSite,
+      requestBody: {
+        startDate: fmt(startDate),
+        endDate: fmt(endDate),
+        dimensions: ['date'],
+        rowLimit: numDays
+      }
+    });
+
+    // Fetch top queries
+    const queriesResp = await searchconsole.searchanalytics.query({
+      siteUrl: targetSite,
+      requestBody: {
+        startDate: fmt(startDate),
+        endDate: fmt(endDate),
+        dimensions: ['query'],
+        rowLimit: 20
+      }
+    });
+
+    // Fetch top pages
+    const pagesResp = await searchconsole.searchanalytics.query({
+      siteUrl: targetSite,
+      requestBody: {
+        startDate: fmt(startDate),
+        endDate: fmt(endDate),
+        dimensions: ['page'],
+        rowLimit: 10
+      }
+    });
+
+    const daily = (perfResp.data.rows || []).map(r => ({
+      date: r.keys[0],
+      clicks: r.clicks,
+      impressions: r.impressions,
+      ctr: Math.round(r.ctr * 10000) / 100,
+      position: Math.round(r.position * 10) / 10
+    }));
+
+    const queries = (queriesResp.data.rows || []).map(r => ({
+      query: r.keys[0],
+      clicks: r.clicks,
+      impressions: r.impressions,
+      ctr: Math.round(r.ctr * 10000) / 100,
+      position: Math.round(r.position * 10) / 10
+    }));
+
+    const pages = (pagesResp.data.rows || []).map(r => ({
+      page: r.keys[0],
+      clicks: r.clicks,
+      impressions: r.impressions,
+      ctr: Math.round(r.ctr * 10000) / 100,
+      position: Math.round(r.position * 10) / 10
+    }));
+
+    // Totals
+    const totalClicks = daily.reduce((s, d) => s + d.clicks, 0);
+    const totalImpressions = daily.reduce((s, d) => s + d.impressions, 0);
+    const avgCtr = totalImpressions > 0 ? Math.round((totalClicks / totalImpressions) * 10000) / 100 : 0;
+    const avgPosition = daily.length > 0 ? Math.round(daily.reduce((s, d) => s + d.position, 0) / daily.length * 10) / 10 : 0;
+
+    res.json({
+      success: true,
+      siteUrl: targetSite,
+      period: { start: fmt(startDate), end: fmt(endDate), days: numDays },
+      totals: { clicks: totalClicks, impressions: totalImpressions, ctr: avgCtr, position: avgPosition },
+      daily,
+      queries,
+      pages
+    });
+  } catch (e) {
+    console.error('GSC error:', e.message);
+    if (e.message?.includes('403') || e.message?.includes('insufficient')) {
+      return res.json({ success: false, error: 'Accès Search Console refusé — vérifiez que le scope webmasters.readonly est autorisé', needsReauth: true });
+    }
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// List GSC sites for user
+app.get('/api/gsc/sites', async (req, res) => {
+  const userId = req.query.user_id;
+  if (!userId) return res.status(400).json({ error: 'user_id required' });
+
+  const auth = getAuthClient(userId, req);
+  if (!auth) return res.json({ success: false, error: 'Google non connecté', needsAuth: true });
+
+  try {
+    const google = getGoogle();
+    const searchconsole = google.searchconsole({ version: 'v1', auth });
+    const resp = await searchconsole.sites.list();
+    res.json({ success: true, sites: (resp.data.siteEntry || []).map(s => ({ siteUrl: s.siteUrl, permissionLevel: s.permissionLevel })) });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// BACKLINKS — Scrape backlink data from free sources
+// ============================================================
+app.post('/api/backlinks', async (req, res) => {
+  const { website_url } = req.body;
+  if (!website_url) return res.status(400).json({ error: 'website_url required' });
+
+  const domain = website_url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
+
+  try {
+    // Strategy: use OpenLinkProfiler (free) or similar free backlink checker
+    // First try: scrape openlinkprofiler.org
+    const olpUrl = `https://openlinkprofiler.org/r/${domain}`;
+    let backlinks = { domain, totalLinks: 0, uniqueDomains: 0, topLinks: [], industries: [], anchors: [], source: 'openlinkprofiler' };
+
+    try {
+      const resp = await fetchPage(olpUrl, 3);
+      if (resp && resp.body) {
+        const html = resp.body;
+        // Extract total backlinks
+        const totalMatch = html.match(/Total[^<]*?(\d[\d,. ]+)/i);
+        if (totalMatch) backlinks.totalLinks = parseInt(totalMatch[1].replace(/[,. ]/g, '')) || 0;
+        // Extract unique domains
+        const domMatch = html.match(/Unique[^<]*?(\d[\d,. ]+)/i) || html.match(/referring[^<]*?(\d[\d,. ]+)/i);
+        if (domMatch) backlinks.uniqueDomains = parseInt(domMatch[1].replace(/[,. ]/g, '')) || 0;
+        // Extract some anchor texts
+        const anchorMatches = html.match(/class="anchor[^"]*"[^>]*>([^<]+)</g);
+        if (anchorMatches) {
+          backlinks.anchors = anchorMatches.slice(0, 10).map(m => m.replace(/.*>/, '').trim()).filter(a => a.length > 1);
+        }
+        // Extract referring domains
+        const domainMatches = html.match(/href="[^"]*"[^>]*>([a-z0-9][-a-z0-9]*\.)+[a-z]{2,}</g);
+        if (domainMatches) {
+          backlinks.topLinks = [...new Set(domainMatches.slice(0, 20).map(m => m.replace(/.*>/, '').trim()))].filter(d => d !== domain && d.includes('.'));
+        }
+      }
+    } catch (e) { console.warn('OLP scrape failed:', e.message); }
+
+    // Fallback: try Google "link:" search (limited but free)
+    if (backlinks.totalLinks === 0) {
+      try {
+        const gUrl = `https://www.google.com/search?q=link:${domain}&num=20`;
+        const resp = await fetchPage(gUrl, 3);
+        if (resp && resp.body) {
+          const resultCount = resp.body.match(/About ([\d,]+) results/i);
+          if (resultCount) backlinks.totalLinks = parseInt(resultCount[1].replace(/,/g, '')) || 0;
+          backlinks.source = 'google_link_search';
+        }
+      } catch (e) { console.warn('Google link search failed:', e.message); }
+    }
+
+    // Also check Moz/Ahrefs API if keys are configured
+    if (process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) {
+      try {
+        const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('base64');
+        const mozResp = await fetch('https://lsapi.seomoz.com/v2/url_metrics', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${mozAuth}` },
+          body: JSON.stringify({ targets: [`${domain}`] })
+        });
+        const mozData = await mozResp.json();
+        if (mozData.results?.[0]) {
+          const m = mozData.results[0];
+          backlinks.totalLinks = m.external_links_to_root_domain || backlinks.totalLinks;
+          backlinks.uniqueDomains = m.root_domains_to_root_domain || backlinks.uniqueDomains;
+          backlinks.domainAuthority = m.domain_authority || null;
+          backlinks.pageAuthority = m.page_authority || null;
+          backlinks.spamScore = m.spam_score || null;
+          backlinks.source = 'moz_api';
+        }
+      } catch (e) { console.warn('Moz API failed:', e.message); }
+    }
+
+    res.json({ success: true, ...backlinks });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
   }
 });
 
