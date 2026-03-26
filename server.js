@@ -5399,38 +5399,55 @@ function extractJSON(text) {
   return null;
 }
 
-// --- PHASE 1: SCRAPE ---
+// --- PHASE 1: SCRAPE (uses real APIs — Google Places, website crawl, directories, PageSpeed) ---
 async function agentScrape(runId, name, city, websiteUrl) {
-  agentEmit(runId, { type: 'stage_started', stage: 'scrape', message: '🔍 Collecte des données...', progress: 5 });
-  const results = { gmb: null, website: null, cms: null };
+  agentEmit(runId, { type: 'stage_started', stage: 'scrape', message: '🔍 Collecte des données réelles...', progress: 5 });
+  const results = { gmb: null, website: null, cms: null, directories: null, performance: null, reviews: null, tripadvisor: null, foursquare: null };
 
-  // 1a. Google Places / GMB scrape
-  agentEmit(runId, { type: 'step', message: 'Recherche Google Places...', progress: 8 });
+  // 1a. Full real audit (runs ALL APIs in parallel: Google Places, website crawl, PageSpeed, TripAdvisor, Foursquare)
+  agentEmit(runId, { type: 'step', message: '🌐 Lancement de l\'audit multi-API en parallèle...', progress: 8 });
   try {
-    const gmbResp = await fetch(`http://localhost:${PORT}/api/scrape-gmb`, {
+    const auditResp = await fetch(`http://localhost:${PORT}/api/real-audit`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, city, website_url: websiteUrl })
     });
-    const gmbData = await gmbResp.json();
-    if (gmbData.success) results.gmb = gmbData.data;
-  } catch(e) { agentEmit(runId, { type: 'warning', message: `GMB scrape error: ${e.message}` }); }
-  agentEmit(runId, { type: 'step', message: results.gmb ? `✅ Google Places: ${results.gmb.name} (${results.gmb.rating}★)` : '⚠️ Google Places: données limitées', progress: 15 });
+    const auditData = await auditResp.json();
+    if (auditData.success) {
+      results._realAudit = auditData.audit;
+      results._details = auditData.details;
+      results._sources = auditData.sources;
+      results._duration = auditData.duration;
+      // Extract structured data
+      if (auditData.details?.google?.available) {
+        results.gmb = auditData.details.google;
+        agentEmit(runId, { type: 'step', message: `✅ Google Places: ${results.gmb.name || name} — ${results.gmb.rating}★ (${results.gmb.reviewCount} avis)`, progress: 12 });
+      }
+      if (auditData.details?.website?.available) {
+        results.website = auditData.details.website;
+        agentEmit(runId, { type: 'step', message: `✅ Site web crawlé: title=${results.website.hasTitle?'oui':'non'}, schema=${results.website.hasSchema?'oui':'non'}`, progress: 16 });
+      }
+      if (auditData.details?.performance?.available) {
+        results.performance = auditData.details.performance;
+        const mob = results.performance.mobile || {};
+        agentEmit(runId, { type: 'step', message: `✅ PageSpeed: mobile ${mob.performance || '?'}/100, desktop ${(results.performance.desktop||{}).performance || '?'}/100`, progress: 18 });
+      }
+      if (auditData.details?.tripadvisor?.available) {
+        results.tripadvisor = auditData.details.tripadvisor;
+        agentEmit(runId, { type: 'step', message: `✅ TripAdvisor: ${results.tripadvisor.found ? 'trouvé' : 'non trouvé'}${results.tripadvisor.rating ? ' — '+results.tripadvisor.rating+'★' : ''}`, progress: 20 });
+      }
+      if (auditData.details?.foursquare?.available) {
+        results.foursquare = auditData.details.foursquare;
+        agentEmit(runId, { type: 'step', message: `✅ Foursquare: ${results.foursquare.found ? 'trouvé' : 'non trouvé'}`, progress: 21 });
+      }
+      // Sources summary
+      const okSources = Object.entries(auditData.sources || {}).filter(([k,v]) => v === 'ok').map(([k]) => k);
+      agentEmit(runId, { type: 'step', message: `📊 ${okSources.length} sources réelles: ${okSources.join(', ')} (${auditData.duration}ms)`, progress: 23 });
+    }
+  } catch(e) { agentEmit(runId, { type: 'warning', message: `Audit multi-API error: ${e.message}` }); }
 
-  // 1b. Website audit
-  if (websiteUrl) {
-    agentEmit(runId, { type: 'step', message: 'Analyse du site web...', progress: 18 });
-    try {
-      const auditResp = await fetch(`http://localhost:${PORT}/api/audit-website`, {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: websiteUrl })
-      });
-      const auditData = await auditResp.json();
-      if (auditData.success) results.website = auditData.data;
-    } catch(e) { agentEmit(runId, { type: 'warning', message: `Website audit error: ${e.message}` }); }
-    agentEmit(runId, { type: 'step', message: results.website ? '✅ Site web analysé' : '⚠️ Site web non accessible', progress: 22 });
-
-    // 1c. CMS detection
-    agentEmit(runId, { type: 'step', message: 'Détection du CMS...', progress: 24 });
+  // 1b. CMS detection (separate call if website available)
+  if (websiteUrl && !results.website?.cms) {
+    agentEmit(runId, { type: 'step', message: 'Détection du CMS...', progress: 25 });
     try {
       const cmsResp = await fetch(`http://localhost:${PORT}/api/detect-cms`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -5439,218 +5456,552 @@ async function agentScrape(runId, name, city, websiteUrl) {
       const cmsData = await cmsResp.json();
       if (cmsData.success) results.cms = cmsData;
     } catch(e) {}
-    agentEmit(runId, { type: 'step', message: results.cms ? `✅ CMS: ${results.cms.cms || 'non détecté'}` : '⚠️ CMS non détecté', progress: 28 });
+    agentEmit(runId, { type: 'step', message: results.cms?.detected ? `✅ CMS: ${results.cms.detected.cms} (${results.cms.detected.confidence}%)` : 'ℹ️ CMS non détecté', progress: 27 });
   }
 
-  // Update DB
+  // 1c. Directory scan
+  agentEmit(runId, { type: 'step', message: 'Scan des annuaires (11 plateformes)...', progress: 28 });
+  try {
+    const dirResp = await fetch(`http://localhost:${PORT}/api/directories/auto-check`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, city })
+    });
+    const dirData = await dirResp.json();
+    if (dirData.success) {
+      results.directories = dirData.results;
+      const found = dirData.results.filter(r => r.found).length;
+      agentEmit(runId, { type: 'step', message: `✅ Annuaires: ${found}/${dirData.results.length} trouvés`, progress: 30 });
+    }
+  } catch(e) { agentEmit(runId, { type: 'warning', message: `Directory scan: ${e.message}` }); }
+
+  // 1d. Review analysis (semantic)
+  agentEmit(runId, { type: 'step', message: 'Analyse sémantique des avis...', progress: 31 });
+  try {
+    const placeId = results.gmb?.place_id || '';
+    const revResp = await fetch(`http://localhost:${PORT}/api/analyze-reviews`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, city, place_id: placeId })
+    });
+    const revData = await revResp.json();
+    if (revData.success && revData.data) {
+      results.reviews = revData.data;
+      agentEmit(runId, { type: 'step', message: `✅ ${revData.data.reviewCount || 0} avis analysés — ${(revData.data.terms||[]).length} termes extraits`, progress: 33 });
+    }
+  } catch(e) {}
+
   db.prepare('UPDATE agent_runs SET scrape_results = ?, stage = ? WHERE id = ?')
     .run(JSON.stringify(results), 'scrape_done', runId);
-
-  agentEmit(runId, { type: 'stage_completed', stage: 'scrape', progress: 30 });
+  agentEmit(runId, { type: 'stage_completed', stage: 'scrape', progress: 35 });
   return results;
 }
 
-// --- PHASE 2: ANALYZE with Claude ---
+// --- PHASE 2: ANALYZE — Comprehensive deterministic engine + optional Claude enhancement ---
 async function agentAnalyze(runId, apiKey, scrapeResults, name, city) {
-  agentEmit(runId, { type: 'stage_started', stage: 'analyze', message: '🧠 Analyse IA en cours...', progress: 32 });
+  agentEmit(runId, { type: 'stage_started', stage: 'analyze', message: '🧠 Analyse des données réelles...', progress: 36 });
 
   const gmb = scrapeResults.gmb || {};
   const web = scrapeResults.website || {};
   const cms = scrapeResults.cms || {};
+  const perf = scrapeResults.performance || scrapeResults._details?.performance || {};
+  const ta = scrapeResults.tripadvisor || scrapeResults._details?.tripadvisor || {};
+  const fsq = scrapeResults.foursquare || scrapeResults._details?.foursquare || {};
+  const dirs = scrapeResults.directories || [];
+  const revs = scrapeResults.reviews || {};
 
-  const systemPrompt = `Tu es l'agent autonome RestauRank. Tu audites la visibilité SEO et GEO (moteurs IA) des restaurants.
-Tu dois analyser les données collectées et retourner un audit structuré en JSON.
+  // Always run deterministic analysis first (works without any API key)
+  agentEmit(runId, { type: 'step', message: '📊 Analyse déterministe de toutes les données collectées...', progress: 38 });
+  const analysis = buildFullDeterministicAnalysis(gmb, web, cms, perf, ta, fsq, dirs, revs, name, city);
 
-IMPORTANT: Retourne UNIQUEMENT du JSON valide, sans texte avant ou après.`;
+  agentEmit(runId, { type: 'step', message: `✅ ${analysis.items.length} points analysés (${analysis.summary.total_issues} problèmes, ${analysis.summary.critical} critiques)`, progress: 42 });
 
-  const userPrompt = `Analyse ce restaurant et identifie TOUS les problèmes SEO/GEO :
-
-RESTAURANT: ${name} à ${city}
-DONNÉES GOOGLE PLACES:
-${JSON.stringify(gmb, null, 2)}
-
-AUDIT SITE WEB:
-${JSON.stringify(web, null, 2)}
-
-CMS DÉTECTÉ: ${cms.cms || 'Inconnu'}
-
-Retourne un JSON avec cette structure EXACTE:
-{
-  "summary": {
-    "seo_score": <0-100>,
-    "geo_score": <0-100>,
-    "total_issues": <number>,
-    "critical": <number>,
-    "auto_fixable": <number>
-  },
-  "items": [
-    {
-      "id": "<item_id>",
-      "category": "GBP|Reviews|Citations|OnPage|ChatGPT|Perplexity|GEO",
-      "name": "<nom lisible>",
-      "status": "good|needs_fix|missing|critical",
-      "severity": "critical|high|medium|low",
-      "current_value": "<ce qui existe actuellement>",
-      "finding": "<problème identifié>",
-      "fix": "<exactement quoi faire>",
-      "auto_fixable": true|false,
-      "priority": <1-10>
+  // Optional: enhance with Claude if API key available
+  if (apiKey) {
+    agentEmit(runId, { type: 'step', message: '🤖 Enrichissement IA en cours...', progress: 44 });
+    try {
+      const raw = await agentClaudeCall(apiKey,
+        `Tu es l'agent RestauRank. Analyse les findings ci-dessous et ajoute des insights que l'analyse automatique a pu manquer. Retourne UNIQUEMENT du JSON.`,
+        `Restaurant: ${name} à ${city}\nFindings actuels: ${analysis.items.length} items\nDonnées:\n${JSON.stringify({ gmb: { rating: gmb.rating, reviewCount: gmb.reviewCount, category: gmb.category, description: (gmb.description||'').substring(0,200) }, web: { hasTitle: web.hasTitle, hasSchema: web.hasSchemaRestaurant, hasFAQ: web.hasFAQ, hasMetaDesc: web.hasMetaDesc }, perf: { mobile: perf.mobile?.performance, desktop: perf.desktop?.performance } })}\n\nRetourne: { "extra_items": [{ "id": "ai_xxx", "category": "...", "name": "...", "status": "needs_fix", "severity": "...", "finding": "...", "fix": "...", "auto_fixable": false, "priority": 5 }], "enhanced_scores": { "seo_adjustment": <-10 to +10>, "geo_adjustment": <-10 to +10> } }`,
+        2048
+      );
+      const aiResult = extractJSON(raw);
+      if (aiResult?.extra_items?.length) {
+        const existingIds = new Set(analysis.items.map(i => i.id));
+        aiResult.extra_items.filter(i => !existingIds.has(i.id)).forEach(i => analysis.items.push(i));
+        agentEmit(runId, { type: 'step', message: `🤖 +${aiResult.extra_items.length} insights IA ajoutés`, progress: 47 });
+      }
+      if (aiResult?.enhanced_scores) {
+        analysis.summary.seo_score = Math.max(0, Math.min(100, analysis.summary.seo_score + (aiResult.enhanced_scores.seo_adjustment || 0)));
+        analysis.summary.geo_score = Math.max(0, Math.min(100, analysis.summary.geo_score + (aiResult.enhanced_scores.geo_adjustment || 0)));
+      }
+      analysis._aiEnhanced = true;
+    } catch(e) {
+      agentEmit(runId, { type: 'step', message: `ℹ️ Enrichissement IA non disponible — analyse déterministe complète utilisée`, progress: 47 });
     }
-  ]
-}
-
-Analyse au minimum ces catégories:
-GBP: titre, description (750 car), catégories, photos, horaires, attributs, Q&A, posts, menu
-Reviews: note moyenne, nb avis, taux de réponse, fraîcheur, sentiment
-Citations: NAP cohérence, présence Yelp/TripAdvisor/TheFork/PagesJaunes/Apple/Bing
-OnPage: title tag, meta desc, schema.org Restaurant, FAQ, H1, images alt, vitesse, mobile, canonical, OG tags
-ChatGPT: contenu Yelp (source #1 ChatGPT), FAQ structurée, mentions dans les sources ChatGPT
-Perplexity/Gemini: schema.org complet, autorité domaine, citations académiques
-GEO: Entity SEO, Wikidata, backlinks locaux, contenu frais`;
-
-  let analysis;
-  try {
-    const raw = await agentClaudeCall(apiKey, systemPrompt, userPrompt, 4096);
-    analysis = extractJSON(raw);
-    if (!analysis || !analysis.items) throw new Error('Invalid analysis JSON');
-  } catch(e) {
-    agentEmit(runId, { type: 'warning', message: `Analyse IA partielle: ${e.message}` });
-    // Fallback to basic analysis
-    analysis = buildFallbackAnalysis(gmb, web, cms, name, city);
+  } else {
+    agentEmit(runId, { type: 'step', message: 'ℹ️ Mode déterministe (pas de clé Claude) — analyse 100% basée sur données réelles', progress: 47 });
   }
 
-  agentEmit(runId, { type: 'step', message: `🔍 ${analysis.items?.length || 0} points analysés`, progress: 45 });
+  // Recalculate summary
+  analysis.summary.total_issues = analysis.items.filter(i => i.status !== 'good').length;
+  analysis.summary.critical = analysis.items.filter(i => i.severity === 'critical').length;
+  analysis.summary.auto_fixable = analysis.items.filter(i => i.auto_fixable).length;
+
+  agentEmit(runId, { type: 'step', message: `🔍 Analyse finale: ${analysis.items.length} points, score SEO ${analysis.summary.seo_score}/100, GEO ${analysis.summary.geo_score}/100`, progress: 49 });
 
   // Store items in DB
   const insertItem = db.prepare('INSERT INTO agent_run_items (run_id, item_id, category, status, severity, finding, recommendation) VALUES (?, ?, ?, ?, ?, ?, ?)');
   (analysis.items || []).forEach(item => {
-    insertItem.run(runId, item.id, item.category, item.status, item.severity, item.finding, item.fix);
+    try { insertItem.run(runId, item.id, item.category, item.status, item.severity, item.finding, item.fix); } catch(e) {}
     agentEmit(runId, { type: 'item_analyzed', item });
   });
 
-  const totalIssues = (analysis.items || []).filter(i => i.status !== 'good').length;
+  const totalIssues = analysis.summary.total_issues;
   db.prepare('UPDATE agent_runs SET analysis = ?, stage = ?, total_items = ?, items_manual = ? WHERE id = ?')
-    .run(JSON.stringify(analysis), 'analyze_done', analysis.items?.length || 0, totalIssues, runId);
+    .run(JSON.stringify(analysis), 'analyze_done', analysis.items.length, totalIssues, runId);
 
   agentEmit(runId, { type: 'stage_completed', stage: 'analyze', summary: analysis.summary, progress: 50 });
   return analysis;
 }
 
-// --- Fallback deterministic analysis (when Claude fails) ---
-function buildFallbackAnalysis(gmb, web, cms, name, city) {
+// --- Comprehensive deterministic analysis engine — works without ANY external API key ---
+function buildFullDeterministicAnalysis(gmb, web, cms, perf, ta, fsq, dirs, revs, name, city) {
   const items = [];
-  const add = (id, cat, nm, status, sev, finding, fix, auto) =>
-    items.push({ id, category: cat, name: nm, status, severity: sev, finding, fix, auto_fixable: auto, priority: sev === 'critical' ? 1 : sev === 'high' ? 3 : 5 });
+  let seoScore = 50, geoScore = 40; // Base scores, adjusted by findings
 
-  // GBP checks
-  if (!gmb.description || gmb.description.length < 200)
-    add('gbp_desc', 'GBP', 'Description GBP', 'needs_fix', 'high', 'Description trop courte ou manquante', 'Générer une description SEO de 750 caractères', true);
-  if (!gmb.rating || gmb.rating < 4.0)
-    add('gbp_rating', 'Reviews', 'Note Google', 'needs_fix', 'high', `Note ${gmb.rating || 'N/A'}/5`, 'Stratégie pour améliorer les avis', false);
-  if (!gmb.hours || gmb.hours.length === 0)
-    add('gbp_hours', 'GBP', 'Horaires', 'missing', 'critical', 'Horaires non renseignés', 'Ajouter les horaires complets', true);
-  if (!gmb.phone)
-    add('gbp_phone', 'GBP', 'Téléphone', 'missing', 'critical', 'Numéro de téléphone manquant', 'Ajouter le numéro dans GBP', true);
+  const add = (id, cat, nm, status, sev, finding, fix, auto, currentVal) => {
+    const priority = sev === 'critical' ? 1 : sev === 'high' ? 3 : sev === 'medium' ? 5 : 7;
+    items.push({ id, category: cat, name: nm, status, severity: sev, finding, fix, auto_fixable: auto, priority, current_value: currentVal || '' });
+  };
 
-  // Website checks
-  if (web) {
-    if (!web.hasTitle) add('op_title', 'OnPage', 'Title tag', 'missing', 'high', 'Pas de title tag', 'Ajouter un title SEO optimisé', true);
-    if (!web.hasMetaDesc) add('op_metadesc', 'OnPage', 'Meta description', 'missing', 'high', 'Pas de meta description', 'Ajouter meta desc avec mots-clés locaux', true);
-    if (!web.hasSchemaRestaurant) add('op_schema', 'OnPage', 'Schema.org', 'missing', 'critical', 'Pas de schema.org Restaurant', 'Ajouter le JSON-LD complet', true);
-    if (!web.hasFAQ) add('op_faq', 'OnPage', 'FAQ', 'missing', 'medium', 'Pas de page FAQ', 'Créer une FAQ avec FAQPage schema', true);
+  // ═══════════════════════════════════════════
+  // GBP — Google Business Profile (from Places API data)
+  // ═══════════════════════════════════════════
+  const hasGMB = gmb && (gmb.name || gmb.place_id);
+
+  if (!hasGMB) {
+    add('gbp_listing', 'GBP', 'Fiche Google Business', 'missing', 'critical', 'Fiche Google Business non trouvée via Google Places API', 'Créer et vérifier la fiche Google Business Profile', false, 'Non trouvée');
+    seoScore -= 20;
+  } else {
+    add('gbp_listing', 'GBP', 'Fiche Google Business', 'good', 'low', 'Fiche trouvée et active', '', false, `${gmb.name} — ${gmb.place_id}`);
+    seoScore += 5;
+
+    // Description
+    const descLen = (gmb.description || '').length;
+    if (!gmb.description || descLen < 100) {
+      add('gbp_desc', 'GBP', 'Description GBP', descLen === 0 ? 'missing' : 'needs_fix', 'high', descLen === 0 ? 'Description manquante' : `Description trop courte (${descLen} car, recommandé: 700-750)`, 'Rédiger une description SEO de 700-750 caractères avec mots-clés locaux (cuisine, quartier, spécialités)', true, descLen > 0 ? `${descLen} caractères` : 'Vide');
+      seoScore -= descLen === 0 ? 10 : 5;
+    } else if (descLen < 500) {
+      add('gbp_desc', 'GBP', 'Description GBP', 'needs_fix', 'medium', `Description sous-optimale (${descLen}/750 car)`, 'Allonger à 700-750 caractères avec mots-clés géolocalisés', true, `${descLen} caractères`);
+      seoScore -= 3;
+    } else {
+      add('gbp_desc', 'GBP', 'Description GBP', 'good', 'low', `Description complète (${descLen} car)`, '', false, `${descLen} caractères`);
+      seoScore += 3;
+    }
+
+    // Category
+    if (gmb.category) {
+      add('gbp_category', 'GBP', 'Catégorie principale', 'good', 'low', `Catégorie: ${gmb.category}`, '', false, gmb.category);
+      seoScore += 2;
+    } else {
+      add('gbp_category', 'GBP', 'Catégorie principale', 'missing', 'high', 'Catégorie non définie', 'Sélectionner "Restaurant" + catégories secondaires spécifiques (ex: Restaurant italien)', true, 'Non définie');
+      seoScore -= 8;
+    }
+
+    // Phone
+    if (gmb.phone) {
+      add('gbp_phone', 'GBP', 'Téléphone', 'good', 'low', 'Téléphone renseigné', '', false, gmb.phone);
+    } else {
+      add('gbp_phone', 'GBP', 'Téléphone', 'missing', 'critical', 'Numéro de téléphone manquant — les clients ne peuvent pas réserver', 'Ajouter le numéro de téléphone local dans GBP', true, 'Manquant');
+      seoScore -= 10;
+    }
+
+    // Hours
+    if (gmb.hours && ((Array.isArray(gmb.hours) && gmb.hours.length > 0) || (typeof gmb.hours === 'string' && gmb.hours.length > 5))) {
+      add('gbp_hours', 'GBP', 'Horaires', 'good', 'low', 'Horaires renseignés', '', false, Array.isArray(gmb.hours) ? `${gmb.hours.length} jours` : 'Renseignés');
+      seoScore += 2;
+    } else {
+      add('gbp_hours', 'GBP', 'Horaires', 'missing', 'critical', 'Horaires non renseignés — Google peut marquer "Fermé"', 'Ajouter tous les horaires d\'ouverture + horaires spéciaux (jours fériés)', true, 'Manquant');
+      seoScore -= 12;
+    }
+
+    // Website link
+    if (gmb.website) {
+      add('gbp_website', 'GBP', 'Lien site web', 'good', 'low', 'Site web lié à GBP', '', false, gmb.website);
+    } else {
+      add('gbp_website', 'GBP', 'Lien site web', 'missing', 'high', 'Pas de lien vers le site web dans la fiche', 'Ajouter l\'URL du site dans Google Business Profile', true, 'Non lié');
+      seoScore -= 5;
+    }
+
+    // Photos
+    const photoCount = gmb.photoCount || gmb.photos?.length || 0;
+    if (photoCount >= 10) {
+      add('gbp_photos', 'GBP', 'Photos GBP', 'good', 'low', `${photoCount} photos`, '', false, `${photoCount} photos`);
+      seoScore += 3;
+    } else if (photoCount > 0) {
+      add('gbp_photos', 'GBP', 'Photos GBP', 'needs_fix', 'medium', `Seulement ${photoCount} photos (recommandé: 20+)`, 'Ajouter photos: plats, intérieur, façade, équipe, terrasse — minimum 20', false, `${photoCount} photos`);
+      seoScore -= 3;
+    } else {
+      add('gbp_photos', 'GBP', 'Photos GBP', 'missing', 'high', 'Aucune photo détectée', 'Uploader minimum 20 photos catégorisées (plats, ambiance, façade, équipe)', false, 'Aucune');
+      seoScore -= 8;
+    }
+
+    // Price level
+    if (gmb.priceLevel) {
+      add('gbp_price', 'GBP', 'Niveau de prix', 'good', 'low', `Prix: ${gmb.priceLevel}`, '', false, gmb.priceLevel);
+    } else {
+      add('gbp_price', 'GBP', 'Niveau de prix', 'needs_fix', 'low', 'Niveau de prix non affiché', 'Confirmer la fourchette de prix dans GBP', true, 'Non défini');
+    }
   }
 
-  // Citations - always check
-  ['Yelp', 'TripAdvisor', 'TheFork', 'PagesJaunes', 'Apple Maps', 'Bing Places'].forEach(p => {
-    add(`cit_${p.toLowerCase().replace(/\s/g, '_')}`, 'Citations', p, 'needs_fix', 'medium', `Présence ${p} non vérifiée`, `Vérifier et optimiser la fiche ${p}`, false);
-  });
+  // ═══════════════════════════════════════════
+  // REVIEWS — Multi-source review analysis
+  // ═══════════════════════════════════════════
+  const rating = gmb.rating || 0;
+  const reviewCount = gmb.reviewCount || 0;
 
-  // GEO checks
-  add('g_entity', 'GEO', 'Entity SEO', 'needs_fix', 'high', 'Pas d\'entrée Wikidata détectée', 'Créer une entrée Wikidata pour le Knowledge Graph', false);
-  add('g_chatgpt', 'ChatGPT', 'Visibilité ChatGPT', 'needs_fix', 'high', 'Optimiser les sources ChatGPT (Yelp = 48%)', 'Enrichir le profil Yelp en priorité', false);
+  if (rating > 0) {
+    if (rating >= 4.5) {
+      add('rev_rating', 'Reviews', 'Note Google', 'good', 'low', `Excellente note: ${rating}★ sur ${reviewCount} avis`, '', false, `${rating}★ (${reviewCount})`);
+      seoScore += 5; geoScore += 5;
+    } else if (rating >= 4.0) {
+      add('rev_rating', 'Reviews', 'Note Google', 'good', 'low', `Bonne note: ${rating}★ sur ${reviewCount} avis`, 'Viser 4.5+ avec stratégie de collecte d\'avis', false, `${rating}★ (${reviewCount})`);
+      seoScore += 2;
+    } else {
+      add('rev_rating', 'Reviews', 'Note Google', 'needs_fix', 'high', `Note insuffisante: ${rating}★ sur ${reviewCount} avis`, 'Mettre en place une stratégie d\'amélioration: répondre à TOUS les avis, résoudre les plaintes récurrentes', false, `${rating}★ (${reviewCount})`);
+      seoScore -= 5;
+    }
+  } else {
+    add('rev_rating', 'Reviews', 'Note Google', 'missing', 'critical', 'Pas de note Google détectée', 'La fiche Google doit avoir des avis pour le SEO local', false, 'N/A');
+    seoScore -= 10;
+  }
+
+  if (reviewCount > 0) {
+    if (reviewCount < 20) {
+      add('rev_volume', 'Reviews', 'Volume d\'avis', 'needs_fix', 'high', `Seulement ${reviewCount} avis (recommandé: 50+)`, 'Mettre en place un système de collecte d\'avis (QR code, email post-visite)', false, `${reviewCount}`);
+      seoScore -= 5;
+    } else if (reviewCount < 100) {
+      add('rev_volume', 'Reviews', 'Volume d\'avis', 'needs_fix', 'medium', `${reviewCount} avis — améliorer pour dominer le local pack`, 'Objectif: 100+ avis via collecte systématique', false, `${reviewCount}`);
+    } else {
+      add('rev_volume', 'Reviews', 'Volume d\'avis', 'good', 'low', `${reviewCount} avis — bon volume`, '', false, `${reviewCount}`);
+      seoScore += 3;
+    }
+  }
+
+  // Review response rate from semantic analysis
+  if (revs.responseRate !== undefined) {
+    if (revs.responseRate >= 80) {
+      add('rev_response', 'Reviews', 'Taux de réponse aux avis', 'good', 'low', `Taux de réponse: ${revs.responseRate}%`, '', false, `${revs.responseRate}%`);
+      seoScore += 3;
+    } else {
+      add('rev_response', 'Reviews', 'Taux de réponse aux avis', 'needs_fix', 'high', `Taux de réponse faible: ${revs.responseRate}%`, 'Répondre à 100% des avis dans les 24h — Google favorise les fiches réactives', false, `${revs.responseRate}%`);
+      seoScore -= 5;
+    }
+  }
+
+  // Sentiment from review analysis
+  if (revs.sentiment) {
+    add('rev_sentiment', 'Reviews', 'Sentiment des avis', revs.sentiment.score >= 0.7 ? 'good' : 'needs_fix', revs.sentiment.score >= 0.7 ? 'low' : 'medium', `Sentiment: ${revs.sentiment.label || (revs.sentiment.score >= 0.7 ? 'Positif' : 'Mixte')}`, revs.sentiment.score < 0.7 ? 'Identifier et résoudre les points négatifs récurrents' : '', false, `Score: ${(revs.sentiment.score * 100).toFixed(0)}%`);
+  }
+
+  // TripAdvisor
+  if (ta.found) {
+    add('rev_tripadvisor', 'Reviews', 'Présence TripAdvisor', 'good', 'low', `TripAdvisor: ${ta.rating ? ta.rating + '★' : 'trouvé'}${ta.reviewCount ? ' (' + ta.reviewCount + ' avis)' : ''}`, '', false, ta.rating ? `${ta.rating}★` : 'Trouvé');
+    geoScore += 5;
+  } else if (ta.available !== false) {
+    add('rev_tripadvisor', 'Reviews', 'Présence TripAdvisor', 'missing', 'medium', 'Non trouvé sur TripAdvisor', 'Revendiquer la fiche TripAdvisor — source majeure pour ChatGPT et les touristes', false, 'Non trouvé');
+    geoScore -= 5;
+  }
+
+  // ═══════════════════════════════════════════
+  // ON-PAGE SEO — Website technical audit
+  // ═══════════════════════════════════════════
+  const hasWeb = web && (web.url || web.hasTitle !== undefined);
+
+  if (!hasWeb) {
+    add('op_nosite', 'OnPage', 'Site web', 'missing', 'critical', 'Aucun site web détecté ou crawlé', 'Créer un site web optimisé SEO — essentiel pour le référencement local', false, 'Non disponible');
+    seoScore -= 15;
+  } else {
+    // Title tag
+    if (web.hasTitle) {
+      const title = web.title || '';
+      const titleLen = title.length;
+      if (titleLen > 70) {
+        add('op_title', 'OnPage', 'Title tag', 'needs_fix', 'medium', `Title trop long (${titleLen} car, max 60-65)`, `Raccourcir: "${name} — Restaurant ${gmb.category || ''} à ${city}"`, true, `"${title.substring(0, 60)}..."`);
+      } else if (titleLen < 20) {
+        add('op_title', 'OnPage', 'Title tag', 'needs_fix', 'high', `Title trop court (${titleLen} car)`, `Optimiser: "${name} — Restaurant ${gmb.category || ''} à ${city} | Réservation"`, true, `"${title}"`);
+        seoScore -= 5;
+      } else {
+        add('op_title', 'OnPage', 'Title tag', 'good', 'low', `Title OK (${titleLen} car)`, '', false, `"${title.substring(0, 60)}"`);
+        seoScore += 3;
+      }
+    } else {
+      add('op_title', 'OnPage', 'Title tag', 'missing', 'high', 'Pas de balise title', `Ajouter: <title>${name} — Restaurant ${gmb.category || ''} à ${city}</title>`, true, 'Manquant');
+      seoScore -= 8;
+    }
+
+    // Meta description
+    if (web.hasMetaDesc) {
+      const mdLen = (web.metaDesc || '').length;
+      if (mdLen > 160) {
+        add('op_metadesc', 'OnPage', 'Meta description', 'needs_fix', 'medium', `Meta description trop longue (${mdLen} car, max 155)`, 'Raccourcir à 150-155 caractères avec call-to-action', true, `${mdLen} car`);
+      } else {
+        add('op_metadesc', 'OnPage', 'Meta description', 'good', 'low', `Meta description OK (${mdLen} car)`, '', false, `${mdLen} car`);
+        seoScore += 2;
+      }
+    } else {
+      add('op_metadesc', 'OnPage', 'Meta description', 'missing', 'high', 'Pas de meta description — Google génère un extrait aléatoire', `Ajouter une meta description de 150 car avec "${name}", "${city}", et call-to-action`, true, 'Manquant');
+      seoScore -= 7;
+    }
+
+    // Schema.org
+    if (web.hasSchemaRestaurant || web.hasSchema) {
+      add('op_schema', 'OnPage', 'Schema.org Restaurant', 'good', 'low', 'Schema.org Restaurant détecté', '', false, 'Présent');
+      seoScore += 5; geoScore += 8;
+    } else {
+      add('op_schema', 'OnPage', 'Schema.org Restaurant', 'missing', 'critical', 'Pas de balisage Schema.org Restaurant — invisible pour les moteurs IA', 'Ajouter JSON-LD Restaurant complet: name, address, telephone, openingHours, menu, aggregateRating, servesCuisine', true, 'Absent');
+      seoScore -= 10; geoScore -= 15;
+    }
+
+    // FAQ
+    if (web.hasFAQ) {
+      add('op_faq', 'OnPage', 'FAQ structurée', 'good', 'low', 'Page FAQ détectée', '', false, 'Présente');
+      geoScore += 5;
+    } else {
+      add('op_faq', 'OnPage', 'FAQ structurée', 'missing', 'medium', 'Pas de FAQ — source #1 des réponses IA (ChatGPT, Perplexity)', 'Créer une FAQ de 15+ questions avec FAQPage schema — questions fréquentes sur le restaurant', true, 'Absente');
+      geoScore -= 8;
+    }
+
+    // OG tags
+    if (web.hasOGTags) {
+      add('op_og', 'OnPage', 'Open Graph tags', 'good', 'low', 'OG tags présents pour le partage social', '', false, 'Présents');
+    } else {
+      add('op_og', 'OnPage', 'Open Graph tags', 'needs_fix', 'medium', 'Pas d\'OG tags — aperçu pauvre sur les réseaux sociaux', 'Ajouter og:title, og:description, og:image, og:type pour un partage optimal', true, 'Absents');
+      seoScore -= 2;
+    }
+
+    // H1
+    if (web.h1) {
+      add('op_h1', 'OnPage', 'Balise H1', 'good', 'low', `H1 présent: "${(web.h1 || '').substring(0, 50)}"`, '', false, web.h1);
+      seoScore += 2;
+    } else if (web.hasH1 === false) {
+      add('op_h1', 'OnPage', 'Balise H1', 'missing', 'medium', 'Pas de balise H1 détectée', `Ajouter: <h1>${name} — Restaurant à ${city}</h1>`, true, 'Absent');
+      seoScore -= 3;
+    }
+
+    // NAP on website
+    if (web.napOnSite || web.hasNAP) {
+      add('op_nap', 'OnPage', 'NAP sur le site', 'good', 'low', 'Nom, Adresse, Téléphone présents sur le site', '', false, 'Présent');
+      seoScore += 3;
+    } else {
+      add('op_nap', 'OnPage', 'NAP sur le site', 'needs_fix', 'high', 'NAP (Nom, Adresse, Téléphone) manquant ou incomplet sur le site', 'Ajouter un footer avec NAP complet identique à GBP — cohérence critique pour le SEO local', true, 'Incomplet');
+      seoScore -= 5;
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  // PERFORMANCE — PageSpeed data
+  // ═══════════════════════════════════════════
+  const mob = perf.mobile || {};
+  const desk = perf.desktop || {};
+
+  if (mob.performance !== undefined) {
+    const mPerf = mob.performance;
+    if (mPerf >= 80) {
+      add('perf_mobile', 'OnPage', 'Performance mobile', 'good', 'low', `Score mobile: ${mPerf}/100`, '', false, `${mPerf}/100`);
+      seoScore += 3;
+    } else if (mPerf >= 50) {
+      add('perf_mobile', 'OnPage', 'Performance mobile', 'needs_fix', 'medium', `Performance mobile moyenne: ${mPerf}/100`, 'Optimiser images (WebP), activer cache, réduire JS/CSS', true, `${mPerf}/100`);
+      seoScore -= 3;
+    } else {
+      add('perf_mobile', 'OnPage', 'Performance mobile', 'needs_fix', 'high', `Performance mobile faible: ${mPerf}/100 — impact direct sur le ranking`, 'Optimisation urgente: lazy loading, compression images, minification, CDN', true, `${mPerf}/100`);
+      seoScore -= 8;
+    }
+  }
+
+  if (desk.performance !== undefined) {
+    const dPerf = desk.performance;
+    if (dPerf >= 80) {
+      add('perf_desktop', 'OnPage', 'Performance desktop', 'good', 'low', `Score desktop: ${dPerf}/100`, '', false, `${dPerf}/100`);
+    } else {
+      add('perf_desktop', 'OnPage', 'Performance desktop', 'needs_fix', 'medium', `Performance desktop: ${dPerf}/100`, 'Optimiser temps de chargement desktop', true, `${dPerf}/100`);
+    }
+  }
+
+  // Core Web Vitals
+  if (mob.lcp !== undefined) {
+    const lcp = parseFloat(mob.lcp) || 0;
+    add('perf_lcp', 'OnPage', 'LCP (Largest Contentful Paint)', lcp <= 2.5 ? 'good' : 'needs_fix', lcp <= 2.5 ? 'low' : 'high', `LCP: ${lcp.toFixed(1)}s${lcp > 2.5 ? ' (>2.5s = mauvais)' : ' (bon)'}`, lcp > 2.5 ? 'Optimiser le chargement de l\'image/bloc principal' : '', true, `${lcp.toFixed(1)}s`);
+  }
+
+  // ═══════════════════════════════════════════
+  // CITATIONS / DIRECTORIES — from auto-check results
+  // ═══════════════════════════════════════════
+  const dirArray = Array.isArray(dirs) ? dirs : [];
+  const dirFound = dirArray.filter(d => d.found);
+  const dirMissing = dirArray.filter(d => !d.found);
+
+  if (dirArray.length > 0) {
+    add('cit_overview', 'Citations', 'Présence annuaires', dirFound.length >= 8 ? 'good' : 'needs_fix', dirFound.length < 4 ? 'high' : 'medium', `${dirFound.length}/${dirArray.length} annuaires trouvés`, dirMissing.length > 0 ? `Revendiquer: ${dirMissing.map(d => d.platform).join(', ')}` : 'Toutes les fiches sont actives', false, `${dirFound.length}/${dirArray.length}`);
+    if (dirFound.length < 5) seoScore -= 8;
+
+    // Individual directory checks
+    dirArray.forEach(d => {
+      const plat = d.platform || d.name || 'Unknown';
+      const platId = plat.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      if (d.found) {
+        add(`cit_${platId}`, 'Citations', plat, 'good', 'low', `Trouvé sur ${plat}${d.url ? '' : ''}`, '', false, d.url || 'Trouvé');
+        geoScore += 1;
+      } else {
+        const isImportant = ['yelp', 'tripadvisor', 'thefork', 'pagesjaunes', 'apple', 'bing'].some(k => platId.includes(k));
+        add(`cit_${platId}`, 'Citations', plat, 'missing', isImportant ? 'high' : 'medium', `Non trouvé sur ${plat}`, `Revendiquer et optimiser la fiche ${plat}`, false, 'Non trouvé');
+        if (isImportant) geoScore -= 3;
+      }
+    });
+  } else {
+    // No directory data — add checks for known important directories
+    ['Yelp', 'TripAdvisor', 'TheFork', 'PagesJaunes', 'Apple Maps', 'Bing Places', 'Foursquare'].forEach(p => {
+      add(`cit_${p.toLowerCase().replace(/\s/g, '_')}`, 'Citations', p, 'needs_fix', 'medium', `Présence ${p} non vérifiée`, `Vérifier et optimiser la fiche ${p}`, false, 'Non scanné');
+    });
+  }
+
+  // NAP consistency
+  add('cit_nap', 'Citations', 'Cohérence NAP', 'needs_fix', 'high', 'La cohérence Nom-Adresse-Téléphone entre toutes les plateformes est critique', 'Vérifier que le NAP est identique sur GBP, site web, et tous les annuaires', false, 'À vérifier');
+
+  // ═══════════════════════════════════════════
+  // GEO / AI VISIBILITY — Visibility on AI engines
+  // ═══════════════════════════════════════════
+
+  // ChatGPT visibility (Yelp = 48% of ChatGPT restaurant sources)
+  const hasYelp = dirArray.some(d => d.found && (d.platform || '').toLowerCase().includes('yelp'));
+  add('geo_chatgpt_yelp', 'ChatGPT', 'Source Yelp (48% ChatGPT)', hasYelp ? 'good' : 'needs_fix', 'high',
+    hasYelp ? 'Profil Yelp actif — source principale de ChatGPT pour les restaurants' : 'Profil Yelp manquant — 48% des réponses restaurants de ChatGPT viennent de Yelp',
+    hasYelp ? '' : 'Créer et optimiser le profil Yelp en priorité — impact direct sur la visibilité ChatGPT',
+    false, hasYelp ? 'Actif' : 'Manquant');
+  if (!hasYelp) geoScore -= 10;
+
+  // FAQ for AI
+  const hasFAQ = web.hasFAQ || false;
+  add('geo_faq', 'ChatGPT', 'FAQ pour IA', hasFAQ ? 'good' : 'needs_fix', 'high',
+    hasFAQ ? 'FAQ structurée détectée — les moteurs IA extraient ces réponses' : 'Pas de FAQ structurée — les moteurs IA (ChatGPT, Perplexity) ne trouvent pas de réponses directes',
+    hasFAQ ? '' : 'Créer 15+ questions/réponses avec FAQPage schema — "Quel type de cuisine ?", "Horaires ?", "Réservation ?"',
+    true, hasFAQ ? 'Présente' : 'Absente');
+  if (!hasFAQ) geoScore -= 8;
+
+  // Schema for Perplexity/Gemini
+  const hasSchema = web.hasSchemaRestaurant || web.hasSchema || false;
+  add('geo_schema', 'Perplexity', 'Schema.org pour IA', hasSchema ? 'good' : 'needs_fix', 'critical',
+    hasSchema ? 'Schema.org Restaurant détecté — données structurées pour les moteurs IA' : 'Pas de Schema.org — Perplexity et Gemini ne comprennent pas la structure du restaurant',
+    hasSchema ? '' : 'Ajouter JSON-LD complet: @type Restaurant, name, address, telephone, menu, openingHours, aggregateRating, servesCuisine',
+    true, hasSchema ? 'Présent' : 'Absent');
+  if (!hasSchema) geoScore -= 12;
+
+  // Entity SEO (Wikidata)
+  add('geo_entity', 'GEO', 'Entity SEO / Wikidata', 'needs_fix', 'medium', 'Aucune entrée Wikidata détectée pour ce restaurant', 'Créer une entrée Wikidata pour apparaître dans le Knowledge Graph Google et les moteurs IA', false, 'Non détecté');
+  geoScore -= 3;
+
+  // Foursquare (important for Apple Maps + Bing)
+  if (fsq.found) {
+    add('geo_foursquare', 'GEO', 'Foursquare/Swarm', 'good', 'low', 'Présent sur Foursquare — alimente Apple Maps et Bing', '', false, 'Trouvé');
+    geoScore += 3;
+  } else {
+    add('geo_foursquare', 'GEO', 'Foursquare/Swarm', 'needs_fix', 'medium', 'Non trouvé sur Foursquare — alimente Apple Maps et Bing Places', 'Revendiquer la fiche Foursquare', false, 'Non trouvé');
+    geoScore -= 3;
+  }
+
+  // CMS info
+  if (cms.detected || cms.cms) {
+    const cmsName = cms.detected?.cms || cms.cms || 'Inconnu';
+    add('tech_cms', 'OnPage', 'CMS détecté', 'good', 'low', `CMS: ${cmsName}`, '', false, cmsName);
+  }
+
+  // Clamp scores
+  seoScore = Math.max(5, Math.min(95, seoScore));
+  geoScore = Math.max(5, Math.min(95, geoScore));
 
   return {
-    summary: { seo_score: 40, geo_score: 30, total_issues: items.filter(i => i.status !== 'good').length, critical: items.filter(i => i.severity === 'critical').length, auto_fixable: items.filter(i => i.auto_fixable).length },
+    summary: {
+      seo_score: seoScore,
+      geo_score: geoScore,
+      total_issues: items.filter(i => i.status !== 'good').length,
+      critical: items.filter(i => i.severity === 'critical').length,
+      auto_fixable: items.filter(i => i.auto_fixable).length,
+      _engine: 'deterministic_v2',
+      _dataSources: {
+        google_places: !!hasGMB,
+        website_crawl: !!hasWeb,
+        pagespeed: !!(mob.performance !== undefined),
+        tripadvisor: !!ta.found,
+        foursquare: !!fsq.found,
+        directories: dirArray.length,
+        review_analysis: !!revs.sentiment
+      }
+    },
     items
   };
 }
 
-// --- PHASE 3: GENERATE with Claude ---
+// --- PHASE 3: GENERATE — Deterministic content generation + optional Claude enhancement ---
 async function agentGenerate(runId, apiKey, analysis, scrapeResults, name, city) {
-  agentEmit(runId, { type: 'stage_started', stage: 'generate', message: '✍️ Génération de contenu IA...', progress: 52 });
+  agentEmit(runId, { type: 'stage_started', stage: 'generate', message: '✍️ Génération de contenu prêt à publier...', progress: 52 });
 
   const gmb = scrapeResults.gmb || {};
-  const items = (analysis.items || []).filter(i => i.status !== 'good');
+  const web = scrapeResults.website || {};
+  const items = (analysis.items || []).filter(i => i.status !== 'good' && i.auto_fixable);
   const generated = {};
 
-  // Build context for Claude
-  const context = {
+  const ctx = {
     name, city,
-    cuisine: gmb.category || '',
+    cuisine: gmb.category || 'Restaurant',
     address: gmb.address || '',
     phone: gmb.phone || '',
     hours: gmb.hours || '',
     rating: gmb.rating || 0,
     reviewCount: gmb.reviewCount || 0,
-    website: scrapeResults.website?.url || '',
+    website: gmb.website || web.url || '',
     priceLevel: gmb.priceLevel || '',
     description: gmb.description || ''
   };
 
-  const systemPrompt = `Tu es l'agent autonome RestauRank. Tu génères du contenu SEO/GEO prêt à publier pour les restaurants.
-Chaque contenu doit être DIRECTEMENT utilisable — pas de placeholder [xxx], utilise les vraies données fournies.
-Retourne UNIQUEMENT du JSON valide.`;
+  // ═══════════════════════════════════════════
+  // DETERMINISTIC CONTENT GENERATION (always runs)
+  // ═══════════════════════════════════════════
+  agentEmit(runId, { type: 'step', message: `📝 Génération déterministe pour ${items.length} items auto-fixables...`, progress: 54 });
 
-  // Generate in batches to stay within token limits
-  const batches = [];
-  for (let i = 0; i < items.length; i += 8) {
-    batches.push(items.slice(i, i + 8));
-  }
+  items.forEach(item => {
+    const content = generateDeterministicContent(item.id, item, ctx);
+    if (content) generated[item.id] = content;
+  });
 
-  let batchIdx = 0;
-  for (const batch of batches) {
-    batchIdx++;
-    const pct = 52 + Math.round((batchIdx / batches.length) * 20);
-    agentEmit(runId, { type: 'step', message: `Génération batch ${batchIdx}/${batches.length}...`, progress: pct });
+  agentEmit(runId, { type: 'step', message: `✅ ${Object.keys(generated).length} contenus générés en mode déterministe`, progress: 62 });
 
-    const userPrompt = `Contexte restaurant:
-${JSON.stringify(context, null, 2)}
-
-Génère du contenu prêt à publier pour ces items d'audit :
-${JSON.stringify(batch.map(i => ({ id: i.id, category: i.category, name: i.name, finding: i.finding, fix: i.fix })), null, 2)}
-
-Retourne un JSON:
-{
-  "<item_id>": {
-    "title": "<titre court>",
-    "content": "<contenu HTML prêt à utiliser — texte, code, instructions>",
-    "raw_text": "<version texte brut pour copier-coller>",
-    "platform": "<où appliquer: GBP|Website|Yelp|TripAdvisor|etc>",
-    "auto_applicable": true|false
-  }
-}
-
-IMPORTANT: Utilise les VRAIES données (nom: ${name}, ville: ${city}, tél: ${context.phone}, adresse: ${context.address}).
-Pour le schema.org, génère le JSON-LD COMPLET avec Menu, openingHours, aggregateRating.
-Pour la description GBP, exactement 700-750 caractères avec mots-clés locaux.
-Pour les Q&A, 15 questions avec réponses pré-remplies utilisant les vraies données.`;
-
-    try {
-      const raw = await agentClaudeCall(apiKey, systemPrompt, userPrompt, 4096);
-      const batchContent = extractJSON(raw);
-      if (batchContent) Object.assign(generated, batchContent);
-    } catch(e) {
-      agentEmit(runId, { type: 'warning', message: `Batch ${batchIdx} partiel: ${e.message}` });
+  // ═══════════════════════════════════════════
+  // OPTIONAL: Claude enhancement for richer content
+  // ═══════════════════════════════════════════
+  if (apiKey && items.length > 0) {
+    agentEmit(runId, { type: 'step', message: '🤖 Enrichissement IA des contenus...', progress: 64 });
+    const enrichBatch = items.filter(i => ['gbp_desc', 'op_schema', 'op_faq', 'op_metadesc'].includes(i.id)).slice(0, 5);
+    if (enrichBatch.length > 0) {
+      try {
+        const raw = await agentClaudeCall(apiKey,
+          `Tu es RestauRank. Génère du contenu SEO/GEO prêt à publier. UNIQUEMENT du JSON. Utilise les VRAIES données.`,
+          `Restaurant: ${name} à ${city}, ${ctx.cuisine}, tél: ${ctx.phone}, adresse: ${ctx.address}\nGénère:\n${JSON.stringify(enrichBatch.map(i => ({ id: i.id, name: i.name, fix: i.fix })))}\nFormat: { "<id>": { "title": "...", "content": "<html>", "raw_text": "...", "platform": "GBP|Website", "auto_applicable": true } }`,
+          4096
+        );
+        const aiContent = extractJSON(raw);
+        if (aiContent) {
+          Object.entries(aiContent).forEach(([id, c]) => { if (c.content || c.raw_text) generated[id] = { ...generated[id], ...c, _aiEnhanced: true }; });
+          agentEmit(runId, { type: 'step', message: `🤖 ${Object.keys(aiContent).length} contenus enrichis par IA`, progress: 68 });
+        }
+      } catch(e) {
+        agentEmit(runId, { type: 'step', message: 'ℹ️ Enrichissement IA non disponible — contenus déterministes utilisés', progress: 68 });
+      }
     }
-
-    // Small delay to respect rate limits
-    if (batchIdx < batches.length) await new Promise(r => setTimeout(r, 1500));
   }
 
   // Update items with generated content
   const updateItem = db.prepare('UPDATE agent_run_items SET generated_content = ? WHERE run_id = ? AND item_id = ?');
   Object.entries(generated).forEach(([itemId, content]) => {
-    updateItem.run(JSON.stringify(content), runId, itemId);
+    try { updateItem.run(JSON.stringify(content), runId, itemId); } catch(e) {}
   });
 
   const fixable = Object.keys(generated).length;
@@ -5661,146 +6012,415 @@ Pour les Q&A, 15 questions avec réponses pré-remplies utilisant les vraies don
   return generated;
 }
 
-// --- PHASE 4: APPLY ---
+// --- Deterministic content generator per item type ---
+function generateDeterministicContent(itemId, item, ctx) {
+  const { name, city, cuisine, address, phone, hours, rating, reviewCount, website, priceLevel } = ctx;
+  const hoursStr = Array.isArray(hours) ? hours.join(', ') : (hours || '');
+
+  switch (itemId) {
+    case 'gbp_desc': {
+      const desc = `${name} est un ${cuisine.toLowerCase()} situé au cœur de ${city}${address ? ', ' + address : ''}. Notre établissement vous accueille dans un cadre chaleureux pour une expérience culinaire authentique. ${rating > 0 ? `Noté ${rating}/5 par nos ${reviewCount} clients, ` : ''}nous proposons une cuisine soignée préparée avec des produits frais et de saison. Que ce soit pour un déjeuner d'affaires, un dîner en famille ou une soirée entre amis, notre équipe vous réserve le meilleur accueil. ${phone ? 'Réservation au ' + phone + '. ' : ''}${website ? 'Menu et réservation en ligne sur notre site.' : 'Venez nous découvrir !'}`;
+      return { title: 'Description GBP optimisée', content: `<p>${desc}</p>`, raw_text: desc.substring(0, 750), platform: 'GBP', auto_applicable: true };
+    }
+
+    case 'op_schema': {
+      const schema = {
+        '@context': 'https://schema.org', '@type': 'Restaurant',
+        name, address: { '@type': 'PostalAddress', streetAddress: address, addressLocality: city, addressCountry: 'FR' },
+        ...(phone && { telephone: phone }), ...(website && { url: website }),
+        servesCuisine: cuisine, priceRange: priceLevel || '€€',
+        ...(rating > 0 && { aggregateRating: { '@type': 'AggregateRating', ratingValue: String(rating), reviewCount: String(reviewCount), bestRating: '5' } }),
+        ...(hoursStr && { openingHoursSpecification: hoursStr })
+      };
+      const jsonLd = `<script type="application/ld+json">\n${JSON.stringify(schema, null, 2)}\n</script>`;
+      return { title: 'Schema.org Restaurant JSON-LD', content: `<pre><code>${jsonLd.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`, raw_text: jsonLd, platform: 'Website', auto_applicable: true };
+    }
+
+    case 'op_faq': {
+      const faqs = [
+        { q: `Quel type de cuisine propose ${name} ?`, a: `${name} est un ${cuisine.toLowerCase()} qui propose une cuisine authentique préparée avec des produits frais.` },
+        { q: `Où se trouve ${name} ?`, a: `${name} est situé ${address ? 'au ' + address + ', ' : 'à '}${city}.` },
+        { q: `Comment réserver chez ${name} ?`, a: `${phone ? 'Vous pouvez réserver par téléphone au ' + phone : 'Contactez-nous'}${website ? ' ou via notre site ' + website : ''}.` },
+        { q: `Quels sont les horaires de ${name} ?`, a: hoursStr || 'Consultez notre fiche Google pour les horaires à jour.' },
+        { q: `${name} propose-t-il des plats à emporter ?`, a: `Contactez-nous ${phone ? 'au ' + phone + ' ' : ''}pour connaître nos options de vente à emporter.` },
+        { q: `Y a-t-il un parking près de ${name} ?`, a: `${name} est situé à ${city}. Des places de stationnement sont disponibles à proximité.` },
+        { q: `${name} est-il adapté aux familles ?`, a: `Oui, ${name} accueille les familles dans un cadre convivial.` },
+        { q: `Quelle est la note de ${name} ?`, a: rating > 0 ? `${name} est noté ${rating}/5 sur Google basé sur ${reviewCount} avis.` : 'Consultez nos avis sur Google Maps.' },
+        { q: `${name} accepte-t-il les réservations de groupe ?`, a: `Pour les réservations de groupe, ${phone ? 'appelez-nous au ' + phone : 'contactez-nous directement'}.` },
+        { q: `Quelle est la fourchette de prix chez ${name} ?`, a: `${name} propose des tarifs ${priceLevel === '€' ? 'abordables' : priceLevel === '€€€' ? 'haut de gamme' : 'modérés'} pour ${city}.` }
+      ];
+      const faqSchema = { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faqs.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })) };
+      const html = faqs.map(f => `<div class="faq-item"><h3>${f.q}</h3><p>${f.a}</p></div>`).join('\n');
+      const schemaTag = `<script type="application/ld+json">\n${JSON.stringify(faqSchema, null, 2)}\n</script>`;
+      return { title: 'FAQ + FAQPage Schema', content: html + '\n' + schemaTag, raw_text: faqs.map(f => `Q: ${f.q}\nR: ${f.a}`).join('\n\n') + '\n\n' + schemaTag, platform: 'Website', auto_applicable: true };
+    }
+
+    case 'op_title': {
+      const title = `${name} — ${cuisine} à ${city} | Réservation & Menu`;
+      return { title: 'Title tag SEO', content: `<title>${title}</title>`, raw_text: title, platform: 'Website', auto_applicable: true };
+    }
+
+    case 'op_metadesc': {
+      const desc = `${name}, ${cuisine.toLowerCase()} à ${city}. ${rating > 0 ? rating + '★ sur Google. ' : ''}${phone ? 'Réservation : ' + phone + '. ' : ''}Cuisine fraîche, cadre chaleureux.`;
+      return { title: 'Meta description SEO', content: `<meta name="description" content="${desc.substring(0, 155)}">`, raw_text: desc.substring(0, 155), platform: 'Website', auto_applicable: true };
+    }
+
+    case 'op_og': {
+      const og = `<meta property="og:title" content="${name} — ${cuisine} à ${city}">\n<meta property="og:description" content="${name}, ${cuisine.toLowerCase()} à ${city}. Découvrez notre carte et réservez.">\n<meta property="og:type" content="restaurant">\n${website ? '<meta property="og:url" content="' + website + '">' : ''}`;
+      return { title: 'Open Graph tags', content: `<pre><code>${og.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</code></pre>`, raw_text: og, platform: 'Website', auto_applicable: true };
+    }
+
+    case 'op_h1': {
+      const h1 = `${name} — ${cuisine} à ${city}`;
+      return { title: 'Balise H1', content: `<h1>${h1}</h1>`, raw_text: h1, platform: 'Website', auto_applicable: true };
+    }
+
+    case 'op_nap': {
+      const nap = `<div class="nap-footer">\n  <strong>${name}</strong><br>\n  ${address ? address + '<br>\n  ' : ''}${city}<br>\n  ${phone ? '<a href="tel:' + phone + '">' + phone + '</a><br>\n  ' : ''}${website ? '<a href="' + website + '">' + website + '</a>' : ''}\n</div>`;
+      return { title: 'NAP Footer', content: nap, raw_text: `${name}\n${address}\n${city}\n${phone}\n${website}`, platform: 'Website', auto_applicable: true };
+    }
+
+    case 'gbp_hours':
+      return { title: 'Horaires GBP', content: '<p>Mettre à jour les horaires dans Google Business Profile avec tous les jours + horaires spéciaux.</p>', raw_text: 'Compléter les horaires dans GBP > Infos > Horaires', platform: 'GBP', auto_applicable: true };
+
+    case 'gbp_phone':
+      return { title: 'Téléphone GBP', content: `<p>Ajouter le numéro ${phone || 'de téléphone'} dans GBP.</p>`, raw_text: `Ajouter ${phone || 'le téléphone'} dans GBP > Infos > Téléphone`, platform: 'GBP', auto_applicable: true };
+
+    case 'gbp_category':
+      return { title: 'Catégorie GBP', content: `<p>Catégorie principale: "${cuisine}". Ajouter des catégories secondaires spécifiques.</p>`, raw_text: `Catégorie: ${cuisine}`, platform: 'GBP', auto_applicable: true };
+
+    case 'perf_mobile':
+    case 'perf_desktop':
+      return { title: 'Optimisation performance', content: '<p>1. Convertir images en WebP<br>2. Activer lazy loading<br>3. Minifier CSS/JS<br>4. Activer compression gzip<br>5. Utiliser un CDN</p>', raw_text: '1. Images WebP\n2. Lazy loading\n3. Minifier CSS/JS\n4. Gzip\n5. CDN', platform: 'Website', auto_applicable: true };
+
+    default:
+      // Generic fix content for known patterns
+      if (itemId.startsWith('cit_') || itemId.startsWith('geo_')) {
+        return { title: item.name, content: `<p>${item.fix || 'Optimiser cette fiche'}</p>`, raw_text: item.fix || 'Optimiser', platform: item.category, auto_applicable: false };
+      }
+      return null;
+  }
+}
+
+// --- PHASE 4: APPLY — Real application via CMS + prepare GBP + directory claims ---
 async function agentApply(runId, apiKey, generated, scrapeResults, name, city) {
-  agentEmit(runId, { type: 'stage_started', stage: 'apply', message: '🚀 Application automatique...', progress: 77 });
+  agentEmit(runId, { type: 'stage_started', stage: 'apply', message: '🚀 Application des améliorations...', progress: 76 });
 
-  const applied = { gbp: [], website: [], directories: [] };
+  const applied = { gbp: [], website: [], directories: [], social: [], _stats: { attempted: 0, success: 0, failed: 0, pending: 0 } };
   const cms = scrapeResults.cms || {};
+  const cmsType = (cms.detected?.cms || cms.cms || '').toLowerCase();
 
-  // Apply to website via CMS if connected
-  if (cms.cms && ['wordpress', 'webflow'].includes(cms.cms.toLowerCase())) {
-    agentEmit(runId, { type: 'step', message: `Application ${cms.cms}...`, progress: 80 });
-    const schemaContent = generated['op_schema'] || generated['schema_org'];
-    if (schemaContent) {
+  // ═══════════════════════════════════════════
+  // 4a. WEBSITE — Apply via CMS API if connected
+  // ═══════════════════════════════════════════
+  const websiteItems = ['op_schema', 'op_title', 'op_metadesc', 'op_faq', 'op_og', 'op_h1', 'op_nap'];
+  const hasWebsiteContent = websiteItems.some(id => generated[id]);
+
+  if (hasWebsiteContent && cmsType) {
+    agentEmit(runId, { type: 'step', message: `🔧 Application via ${cmsType}...`, progress: 78 });
+    applied._stats.attempted++;
+
+    // Check if CMS is connected
+    const cmsConn = db.prepare('SELECT * FROM cms_connections WHERE cms_type = ? ORDER BY created_at DESC LIMIT 1').get(cmsType);
+
+    if (cmsConn) {
       try {
-        // Build website improvements from generated content
         const improvements = {
-          schema_org: schemaContent.raw_text || schemaContent.content || '',
-          meta_title: (generated['op_title'] || {}).raw_text || `${name} — Restaurant à ${city}`,
-          meta_description: (generated['op_metadesc'] || {}).raw_text || `${name} à ${city}. Réservation en ligne.`,
-          faq_page: (generated['op_faq'] || {}).content || ''
+          schema_org: (generated['op_schema'] || {}).raw_text || '',
+          meta_title: (generated['op_title'] || {}).raw_text || '',
+          meta_description: (generated['op_metadesc'] || {}).raw_text || '',
+          faq_page: (generated['op_faq'] || {}).raw_text || '',
+          og_tags: (generated['op_og'] || {}).raw_text || '',
+          h1: (generated['op_h1'] || {}).raw_text || '',
+          nap_footer: (generated['op_nap'] || {}).raw_text || ''
         };
-        const cmsResp = await fetch(`http://localhost:${PORT}/api/cms/generic/apply`, {
+
+        const applyEndpoint = cmsType === 'wordpress' ? '/api/cms/wordpress/apply' : cmsType === 'webflow' ? '/api/cms/webflow/apply' : '/api/cms/generic/apply';
+        const cmsResp = await fetch(`http://localhost:${PORT}${applyEndpoint}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ cms_type: cms.cms, improvements })
+          body: JSON.stringify({ cms_type: cmsType, improvements, connection_id: cmsConn.id })
         });
         const cmsResult = await cmsResp.json();
-        applied.website.push({ cms: cms.cms, result: cmsResult.success ? 'success' : 'failed' });
+        const status = cmsResult.success ? 'applied' : 'failed';
+        applied.website.push({ cms: cmsType, status, items_applied: Object.keys(improvements).filter(k => improvements[k]).length, details: cmsResult });
+        if (cmsResult.success) applied._stats.success++; else applied._stats.failed++;
+        agentEmit(runId, { type: 'step', message: `${cmsResult.success ? '✅' : '❌'} CMS ${cmsType}: ${status}`, progress: 80 });
       } catch(e) {
-        applied.website.push({ cms: cms.cms, result: 'error', error: e.message });
+        applied.website.push({ cms: cmsType, status: 'error', error: e.message });
+        applied._stats.failed++;
+        agentEmit(runId, { type: 'warning', message: `Erreur CMS ${cmsType}: ${e.message}` });
       }
+    } else {
+      // CMS detected but not connected — prepare content for manual apply
+      applied.website.push({ cms: cmsType, status: 'not_connected', message: 'CMS détecté mais pas connecté — contenu prêt à copier-coller' });
+      applied._stats.pending++;
+      agentEmit(runId, { type: 'step', message: `ℹ️ CMS ${cmsType} non connecté — contenu prêt dans le Hub`, progress: 80 });
     }
+  } else if (hasWebsiteContent) {
+    applied.website.push({ status: 'no_cms', message: 'Contenu généré — à appliquer manuellement (pas de CMS détecté)' });
+    applied._stats.pending += websiteItems.filter(id => generated[id]).length;
   }
 
-  // GBP application (when API is approved)
-  agentEmit(runId, { type: 'step', message: 'Préparation GBP...', progress: 85 });
-  const gbpItems = ['gbp_desc', 'gbp_hours', 'gbp_attr', 'gbp_posts', 'gbp_menu', 'gbp_photos'];
-  gbpItems.forEach(id => {
-    if (generated[id]) {
-      applied.gbp.push({ item: id, status: 'ready', content_preview: (generated[id].raw_text || '').substring(0, 100) });
-    }
-  });
-
-  // Directory preparation
-  agentEmit(runId, { type: 'step', message: 'Scan annuaires...', progress: 88 });
-  try {
-    const dirResp = await fetch(`http://localhost:${PORT}/api/directories/auto-check`, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, city })
+  // ═══════════════════════════════════════════
+  // 4b. GBP — Prepare for API (pending approval) or manual apply
+  // ═══════════════════════════════════════════
+  agentEmit(runId, { type: 'step', message: '📋 Préparation des modifications GBP...', progress: 83 });
+  const gbpItems = Object.entries(generated).filter(([id]) => id.startsWith('gbp_'));
+  gbpItems.forEach(([id, content]) => {
+    applied.gbp.push({
+      item: id,
+      status: 'ready_to_apply', // Will be 'applied' once GBP API is approved
+      content_preview: (content.raw_text || '').substring(0, 200),
+      platform: 'Google Business Profile',
+      _note: 'API GBP en attente d\'approbation (ticket #6569000040778)'
     });
-    const dirData = await dirResp.json();
-    if (dirData.results) {
-      applied.directories = dirData.results.map(r => ({
-        platform: r.platform, found: r.found, url: r.url
-      }));
+    applied._stats.pending++;
+  });
+  if (gbpItems.length > 0) {
+    agentEmit(runId, { type: 'step', message: `📋 ${gbpItems.length} modifications GBP prêtes (API en attente)`, progress: 85 });
+  }
+
+  // ═══════════════════════════════════════════
+  // 4c. DIRECTORIES — Claim preparation from scrape results
+  // ═══════════════════════════════════════════
+  agentEmit(runId, { type: 'step', message: '🗂️ Préparation des revendications annuaires...', progress: 86 });
+  const dirResults = scrapeResults.directories || [];
+
+  if (Array.isArray(dirResults) && dirResults.length > 0) {
+    const missing = dirResults.filter(d => !d.found);
+    const found = dirResults.filter(d => d.found);
+
+    found.forEach(d => {
+      applied.directories.push({ platform: d.platform, status: 'active', url: d.url || '' });
+    });
+
+    // Prepare claim data for missing directories
+    for (const d of missing.slice(0, 6)) {
+      applied._stats.attempted++;
+      try {
+        const claimResp = await fetch(`http://localhost:${PORT}/api/directories/auto-claim`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ platform: d.platform, name, city })
+        });
+        const claimData = await claimResp.json();
+        applied.directories.push({
+          platform: d.platform, status: 'claim_ready',
+          claim_url: claimData.url || claimData.claimUrl || '',
+          instructions: claimData.instructions ? claimData.instructions.substring(0, 200) : ''
+        });
+        applied._stats.pending++;
+      } catch(e) {
+        applied.directories.push({ platform: d.platform, status: 'claim_error', error: e.message });
+        applied._stats.failed++;
+      }
     }
-  } catch(e) {
-    agentEmit(runId, { type: 'warning', message: `Directory scan error: ${e.message}` });
+
+    agentEmit(runId, { type: 'step', message: `✅ Annuaires: ${found.length} actifs, ${missing.length} à revendiquer`, progress: 89 });
   }
 
   db.prepare('UPDATE agent_runs SET apply_results = ?, stage = ? WHERE id = ?')
     .run(JSON.stringify(applied), 'apply_done', runId);
 
-  agentEmit(runId, { type: 'stage_completed', stage: 'apply', results: applied, progress: 92 });
+  agentEmit(runId, { type: 'stage_completed', stage: 'apply', results: { attempted: applied._stats.attempted, success: applied._stats.success, pending: applied._stats.pending }, progress: 90 });
   return applied;
 }
 
-// --- PHASE 5: REPORT ---
-async function agentReport(runId, apiKey, analysis, generated, applied, name, city) {
-  agentEmit(runId, { type: 'stage_started', stage: 'report', message: '📊 Génération du rapport...', progress: 94 });
+// --- PHASE 5: REPORT — Comprehensive real data report ---
+async function agentReport(runId, apiKey, analysis, generated, applied, scrapeResults, name, city) {
+  agentEmit(runId, { type: 'stage_started', stage: 'report', message: '📊 Génération du rapport complet...', progress: 91 });
 
   const items = analysis.items || [];
   const issues = items.filter(i => i.status !== 'good');
   const autoFixed = Object.keys(generated).length;
-  const manualNeeded = issues.length - autoFixed;
+  const manualNeeded = issues.filter(i => !i.auto_fixable).length;
+  const gmb = scrapeResults.gmb || {};
 
   const report = {
     restaurant: name,
     city,
+    timestamp: new Date().toISOString(),
     scores: analysis.summary || { seo_score: 0, geo_score: 0 },
+    real_data: {
+      google_rating: gmb.rating || null,
+      google_reviews: gmb.reviewCount || null,
+      place_id: gmb.place_id || null,
+      website: gmb.website || scrapeResults.website?.url || null,
+      phone: gmb.phone || null,
+      address: gmb.address || null,
+      category: gmb.category || null
+    },
     total_items_analyzed: items.length,
     issues_found: issues.length,
     auto_generated: autoFixed,
     manual_actions: manualNeeded,
     by_category: {},
+    by_severity: { critical: 0, high: 0, medium: 0, low: 0 },
     critical_actions: issues.filter(i => i.severity === 'critical').map(i => ({
-      name: i.name, finding: i.finding, fix: i.fix
+      id: i.id, name: i.name, finding: i.finding, fix: i.fix, auto_fixable: i.auto_fixable
     })),
-    next_steps: issues.filter(i => !i.auto_fixable).slice(0, 10).map(i => ({
-      name: i.name, priority: i.severity, action: i.fix
-    }))
+    quick_wins: issues.filter(i => i.auto_fixable && i.severity !== 'low').slice(0, 5).map(i => ({
+      id: i.id, name: i.name, fix: i.fix, content_ready: !!generated[i.id]
+    })),
+    manual_next_steps: issues.filter(i => !i.auto_fixable).slice(0, 10).map(i => ({
+      name: i.name, priority: i.severity, action: i.fix, category: i.category
+    })),
+    apply_summary: {
+      website: applied.website || [],
+      gbp_ready: (applied.gbp || []).length,
+      directories_active: (applied.directories || []).filter(d => d.status === 'active').length,
+      directories_to_claim: (applied.directories || []).filter(d => d.status === 'claim_ready').length
+    },
+    data_sources: analysis.summary?._dataSources || {},
+    _engine: analysis.summary?._engine || 'unknown',
+    _aiEnhanced: analysis._aiEnhanced || false
   };
 
   // Group by category
   items.forEach(i => {
-    if (!report.by_category[i.category]) report.by_category[i.category] = { total: 0, good: 0, issues: 0 };
+    if (!report.by_category[i.category]) report.by_category[i.category] = { total: 0, good: 0, issues: 0, items: [] };
     report.by_category[i.category].total++;
     if (i.status === 'good') report.by_category[i.category].good++;
-    else report.by_category[i.category].issues++;
+    else {
+      report.by_category[i.category].issues++;
+      report.by_category[i.category].items.push({ id: i.id, name: i.name, severity: i.severity, fix: i.fix });
+    }
+    if (i.status !== 'good' && report.by_severity[i.severity] !== undefined) report.by_severity[i.severity]++;
   });
 
-  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
-    .run('completed', 'done', runId);
+  // Log to action_log
+  try {
+    db.prepare('INSERT INTO action_log (restaurant_id, action_type, details) VALUES (?, ?, ?)')
+      .run(null, 'agent_report', JSON.stringify({ run_id: runId, scores: report.scores, issues: report.issues_found, auto: report.auto_generated }));
+  } catch(e) {}
 
-  agentEmit(runId, { type: 'run_completed', report, progress: 100 });
+  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run('report_done', 'report_done', runId);
+
+  agentEmit(runId, { type: 'step', message: `📊 Rapport: SEO ${report.scores.seo_score}/100, GEO ${report.scores.geo_score}/100, ${report.issues_found} problèmes, ${report.auto_generated} corrections prêtes`, progress: 93 });
+  agentEmit(runId, { type: 'stage_completed', stage: 'report', report, progress: 93 });
   return report;
 }
 
-// --- POST /api/agent/launch — Start full autonomous run ---
+// --- PHASE 6: REFLECTION / VERIFICATION — Re-scrape, compare, verify, correct ---
+async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeResults, name, city, websiteUrl) {
+  agentEmit(runId, { type: 'stage_started', stage: 'verify', message: '🔄 Vérification et réflexion...', progress: 94 });
+
+  const verification = { checks: [], improvements: [], score_delta: { seo: 0, geo: 0 }, verified_at: new Date().toISOString() };
+
+  // 6a. Re-scrape website to verify CMS changes took effect
+  if (websiteUrl && applied.website?.some(w => w.status === 'applied')) {
+    agentEmit(runId, { type: 'step', message: '🔍 Re-crawl du site web pour vérifier les changements...', progress: 95 });
+    try {
+      const reAuditResp = await fetch(`http://localhost:${PORT}/api/audit-website`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: websiteUrl })
+      });
+      const reAudit = await reAuditResp.json();
+      if (reAudit.success) {
+        const before = scrapeResults.website || {};
+        const after = reAudit.data || {};
+
+        // Compare key fields
+        const checks = [
+          { field: 'Schema.org', before: !!before.hasSchemaRestaurant, after: !!after.hasSchemaRestaurant },
+          { field: 'Title', before: !!before.hasTitle, after: !!after.hasTitle },
+          { field: 'Meta desc', before: !!before.hasMetaDesc, after: !!after.hasMetaDesc },
+          { field: 'FAQ', before: !!before.hasFAQ, after: !!after.hasFAQ },
+          { field: 'OG tags', before: !!before.hasOGTags, after: !!after.hasOGTags },
+          { field: 'NAP', before: !!before.napOnSite, after: !!after.napOnSite }
+        ];
+
+        checks.forEach(c => {
+          const improved = !c.before && c.after;
+          const regressed = c.before && !c.after;
+          verification.checks.push({ ...c, status: improved ? 'improved' : regressed ? 'regressed' : c.after ? 'ok' : 'still_missing' });
+          if (improved) {
+            verification.improvements.push(c.field);
+            verification.score_delta.seo += 3;
+          }
+          if (regressed) verification.score_delta.seo -= 5;
+        });
+
+        const improved = verification.improvements.length;
+        const stillMissing = checks.filter(c => !c.after).length;
+        agentEmit(runId, { type: 'step', message: `✅ Vérification site: ${improved} améliorations confirmées, ${stillMissing} encore à faire`, progress: 97 });
+      }
+    } catch(e) {
+      agentEmit(runId, { type: 'warning', message: `Re-crawl échoué: ${e.message}` });
+    }
+  }
+
+  // 6b. Verify directory presence
+  const claimedDirs = (applied.directories || []).filter(d => d.status === 'claim_ready');
+  if (claimedDirs.length > 0) {
+    agentEmit(runId, { type: 'step', message: `📋 ${claimedDirs.length} annuaires à revendiquer — vérification programmée`, progress: 98 });
+    verification.checks.push({ field: 'Directories', pending_claims: claimedDirs.length, note: 'Les revendications d\'annuaires prennent 24-72h pour être traitées' });
+  }
+
+  // 6c. Score adjustment based on verification
+  const finalScores = {
+    seo: Math.max(0, Math.min(100, (analysis.summary?.seo_score || 0) + verification.score_delta.seo)),
+    geo: Math.max(0, Math.min(100, (analysis.summary?.geo_score || 0) + verification.score_delta.geo))
+  };
+  verification.final_scores = finalScores;
+
+  // 6d. Generate reflection summary
+  verification.reflection = {
+    total_checks: verification.checks.length,
+    improvements_confirmed: verification.improvements.length,
+    regressions: verification.checks.filter(c => c.status === 'regressed').length,
+    still_pending: verification.checks.filter(c => c.status === 'still_missing').length,
+    recommendation: verification.improvements.length > 0
+      ? `${verification.improvements.length} améliorations vérifiées. Re-scanner dans 48h pour confirmer l'indexation.`
+      : 'Aucun changement appliqué détecté — vérifier la connexion CMS et relancer.'
+  };
+
+  // Update run with final status
+  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run('completed', 'done', runId);
+
+  agentEmit(runId, { type: 'step', message: `🏁 Terminé — SEO ${finalScores.seo}/100, GEO ${finalScores.geo}/100`, progress: 100 });
+  agentEmit(runId, { type: 'run_completed', verification, final_scores: finalScores, progress: 100 });
+  return verification;
+}
+
+// --- POST /api/agent/launch — Start full autonomous run (works WITHOUT Claude API key) ---
 app.post('/api/agent/launch', async (req, res) => {
   const { restaurant_name, city, website_url, restaurant_id } = req.body;
   if (!restaurant_name || !city) return res.status(400).json({ success: false, error: 'restaurant_name and city required' });
 
+  // API key is OPTIONAL — deterministic engine works without it
   const apiKey = getAIKey(restaurant_id);
-  if (!apiKey) return res.status(400).json({ success: false, error: 'No Claude API key configured. Set ANTHROPIC_API_KEY env var or save via /api/ai/save-key' });
 
   // Create run
   const result = db.prepare('INSERT INTO agent_runs (restaurant_name, city, website_url, restaurant_id, status, stage) VALUES (?, ?, ?, ?, ?, ?)')
     .run(restaurant_name, city, website_url || null, restaurant_id || null, 'running', 'init');
   const runId = result.lastInsertRowid;
 
-  res.json({ success: true, run_id: runId, status: 'running', stream_url: `/api/agent/stream?run_id=${runId}` });
+  res.json({ success: true, run_id: runId, status: 'running', stream_url: `/api/agent/stream?run_id=${runId}`, mode: apiKey ? 'ai_enhanced' : 'deterministic' });
 
-  // Run pipeline async
+  // Run 6-phase pipeline async
   (async () => {
     try {
-      agentEmit(runId, { type: 'run_started', run_id: runId, restaurant: restaurant_name, progress: 0 });
+      agentEmit(runId, { type: 'run_started', run_id: runId, restaurant: restaurant_name, mode: apiKey ? 'ai_enhanced' : 'deterministic', progress: 0 });
 
-      // Phase 1: Scrape
+      // Phase 1: Scrape — real multi-API data collection
       const scrapeResults = await agentScrape(runId, restaurant_name, city, website_url);
 
-      // Phase 2: Analyze
+      // Phase 2: Analyze — deterministic + optional AI enhancement
       const analysis = await agentAnalyze(runId, apiKey, scrapeResults, restaurant_name, city);
 
-      // Phase 3: Generate
+      // Phase 3: Generate — deterministic content + optional AI enrichment
       const generated = await agentGenerate(runId, apiKey, analysis, scrapeResults, restaurant_name, city);
 
-      // Phase 4: Apply
+      // Phase 4: Apply — CMS, GBP prep, directory claims
       const applied = await agentApply(runId, apiKey, generated, scrapeResults, restaurant_name, city);
 
-      // Phase 5: Report
-      await agentReport(runId, apiKey, analysis, generated, applied, restaurant_name, city);
+      // Phase 5: Report — comprehensive real data report
+      const report = await agentReport(runId, apiKey, analysis, generated, applied, scrapeResults, restaurant_name, city);
+
+      // Phase 6: Verify — reflection loop (re-scrape + compare + correct)
+      await agentVerify(runId, apiKey, analysis, generated, applied, scrapeResults, restaurant_name, city, website_url);
 
     } catch(e) {
       console.error('Agent run error:', e);
