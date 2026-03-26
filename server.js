@@ -3798,29 +3798,8 @@ app.delete('/api/keywords/:id', (req, res) => {
 app.get('/api/stats/seo', (req, res) => {
   const restaurantId = req.query.restaurant_id || 1;
   const history = db.prepare('SELECT * FROM seo_stats_history WHERE restaurant_id = ? ORDER BY recorded_at DESC LIMIT 12').all(restaurantId);
-  // If no history, generate initial data and store it
-  if (history.length === 0) {
-    const months = ['2025-12', '2026-01', '2026-02', '2026-03'];
-    const insert = db.prepare('INSERT INTO seo_stats_history (restaurant_id, period, total_searches, maps_views, actions_count, branded_searches, discovery_searches) VALUES (?, ?, ?, ?, ?, ?, ?)');
-    const tx = db.transaction(() => {
-      let base_s = 2000 + Math.floor(Math.random() * 3000);
-      let base_m = 1500 + Math.floor(Math.random() * 2000);
-      let base_a = 800 + Math.floor(Math.random() * 1000);
-      for (const m of months) {
-        const growth = 1 + (Math.random() * 0.15);
-        base_s = Math.floor(base_s * growth);
-        base_m = Math.floor(base_m * growth);
-        base_a = Math.floor(base_a * growth);
-        const branded = Math.floor(base_s * (0.4 + Math.random() * 0.2));
-        const discovery = base_s - branded;
-        insert.run(restaurantId, m, base_s, base_m, base_a, branded, discovery);
-      }
-    });
-    tx();
-    const newHistory = db.prepare('SELECT * FROM seo_stats_history WHERE restaurant_id = ? ORDER BY recorded_at DESC LIMIT 12').all(restaurantId);
-    return res.json({ success: true, stats: newHistory });
-  }
-  res.json({ success: true, stats: history });
+  // No fake data — return empty if no real stats yet (requires GBP API)
+  res.json({ success: true, stats: history, note: history.length === 0 ? 'Aucune donnée — les statistiques de recherches/vues nécessitent l\'API Google Business Profile (demande en cours).' : null });
 });
 
 app.post('/api/stats/seo', (req, res) => {

@@ -3550,7 +3550,7 @@ function _seedHash(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCod
 // Prepare real audit data for the scoring engine
 // null = "couldn't check" → score as 0 but mark as unavailable
 function _prepareRealData(raw, name, city) {
-    const d = { ...raw, name, city };
+    const d = { ...raw, name, city, _auditSource: 'real', _realAuditComplete: true };
     // For scoring: null → 0/false (pessimistic default), but keep _isNull flag
     const boolFields = ['hasPrimaryCategory','primaryCategorySpecific','hoursComplete','specialHours','menuUploaded','menuStructured','bookingLink','hasSchemaRestaurant','schemaComplete','hasFAQ','titleOptimized','hasTitle','napOnSite','hasMetaDesc','hasOpenGraph','hasPhoneLink','hasMapEmbed','hasSocialLinks','hasSitemap','hasRobotsTxt','hasBookingLink','hasCanonical','hasAltTags','hasHreflang','httpsRedirect','foursquarePresent','foursquareOptimized','hasBlog','hasWikipedia','contentFreshness'];
     const numFields = ['secondaryCategories','descriptionLength','photoCount','attributeCount','postsPerMonth','rating','reviewCount','recentReviewsPerMonth','responseRate','platformsWithReviews','napConsistency','directoryPresence','listingCompleteness','faqCount','mobileSpeed','contentRichness','metaDescLength','headingCount','yelpOptimized','ugcPresence','socialScore','brandMentions','localBacklinks','gbpQACount','bestOfListings'];
@@ -8490,88 +8490,79 @@ async function renderStatsTab(){
     const rid=currentData?.restaurant_id||1;
     
     container.innerHTML='<p style="text-align:center;color:var(--mut);padding:40px;">⏳ Chargement des statistiques...</p>';
-    
-    let stats=[];
-    try{
-        const r=await fetchTimeout(`${API_BASE}/api/stats/seo?restaurant_id=${rid}`,{},8000);
-        const j=await r.json();
-        if(j.success)stats=j.stats;
-    }catch(e){console.warn('Stats fetch failed, using fallback',e);}
-    
-    if(!stats||stats.length===0){
-        const months=['2025-12','2026-01','2026-02','2026-03'];
-        let base_s=2000+Math.floor(Math.random()*3000);
-        let base_m=1500+Math.floor(Math.random()*2000);
-        let base_a=800+Math.floor(Math.random()*1000);
-        stats=[];
-        for(const m of months){
-            const growth=1+(Math.random()*0.15);
-            base_s=Math.floor(base_s*growth);
-            base_m=Math.floor(base_m*growth);
-            base_a=Math.floor(base_a*growth);
-            const branded=Math.floor(base_s*(0.4+Math.random()*0.2));
-            stats.push({period:m,total_searches:base_s,maps_views:base_m,actions_count:base_a,branded_searches:branded,discovery_searches:base_s-branded});
-        }
-    }
-    
-    const latest=stats[stats.length-1]||{};
-    const prev=stats.length>1?stats[stats.length-2]:{};
-    const calcTrend=(cur,old)=>old?Math.round(((cur-old)/old)*100):0;
-    
-    const kpis=[
-        {label:'Total recherches',value:latest.total_searches||0,trend:calcTrend(latest.total_searches,prev.total_searches)},
-        {label:'Vues Maps',value:latest.maps_views||0,trend:calcTrend(latest.maps_views,prev.maps_views)},
-        {label:'Actions (appels+itinéraires)',value:latest.actions_count||0,trend:calcTrend(latest.actions_count,prev.actions_count)}
-    ];
-    
+
+    // ── Real data from Google Places + audit ──
+    const gd=window._realAuditDetails?.google||{};
+    const wd=window._realAuditDetails?.website||{};
+    const src=window._realAuditSources||{};
+    const hasGoogle=gd.available===true;
+    const hasWebsite=wd.available===true;
+
+    // Real KPIs from actual data
+    const realRating=currentData?.rating||gd.rating||0;
+    const realReviews=currentData?.reviewCount||gd.reviewCount||0;
+    const realPhotos=gd.photos?.length||currentData?.photoCount||0;
+    const dirResults=Object.values(dirCheckResults||{});
+    const dirsFound=dirResults.filter(r=>r.found).length;
+    const dirsTotal=dirResults.length||0;
+    const seoScore=currentScores?.seo||0;
+    const geoScore=currentScores?.geo||0;
+
+    // Keywords — server-side only (no random generation)
     let keywords=[];
     try{
         const r2=await fetchTimeout(`${API_BASE}/api/keywords?restaurant_id=${rid}`,{},8000);
         const j2=await r2.json();
-        if(j2.success&&j2.keywords.length>0)keywords=j2.keywords.map(k=>({kw:k.keyword,lang:k.language,pop:k.popularity,pos:k.position||Math.floor(Math.random()*20)+1,change:k.position&&k.previous_position?(k.position<k.previous_position?'↑':k.position>k.previous_position?'↓':'→'):'→',comp:k.competitors}));
+        if(j2.success&&j2.keywords.length>0)keywords=j2.keywords.map(k=>({kw:k.keyword,lang:k.language||'FR',pop:k.popularity||'Moyenne',pos:k.position||'—',change:k.position&&k.previous_position?(k.position<k.previous_position?'↑':k.position>k.previous_position?'↓':'→'):'—',comp:k.competitors||0,id:k.id}));
     }catch(e){}
-    
-    if(keywords.length===0){
-        keywords=[
-            {kw:`${name} ${city}`,lang:'FR',pop:'Élevée',pos:Math.floor(Math.random()*10)+1,change:'→',comp:Math.floor(Math.random()*8)+2},
-            {kw:`Restaurant ${city}`,lang:'FR',pop:'Élevée',pos:Math.floor(Math.random()*15)+3,change:'↑',comp:Math.floor(Math.random()*12)+3},
-            {kw:`Meilleur resto ${city}`,lang:'FR',pop:'Moyenne',pos:Math.floor(Math.random()*20)+5,change:'↑',comp:Math.floor(Math.random()*15)+4},
-            {kw:`Restaurant français`,lang:'FR',pop:'Moyenne',pos:Math.floor(Math.random()*25)+10,change:'→',comp:Math.floor(Math.random()*20)+8},
-            {kw:`Où manger ${city}`,lang:'FR',pop:'Moyenne',pos:Math.floor(Math.random()*30)+12,change:'↑',comp:Math.floor(Math.random()*18)+7}
-        ];
-        try{fetchTimeout(`${API_BASE}/api/keywords/bulk`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,keywords:keywords.map(k=>({keyword:k.kw,language:k.lang,popularity:k.pop,position:k.pos,competitors:k.comp}))})},5000).catch(()=>{});}catch(e){}
-    }
 
-    const brandedPcts=stats.map(s=>s.branded_searches&&s.total_searches?Math.round(s.branded_searches/s.total_searches*100):50);
-    const discoveryPcts=stats.map(s=>s.discovery_searches&&s.total_searches?Math.round(s.discovery_searches/s.total_searches*100):50);
-    const brandedGrowth=stats.length>1?calcTrend(stats[stats.length-1].branded_searches,stats[0].branded_searches):0;
-    const discoveryGrowth=stats.length>1?calcTrend(stats[stats.length-1].discovery_searches,stats[0].discovery_searches):0;
+    // Source badges
+    const srcBadge=(key,label)=>{
+        const s=src[key];
+        if(s==='ok')return `<span style="font-size:.55rem;padding:1px 6px;border-radius:4px;background:rgba(16,185,129,.12);color:var(--grn);font-weight:600;">API ${label}</span>`;
+        return `<span style="font-size:.55rem;padding:1px 6px;border-radius:4px;background:rgba(239,68,68,.1);color:var(--red);font-weight:600;">Non connecté</span>`;
+    };
 
-    let html=`<div class="stats-kpi-cards">`;
+    let html=``;
+
+    // ── Data source banner ──
+    const activeSources=Object.entries(src).filter(([k,v])=>v==='ok').map(([k])=>k);
+    html+=`<div style="padding:10px 14px;border-radius:10px;background:${activeSources.length>0?'rgba(16,185,129,.06)':'rgba(245,158,11,.06)'};border:1px solid ${activeSources.length>0?'rgba(16,185,129,.15)':'rgba(245,158,11,.15)'};margin-bottom:16px;font-size:.75rem;">
+        <span style="font-weight:700;color:var(--txt);">Sources de données :</span>
+        ${activeSources.length>0?activeSources.map(s=>`<span style="display:inline-block;padding:1px 8px;border-radius:4px;background:rgba(16,185,129,.12);color:var(--grn);font-weight:600;font-size:.65rem;margin-left:4px;">✓ ${s}</span>`).join(''):'<span style="color:var(--org);"> Aucune source API active</span>'}
+        ${!hasGoogle?'<span style="display:block;margin-top:4px;color:var(--mut);">Les KPI de recherches et vues Maps seront disponibles une fois l\'API Google Business Profile activée (demande en cours).</span>':''}
+    </div>`;
+
+    // ── Real KPI cards ──
+    html+=`<div class="stats-kpi-cards">`;
+    const kpis=[
+        {label:'Note Google',value:realRating?realRating.toFixed(1)+'/5':'—',src:hasGoogle?'Google Places':'—',color:realRating>=4?'var(--grn)':realRating>=3?'var(--org)':'var(--red)'},
+        {label:'Nombre d\'avis',value:realReviews?realReviews.toLocaleString('fr-FR'):'—',src:hasGoogle?'Google Places':'—',color:'var(--ind)'},
+        {label:'Score SEO',value:seoScore+'%',src:'Audit RestauRank',color:seoScore>=70?'var(--grn)':seoScore>=40?'var(--org)':'var(--red)'},
+        {label:'Score GEO',value:geoScore+'%',src:'Audit RestauRank',color:geoScore>=70?'var(--grn)':geoScore>=40?'var(--org)':'var(--red)'},
+        {label:'Annuaires trouvés',value:dirsTotal>0?`${dirsFound}/${dirsTotal}`:'—',src:dirsTotal>0?'Scan auto':'—',color:dirsFound>3?'var(--grn)':'var(--org)'},
+        {label:'Photos indexées',value:realPhotos||'—',src:hasGoogle?'Google Places':'—',color:'var(--cyn)'}
+    ];
     kpis.forEach(kpi=>{
-        const trendClass=kpi.trend>0?'up':'down';
-        const trendSymbol=kpi.trend>0?'📈':kpi.trend<0?'📉':'→';
         html+=`<div class="kpi-card">
             <div class="kpi-label">${kpi.label}</div>
-            <div class="kpi-value">${kpi.value.toLocaleString('fr-FR')}</div>
-            <div class="kpi-trend ${trendClass}">${trendSymbol} ${Math.abs(kpi.trend)}% ce mois</div>
+            <div class="kpi-value" style="color:${kpi.color};">${kpi.value}</div>
+            <div class="kpi-trend" style="font-size:.6rem;color:var(--mut);">${kpi.src}</div>
         </div>`;
     });
     html+=`</div>`;
 
+    // ── GBP Performance (recherches, vues) — requires GBP API ──
     html+=`<div class="chart-section">
-        <h3 class="chart-title">📊 Notoriété vs Découverte (4 derniers mois)</h3>
-        <div class="bar-chart">
-            <div class="bar-col">
-                <div class="bar-label">Notoriété (branded)</div>
-                <div class="bar-graph">`;
-    brandedPcts.forEach(p=>{html+=`<div class="bar" style="height:${Math.max(p,10)}%;"></div>`;});
-    html+=`</div><div class="bar-value">${brandedGrowth>0?'+':''}${brandedGrowth}%</div></div>
-            <div class="bar-col">
-                <div class="bar-label">Découverte (generic)</div>
-                <div class="bar-graph">`;
-    discoveryPcts.forEach(p=>{html+=`<div class="bar" style="background:linear-gradient(135deg,var(--org),#f59e0b);height:${Math.max(p,10)}%;"></div>`;});
-    html+=`</div><div class="bar-value">${discoveryGrowth>0?'+':''}${discoveryGrowth}%</div></div></div></div>`;
+        <h3 class="chart-title">📊 Performance Google Business Profile</h3>
+        <div style="padding:20px;background:var(--s1);border-radius:10px;border:1px solid var(--bdr);text-align:center;">
+            <div style="font-size:2rem;margin-bottom:10px;">🔒</div>
+            <div style="font-weight:600;color:var(--txt);margin-bottom:6px;">Recherches, vues Maps & actions — API GBP requise</div>
+            <div style="font-size:.78rem;color:var(--mut);line-height:1.5;">Les statistiques de recherches Google, vues Maps, appels et itinéraires nécessitent l'accès à l'API Google Business Profile.<br>
+            <span style="color:var(--org);font-weight:600;">Demande en cours — ticket #6569000040778 (soumis le 22/03/2026)</span></div>
+            <div style="margin-top:12px;font-size:.72rem;color:var(--mut);">En attendant, vos scores SEO et GEO sont calculés à partir de données réelles (Google Places, crawl site web, scan annuaires).</div>
+        </div>
+    </div>`;
 
     html+=`<div class="chart-section">
         <h3 class="chart-title">🎯 Classements mots-clés (Top 10)</h3>
@@ -9057,7 +9048,7 @@ function editTargetKeywords(){
     const pops=['Élevée','Moyenne','Faible'];
     window._targetKeywords=newKws.map(kw=>{
         const existing=keywords.find(k=>k.kw.toLowerCase()===kw.toLowerCase());
-        return existing||{kw,lang:'fr',pop:pops[Math.floor(Math.random()*3)],comp:Math.floor(Math.random()*20)+1};
+        return existing||{kw,lang:'fr',pop:'Moyenne',comp:0};
     });
     renderTargetKeywords();
     addToLog('🎯 Mots-clés cibles mis à jour ('+newKws.length+')');
@@ -9083,7 +9074,7 @@ function generateKeywordSuggestions(){
         const kws=pick.split(',').map(s=>s.trim()).filter(Boolean);
         const existing=window._targetKeywords||[];
         const pops=['Élevée','Moyenne','Faible'];
-        kws.forEach(kw=>{if(!existing.find(e=>e.kw.toLowerCase()===kw.toLowerCase()))existing.push({kw,lang:'fr',pop:pops[Math.floor(Math.random()*3)],comp:Math.floor(Math.random()*20)+1});});
+        kws.forEach(kw=>{if(!existing.find(e=>e.kw.toLowerCase()===kw.toLowerCase()))existing.push({kw,lang:'fr',pop:'Moyenne',comp:0});});
         window._targetKeywords=existing;
         renderTargetKeywords();
         addToLog('💡 '+kws.length+' mot(s)-clé(s) ajouté(s)');
