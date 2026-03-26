@@ -1410,6 +1410,7 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         <div class="dash-tab" onclick="switchDashTab('reviews')">⭐ Avis</div>
         <div class="dash-tab" onclick="switchDashTab('social')">📱 Social</div>
         <div class="dash-tab" onclick="switchDashTab('dispatch')">🤖 IA Dispatch</div>
+        <div class="dash-tab" onclick="switchDashTab('agent')" style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.15));font-weight:600;">🧠 Agent Auto</div>
         <div class="dash-tab" onclick="switchDashTab('team')">👥 Équipe</div>
         <div class="dash-tab" onclick="switchDashTab('settings')">⚙️ Paramètres</div>
     </div>
@@ -1766,6 +1767,67 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
     
     <!-- TEAM TAB -->
     <div class="dash-tab-content" id="tabTeam"></div>
+
+    <!-- AGENT AUTONOMOUS TAB -->
+    <div class="dash-tab-content" id="tabAgent">
+      <div id="agentPanel" style="max-width:800px;margin:0 auto;">
+        <!-- Launch screen -->
+        <div id="agentLaunch">
+          <div style="text-align:center;padding:30px 0 20px;">
+            <div style="font-size:3rem;margin-bottom:8px;">🧠</div>
+            <h2 style="margin:0 0 8px;font-size:1.4rem;">Agent Autonome RestauRank</h2>
+            <p style="color:var(--t2);margin:0 0 24px;font-size:.9rem;">Entrez le nom du restaurant. L'agent IA fait <strong>tout</strong> : scrape, analyse, génère, applique.</p>
+          </div>
+          <div style="display:flex;gap:8px;margin-bottom:12px;">
+            <input type="text" id="agentRestName" placeholder="Nom du restaurant" style="flex:2;padding:12px 16px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:10px;font-size:1rem;">
+            <input type="text" id="agentCity" placeholder="Ville" style="flex:1;padding:12px 16px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:10px;font-size:1rem;">
+          </div>
+          <input type="text" id="agentWebsite" placeholder="Site web (optionnel)" style="width:100%;padding:12px 16px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:10px;font-size:.9rem;margin-bottom:16px;box-sizing:border-box;">
+          <button onclick="launchAgent()" style="width:100%;padding:16px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:transform .15s;">
+            🚀 Lancer l'Agent Autonome
+          </button>
+          <div id="agentHistory" style="margin-top:24px;"></div>
+        </div>
+
+        <!-- Progress screen -->
+        <div id="agentProgress" style="display:none;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:2rem;" id="agentStageIcon">🔍</div>
+            <h3 id="agentStageText" style="margin:8px 0 4px;">Initialisation...</h3>
+            <p id="agentStageDetail" style="color:var(--t2);margin:0;font-size:.85rem;"></p>
+          </div>
+          <!-- Progress bar -->
+          <div style="background:var(--s1);border-radius:10px;height:8px;margin-bottom:16px;overflow:hidden;">
+            <div id="agentProgressBar" style="height:100%;background:linear-gradient(90deg,#6366f1,#a855f7);border-radius:10px;width:0%;transition:width .5s ease;"></div>
+          </div>
+          <div id="agentProgressPct" style="text-align:center;font-weight:600;color:var(--ind2);margin-bottom:16px;">0%</div>
+          <!-- Timeline -->
+          <div id="agentTimeline" style="border-left:2px solid var(--bdr);margin-left:12px;padding-left:16px;"></div>
+        </div>
+
+        <!-- Results screen -->
+        <div id="agentResults" style="display:none;">
+          <div style="text-align:center;margin-bottom:20px;">
+            <div style="font-size:2.5rem;">✅</div>
+            <h2 style="margin:8px 0;">Audit terminé</h2>
+          </div>
+          <!-- Score cards -->
+          <div id="agentScoreCards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:20px;"></div>
+          <!-- Category breakdown -->
+          <div id="agentCategories" style="margin-bottom:20px;"></div>
+          <!-- Generated content list -->
+          <h3 style="margin-bottom:10px;">📝 Contenu généré par l'IA</h3>
+          <div id="agentGenerated" style="margin-bottom:20px;"></div>
+          <!-- Manual actions -->
+          <h3 style="margin-bottom:10px;">⚠️ Actions manuelles requises</h3>
+          <div id="agentManual" style="margin-bottom:20px;"></div>
+          <!-- Relaunch -->
+          <button onclick="document.getElementById('agentLaunch').style.display='';document.getElementById('agentResults').style.display='none';" style="width:100%;padding:14px;background:var(--s2);color:var(--txt);border:1px solid var(--bdr);border-radius:10px;font-size:1rem;cursor:pointer;margin-top:10px;">
+            🔄 Relancer un audit
+          </button>
+        </div>
+      </div>
+    </div>
 
     <!-- SETTINGS TAB -->
     <div class="dash-tab-content" id="tabSettings">
@@ -5477,7 +5539,7 @@ function switchDashTab(tab){
     document.querySelectorAll('.dash-tab').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.dash-tab-content').forEach(c=>c.classList.remove('active'));
 
-    const tabMap={audit:'Audit',stats:'SEO Stats',hub:'Hub Central',reviews:'Avis',social:'Social',dispatch:'IA Dispatch',team:'Équipe',settings:'Paramètres'};
+    const tabMap={audit:'Audit',stats:'SEO Stats',hub:'Hub Central',reviews:'Avis',social:'Social',dispatch:'IA Dispatch',agent:'Agent Auto',team:'Équipe',settings:'Paramètres'};
     document.querySelectorAll('.dash-tab').forEach(t=>{if(t.textContent.includes(tabMap[tab]||tab))t.classList.add('active');});
     const el=document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
     if(el)el.classList.add('active');
@@ -5485,6 +5547,243 @@ function switchDashTab(tab){
     if(tab==='dispatch'){try{renderCMSPanel();renderDirAutoGrid();}catch(e){}}
     if(tab==='hub'){try{populateHub();renderHubSources();renderHubPhotos();}catch(e){}}
     if(tab==='team'){try{renderTeam();}catch(e){}}
+    if(tab==='agent'){try{loadAgentHistory();}catch(e){}}
+}
+
+// ============================================================
+// 🧠 AGENT AUTONOMOUS — Frontend
+// ============================================================
+let agentSSE=null;
+let agentCurrentRunId=null;
+
+function launchAgent(){
+  const name=document.getElementById('agentRestName').value.trim()||currentData?.name||storedName;
+  const city=document.getElementById('agentCity').value.trim()||currentData?.city||storedCity;
+  const website=document.getElementById('agentWebsite').value.trim()||currentData?.websiteUrl||storedWebsite||'';
+  if(!name||!city){showToast('Entrez le nom du restaurant et la ville','error');return;}
+
+  // Switch to progress screen
+  document.getElementById('agentLaunch').style.display='none';
+  document.getElementById('agentProgress').style.display='';
+  document.getElementById('agentResults').style.display='none';
+  document.getElementById('agentTimeline').innerHTML='';
+  document.getElementById('agentProgressBar').style.width='0%';
+  document.getElementById('agentProgressPct').textContent='0%';
+
+  // Launch
+  fetch(`${API_BASE}/api/agent/launch`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_name:name,city,website_url:website,restaurant_id:currentData?.restaurant_id||null})})
+  .then(r=>r.json()).then(data=>{
+    if(!data.success){showToast(data.error||'Erreur','error');document.getElementById('agentLaunch').style.display='';document.getElementById('agentProgress').style.display='none';return;}
+    agentCurrentRunId=data.run_id;
+    connectAgentSSE(data.run_id);
+  }).catch(e=>{showToast('Erreur: '+e.message,'error');document.getElementById('agentLaunch').style.display='';document.getElementById('agentProgress').style.display='none';});
+}
+
+function connectAgentSSE(runId){
+  if(agentSSE)try{agentSSE.close();}catch(e){}
+  const url=`${API_BASE}/api/agent/stream?run_id=${runId}`;
+  agentSSE=new EventSource(url);
+  agentSSE.onmessage=function(e){
+    try{
+      const ev=JSON.parse(e.data);
+      handleAgentEvent(ev);
+    }catch(err){}
+  };
+  agentSSE.onerror=function(){
+    // Reconnect after 3s
+    setTimeout(()=>{if(agentCurrentRunId)connectAgentSSE(agentCurrentRunId);},3000);
+  };
+}
+
+const stageIcons={scrape:'🔍',analyze:'🧠',generate:'✍️',apply:'🚀',report:'📊'};
+const stageLabels={scrape:'Collecte des données',analyze:'Analyse IA',generate:'Génération de contenu',apply:'Application automatique',report:'Rapport final'};
+
+function handleAgentEvent(ev){
+  const bar=document.getElementById('agentProgressBar');
+  const pct=document.getElementById('agentProgressPct');
+  const timeline=document.getElementById('agentTimeline');
+  const stageIcon=document.getElementById('agentStageIcon');
+  const stageText=document.getElementById('agentStageText');
+  const stageDetail=document.getElementById('agentStageDetail');
+
+  if(ev.progress>=0){
+    bar.style.width=ev.progress+'%';
+    pct.textContent=ev.progress+'%';
+  }
+
+  switch(ev.type){
+    case 'stage_started':
+      stageIcon.textContent=stageIcons[ev.stage]||'⏳';
+      stageText.textContent=stageLabels[ev.stage]||ev.stage;
+      stageDetail.textContent=ev.message||'';
+      timeline.innerHTML+=`<div style="padding:8px 0;border-bottom:1px solid var(--bdr);"><span style="color:var(--ind2);">${stageIcons[ev.stage]||'▸'}</span> <strong>${stageLabels[ev.stage]||ev.stage}</strong> — <span style="color:var(--t2);">${ev.message||''}</span></div>`;
+      break;
+    case 'step':
+      stageDetail.textContent=ev.message||'';
+      timeline.innerHTML+=`<div style="padding:4px 0;font-size:.85rem;color:var(--t2);">  ${ev.message}</div>`;
+      break;
+    case 'item_analyzed':
+      if(ev.item){
+        const color=ev.item.status==='good'?'var(--grn)':ev.item.severity==='critical'?'var(--err)':ev.item.severity==='high'?'var(--wrn)':'var(--t2)';
+        const icon=ev.item.status==='good'?'✅':ev.item.severity==='critical'?'🔴':'🟡';
+        timeline.innerHTML+=`<div style="padding:3px 0;font-size:.82rem;color:${color};">  ${icon} ${ev.item.name}: ${ev.item.finding||'OK'}</div>`;
+      }
+      break;
+    case 'warning':
+      timeline.innerHTML+=`<div style="padding:4px 0;font-size:.85rem;color:var(--wrn);">  ⚠️ ${ev.message}</div>`;
+      break;
+    case 'stage_completed':
+      timeline.innerHTML+=`<div style="padding:6px 0;color:var(--grn);font-weight:500;">  ✅ ${stageLabels[ev.stage]||ev.stage} terminé</div>`;
+      break;
+    case 'run_completed':
+      if(agentSSE)try{agentSSE.close();}catch(e){}
+      agentSSE=null;
+      showAgentResults(ev.report);
+      break;
+    case 'run_failed':
+      if(agentSSE)try{agentSSE.close();}catch(e){}
+      agentSSE=null;
+      stageIcon.textContent='❌';
+      stageText.textContent='Erreur';
+      stageDetail.textContent=ev.error||'Erreur inconnue';
+      timeline.innerHTML+=`<div style="padding:8px 0;color:var(--err);font-weight:500;">❌ ${ev.error}</div>`;
+      showToast('Agent échoué: '+(ev.error||''),'error');
+      break;
+  }
+  // Auto-scroll timeline
+  timeline.scrollTop=timeline.scrollHeight;
+}
+
+function showAgentResults(report){
+  document.getElementById('agentProgress').style.display='none';
+  document.getElementById('agentResults').style.display='';
+
+  // Score cards
+  const cards=document.getElementById('agentScoreCards');
+  const s=report.scores||{};
+  cards.innerHTML=`
+    <div style="background:var(--s1);padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:2rem;font-weight:700;color:${(s.seo_score||0)>=60?'var(--grn)':'var(--wrn)'}">${s.seo_score||'?'}</div>
+      <div style="font-size:.8rem;color:var(--t2);">Score SEO</div>
+    </div>
+    <div style="background:var(--s1);padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:2rem;font-weight:700;color:${(s.geo_score||0)>=60?'var(--grn)':'var(--wrn)'}">${s.geo_score||'?'}</div>
+      <div style="font-size:.8rem;color:var(--t2);">Score GEO</div>
+    </div>
+    <div style="background:var(--s1);padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:2rem;font-weight:700;color:var(--err)">${report.issues_found||0}</div>
+      <div style="font-size:.8rem;color:var(--t2);">Problèmes</div>
+    </div>
+    <div style="background:var(--s1);padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:2rem;font-weight:700;color:var(--grn)">${report.auto_generated||0}</div>
+      <div style="font-size:.8rem;color:var(--t2);">Contenus IA</div>
+    </div>
+    <div style="background:var(--s1);padding:16px;border-radius:12px;text-align:center;">
+      <div style="font-size:2rem;font-weight:700;color:var(--wrn)">${report.manual_actions||0}</div>
+      <div style="font-size:.8rem;color:var(--t2);">Actions manuelles</div>
+    </div>`;
+
+  // Categories
+  const cats=document.getElementById('agentCategories');
+  let catHtml='';
+  Object.entries(report.by_category||{}).forEach(([cat,data])=>{
+    const pct=data.total?Math.round(data.good/data.total*100):0;
+    catHtml+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bdr);">
+      <span style="min-width:120px;font-weight:500;">${cat}</span>
+      <div style="flex:1;background:var(--s1);border-radius:4px;height:6px;overflow:hidden;"><div style="height:100%;background:${pct>=70?'var(--grn)':pct>=40?'var(--wrn)':'var(--err)'};width:${pct}%;border-radius:4px;"></div></div>
+      <span style="min-width:60px;text-align:right;font-size:.85rem;">${data.good}/${data.total}</span>
+    </div>`;
+  });
+  cats.innerHTML=catHtml;
+
+  // Load full generated content
+  if(agentCurrentRunId){
+    fetch(`${API_BASE}/api/agent/run/${agentCurrentRunId}`).then(r=>r.json()).then(data=>{
+      if(!data.success)return;
+      const gen=document.getElementById('agentGenerated');
+      const manual=document.getElementById('agentManual');
+      let genHtml='',manHtml='';
+
+      (data.items||[]).forEach(item=>{
+        if(item.generated_content){
+          const gc=typeof item.generated_content==='object'?item.generated_content:{};
+          genHtml+=`<div style="background:var(--s1);padding:12px;border-radius:10px;margin-bottom:8px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong>${item.item_id}</strong>
+              <span style="font-size:.75rem;padding:2px 8px;border-radius:20px;background:${item.status==='good'?'rgba(16,185,129,.15);color:var(--grn)':'rgba(245,158,11,.15);color:var(--wrn)'}">${item.category}</span>
+            </div>
+            <p style="margin:6px 0 0;font-size:.85rem;color:var(--t2);">${gc.title||item.finding||''}</p>
+            ${gc.content?'<details style="margin-top:8px;"><summary style="cursor:pointer;font-size:.85rem;color:var(--ind2);">Voir le contenu généré</summary><div style="margin-top:8px;padding:10px;background:var(--bg);border-radius:8px;font-size:.82rem;max-height:200px;overflow-y:auto;">'+gc.content+'</div></details>':''}
+          </div>`;
+        } else if(item.status!=='good'){
+          manHtml+=`<div style="background:rgba(245,158,11,.05);padding:10px;border-radius:8px;margin-bottom:6px;border-left:3px solid var(--wrn);">
+            <strong style="font-size:.9rem;">${item.item_id}</strong>
+            <span style="font-size:.75rem;color:var(--t2);margin-left:8px;">${item.category}</span>
+            <p style="margin:4px 0 0;font-size:.85rem;">${item.finding||''}</p>
+            ${item.recommendation?'<p style="margin:4px 0 0;font-size:.82rem;color:var(--ind2);">→ '+item.recommendation+'</p>':''}
+          </div>`;
+        }
+      });
+      gen.innerHTML=genHtml||'<p style="color:var(--t2);font-size:.9rem;">Aucun contenu généré</p>';
+      manual.innerHTML=manHtml||'<p style="color:var(--t2);font-size:.9rem;">Aucune action manuelle requise</p>';
+    }).catch(()=>{});
+  }
+}
+
+function loadAgentHistory(){
+  fetch(`${API_BASE}/api/agent/runs`).then(r=>r.json()).then(data=>{
+    if(!data.success||!data.runs.length)return;
+    const el=document.getElementById('agentHistory');
+    if(!el)return;
+    el.innerHTML='<h4 style="margin:0 0 10px;font-size:.9rem;color:var(--t2);">Derniers audits agent</h4>'+
+      data.runs.slice(0,5).map(r=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:var(--s1);border-radius:8px;margin-bottom:6px;cursor:pointer;" onclick="viewAgentRun(${r.id})">
+        <div><strong>${r.restaurant_name}</strong> <span style="color:var(--t2);font-size:.8rem;">${r.city}</span></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:.75rem;padding:2px 8px;border-radius:20px;background:${r.status==='completed'?'rgba(16,185,129,.15);color:var(--grn)':r.status==='running'?'rgba(99,102,241,.15);color:var(--ind2)':'rgba(239,68,68,.15);color:var(--err)'}">${r.status}</span>
+          <span style="font-size:.75rem;color:var(--t2);">${new Date(r.started_at).toLocaleDateString('fr-FR')}</span>
+        </div>
+      </div>`).join('');
+  }).catch(()=>{});
+
+  // Pre-fill from current data
+  if(currentData?.name){document.getElementById('agentRestName').value=currentData.name;}
+  if(currentData?.city||storedCity){document.getElementById('agentCity').value=currentData?.city||storedCity;}
+  if(currentData?.websiteUrl||storedWebsite){document.getElementById('agentWebsite').value=currentData?.websiteUrl||storedWebsite||'';}
+}
+
+function viewAgentRun(runId){
+  agentCurrentRunId=runId;
+  fetch(`${API_BASE}/api/agent/run/${runId}`).then(r=>r.json()).then(data=>{
+    if(!data.success)return;
+    const run=data.run;
+    if(run.status==='running'){
+      // Reconnect to SSE
+      document.getElementById('agentLaunch').style.display='none';
+      document.getElementById('agentProgress').style.display='';
+      document.getElementById('agentResults').style.display='none';
+      connectAgentSSE(runId);
+    } else if(run.status==='completed'&&run.analysis){
+      const analysis=run.analysis;
+      const report={
+        restaurant:run.restaurant_name,city:run.city,
+        scores:analysis.summary||{},
+        total_items_analyzed:run.total_items,
+        issues_found:run.items_manual,
+        auto_generated:run.items_fixed,
+        manual_actions:run.items_manual-run.items_fixed,
+        by_category:{}
+      };
+      (analysis.items||[]).forEach(i=>{
+        if(!report.by_category[i.category])report.by_category[i.category]={total:0,good:0,issues:0};
+        report.by_category[i.category].total++;
+        if(i.status==='good')report.by_category[i.category].good++;
+        else report.by_category[i.category].issues++;
+      });
+      document.getElementById('agentLaunch').style.display='none';
+      document.getElementById('agentProgress').style.display='none';
+      showAgentResults(report);
+    }
+  }).catch(()=>{});
 }
 
 // REVIEWS PANEL

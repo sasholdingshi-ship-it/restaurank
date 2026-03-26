@@ -5286,6 +5286,554 @@ app.get('/', (req, res) => {
 });
 
 // ============================================================
+// 🤖 AUTONOMOUS AGENT SYSTEM — Claude-powered full autopilot
+// ============================================================
+
+// --- Agent DB tables ---
+db.exec(`
+  CREATE TABLE IF NOT EXISTS agent_runs (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER,
+    status TEXT DEFAULT 'pending',
+    stage TEXT DEFAULT 'init',
+    restaurant_name TEXT NOT NULL,
+    city TEXT NOT NULL,
+    website_url TEXT,
+    place_id TEXT,
+    scrape_results TEXT,
+    analysis TEXT,
+    generated_content TEXT,
+    apply_results TEXT,
+    total_items INTEGER DEFAULT 0,
+    items_fixed INTEGER DEFAULT 0,
+    items_manual INTEGER DEFAULT 0,
+    error_message TEXT,
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    completed_at DATETIME
+  );
+  CREATE TABLE IF NOT EXISTS agent_run_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    run_id INTEGER NOT NULL,
+    item_id TEXT NOT NULL,
+    category TEXT,
+    status TEXT DEFAULT 'pending',
+    severity TEXT DEFAULT 'medium',
+    finding TEXT,
+    recommendation TEXT,
+    generated_content TEXT,
+    applied INTEGER DEFAULT 0,
+    applied_at DATETIME,
+    FOREIGN KEY (run_id) REFERENCES agent_runs(id)
+  );
+`);
+
+// --- SSE connections map ---
+const agentSSEClients = new Map(); // run_id -> [res1, res2, ...]
+
+function agentEmit(runId, event) {
+  const clients = agentSSEClients.get(runId) || [];
+  const data = JSON.stringify(event);
+  clients.forEach(res => {
+    try { res.write(`data: ${data}\n\n`); } catch(e) {}
+  });
+}
+
+// --- GET /api/agent/stream?run_id=X — SSE endpoint ---
+app.get('/api/agent/stream', (req, res) => {
+  const runId = parseInt(req.query.run_id);
+  if (!runId) return res.status(400).json({ error: 'run_id required' });
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+    'Access-Control-Allow-Origin': '*'
+  });
+  res.write(`data: ${JSON.stringify({ type: 'connected', run_id: runId })}\n\n`);
+  if (!agentSSEClients.has(runId)) agentSSEClients.set(runId, []);
+  agentSSEClients.get(runId).push(res);
+  req.on('close', () => {
+    const arr = agentSSEClients.get(runId) || [];
+    agentSSEClients.set(runId, arr.filter(r => r !== res));
+  });
+});
+
+// --- Claude Agent Call with structured output ---
+async function agentClaudeCall(apiKey, systemPrompt, userPrompt, maxTokens = 4096) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userPrompt }]
+    })
+  });
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Claude API ${response.status}: ${err}`);
+  }
+  const data = await response.json();
+  return data.content[0].text;
+}
+
+// --- Extract JSON from Claude response (handles markdown code blocks) ---
+function extractJSON(text) {
+  // Try direct parse first
+  try { return JSON.parse(text); } catch(e) {}
+  // Try extracting from code block
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (match) try { return JSON.parse(match[1].trim()); } catch(e) {}
+  // Try finding JSON object/array
+  const jsonMatch = text.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
+  if (jsonMatch) try { return JSON.parse(jsonMatch[1]); } catch(e) {}
+  return null;
+}
+
+// --- PHASE 1: SCRAPE ---
+async function agentScrape(runId, name, city, websiteUrl) {
+  agentEmit(runId, { type: 'stage_started', stage: 'scrape', message: '🔍 Collecte des données...', progress: 5 });
+  const results = { gmb: null, website: null, cms: null };
+
+  // 1a. Google Places / GMB scrape
+  agentEmit(runId, { type: 'step', message: 'Recherche Google Places...', progress: 8 });
+  try {
+    const gmbResp = await fetch(`http://localhost:${PORT}/api/scrape-gmb`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, city, website_url: websiteUrl })
+    });
+    const gmbData = await gmbResp.json();
+    if (gmbData.success) results.gmb = gmbData.data;
+  } catch(e) { agentEmit(runId, { type: 'warning', message: `GMB scrape error: ${e.message}` }); }
+  agentEmit(runId, { type: 'step', message: results.gmb ? `✅ Google Places: ${results.gmb.name} (${results.gmb.rating}★)` : '⚠️ Google Places: données limitées', progress: 15 });
+
+  // 1b. Website audit
+  if (websiteUrl) {
+    agentEmit(runId, { type: 'step', message: 'Analyse du site web...', progress: 18 });
+    try {
+      const auditResp = await fetch(`http://localhost:${PORT}/api/audit-website`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: websiteUrl })
+      });
+      const auditData = await auditResp.json();
+      if (auditData.success) results.website = auditData.data;
+    } catch(e) { agentEmit(runId, { type: 'warning', message: `Website audit error: ${e.message}` }); }
+    agentEmit(runId, { type: 'step', message: results.website ? '✅ Site web analysé' : '⚠️ Site web non accessible', progress: 22 });
+
+    // 1c. CMS detection
+    agentEmit(runId, { type: 'step', message: 'Détection du CMS...', progress: 24 });
+    try {
+      const cmsResp = await fetch(`http://localhost:${PORT}/api/detect-cms`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: websiteUrl })
+      });
+      const cmsData = await cmsResp.json();
+      if (cmsData.success) results.cms = cmsData;
+    } catch(e) {}
+    agentEmit(runId, { type: 'step', message: results.cms ? `✅ CMS: ${results.cms.cms || 'non détecté'}` : '⚠️ CMS non détecté', progress: 28 });
+  }
+
+  // Update DB
+  db.prepare('UPDATE agent_runs SET scrape_results = ?, stage = ? WHERE id = ?')
+    .run(JSON.stringify(results), 'scrape_done', runId);
+
+  agentEmit(runId, { type: 'stage_completed', stage: 'scrape', progress: 30 });
+  return results;
+}
+
+// --- PHASE 2: ANALYZE with Claude ---
+async function agentAnalyze(runId, apiKey, scrapeResults, name, city) {
+  agentEmit(runId, { type: 'stage_started', stage: 'analyze', message: '🧠 Analyse IA en cours...', progress: 32 });
+
+  const gmb = scrapeResults.gmb || {};
+  const web = scrapeResults.website || {};
+  const cms = scrapeResults.cms || {};
+
+  const systemPrompt = `Tu es l'agent autonome RestauRank. Tu audites la visibilité SEO et GEO (moteurs IA) des restaurants.
+Tu dois analyser les données collectées et retourner un audit structuré en JSON.
+
+IMPORTANT: Retourne UNIQUEMENT du JSON valide, sans texte avant ou après.`;
+
+  const userPrompt = `Analyse ce restaurant et identifie TOUS les problèmes SEO/GEO :
+
+RESTAURANT: ${name} à ${city}
+DONNÉES GOOGLE PLACES:
+${JSON.stringify(gmb, null, 2)}
+
+AUDIT SITE WEB:
+${JSON.stringify(web, null, 2)}
+
+CMS DÉTECTÉ: ${cms.cms || 'Inconnu'}
+
+Retourne un JSON avec cette structure EXACTE:
+{
+  "summary": {
+    "seo_score": <0-100>,
+    "geo_score": <0-100>,
+    "total_issues": <number>,
+    "critical": <number>,
+    "auto_fixable": <number>
+  },
+  "items": [
+    {
+      "id": "<item_id>",
+      "category": "GBP|Reviews|Citations|OnPage|ChatGPT|Perplexity|GEO",
+      "name": "<nom lisible>",
+      "status": "good|needs_fix|missing|critical",
+      "severity": "critical|high|medium|low",
+      "current_value": "<ce qui existe actuellement>",
+      "finding": "<problème identifié>",
+      "fix": "<exactement quoi faire>",
+      "auto_fixable": true|false,
+      "priority": <1-10>
+    }
+  ]
+}
+
+Analyse au minimum ces catégories:
+GBP: titre, description (750 car), catégories, photos, horaires, attributs, Q&A, posts, menu
+Reviews: note moyenne, nb avis, taux de réponse, fraîcheur, sentiment
+Citations: NAP cohérence, présence Yelp/TripAdvisor/TheFork/PagesJaunes/Apple/Bing
+OnPage: title tag, meta desc, schema.org Restaurant, FAQ, H1, images alt, vitesse, mobile, canonical, OG tags
+ChatGPT: contenu Yelp (source #1 ChatGPT), FAQ structurée, mentions dans les sources ChatGPT
+Perplexity/Gemini: schema.org complet, autorité domaine, citations académiques
+GEO: Entity SEO, Wikidata, backlinks locaux, contenu frais`;
+
+  let analysis;
+  try {
+    const raw = await agentClaudeCall(apiKey, systemPrompt, userPrompt, 4096);
+    analysis = extractJSON(raw);
+    if (!analysis || !analysis.items) throw new Error('Invalid analysis JSON');
+  } catch(e) {
+    agentEmit(runId, { type: 'warning', message: `Analyse IA partielle: ${e.message}` });
+    // Fallback to basic analysis
+    analysis = buildFallbackAnalysis(gmb, web, cms, name, city);
+  }
+
+  agentEmit(runId, { type: 'step', message: `🔍 ${analysis.items?.length || 0} points analysés`, progress: 45 });
+
+  // Store items in DB
+  const insertItem = db.prepare('INSERT INTO agent_run_items (run_id, item_id, category, status, severity, finding, recommendation) VALUES (?, ?, ?, ?, ?, ?, ?)');
+  (analysis.items || []).forEach(item => {
+    insertItem.run(runId, item.id, item.category, item.status, item.severity, item.finding, item.fix);
+    agentEmit(runId, { type: 'item_analyzed', item });
+  });
+
+  const totalIssues = (analysis.items || []).filter(i => i.status !== 'good').length;
+  db.prepare('UPDATE agent_runs SET analysis = ?, stage = ?, total_items = ?, items_manual = ? WHERE id = ?')
+    .run(JSON.stringify(analysis), 'analyze_done', analysis.items?.length || 0, totalIssues, runId);
+
+  agentEmit(runId, { type: 'stage_completed', stage: 'analyze', summary: analysis.summary, progress: 50 });
+  return analysis;
+}
+
+// --- Fallback deterministic analysis (when Claude fails) ---
+function buildFallbackAnalysis(gmb, web, cms, name, city) {
+  const items = [];
+  const add = (id, cat, nm, status, sev, finding, fix, auto) =>
+    items.push({ id, category: cat, name: nm, status, severity: sev, finding, fix, auto_fixable: auto, priority: sev === 'critical' ? 1 : sev === 'high' ? 3 : 5 });
+
+  // GBP checks
+  if (!gmb.description || gmb.description.length < 200)
+    add('gbp_desc', 'GBP', 'Description GBP', 'needs_fix', 'high', 'Description trop courte ou manquante', 'Générer une description SEO de 750 caractères', true);
+  if (!gmb.rating || gmb.rating < 4.0)
+    add('gbp_rating', 'Reviews', 'Note Google', 'needs_fix', 'high', `Note ${gmb.rating || 'N/A'}/5`, 'Stratégie pour améliorer les avis', false);
+  if (!gmb.hours || gmb.hours.length === 0)
+    add('gbp_hours', 'GBP', 'Horaires', 'missing', 'critical', 'Horaires non renseignés', 'Ajouter les horaires complets', true);
+  if (!gmb.phone)
+    add('gbp_phone', 'GBP', 'Téléphone', 'missing', 'critical', 'Numéro de téléphone manquant', 'Ajouter le numéro dans GBP', true);
+
+  // Website checks
+  if (web) {
+    if (!web.hasTitle) add('op_title', 'OnPage', 'Title tag', 'missing', 'high', 'Pas de title tag', 'Ajouter un title SEO optimisé', true);
+    if (!web.hasMetaDesc) add('op_metadesc', 'OnPage', 'Meta description', 'missing', 'high', 'Pas de meta description', 'Ajouter meta desc avec mots-clés locaux', true);
+    if (!web.hasSchemaRestaurant) add('op_schema', 'OnPage', 'Schema.org', 'missing', 'critical', 'Pas de schema.org Restaurant', 'Ajouter le JSON-LD complet', true);
+    if (!web.hasFAQ) add('op_faq', 'OnPage', 'FAQ', 'missing', 'medium', 'Pas de page FAQ', 'Créer une FAQ avec FAQPage schema', true);
+  }
+
+  // Citations - always check
+  ['Yelp', 'TripAdvisor', 'TheFork', 'PagesJaunes', 'Apple Maps', 'Bing Places'].forEach(p => {
+    add(`cit_${p.toLowerCase().replace(/\s/g, '_')}`, 'Citations', p, 'needs_fix', 'medium', `Présence ${p} non vérifiée`, `Vérifier et optimiser la fiche ${p}`, false);
+  });
+
+  // GEO checks
+  add('g_entity', 'GEO', 'Entity SEO', 'needs_fix', 'high', 'Pas d\'entrée Wikidata détectée', 'Créer une entrée Wikidata pour le Knowledge Graph', false);
+  add('g_chatgpt', 'ChatGPT', 'Visibilité ChatGPT', 'needs_fix', 'high', 'Optimiser les sources ChatGPT (Yelp = 48%)', 'Enrichir le profil Yelp en priorité', false);
+
+  return {
+    summary: { seo_score: 40, geo_score: 30, total_issues: items.filter(i => i.status !== 'good').length, critical: items.filter(i => i.severity === 'critical').length, auto_fixable: items.filter(i => i.auto_fixable).length },
+    items
+  };
+}
+
+// --- PHASE 3: GENERATE with Claude ---
+async function agentGenerate(runId, apiKey, analysis, scrapeResults, name, city) {
+  agentEmit(runId, { type: 'stage_started', stage: 'generate', message: '✍️ Génération de contenu IA...', progress: 52 });
+
+  const gmb = scrapeResults.gmb || {};
+  const items = (analysis.items || []).filter(i => i.status !== 'good');
+  const generated = {};
+
+  // Build context for Claude
+  const context = {
+    name, city,
+    cuisine: gmb.category || '',
+    address: gmb.address || '',
+    phone: gmb.phone || '',
+    hours: gmb.hours || '',
+    rating: gmb.rating || 0,
+    reviewCount: gmb.reviewCount || 0,
+    website: scrapeResults.website?.url || '',
+    priceLevel: gmb.priceLevel || '',
+    description: gmb.description || ''
+  };
+
+  const systemPrompt = `Tu es l'agent autonome RestauRank. Tu génères du contenu SEO/GEO prêt à publier pour les restaurants.
+Chaque contenu doit être DIRECTEMENT utilisable — pas de placeholder [xxx], utilise les vraies données fournies.
+Retourne UNIQUEMENT du JSON valide.`;
+
+  // Generate in batches to stay within token limits
+  const batches = [];
+  for (let i = 0; i < items.length; i += 8) {
+    batches.push(items.slice(i, i + 8));
+  }
+
+  let batchIdx = 0;
+  for (const batch of batches) {
+    batchIdx++;
+    const pct = 52 + Math.round((batchIdx / batches.length) * 20);
+    agentEmit(runId, { type: 'step', message: `Génération batch ${batchIdx}/${batches.length}...`, progress: pct });
+
+    const userPrompt = `Contexte restaurant:
+${JSON.stringify(context, null, 2)}
+
+Génère du contenu prêt à publier pour ces items d'audit :
+${JSON.stringify(batch.map(i => ({ id: i.id, category: i.category, name: i.name, finding: i.finding, fix: i.fix })), null, 2)}
+
+Retourne un JSON:
+{
+  "<item_id>": {
+    "title": "<titre court>",
+    "content": "<contenu HTML prêt à utiliser — texte, code, instructions>",
+    "raw_text": "<version texte brut pour copier-coller>",
+    "platform": "<où appliquer: GBP|Website|Yelp|TripAdvisor|etc>",
+    "auto_applicable": true|false
+  }
+}
+
+IMPORTANT: Utilise les VRAIES données (nom: ${name}, ville: ${city}, tél: ${context.phone}, adresse: ${context.address}).
+Pour le schema.org, génère le JSON-LD COMPLET avec Menu, openingHours, aggregateRating.
+Pour la description GBP, exactement 700-750 caractères avec mots-clés locaux.
+Pour les Q&A, 15 questions avec réponses pré-remplies utilisant les vraies données.`;
+
+    try {
+      const raw = await agentClaudeCall(apiKey, systemPrompt, userPrompt, 4096);
+      const batchContent = extractJSON(raw);
+      if (batchContent) Object.assign(generated, batchContent);
+    } catch(e) {
+      agentEmit(runId, { type: 'warning', message: `Batch ${batchIdx} partiel: ${e.message}` });
+    }
+
+    // Small delay to respect rate limits
+    if (batchIdx < batches.length) await new Promise(r => setTimeout(r, 1500));
+  }
+
+  // Update items with generated content
+  const updateItem = db.prepare('UPDATE agent_run_items SET generated_content = ? WHERE run_id = ? AND item_id = ?');
+  Object.entries(generated).forEach(([itemId, content]) => {
+    updateItem.run(JSON.stringify(content), runId, itemId);
+  });
+
+  const fixable = Object.keys(generated).length;
+  db.prepare('UPDATE agent_runs SET generated_content = ?, stage = ?, items_fixed = ? WHERE id = ?')
+    .run(JSON.stringify(generated), 'generate_done', fixable, runId);
+
+  agentEmit(runId, { type: 'stage_completed', stage: 'generate', items_generated: fixable, progress: 75 });
+  return generated;
+}
+
+// --- PHASE 4: APPLY ---
+async function agentApply(runId, apiKey, generated, scrapeResults, name, city) {
+  agentEmit(runId, { type: 'stage_started', stage: 'apply', message: '🚀 Application automatique...', progress: 77 });
+
+  const applied = { gbp: [], website: [], directories: [] };
+  const cms = scrapeResults.cms || {};
+
+  // Apply to website via CMS if connected
+  if (cms.cms && ['wordpress', 'webflow'].includes(cms.cms.toLowerCase())) {
+    agentEmit(runId, { type: 'step', message: `Application ${cms.cms}...`, progress: 80 });
+    const schemaContent = generated['op_schema'] || generated['schema_org'];
+    if (schemaContent) {
+      try {
+        // Build website improvements from generated content
+        const improvements = {
+          schema_org: schemaContent.raw_text || schemaContent.content || '',
+          meta_title: (generated['op_title'] || {}).raw_text || `${name} — Restaurant à ${city}`,
+          meta_description: (generated['op_metadesc'] || {}).raw_text || `${name} à ${city}. Réservation en ligne.`,
+          faq_page: (generated['op_faq'] || {}).content || ''
+        };
+        const cmsResp = await fetch(`http://localhost:${PORT}/api/cms/generic/apply`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ cms_type: cms.cms, improvements })
+        });
+        const cmsResult = await cmsResp.json();
+        applied.website.push({ cms: cms.cms, result: cmsResult.success ? 'success' : 'failed' });
+      } catch(e) {
+        applied.website.push({ cms: cms.cms, result: 'error', error: e.message });
+      }
+    }
+  }
+
+  // GBP application (when API is approved)
+  agentEmit(runId, { type: 'step', message: 'Préparation GBP...', progress: 85 });
+  const gbpItems = ['gbp_desc', 'gbp_hours', 'gbp_attr', 'gbp_posts', 'gbp_menu', 'gbp_photos'];
+  gbpItems.forEach(id => {
+    if (generated[id]) {
+      applied.gbp.push({ item: id, status: 'ready', content_preview: (generated[id].raw_text || '').substring(0, 100) });
+    }
+  });
+
+  // Directory preparation
+  agentEmit(runId, { type: 'step', message: 'Scan annuaires...', progress: 88 });
+  try {
+    const dirResp = await fetch(`http://localhost:${PORT}/api/directories/auto-check`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, city })
+    });
+    const dirData = await dirResp.json();
+    if (dirData.results) {
+      applied.directories = dirData.results.map(r => ({
+        platform: r.platform, found: r.found, url: r.url
+      }));
+    }
+  } catch(e) {
+    agentEmit(runId, { type: 'warning', message: `Directory scan error: ${e.message}` });
+  }
+
+  db.prepare('UPDATE agent_runs SET apply_results = ?, stage = ? WHERE id = ?')
+    .run(JSON.stringify(applied), 'apply_done', runId);
+
+  agentEmit(runId, { type: 'stage_completed', stage: 'apply', results: applied, progress: 92 });
+  return applied;
+}
+
+// --- PHASE 5: REPORT ---
+async function agentReport(runId, apiKey, analysis, generated, applied, name, city) {
+  agentEmit(runId, { type: 'stage_started', stage: 'report', message: '📊 Génération du rapport...', progress: 94 });
+
+  const items = analysis.items || [];
+  const issues = items.filter(i => i.status !== 'good');
+  const autoFixed = Object.keys(generated).length;
+  const manualNeeded = issues.length - autoFixed;
+
+  const report = {
+    restaurant: name,
+    city,
+    scores: analysis.summary || { seo_score: 0, geo_score: 0 },
+    total_items_analyzed: items.length,
+    issues_found: issues.length,
+    auto_generated: autoFixed,
+    manual_actions: manualNeeded,
+    by_category: {},
+    critical_actions: issues.filter(i => i.severity === 'critical').map(i => ({
+      name: i.name, finding: i.finding, fix: i.fix
+    })),
+    next_steps: issues.filter(i => !i.auto_fixable).slice(0, 10).map(i => ({
+      name: i.name, priority: i.severity, action: i.fix
+    }))
+  };
+
+  // Group by category
+  items.forEach(i => {
+    if (!report.by_category[i.category]) report.by_category[i.category] = { total: 0, good: 0, issues: 0 };
+    report.by_category[i.category].total++;
+    if (i.status === 'good') report.by_category[i.category].good++;
+    else report.by_category[i.category].issues++;
+  });
+
+  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run('completed', 'done', runId);
+
+  agentEmit(runId, { type: 'run_completed', report, progress: 100 });
+  return report;
+}
+
+// --- POST /api/agent/launch — Start full autonomous run ---
+app.post('/api/agent/launch', async (req, res) => {
+  const { restaurant_name, city, website_url, restaurant_id } = req.body;
+  if (!restaurant_name || !city) return res.status(400).json({ success: false, error: 'restaurant_name and city required' });
+
+  const apiKey = getAIKey(restaurant_id);
+  if (!apiKey) return res.status(400).json({ success: false, error: 'No Claude API key configured. Set ANTHROPIC_API_KEY env var or save via /api/ai/save-key' });
+
+  // Create run
+  const result = db.prepare('INSERT INTO agent_runs (restaurant_name, city, website_url, restaurant_id, status, stage) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(restaurant_name, city, website_url || null, restaurant_id || null, 'running', 'init');
+  const runId = result.lastInsertRowid;
+
+  res.json({ success: true, run_id: runId, status: 'running', stream_url: `/api/agent/stream?run_id=${runId}` });
+
+  // Run pipeline async
+  (async () => {
+    try {
+      agentEmit(runId, { type: 'run_started', run_id: runId, restaurant: restaurant_name, progress: 0 });
+
+      // Phase 1: Scrape
+      const scrapeResults = await agentScrape(runId, restaurant_name, city, website_url);
+
+      // Phase 2: Analyze
+      const analysis = await agentAnalyze(runId, apiKey, scrapeResults, restaurant_name, city);
+
+      // Phase 3: Generate
+      const generated = await agentGenerate(runId, apiKey, analysis, scrapeResults, restaurant_name, city);
+
+      // Phase 4: Apply
+      const applied = await agentApply(runId, apiKey, generated, scrapeResults, restaurant_name, city);
+
+      // Phase 5: Report
+      await agentReport(runId, apiKey, analysis, generated, applied, restaurant_name, city);
+
+    } catch(e) {
+      console.error('Agent run error:', e);
+      db.prepare('UPDATE agent_runs SET status = ?, error_message = ? WHERE id = ?')
+        .run('failed', e.message, runId);
+      agentEmit(runId, { type: 'run_failed', error: e.message, progress: -1 });
+    }
+  })();
+});
+
+// --- GET /api/agent/runs — List runs ---
+app.get('/api/agent/runs', (req, res) => {
+  const restaurantId = req.query.restaurant_id;
+  let runs;
+  if (restaurantId) {
+    runs = db.prepare('SELECT * FROM agent_runs WHERE restaurant_id = ? ORDER BY started_at DESC LIMIT 20').all(restaurantId);
+  } else {
+    runs = db.prepare('SELECT * FROM agent_runs ORDER BY started_at DESC LIMIT 20').all();
+  }
+  res.json({ success: true, runs: runs.map(r => ({ ...r, analysis: undefined, generated_content: undefined, scrape_results: undefined })) });
+});
+
+// --- GET /api/agent/run/:id — Get full run details ---
+app.get('/api/agent/run/:id', (req, res) => {
+  const run = db.prepare('SELECT * FROM agent_runs WHERE id = ?').get(req.params.id);
+  if (!run) return res.status(404).json({ success: false, error: 'Run not found' });
+  const items = db.prepare('SELECT * FROM agent_run_items WHERE run_id = ? ORDER BY severity ASC').all(run.id);
+  // Parse JSON fields
+  try { run.analysis = JSON.parse(run.analysis); } catch(e) { run.analysis = null; }
+  try { run.generated_content = JSON.parse(run.generated_content); } catch(e) { run.generated_content = null; }
+  try { run.apply_results = JSON.parse(run.apply_results); } catch(e) { run.apply_results = null; }
+  try { run.scrape_results = JSON.parse(run.scrape_results); } catch(e) { run.scrape_results = null; }
+  // Parse item generated_content
+  items.forEach(i => { try { i.generated_content = JSON.parse(i.generated_content); } catch(e) {} });
+  res.json({ success: true, run, items });
+});
+
+// ============================================================
 // START SERVER
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
