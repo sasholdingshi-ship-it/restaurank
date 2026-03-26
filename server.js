@@ -6268,10 +6268,12 @@ app.post('/api/real-audit', async (req, res) => {
         ];
 
         const results = {};
-        // Run all 3 in parallel
+        // Run all 3 in parallel with direct fetch (not safeFetch — Claude API needs longer)
         await Promise.allSettled(prompts.map(async (p) => {
           try {
-            const resp = await safeFetch('https://api.anthropic.com/v1/messages', {
+            const ctrl = new AbortController();
+            const t = setTimeout(() => ctrl.abort(), 25000);
+            const resp = await fetch('https://api.anthropic.com/v1/messages', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -6280,12 +6282,25 @@ app.post('/api/real-audit', async (req, res) => {
               },
               body: JSON.stringify({
                 model: 'claude-haiku-4-5-20251001',
-                max_tokens: 1024,
+                max_tokens: 800,
                 messages: [{ role: 'user', content: p.question }]
-              })
-            }, 20000);
+              }),
+              signal: ctrl.signal
+            });
+            clearTimeout(t);
+
+            if (!resp.ok) {
+              const errText = await resp.text();
+              results[p.engine] = { error: `API ${resp.status}: ${errText.substring(0, 200)}` };
+              return;
+            }
+
             const data = await resp.json();
             const text = data.content?.[0]?.text || '';
+            if (!text) {
+              results[p.engine] = { error: 'Empty response', raw: JSON.stringify(data).substring(0, 300) };
+              return;
+            }
             const textNorm = text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
             const mentioned = textNorm.includes(nameNorm);
             const partialMatch = name.split(' ').filter(w => w.length > 3).some(w => textNorm.includes(w.toLowerCase()));
