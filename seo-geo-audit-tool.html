@@ -6100,12 +6100,14 @@ function renderReviews(){
         <div style="font-size:.7rem;color:var(--mut);">Réponses optimisées SEO local — inclut mots-clés + nom ville</div>
     </div>`;
 
-    // Update stat cards with real data
-    const avgR=data.length>0?(data.reduce((s,r)=>s+r.rating,0)/data.length).toFixed(1):'—';
+    // Update stat cards with REAL aggregate data from Google/Hub (not just the sample reviews)
+    const realCount=window._hubData?.reviewCount||currentData?.reviewCount||data.length;
+    const realRating=window._hubData?.rating||currentData?.rating||null;
+    const avgR=realRating?realRating.toFixed(1):data.length>0?(data.reduce((s,r)=>s+r.rating,0)/data.length).toFixed(1):'—';
     const respRate=data.length>0?Math.round(data.filter(r=>r.replied).length/data.length*100)+'%':'—';
     const avgNum=parseFloat(avgR);
     const sentEmoji=avgNum>=4.5?'😍':avgNum>=4?'😊':avgNum>=3?'😐':'😟';
-    try{document.getElementById('reviewCount').textContent=data.length;document.getElementById('avgRating').textContent=avgR;document.getElementById('responseRate').textContent=respRate;document.getElementById('sentiment').textContent=sentEmoji;}catch(e){}
+    try{document.getElementById('reviewCount').textContent=realCount;document.getElementById('avgRating').textContent=avgR;document.getElementById('responseRate').textContent=respRate;document.getElementById('sentiment').textContent=sentEmoji;}catch(e){}
 
     list.innerHTML=headerHtml+data.map((r,i)=>{
         const srcBadge=r.source==='google_places'?'<span style="font-size:.55rem;padding:1px 5px;border-radius:4px;background:rgba(66,133,244,.12);color:#4285f4;font-weight:600;margin-left:4px;">Google</span>':r.source==='tripadvisor'?'<span style="font-size:.55rem;padding:1px 5px;border-radius:4px;background:rgba(52,224,161,.12);color:#34e0a1;font-weight:600;margin-left:4px;">TripAdvisor</span>':r.source==='yelp'?'<span style="font-size:.55rem;padding:1px 5px;border-radius:4px;background:rgba(255,26,26,.12);color:#ff1a1a;font-weight:600;margin-left:4px;">Yelp</span>':'';
