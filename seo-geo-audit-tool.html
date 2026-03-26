@@ -3748,8 +3748,8 @@ function renderDashboard(){
             const badges = [];
             const ok = (k,label,icon) => { if(sources[k]==='ok') badges.push(`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:rgba(0,255,150,.12);border-radius:6px;margin:2px;"><span style="color:#0f8">${icon}</span> ${label}</span>`); };
             const miss = (k,label,icon) => { if(sources[k]!=='ok') badges.push(`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:rgba(255,100,100,.1);border-radius:6px;margin:2px;color:#f66;"><span>${icon}</span> ${label}</span>`); };
-            ok('google','Google Places','📍'); ok('website','Site Web','🌐'); ok('pagespeed','PageSpeed','⚡'); ok('foursquare','Foursquare','📌'); ok('tripadvisor','TripAdvisor','🦉'); ok('yelp','Yelp','⭐');
-            miss('google','Google Places','📍'); miss('website','Site Web','🌐'); miss('foursquare','Foursquare','📌'); miss('tripadvisor','TripAdvisor','🦉'); miss('yelp','Yelp','⭐');
+            ok('google','Google Places','📍'); ok('website','Site Web','🌐'); ok('pagespeed','PageSpeed','⚡'); ok('foursquare','Foursquare','📌'); ok('tripadvisor','TripAdvisor','🦉'); ok('yelp','Yelp','⭐'); ok('aiVisibility','Visibilité IA','🤖');
+            miss('google','Google Places','📍'); miss('website','Site Web','🌐'); miss('foursquare','Foursquare','📌'); miss('tripadvisor','TripAdvisor','🦉'); miss('yelp','Yelp','⭐'); miss('aiVisibility','Visibilité IA','🤖');
             const nullCount = (currentData._nullFields||[]).length;
             srcBanner.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-weight:600;color:var(--cyn);">📊 Données réelles</span><span style="color:var(--mut);font-size:.7rem;">${currentData._auditDuration ? '('+Math.round(currentData._auditDuration/1000)+'s)' : ''}</span></div><div style="display:flex;flex-wrap:wrap;gap:2px;">${badges.join('')}</div>${nullCount > 0 ? '<div style="margin-top:6px;color:var(--mut);font-size:.7rem;">'+nullCount+' critères non vérifiables sans accès GBP complet — scorés à 0 par défaut</div>' : ''}`;
             srcBanner.style.display='';
