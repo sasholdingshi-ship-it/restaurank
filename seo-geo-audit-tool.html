@@ -9712,12 +9712,20 @@ async function publishToWordPress(){
     // Check if WordPress credentials are stored
     const wpCreds=window._wpCredentials||{};
     if(!wpCreds.site_url){
-        const url=prompt('URL WordPress (ex: https://monsite.fr):');
-        const user=prompt('Nom d\'utilisateur WordPress:');
-        const pass=prompt('Mot de passe d\'application WordPress:');
-        if(!url||!user||!pass)return;
-        wpCreds.site_url=url;wpCreds.username=user;wpCreds.app_password=pass;
-        window._wpCredentials=wpCreds;
+        // Show inline form instead of prompt()
+        const container=document.getElementById('blogContent')?.parentElement||document.querySelector('[onclick*="publishToWordPress"]')?.parentElement;
+        if(!container)return;
+        let formDiv=document.getElementById('wpCredsForm');
+        if(formDiv){formDiv.style.display='block';return;}
+        formDiv=document.createElement('div');formDiv.id='wpCredsForm';
+        formDiv.style.cssText='background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px;margin:12px 0;';
+        formDiv.innerHTML=`<div style="font-weight:600;margin-bottom:12px;">🔑 Connexion WordPress</div>
+            <input id="wpUrl" type="url" placeholder="URL WordPress (ex: https://monsite.fr)" style="width:100%;padding:10px 12px;border:1px solid var(--brd);border-radius:8px;background:var(--bg);color:var(--txt);margin-bottom:8px;box-sizing:border-box;">
+            <input id="wpUser" type="text" placeholder="Nom d'utilisateur WordPress" style="width:100%;padding:10px 12px;border:1px solid var(--brd);border-radius:8px;background:var(--bg);color:var(--txt);margin-bottom:8px;box-sizing:border-box;">
+            <input id="wpPass" type="password" placeholder="Mot de passe d'application" style="width:100%;padding:10px 12px;border:1px solid var(--brd);border-radius:8px;background:var(--bg);color:var(--txt);margin-bottom:8px;box-sizing:border-box;">
+            <div style="display:flex;gap:8px;"><button onclick="submitWpCreds()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✅ Connecter & Publier</button><button onclick="document.getElementById('wpCredsForm').style.display='none'" style="padding:10px 16px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>`;
+        container.insertBefore(formDiv,container.querySelector('[onclick*="publishToWordPress"]')?.nextSibling||container.firstChild);
+        return;
     }
     try{
         const r=await fetchTimeout(`${API_BASE}/api/wordpress/publish`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...wpCreds,title:`${currentData?.name||'Restaurant'} — Guide complet`,content,status:'draft'})},15000);
@@ -9725,6 +9733,16 @@ async function publishToWordPress(){
         if(d.success){alert(`✅ Article créé en brouillon sur WordPress !\n${d.edit_url}`);if(d.edit_url)window.open(d.edit_url,'_blank');}
         else alert(`❌ WordPress: ${d.error}`);
     }catch(e){alert('Erreur WordPress: '+e.message);}
+}
+function submitWpCreds(){
+    const url=document.getElementById('wpUrl')?.value?.trim();
+    const user=document.getElementById('wpUser')?.value?.trim();
+    const pass=document.getElementById('wpPass')?.value?.trim();
+    if(!url||!user||!pass){showToast('⚠️ Remplissez les 3 champs','error');return;}
+    window._wpCredentials={site_url:url,username:user,app_password:pass};
+    const form=document.getElementById('wpCredsForm');if(form)form.style.display='none';
+    showToast('✅ Credentials WordPress sauvegardés','success');
+    publishToWordPress();
 }
 
 // Real CMS publishing
@@ -11088,16 +11106,32 @@ async function schedulePost(){
 function editTargetKeywords(){
     const keywords=window._targetKeywords||[];
     const current=keywords.map(k=>k.kw).join(', ');
-    const input=prompt('Modifiez vos mots-clés cibles (séparés par des virgules) :',current);
-    if(input===null)return;
+    // Inline editing instead of prompt()
+    let editor=document.getElementById('kwEditor');
+    if(editor){editor.style.display='block';document.getElementById('kwEditInput').value=current;return;}
+    const container=document.querySelector('[onclick*="editTargetKeywords"]')?.parentElement;
+    if(!container)return;
+    editor=document.createElement('div');editor.id='kwEditor';
+    editor.style.cssText='background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:14px;margin:10px 0;';
+    editor.innerHTML=`<div style="font-weight:600;margin-bottom:8px;">✏️ Modifier les mots-clés</div>
+        <textarea id="kwEditInput" rows="3" style="width:100%;padding:10px;border:1px solid var(--brd);border-radius:8px;background:var(--bg);color:var(--txt);resize:vertical;box-sizing:border-box;font-size:.95rem;">${current}</textarea>
+        <div style="font-size:.8rem;color:var(--mut);margin:4px 0 8px;">Séparez par des virgules</div>
+        <div style="display:flex;gap:8px;"><button onclick="confirmEditKeywords()" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✅ Enregistrer</button><button onclick="document.getElementById('kwEditor').style.display='none'" style="padding:9px 14px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>`;
+    container.appendChild(editor);
+}
+function confirmEditKeywords(){
+    const input=document.getElementById('kwEditInput')?.value;
+    if(!input&&input!=='')return;
+    const keywords=window._targetKeywords||[];
     const newKws=input.split(',').map(s=>s.trim()).filter(Boolean);
-    const pops=['Élevée','Moyenne','Faible'];
     window._targetKeywords=newKws.map(kw=>{
         const existing=keywords.find(k=>k.kw.toLowerCase()===kw.toLowerCase());
         return existing||{kw,lang:'fr',pop:'Moyenne',comp:0};
     });
+    const editor=document.getElementById('kwEditor');if(editor)editor.style.display='none';
     renderTargetKeywords();
     addToLog('🎯 Mots-clés cibles mis à jour ('+newKws.length+')');
+    showToast('✅ '+newKws.length+' mots-clés enregistrés');
 }
 async function generateKeywordSuggestions(){
     const name=currentData?.name||storedName||'restaurant';
@@ -11143,14 +11177,29 @@ async function generateKeywordSuggestions(){
     const newSuggestions=suggestions.filter(s=>!existingKws.find(e=>e.toLowerCase()===s.kw.toLowerCase()));
     if(!newSuggestions.length){showToast('Toutes les suggestions sont déjà dans votre liste !','info');return;}
 
-    const msg=newSuggestions.map((s,i)=>`${i+1}. ${s.kw} (${s.pop}, concurrence: ${s.comp}/10)`).join('\n');
-    const pick=prompt('Suggestions de mots-clés :\n\n'+msg+'\n\nEntrez les numéros à ajouter (ex: 1,3,5) ou "tout" :','tout');
-    if(!pick)return;
-    let toAdd=[];
-    if(pick.toLowerCase()==='tout'||pick.toLowerCase()==='all'){toAdd=newSuggestions;}
-    else{const nums=pick.split(',').map(n=>parseInt(n.trim())-1).filter(n=>n>=0&&n<newSuggestions.length);toAdd=nums.map(n=>newSuggestions[n]);}
+    // Show inline selection panel instead of prompt()
+    window._kwSuggestions=newSuggestions;window._kwExisting=existing;
+    const popColors={Élevée:'var(--grn)',Moyenne:'var(--ylw)',Faible:'var(--red)'};
+    const items=newSuggestions.map((s,i)=>`<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='transparent'"><input type="checkbox" checked class="kwSugCheck" data-idx="${i}" style="width:18px;height:18px;accent-color:var(--acc);"><span style="flex:1;font-size:.95rem;">${s.kw}</span><span style="font-size:.75rem;padding:2px 8px;border-radius:10px;background:${popColors[s.pop]||'var(--mut)'};color:#fff;">${s.pop}</span><span style="font-size:.75rem;color:var(--mut);">${s.comp}/10</span></label>`).join('');
+    const panel=document.createElement('div');panel.id='kwSugPanel';
+    panel.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    panel.onclick=e=>{if(e.target===panel)panel.remove();};
+    panel.innerHTML=`<div style="background:var(--card);border-radius:16px;padding:24px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;">
+        <div style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">💡 Suggestions de mots-clés</div>
+        <div style="font-size:.8rem;color:var(--mut);margin-bottom:14px;">Cochez les mots-clés à ajouter</div>
+        <div style="margin-bottom:14px;">${items}</div>
+        <div style="display:flex;gap:8px;"><button onclick="addSelectedKeywords()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✅ Ajouter la sélection</button><button onclick="document.getElementById('kwSugPanel')?.remove()" style="padding:10px 16px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>
+    </div>`;
+    document.body.appendChild(panel);
+}
+function addSelectedKeywords(){
+    const checks=document.querySelectorAll('.kwSugCheck:checked');
+    const newSuggestions=window._kwSuggestions||[];
+    const existing=window._kwExisting||window._targetKeywords||[];
+    const toAdd=[...checks].map(c=>newSuggestions[parseInt(c.dataset.idx)]).filter(Boolean);
     toAdd.forEach(kw=>{if(!existing.find(e=>e.kw.toLowerCase()===kw.kw.toLowerCase()))existing.push(kw);});
     window._targetKeywords=existing;
+    document.getElementById('kwSugPanel')?.remove();
     renderTargetKeywords();
     addToLog('💡 '+toAdd.length+' mot(s)-clé(s) ajouté(s)');
     showToast('✅ '+toAdd.length+' mots-clés ajoutés !');
