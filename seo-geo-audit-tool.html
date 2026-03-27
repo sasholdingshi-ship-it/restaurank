@@ -6836,43 +6836,34 @@ async function autoReplyAllReviews(){
 }
 
 // SOCIAL PANEL — SEO-optimized Google Posts
-function generateSocialContent(){
+async function generateSocialContent(){
     const t=document.getElementById('socialContent');
-    const name=currentData?.name||'notre restaurant';
-    const city=currentData?.city||'Paris';
+    const name=currentData?.name||storedName||'notre restaurant';
+    const city=currentData?.city||storedCity||'Paris';
     const cuisine=currentData?.cuisine||'gastronomique';
-
-    // Day-of-week based content strategy for natural variety
+    t.value='⏳ Génération IA en cours…';
+    t.disabled=true;
+    try{
+        const rid=currentData?.restaurant_id||0;
+        const resp=await fetchTimeout(`${API_BASE}/api/ai/social-content`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,restaurant_name:name,city,cuisine,platform:'Google Business'})},12000);
+        const data=await resp.json();
+        if(data.success&&data.content){
+            t.value=data.content;
+            t.disabled=false;
+            addToLog('✨ Post social généré'+(data.source==='ai'?' par IA':' (template)'));
+            return;
+        }
+    }catch(e){console.log('Social content API error:',e.message);}
+    // Fallback local si le serveur est indisponible
     const day=new Date().getDay();
-    const templates={
-        0:[ // Dimanche
-            `🥐 Brunch du dimanche chez ${name} à ${city} ! Produits frais, fait maison, ambiance chaleureuse. Réservez votre table pour un moment gourmand en famille. #${name.replace(/\s+/g,'')} #restaurant${city}`,
-            `☀️ Dimanche ${cuisine} chez ${name} — découvrez notre menu spécial weekend. Cuisine raffinée au cœur de ${city}. Réservation recommandée !`,
-        ],
-        1:[ // Lundi
-            `🍽️ Nouvelle semaine, nouvelle carte ! Chez ${name} à ${city}, notre chef propose des créations ${cuisine} avec des produits de saison. Venez découvrir les nouveautés ! #restaurant #${city}`,
-            `💡 Le saviez-vous ? ${name} utilise uniquement des produits frais et locaux dans sa cuisine ${cuisine} à ${city}. Goûtez la différence !`,
-        ],
-        2:[
-            `🌿 Mardi vert chez ${name} ! Découvrez nos options végétariennes — cuisine ${cuisine} créative au cœur de ${city}. Pour réserver : lien en bio. 🍃`,
-        ],
-        3:[
-            `🔥 Milieu de semaine, envie de bien manger ? ${name} vous accueille à ${city} pour une pause ${cuisine} d'exception. Plats du jour & carte raffinée !`,
-        ],
-        4:[
-            `⭐ Jeudi soir chez ${name} — l'occasion parfaite pour un dîner ${cuisine} entre amis à ${city}. Ambiance cosy, carte inventive, service soigné. Réservez !`,
-        ],
-        5:[
-            `🎉 Vendredi = début de weekend ! Chez ${name}, restaurant ${cuisine} à ${city}, on fête ça avec notre menu dégustation. Vivez une soirée inoubliable !`,
-            `🥂 Ce vendredi, offrez-vous un dîner d'exception chez ${name} à ${city}. Cuisine ${cuisine}, sélection de vins, service aux petits soins. Réservez maintenant !`,
-        ],
-        6:[
-            `✨ Samedi soir spécial chez ${name} ! Notre restaurant ${cuisine} au cœur de ${city} vous propose une expérience culinaire unique. Places limitées — réservez vite !`,
-        ],
-    };
-
-    const dayTemplates=templates[day]||templates[1];
-    t.value=dayTemplates[Math.floor(Math.random()*dayTemplates.length)];
+    const fallbacks=[
+        `🍽️ Nouvelle semaine chez ${name} à ${city} ! Cuisine ${cuisine} avec des produits de saison. #${name.replace(/\s+/g,'')} #restaurant${city}`,
+        `✨ Ce ${['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][day]} chez ${name}, vivez une expérience ${cuisine} unique à ${city}. Réservez ! 🥂`,
+        `🔥 Envie de bien manger ? ${name} à ${city} — cuisine ${cuisine} raffinée, produits frais. #bonneadresse`
+    ];
+    t.value=fallbacks[day%fallbacks.length];
+    t.disabled=false;
+    addToLog('✨ Post social généré (template local)');
 }
 
 async function publishSocialPost(){
@@ -8268,12 +8259,30 @@ async function checkAlgoUpdates(){
 
     panel.innerHTML='<div style="text-align:center;padding:10px;"><span class="spinner-sm"></span> Vérification des mises à jour Google…</div>';
 
-    // Simulate checking (in production, this would fetch from a real API or scrape Google Search Status Dashboard)
-    await new Promise(r=>setTimeout(r,1500));
-
-    // Get updates from the last 6 months
-    const sixMonthsAgo=new Date();sixMonthsAgo.setMonth(sixMonthsAgo.getMonth()-6);
-    const recent=ALGO_UPDATES_CACHE.filter(u=>new Date(u.date)>=sixMonthsAgo).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    // Fetch real algo updates from server (RSS + Google Status + curated)
+    let recent=[];
+    try{
+        const resp=await fetchTimeout(`${API_BASE}/api/algo-updates`,{},8000);
+        const data=await resp.json();
+        if(data.success&&data.updates){
+            recent=data.updates.map(u=>({
+                name:u.name||'Update',
+                date:u.date||new Date().toISOString().split('T')[0],
+                area:u.area||'core',
+                impact:u.impact||'medium',
+                detail:u.detail||u.name||'',
+                actions:u.actions||['Surveiller vos positions dans les prochains jours'],
+                source:u.source||'curated',
+                link:u.link||''
+            }));
+            addToLog('📡 '+data.real_count+' mises à jour réelles + '+Math.max(0,data.total-data.real_count)+' curées récupérées');
+        }
+    }catch(e){console.log('Algo updates API error:',e.message);}
+    // Fallback to local cache if server unavailable
+    if(!recent.length){
+        const sixMonthsAgo=new Date();sixMonthsAgo.setMonth(sixMonthsAgo.getMonth()-6);
+        recent=ALGO_UPDATES_CACHE.filter(u=>new Date(u.date)>=sixMonthsAgo).sort((a,b)=>new Date(b.date)-new Date(a.date));
+    }
 
     panel.innerHTML=recent.map(u=>{
         const impactColor=u.impact==='high'?'#ef4444':u.impact==='medium'?'#f59e0b':'var(--grn)';
@@ -8663,28 +8672,40 @@ async function pushHubToAll(){
     addToLog(`🚀 Hub poussé: 🤖 ${automated} automatisés · ${prepared} prêts`);
 }
 
-function checkNapConsistency(){
+async function checkNapConsistency(){
     const hub=getHubData();
     const container=document.getElementById('hubNapConsistency');if(!container)return;
     container.style.display='block';
-    container.innerHTML='<div style="padding:12px;color:var(--cyn);font-size:.8rem;">🔍 Vérification de la cohérence NAP...</div>';
+    container.innerHTML='<div style="padding:12px;color:var(--cyn);font-size:.8rem;"><span class="spinner-sm"></span> Vérification de la cohérence NAP sur toutes les sources…</div>';
 
     const sources=[
         {name:'Hub Central',icon:'🏠',data:hub},
         {name:'Google Business',icon:'📊',data:{name:currentData?.name||'',phone:currentData?.phone||window._hubData?.phone||'',address:currentData?.address||window._hubData?.address||'',website:currentData?.websiteUrl||window._hubData?.website||''}},
     ];
-    // Real audit data from /api/real-audit (details stored in window._realAuditDetails)
-    const det=window._realAuditDetails||{};
-    if(det.foursquare?.available&&det.foursquare?.found){sources.push({name:'Foursquare',icon:'📍',data:{name:det.foursquare.name||'',phone:det.foursquare.phone||'',address:det.foursquare.address||'',website:det.foursquare.website||''}});}
-    if(det.tripadvisor?.available&&det.tripadvisor?.found){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:det.tripadvisor.name||'',phone:'',address:det.tripadvisor.address||'',website:''}});}
-    if(det.yelp?.available&&det.yelp?.found){sources.push({name:'Yelp',icon:'⭐',data:{name:det.yelp.name||'',phone:det.yelp.phone||'',address:det.yelp.address||'',website:''}});}
-    // Fallback to _foursquare/_tripadvisor/_yelp from currentData (old format)
-    const ra=window._realAuditData||currentData||{};
-    if(!det.foursquare&&ra._foursquare){sources.push({name:'Foursquare',icon:'📍',data:{name:ra._foursquare.name||'',phone:ra._foursquare.phone||'',address:ra._foursquare.address||'',website:ra._foursquare.website||''}});}
-    if(!det.tripadvisor&&ra._tripadvisor){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:ra._tripadvisor.name||'',phone:'',address:ra._tripadvisor.address||'',website:''}});}
-    if(!det.yelp&&ra._yelp){sources.push({name:'Yelp',icon:'⭐',data:{name:ra._yelp.name||'',phone:ra._yelp.phone||'',address:ra._yelp.address||'',website:''}});}
 
-    // Also check dirCheckResults for platforms not already added
+    // Active fetch from server for external platforms
+    try{
+        const resp=await fetchTimeout(`${API_BASE}/api/nap-check`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_name:hub.name||currentData?.name||storedName||'',address:hub.address||currentData?.address||'',phone:hub.phone||currentData?.phone||'',website:hub.website||currentData?.websiteUrl||'',city:currentData?.city||storedCity||''})},10000);
+        const data=await resp.json();
+        if(data.success&&data.sources){
+            data.sources.forEach(s=>{if(s.found)sources.push(s);});
+            addToLog('🔍 NAP check : '+data.sources.length+' sources externes vérifiées');
+        }
+    }catch(e){console.log('NAP check API error:',e.message);}
+
+    // Also use cached real audit data
+    const det=window._realAuditDetails||{};
+    const addedNames=sources.map(s=>s.name.toLowerCase());
+    if(det.foursquare?.available&&det.foursquare?.found&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'📍',data:{name:det.foursquare.name||'',phone:det.foursquare.phone||'',address:det.foursquare.address||'',website:det.foursquare.website||''}});}
+    if(det.tripadvisor?.available&&det.tripadvisor?.found&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:det.tripadvisor.name||'',phone:'',address:det.tripadvisor.address||'',website:''}});}
+    if(det.yelp?.available&&det.yelp?.found&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'⭐',data:{name:det.yelp.name||'',phone:det.yelp.phone||'',address:det.yelp.address||'',website:''}});}
+    // Fallback to old format
+    const ra=window._realAuditData||currentData||{};
+    if(!det.foursquare&&ra._foursquare&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'📍',data:{name:ra._foursquare.name||'',phone:ra._foursquare.phone||'',address:ra._foursquare.address||'',website:ra._foursquare.website||''}});}
+    if(!det.tripadvisor&&ra._tripadvisor&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:ra._tripadvisor.name||'',phone:'',address:ra._tripadvisor.address||'',website:''}});}
+    if(!det.yelp&&ra._yelp&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'⭐',data:{name:ra._yelp.name||'',phone:ra._yelp.phone||'',address:ra._yelp.address||'',website:''}});}
+
+    // dirCheckResults
     const dirList=typeof DIR_LIST!=='undefined'?DIR_LIST:[];
     const addedPlatforms=sources.map(s=>s.name.toLowerCase());
     const platforms=['yelp','tripadvisor','pagesjaunes','foursquare'];
@@ -10945,37 +10966,62 @@ async function saveAiSettings(){
 
 // generateSocialContent() and publishSocialPost() defined above (line ~5681/5720) — no duplicate here
 
-function editGooglePost(id){
-    // id can be a DB id or 0 for demo posts — use the textarea to edit
+async function editGooglePost(id){
     const postCards=document.querySelectorAll('#googlePostsList > div');
     let postText='';
-    // Find post text from rendered cards
     postCards.forEach((card,i)=>{
         const p=card.querySelector('p');
-        if(p && (id===i || (id>0 && card.dataset.postId==id))){
-            postText=p.textContent;
-        }
+        if(p && (id===i || (id>0 && card.dataset.postId==id))) postText=p.textContent;
     });
     if(!postText){
-        // Fallback: just open the textarea pre-filled
         const ta=document.getElementById('socialContent');
         if(ta){ta.focus();showToast('Écrivez votre post dans le champ ci-dessus','info',3000);}
         return;
     }
     const newContent=prompt('Modifier le contenu du post :',postText);
-    if(newContent===null)return;
-    // If real DB id, update server
+    if(newContent===null||newContent===postText)return;
+    // Save to server
+    const rid=currentData?.restaurant_id||1;
+    let saved=false;
     if(id>0){
-        const rid=currentData?.restaurant_id||1;
-        fetchTimeout(`${API_BASE}/api/posts/google/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:newContent})},5000).catch(()=>{});
+        try{
+            const resp=await fetchTimeout(`${API_BASE}/api/posts/google/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({content:newContent,restaurant_id:rid})},8000);
+            const data=await resp.json();
+            if(data.success){saved=true;showToast('✅ Post mis à jour'+(data.published?' et republié sur Google':' en base'),'success');}
+        }catch(e){console.log('Edit post error:',e.message);}
     }
-    // For demo posts, just duplicate to textarea for republishing
+    if(!saved){
+        // Publish as new post with updated content
+        try{
+            await fetchTimeout(`${API_BASE}/api/gbp/create-post`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,content:newContent})},8000);
+            showToast('✅ Post modifié republié sur Google','success');
+            saved=true;
+        }catch(e){}
+    }
+    // Also update the card in UI
+    postCards.forEach((card,i)=>{
+        const p=card.querySelector('p');
+        if(p && (id===i || (id>0 && card.dataset.postId==id))) p.textContent=newContent;
+    });
     const ta=document.getElementById('socialContent');
     if(ta)ta.value=newContent;
-    addToLog('✏️ Post modifié — publiez la version mise à jour');
-    showToast('Post copié dans l\'éditeur — modifiez et publiez !','info',4000);
+    addToLog('✏️ Post modifié'+(saved?' et sauvegardé':' — publiez la version mise à jour'));
 }
-function duplicateGooglePost(text){const ta=document.getElementById('socialContent');if(ta){ta.value=text;switchDashTab('social');}}
+async function duplicateGooglePost(text){
+    const ta=document.getElementById('socialContent');
+    // Try to duplicate via API (creates draft or publishes on GBP)
+    try{
+        const rid=currentData?.restaurant_id||0;
+        const resp=await fetchTimeout(`${API_BASE}/api/posts/google/duplicate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,original_content:text})},8000);
+        const data=await resp.json();
+        if(data.success){
+            addToLog('📋 Post dupliqué'+(data.source==='gbp_api'?' et publié sur Google':' en brouillon'));
+            showToast(data.message||'Post dupliqué !');
+        }
+    }catch(e){console.log('Duplicate post error:',e.message);}
+    // Also copy to editor for manual editing
+    if(ta){ta.value=text;switchDashTab('social');}
+}
 async function schedulePost(){
     const content=document.getElementById('socialContent')?.value;
     if(!content){alert('Entrez un contenu');return;}
@@ -11003,54 +11049,133 @@ function editTargetKeywords(){
     renderTargetKeywords();
     addToLog('🎯 Mots-clés cibles mis à jour ('+newKws.length+')');
 }
-function generateKeywordSuggestions(){
+async function generateKeywordSuggestions(){
     const name=currentData?.name||storedName||'restaurant';
     const city=currentData?.city||storedCity||'';
-    const suggestions=[
-        name.toLowerCase()+' '+city.toLowerCase(),
-        'restaurant '+city.toLowerCase(),
-        'meilleur restaurant '+city.toLowerCase(),
-        'avis '+name.toLowerCase(),
-        name.toLowerCase()+' menu',
-        name.toLowerCase()+' réservation',
-        'restaurant livraison '+city.toLowerCase(),
-        'brunch '+city.toLowerCase(),
-        'restaurant terrasse '+city.toLowerCase(),
-        'restaurant pas cher '+city.toLowerCase()
-    ].filter(s=>s.trim().length>3);
-    const msg=suggestions.map((s,i)=>(i+1)+'. '+s).join('\n');
-    const pick=prompt('Suggestions de mots-clés :\n\n'+msg+'\n\nCopiez ceux que vous souhaitez ajouter (séparés par virgules) :','');
-    if(pick){
-        const kws=pick.split(',').map(s=>s.trim()).filter(Boolean);
-        const existing=window._targetKeywords||[];
-        const pops=['Élevée','Moyenne','Faible'];
-        kws.forEach(kw=>{if(!existing.find(e=>e.kw.toLowerCase()===kw.toLowerCase()))existing.push({kw,lang:'fr',pop:'Moyenne',comp:0});});
-        window._targetKeywords=existing;
-        renderTargetKeywords();
-        addToLog('💡 '+kws.length+' mot(s)-clé(s) ajouté(s)');
+    const cuisine=currentData?.cuisine||'';
+    const existing=window._targetKeywords||[];
+    const existingKws=existing.map(e=>e.kw);
+
+    // Show loading in the keyword panel
+    const btn=document.querySelector('[onclick*="generateKeywordSuggestions"]');
+    if(btn){btn.disabled=true;btn.textContent='⏳ Recherche IA…';}
+
+    let suggestions=[];
+    try{
+        const rid=currentData?.restaurant_id||0;
+        const resp=await fetchTimeout(`${API_BASE}/api/ai/keywords`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,restaurant_name:name,city,cuisine,existing_keywords:existingKws})},12000);
+        const data=await resp.json();
+        if(data.success&&data.keywords){
+            suggestions=data.keywords;
+            addToLog('💡 '+suggestions.length+' suggestions de mots-clés'+(data.source==='ai'?' (IA)':' (template)'));
+        }
+    }catch(e){console.log('Keywords API error:',e.message);}
+
+    // Fallback local
+    if(!suggestions.length){
+        suggestions=[
+            {kw:name.toLowerCase()+' '+city.toLowerCase(),pop:'Élevée',comp:3},
+            {kw:'restaurant '+city.toLowerCase(),pop:'Élevée',comp:8},
+            {kw:'meilleur restaurant '+city.toLowerCase(),pop:'Élevée',comp:9},
+            {kw:'avis '+name.toLowerCase(),pop:'Moyenne',comp:2},
+            {kw:name.toLowerCase()+' menu',pop:'Moyenne',comp:2},
+            {kw:name.toLowerCase()+' réservation',pop:'Moyenne',comp:3},
+            {kw:'restaurant livraison '+city.toLowerCase(),pop:'Élevée',comp:7},
+            {kw:'brunch '+city.toLowerCase(),pop:'Moyenne',comp:6},
+            {kw:'restaurant terrasse '+city.toLowerCase(),pop:'Moyenne',comp:5},
+            {kw:'restaurant romantique '+city.toLowerCase(),pop:'Faible',comp:4}
+        ];
     }
+
+    if(btn){btn.disabled=false;btn.textContent='💡 Suggestions IA';}
+
+    // Filter out already existing keywords
+    const newSuggestions=suggestions.filter(s=>!existingKws.find(e=>e.toLowerCase()===s.kw.toLowerCase()));
+    if(!newSuggestions.length){showToast('Toutes les suggestions sont déjà dans votre liste !','info');return;}
+
+    const msg=newSuggestions.map((s,i)=>`${i+1}. ${s.kw} (${s.pop}, concurrence: ${s.comp}/10)`).join('\n');
+    const pick=prompt('Suggestions de mots-clés :\n\n'+msg+'\n\nEntrez les numéros à ajouter (ex: 1,3,5) ou "tout" :','tout');
+    if(!pick)return;
+    let toAdd=[];
+    if(pick.toLowerCase()==='tout'||pick.toLowerCase()==='all'){toAdd=newSuggestions;}
+    else{const nums=pick.split(',').map(n=>parseInt(n.trim())-1).filter(n=>n>=0&&n<newSuggestions.length);toAdd=nums.map(n=>newSuggestions[n]);}
+    toAdd.forEach(kw=>{if(!existing.find(e=>e.kw.toLowerCase()===kw.kw.toLowerCase()))existing.push(kw);});
+    window._targetKeywords=existing;
+    renderTargetKeywords();
+    addToLog('💡 '+toAdd.length+' mot(s)-clé(s) ajouté(s)');
+    showToast('✅ '+toAdd.length+' mots-clés ajoutés !');
 }
 function viewKeywordAnalysis(i){
     const kw=(window._targetKeywords||[])[i];
     if(!kw)return;
-    alert('📊 Analyse du mot-clé : "'+kw.kw+'"\n\nPopularité : '+kw.pop+'\nConcurrents directs : '+kw.comp+'\nLangue : '+kw.lang+'\n\n💡 Conseil : Intégrez ce mot-clé dans votre fiche Google, votre site web et vos posts sociaux pour améliorer votre positionnement.');
+    const name=currentData?.name||storedName||'restaurant';
+    const popColors={Élevée:'var(--grn)',Moyenne:'var(--ylw)',Faible:'var(--red)'};
+    const compBar=Math.min(10,kw.comp||0);
+    const modal=document.createElement('div');
+    modal.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
+    modal.onclick=e=>{if(e.target===modal)modal.remove();};
+    modal.innerHTML=`<div style="background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:24px;max-width:420px;width:90%;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+            <h3 style="margin:0;font-size:1rem;">📊 Analyse : "${kw.kw}"</h3>
+            <span onclick="this.closest('div[style*=fixed]').remove()" style="cursor:pointer;font-size:1.2rem;">✕</span>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
+            <div style="background:var(--s2);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:.7rem;color:var(--mut);margin-bottom:4px;">Popularité</div>
+                <div style="font-size:1.1rem;font-weight:700;color:${popColors[kw.pop]||'var(--txt)'};">${kw.pop||'N/A'}</div>
+            </div>
+            <div style="background:var(--s2);border-radius:10px;padding:12px;text-align:center;">
+                <div style="font-size:.7rem;color:var(--mut);margin-bottom:4px;">Concurrence</div>
+                <div style="font-size:1.1rem;font-weight:700;">${kw.comp||0}/10</div>
+                <div style="background:var(--s3);border-radius:4px;height:4px;margin-top:6px;"><div style="background:${compBar>7?'var(--red)':compBar>4?'var(--ylw)':'var(--grn)'};height:100%;border-radius:4px;width:${compBar*10}%;"></div></div>
+            </div>
+        </div>
+        <div style="background:var(--s2);border-radius:10px;padding:12px;margin-bottom:12px;">
+            <div style="font-size:.75rem;font-weight:600;margin-bottom:8px;">💡 Conseils d'optimisation</div>
+            <ul style="margin:0;padding-left:16px;font-size:.72rem;color:var(--mut);line-height:1.6;">
+                <li>Intégrez "<b>${kw.kw}</b>" dans votre fiche Google Business</li>
+                <li>Ajoutez-le dans le title et la meta description de votre site</li>
+                <li>Créez un post social autour de ce mot-clé</li>
+                <li>Incluez-le naturellement dans les réponses aux avis</li>
+            </ul>
+        </div>
+        <button onclick="this.closest('div[style*=fixed]').remove()" style="width:100%;padding:10px;background:var(--ind);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">Compris !</button>
+    </div>`;
+    document.body.appendChild(modal);
 }
-function markHolidayOpen(){
+async function markHolidayOpen(){
     const holiday=getNextHoliday();
     if(!holiday)return;
-    addToLog('✅ Jour férié '+holiday.name+' : horaires normaux confirmés');
-    const alert=document.getElementById('holidayAlert');
-    if(alert)alert.innerHTML='<div class="holiday-alert" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn);">✅ '+holiday.name+' — Vous ouvrez normalement. Mise à jour envoyée à Google.</div>';
-    // In production, this would update GBP special hours via API
-    setTimeout(()=>{if(alert)alert.innerHTML='';},5000);
+    const alertEl=document.getElementById('holidayAlert');
+    if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:var(--ind);">⏳ Mise à jour en cours…</div>';
+    try{
+        const rid=currentData?.restaurant_id||0;
+        const resp=await fetchTimeout(`${API_BASE}/api/gbp/special-hours`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,date:holiday.date,is_closed:false,holiday_name:holiday.name})},8000);
+        const data=await resp.json();
+        addToLog('✅ Jour férié '+holiday.name+' : horaires normaux confirmés'+(data.source==='gbp_api'?' (Google mis à jour)':' (en attente sync)'));
+        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn);">✅ '+holiday.name+' — Ouvert normalement. '+(data.message||'')+'</div>';
+    }catch(e){
+        addToLog('✅ Jour férié '+holiday.name+' : horaires normaux (sauvé localement)');
+        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn);">✅ '+holiday.name+' — Ouvert normalement (sera synchronisé avec Google).</div>';
+    }
+    setTimeout(()=>{if(alertEl)alertEl.innerHTML='';},8000);
 }
-function markHolidayClosed(){
+async function markHolidayClosed(){
     const holiday=getNextHoliday();
     if(!holiday)return;
-    addToLog('🔒 Jour férié '+holiday.name+' : marqué comme fermé');
-    const alert=document.getElementById('holidayAlert');
-    if(alert)alert.innerHTML='<div class="holiday-alert" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);">🔒 '+holiday.name+' — Marqué comme fermé. Mise à jour envoyée à Google.</div>';
-    setTimeout(()=>{if(alert)alert.innerHTML='';},5000);
+    const alertEl=document.getElementById('holidayAlert');
+    if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:var(--ind);">⏳ Mise à jour en cours…</div>';
+    try{
+        const rid=currentData?.restaurant_id||0;
+        const resp=await fetchTimeout(`${API_BASE}/api/gbp/special-hours`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,date:holiday.date,is_closed:true,holiday_name:holiday.name})},8000);
+        const data=await resp.json();
+        addToLog('🔒 Jour férié '+holiday.name+' : marqué comme fermé'+(data.source==='gbp_api'?' (Google mis à jour)':' (en attente sync)'));
+        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);">🔒 '+holiday.name+' — Fermé. '+(data.message||'')+'</div>';
+    }catch(e){
+        addToLog('🔒 Jour férié '+holiday.name+' : fermé (sauvé localement)');
+        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);">🔒 '+holiday.name+' — Fermé (sera synchronisé avec Google).</div>';
+    }
+    setTimeout(()=>{if(alertEl)alertEl.innerHTML='';},8000);
 }
 
 // ============================================================
