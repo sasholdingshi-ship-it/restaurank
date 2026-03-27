@@ -8515,6 +8515,196 @@ app.get('/api/ai-test/results/:restaurant_id', (req, res) => {
 });
 
 // ============================================================
+// SPRINT 3: COMPETITOR WATCH
+// ============================================================
+
+// SQLite table for competitors
+try {
+  db.exec(`CREATE TABLE IF NOT EXISTS competitors (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER,
+    competitor_name TEXT NOT NULL,
+    competitor_address TEXT,
+    competitor_rating REAL DEFAULT 0,
+    competitor_reviews INTEGER DEFAULT 0,
+    competitor_place_id TEXT,
+    competitor_cuisine TEXT,
+    competitor_website TEXT,
+    seo_score INTEGER DEFAULT 0,
+    geo_score INTEGER DEFAULT 0,
+    discovered_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(restaurant_id, competitor_name)
+  )`);
+} catch(e) { console.log('competitors table exists'); }
+
+// POST /api/competitors/discover — Auto-discover competitors via Claude AI
+app.post('/api/competitors/discover', async (req, res) => {
+  try {
+    const { restaurant_id, restaurant_name, city, cuisine, address } = req.body;
+    if (!restaurant_name || !city) return res.status(400).json({ success: false, error: 'restaurant_name and city required' });
+
+    const apiKey = getAIKey(restaurant_id);
+    if (!apiKey) {
+      // Fallback: return simulated competitors
+      const simulated = generateSimulatedCompetitors(restaurant_name, city, cuisine);
+      return res.json({ success: true, source: 'simulated', competitors: simulated });
+    }
+
+    const prompt = `Tu es un expert en restauration locale. Identifie les 5-8 principaux concurrents directs du restaurant "${restaurant_name}" situé à ${city}${address ? ' ('+address+')' : ''}${cuisine ? ', cuisine: '+cuisine : ''}.
+
+Pour chaque concurrent, donne un JSON valide avec ces champs:
+- name: nom exact du restaurant
+- address: adresse approximative
+- cuisine: type de cuisine
+- rating: note Google estimée (1-5)
+- reviews: nombre d'avis estimé
+- strengths: 2-3 points forts (array)
+- weaknesses: 1-2 points faibles (array)
+- threat_level: "high", "medium" ou "low"
+- why_competitor: phrase courte expliquant pourquoi c'est un concurrent
+
+Réponds UNIQUEMENT avec un JSON array, rien d'autre. Exemple:
+[{"name":"Resto X","address":"12 rue...","cuisine":"français","rating":4.3,"reviews":850,"strengths":["bon rapport qualité-prix","terrasse"],"weaknesses":["service lent"],"threat_level":"high","why_competitor":"Même segment prix, même quartier"}]`;
+
+    const result = await callClaudeAPI(apiKey, prompt, 2000);
+
+    let competitors = [];
+    try {
+      // Extract JSON array from response
+      const jsonMatch = result.match(/\[[\s\S]*\]/);
+      if (jsonMatch) competitors = JSON.parse(jsonMatch[0]);
+    } catch(e) {
+      console.error('Failed to parse competitors JSON:', e.message);
+      competitors = generateSimulatedCompetitors(restaurant_name, city, cuisine);
+      return res.json({ success: true, source: 'simulated_fallback', competitors });
+    }
+
+    // Store in DB
+    for (const comp of competitors) {
+      try {
+        db.prepare(`INSERT OR REPLACE INTO competitors (restaurant_id, competitor_name, competitor_address, competitor_rating, competitor_reviews, competitor_cuisine, competitor_place_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`)
+          .run(restaurant_id || 0, comp.name, comp.address || '', comp.rating || 0, comp.reviews || 0, comp.cuisine || '', comp.threat_level || 'medium');
+      } catch(e) {}
+    }
+
+    res.json({ success: true, source: 'ai', competitors });
+  } catch(e) {
+    console.error('Competitor discover error:', e.message);
+    const simulated = generateSimulatedCompetitors(req.body.restaurant_name, req.body.city, req.body.cuisine);
+    res.json({ success: true, source: 'simulated_error', competitors: simulated });
+  }
+});
+
+// POST /api/competitors/compare — Side-by-side comparison via AI
+app.post('/api/competitors/compare', async (req, res) => {
+  try {
+    const { restaurant_id, restaurant_name, competitor_name, city, cuisine } = req.body;
+    if (!restaurant_name || !competitor_name) return res.status(400).json({ success: false, error: 'Both restaurant names required' });
+
+    const apiKey = getAIKey(restaurant_id);
+    if (!apiKey) {
+      return res.json({ success: true, source: 'simulated', comparison: generateSimulatedComparison(restaurant_name, competitor_name) });
+    }
+
+    const prompt = `Compare ces 2 restaurants à ${city}: "${restaurant_name}" vs "${competitor_name}"${cuisine ? ' (cuisine: '+cuisine+')' : ''}.
+
+Donne un JSON avec:
+{
+  "categories": [
+    {"name": "Visibilité Google", "restaurant_score": 0-100, "competitor_score": 0-100, "insight": "phrase courte"},
+    {"name": "Présence IA (GEO)", "restaurant_score": 0-100, "competitor_score": 0-100, "insight": "..."},
+    {"name": "Avis & Réputation", "restaurant_score": 0-100, "competitor_score": 0-100, "insight": "..."},
+    {"name": "Site Web & SEO", "restaurant_score": 0-100, "competitor_score": 0-100, "insight": "..."},
+    {"name": "Réseaux sociaux", "restaurant_score": 0-100, "competitor_score": 0-100, "insight": "..."},
+    {"name": "Annuaires locaux", "restaurant_score": 0-100, "competitor_score": 0-100, "insight": "..."}
+  ],
+  "overall_restaurant": 0-100,
+  "overall_competitor": 0-100,
+  "key_advantages": ["avantage 1", "avantage 2"],
+  "key_gaps": ["écart 1", "écart 2"],
+  "action_plan": ["action prioritaire 1", "action prioritaire 2", "action 3"]
+}
+Réponds UNIQUEMENT avec le JSON, rien d'autre.`;
+
+    const result = await callClaudeAPI(apiKey, prompt, 1500);
+
+    let comparison;
+    try {
+      const jsonMatch = result.match(/\{[\s\S]*\}/);
+      if (jsonMatch) comparison = JSON.parse(jsonMatch[0]);
+      else throw new Error('No JSON found');
+    } catch(e) {
+      comparison = generateSimulatedComparison(restaurant_name, competitor_name);
+      return res.json({ success: true, source: 'simulated_fallback', comparison });
+    }
+
+    res.json({ success: true, source: 'ai', comparison });
+  } catch(e) {
+    console.error('Competitor compare error:', e.message);
+    res.json({ success: true, source: 'simulated_error', comparison: generateSimulatedComparison(req.body.restaurant_name, req.body.competitor_name) });
+  }
+});
+
+// GET /api/competitors/:restaurant_id — Get saved competitors
+app.get('/api/competitors/:restaurant_id', (req, res) => {
+  try {
+    const rows = db.prepare(`SELECT * FROM competitors WHERE restaurant_id = ? ORDER BY competitor_rating DESC`).all(req.params.restaurant_id || 0);
+    res.json({ success: true, competitors: rows });
+  } catch(e) {
+    res.json({ success: true, competitors: [] });
+  }
+});
+
+// Helper: generate simulated competitors
+function generateSimulatedCompetitors(name, city, cuisine) {
+  const types = cuisine ? [cuisine, 'Bistrot', 'Brasserie', 'Gastro'] : ['Français', 'Italien', 'Bistrot', 'Brasserie', 'Fusion'];
+  const prefixes = ['Le Petit', 'Chez', 'La Table de', 'Maison', 'L\'Atelier', 'Au Bon', 'Le Grand'];
+  const suffixes = ['Marcel', 'Pierre', 'Marie', 'Jules', 'Victor', 'Paul', 'Louis'];
+  const competitors = [];
+  const count = 5 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < count; i++) {
+    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
+    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
+    const cName = `${prefix} ${suffix}`;
+    const rating = (3.5 + Math.random() * 1.4).toFixed(1);
+    const reviews = Math.floor(100 + Math.random() * 2000);
+    competitors.push({
+      name: cName,
+      address: `${Math.floor(1+Math.random()*150)} rue du ${['Commerce','Marché','Temple','Faubourg','Château'][Math.floor(Math.random()*5)]}, ${city}`,
+      cuisine: types[Math.floor(Math.random() * types.length)],
+      rating: parseFloat(rating),
+      reviews,
+      strengths: ['Bonne visibilité locale', 'Avis positifs récents', 'Menu bien référencé'].slice(0, 2 + Math.floor(Math.random()*2)),
+      weaknesses: ['Site web lent', 'Pas de schema.org', 'Peu actif sur les réseaux'].slice(0, 1 + Math.floor(Math.random()*2)),
+      threat_level: ['high','medium','low'][Math.floor(Math.random()*3)],
+      why_competitor: `Même zone que ${name}, ${reviews > 500 ? 'forte notoriété' : 'concurrent émergent'}`
+    });
+  }
+  return competitors;
+}
+
+// Helper: generate simulated comparison
+function generateSimulatedComparison(restaurantName, competitorName) {
+  const rnd = (min,max) => Math.floor(min + Math.random()*(max-min));
+  return {
+    categories: [
+      { name: 'Visibilité Google', restaurant_score: rnd(20,60), competitor_score: rnd(30,80), insight: 'Écart sur les requêtes locales' },
+      { name: 'Présence IA (GEO)', restaurant_score: rnd(5,30), competitor_score: rnd(5,40), insight: 'Les deux restaurants peu cités par les IA' },
+      { name: 'Avis & Réputation', restaurant_score: rnd(40,80), competitor_score: rnd(40,80), insight: 'Notes similaires mais volume différent' },
+      { name: 'Site Web & SEO', restaurant_score: rnd(20,60), competitor_score: rnd(20,70), insight: 'Optimisation on-page à améliorer' },
+      { name: 'Réseaux sociaux', restaurant_score: rnd(10,50), competitor_score: rnd(15,60), insight: 'Présence irrégulière des deux côtés' },
+      { name: 'Annuaires locaux', restaurant_score: rnd(20,50), competitor_score: rnd(25,60), insight: 'Couverture annuaires à renforcer' }
+    ],
+    overall_restaurant: rnd(25,55),
+    overall_competitor: rnd(35,65),
+    key_advantages: ['Menu mieux décrit', 'Photos plus récentes'],
+    key_gaps: ['Moins d\'avis récents', 'Fiche Google moins complète'],
+    action_plan: ['Répondre à tous les avis récents', 'Ajouter schema.org Restaurant', 'Publier 2 Google Posts par semaine']
+  };
+}
+
+// ============================================================
 // START SERVER
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {
