@@ -6786,11 +6786,9 @@ function generateReviewReply(idx){
         replyDiv.style.display='block';
         replyDiv.textContent=reply;
     }
-    navigator.clipboard.writeText(reply).then(()=>{
-        if(btn){btn.textContent='✅ Copié !';btn.style.color='var(--grn)';setTimeout(()=>{btn.textContent='💬 Répondre avec IA';btn.style.color='';},3000);}
-    }).catch(()=>{
-        prompt('Réponse IA générée — copiez-la :',reply);
-    });
+    try{await navigator.clipboard.writeText(reply);}catch(e){}
+    if(btn){btn.textContent='✅ Copié !';btn.style.color='var(--grn)';setTimeout(()=>{btn.textContent='💬 Répondre avec IA';btn.style.color='';},3000);}
+    showToast('✅ Réponse copiée dans le presse-papier','success',3000);
 
     // If GBP connected, also offer to publish directly
     if(googleAuth?.connected&&r.reviewId){
