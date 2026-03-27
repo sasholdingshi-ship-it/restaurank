@@ -9320,15 +9320,7 @@ async function loadGSCChart(){
                 renderGSCChart(data);
                 return;
             }
-            if(data.needsAuth||data.needsReauth){
-                container.innerHTML=`<div style="padding:20px;text-align:center;">
-                    <div style="font-size:1.5rem;margin-bottom:8px;">🔐</div>
-                    <div style="font-weight:600;color:var(--txt);margin-bottom:6px;">Connectez Google Search Console</div>
-                    <div style="font-size:.78rem;color:var(--mut);margin-bottom:12px;">Autorisez l'accès à Search Console pour voir vos vraies données de performance (clics, impressions, position).</div>
-                    <button onclick="connectGSC()" style="padding:10px 24px;background:var(--ind);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;">🔗 Connecter Google Search Console</button>
-                </div>`;
-                return;
-            }
+            // needsAuth → fall through to estimated data (don't show empty connect prompt)
         }catch(e){console.warn('GSC load error:',e);}
     }
 
@@ -9539,7 +9531,7 @@ async function loadBacklinks(){
     try{
         const r=await fetchTimeout(`${API_BASE}/api/backlinks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({website_url:websiteUrl})},15000);
         const data=await r.json();
-        if(data.success){
+        if(data.success&&data.totalLinks>0){
             window._backlinkData=data;
             renderBacklinks(data);
             return;
