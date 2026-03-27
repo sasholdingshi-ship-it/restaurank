@@ -8290,6 +8290,231 @@ function _computeListingCompleteness(g, ta, ylp, fsq) {
 }
 
 // ============================================================
+// PROMPT LIBRARY + AI VISIBILITY TESTING (Sprint 2)
+// ============================================================
+
+// SQLite table for AI test results
+try {
+  db.exec(`CREATE TABLE IF NOT EXISTS ai_visibility_tests (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER,
+    platform TEXT NOT NULL,
+    prompt TEXT NOT NULL,
+    prompt_category TEXT DEFAULT 'discovery',
+    result_status TEXT DEFAULT 'pending',
+    result_text TEXT,
+    cited INTEGER DEFAULT 0,
+    position INTEGER DEFAULT 0,
+    confidence REAL DEFAULT 0,
+    tested_at TEXT DEFAULT (datetime('now')),
+    UNIQUE(restaurant_id, platform, prompt)
+  )`);
+} catch(e) { console.log('ai_visibility_tests table:', e.message); }
+
+// Prompt templates by category — adapted to restaurant context
+const PROMPT_LIBRARY = {
+  discovery: [
+    { id: 'd1', fr: 'Quels sont les meilleurs restaurants {cuisine} à {city} ?', en: 'What are the best {cuisine} restaurants in {city}?' },
+    { id: 'd2', fr: 'Où manger {cuisine} à {city} ?', en: 'Where to eat {cuisine} in {city}?' },
+    { id: 'd3', fr: 'Recommande-moi un bon restaurant à {city}', en: 'Recommend a good restaurant in {city}' },
+    { id: 'd4', fr: 'Quel restaurant pour un dîner romantique à {city} ?', en: 'Which restaurant for a romantic dinner in {city}?' },
+    { id: 'd5', fr: 'Meilleurs restaurants rapport qualité-prix à {city}', en: 'Best value restaurants in {city}' }
+  ],
+  reputation: [
+    { id: 'r1', fr: 'Que penses-tu du restaurant {name} à {city} ?', en: 'What do you think of {name} restaurant in {city}?' },
+    { id: 'r2', fr: '{name} {city} avis et recommandation', en: '{name} {city} reviews and recommendation' },
+    { id: 'r3', fr: 'Est-ce que {name} est un bon restaurant ?', en: 'Is {name} a good restaurant?' }
+  ],
+  comparison: [
+    { id: 'c1', fr: 'Compare les meilleurs restaurants {cuisine} à {city}', en: 'Compare the best {cuisine} restaurants in {city}' },
+    { id: 'c2', fr: 'Top 5 restaurants à {city} avec terrasse', en: 'Top 5 restaurants in {city} with terrace' },
+    { id: 'c3', fr: '{name} vs autres restaurants {cuisine} à {city}', en: '{name} vs other {cuisine} restaurants in {city}' }
+  ],
+  specifics: [
+    { id: 's1', fr: 'Quels restaurants à {city} sont ouverts le dimanche ?', en: 'Which restaurants in {city} are open on Sunday?' },
+    { id: 's2', fr: 'Restaurant avec terrasse à {city}', en: 'Restaurant with terrace in {city}' },
+    { id: 's3', fr: 'Restaurant pour groupe à {city}', en: 'Restaurant for groups in {city}' },
+    { id: 's4', fr: 'Restaurant végétarien à {city}', en: 'Vegetarian restaurant in {city}' }
+  ]
+};
+
+// GET /api/prompts/library — Get prompt templates for a restaurant
+app.get('/api/prompts/library', (req, res) => {
+  const { name, city, cuisine } = req.query;
+  const n = name || 'Mon Restaurant';
+  const c = city || 'Paris';
+  const cu = cuisine || 'italien';
+
+  const result = {};
+  for (const [category, prompts] of Object.entries(PROMPT_LIBRARY)) {
+    result[category] = prompts.map(p => ({
+      id: p.id,
+      prompt_fr: p.fr.replace(/\{name\}/g, n).replace(/\{city\}/g, c).replace(/\{cuisine\}/g, cu),
+      prompt_en: p.en.replace(/\{name\}/g, n).replace(/\{city\}/g, c).replace(/\{cuisine\}/g, cu),
+      category
+    }));
+  }
+  res.json({ success: true, library: result, total: Object.values(result).flat().length });
+});
+
+// POST /api/ai-test/single — Test one prompt on one platform via Claude
+app.post('/api/ai-test/single', async (req, res) => {
+  try {
+    const { restaurant_id, platform, prompt, restaurant_name, city, cuisine } = req.body;
+    if (!platform || !prompt) return res.status(400).json({ success: false, error: 'platform and prompt required' });
+
+    const apiKey = getAIKey(restaurant_id);
+    if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key', message: 'Clé API Claude requise pour tester la visibilité IA' });
+
+    // Build the simulation prompt — we ask Claude to simulate how the target platform would answer
+    const systemPrompt = `Tu es un simulateur de moteur IA. Simule la réponse que ${platform} donnerait à la requête utilisateur ci-dessous.
+Réponds comme le ferait ${platform} — naturellement, avec des recommandations.
+IMPORTANT: Sois réaliste. Si le restaurant "${restaurant_name}" à ${city} est peu connu, il est normal qu'il ne soit PAS mentionné.
+Après ta réponse simulée, ajoute sur une ligne séparée un JSON avec cette structure exacte:
+{"cited": true/false, "position": 0-5, "confidence": 0.0-1.0, "context": "explanation"}
+- cited: true si ${restaurant_name} apparaît dans la réponse
+- position: rang dans la liste (0 si non cité, 1 si premier, etc.)
+- confidence: probabilité estimée que la vraie plateforme citerait ce restaurant
+- context: courte explication`;
+
+    const fullPrompt = `${systemPrompt}\n\nRequête utilisateur: "${prompt}"`;
+    const result = await callClaudeAPI(apiKey, fullPrompt, 1500);
+
+    // Parse the JSON metadata from the response
+    let cited = false, position = 0, confidence = 0, context = '';
+    try {
+      const jsonMatch = result.match(/\{[^{}]*"cited"[^{}]*\}/);
+      if (jsonMatch) {
+        const meta = JSON.parse(jsonMatch[0]);
+        cited = !!meta.cited;
+        position = meta.position || 0;
+        confidence = meta.confidence || 0;
+        context = meta.context || '';
+      }
+    } catch(e) { /* parse failed, defaults apply */ }
+
+    // Clean response text (remove the JSON line)
+    const cleanText = result.replace(/\{[^{}]*"cited"[^{}]*\}/, '').trim();
+
+    // Store in DB
+    try {
+      db.prepare(`INSERT OR REPLACE INTO ai_visibility_tests (restaurant_id, platform, prompt, result_status, result_text, cited, position, confidence, tested_at)
+        VALUES (?, ?, ?, 'done', ?, ?, ?, ?, datetime('now'))`)
+        .run(restaurant_id || 0, platform, prompt, cleanText, cited ? 1 : 0, position, confidence);
+    } catch(e) {}
+
+    res.json({
+      success: true,
+      platform,
+      prompt,
+      result: {
+        text: cleanText,
+        cited,
+        position,
+        confidence,
+        context,
+        tested_at: new Date().toISOString()
+      }
+    });
+  } catch(e) {
+    console.error('AI test error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// POST /api/ai-test/matrix — Test multiple prompts across all platforms
+app.post('/api/ai-test/matrix', async (req, res) => {
+  try {
+    const { restaurant_id, prompts, platforms, restaurant_name, city, cuisine } = req.body;
+    const plats = platforms || ['ChatGPT', 'Perplexity', 'Gemini', 'Claude'];
+    const proms = prompts || [];
+    if (proms.length === 0) return res.status(400).json({ success: false, error: 'At least one prompt required' });
+
+    const apiKey = getAIKey(restaurant_id);
+    if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key' });
+
+    const results = [];
+    // Process sequentially to avoid rate limits
+    for (const prompt of proms) {
+      for (const platform of plats) {
+        try {
+          const systemPrompt = `Tu es un simulateur de moteur IA. Simule la réponse COURTE que ${platform} donnerait.
+Restaurant à vérifier: "${restaurant_name}" à ${city} (cuisine: ${cuisine || 'variée'}).
+Réponds en 2-3 phrases max, puis ajoute le JSON:
+{"cited": true/false, "position": 0-5, "confidence": 0.0-1.0}`;
+
+          const result = await callClaudeAPI(apiKey, `${systemPrompt}\n\nRequête: "${prompt}"`, 500);
+
+          let cited = false, position = 0, confidence = 0;
+          try {
+            const jsonMatch = result.match(/\{[^{}]*"cited"[^{}]*\}/);
+            if (jsonMatch) {
+              const meta = JSON.parse(jsonMatch[0]);
+              cited = !!meta.cited;
+              position = meta.position || 0;
+              confidence = meta.confidence || 0;
+            }
+          } catch(e) {}
+
+          const cleanText = result.replace(/\{[^{}]*"cited"[^{}]*\}/, '').trim();
+
+          // Store
+          try {
+            db.prepare(`INSERT OR REPLACE INTO ai_visibility_tests (restaurant_id, platform, prompt, result_status, result_text, cited, position, confidence, tested_at)
+              VALUES (?, ?, ?, 'done', ?, ?, ?, ?, datetime('now'))`)
+              .run(restaurant_id || 0, platform, prompt, cleanText, cited ? 1 : 0, position, confidence);
+          } catch(e) {}
+
+          results.push({ platform, prompt, cited, position, confidence, text: cleanText.substring(0, 200) });
+        } catch(e) {
+          results.push({ platform, prompt, cited: false, position: 0, confidence: 0, error: e.message });
+        }
+      }
+    }
+
+    // Compute summary
+    const summary = {
+      total_tests: results.length,
+      cited_count: results.filter(r => r.cited).length,
+      avg_confidence: results.length > 0 ? (results.reduce((a, r) => a + (r.confidence || 0), 0) / results.length) : 0,
+      by_platform: {}
+    };
+    for (const p of plats) {
+      const pr = results.filter(r => r.platform === p);
+      summary.by_platform[p] = {
+        cited: pr.filter(r => r.cited).length,
+        total: pr.length,
+        avg_confidence: pr.length > 0 ? (pr.reduce((a, r) => a + (r.confidence || 0), 0) / pr.length) : 0
+      };
+    }
+
+    res.json({ success: true, results, summary });
+  } catch(e) {
+    console.error('AI matrix test error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/ai-test/results — Get past test results for a restaurant
+app.get('/api/ai-test/results/:restaurant_id', (req, res) => {
+  try {
+    const rows = db.prepare(`SELECT * FROM ai_visibility_tests WHERE restaurant_id = ? ORDER BY tested_at DESC LIMIT 100`).all(req.params.restaurant_id || 0);
+    const summary = {
+      total: rows.length,
+      cited: rows.filter(r => r.cited).length,
+      by_platform: {}
+    };
+    ['ChatGPT', 'Perplexity', 'Gemini', 'Claude'].forEach(p => {
+      const pr = rows.filter(r => r.platform === p);
+      summary.by_platform[p] = { cited: pr.filter(r => r.cited).length, total: pr.length };
+    });
+    res.json({ success: true, results: rows, summary });
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
 // START SERVER
 // ============================================================
 app.listen(PORT, '0.0.0.0', () => {

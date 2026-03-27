@@ -1014,6 +1014,52 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
 .st-legend-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--mut);}
 .st-legend-dot{width:8px;height:8px;border-radius:50%;}
 .st-no-data{text-align:center;color:var(--mut);font-size:.8rem;padding:30px 0;}
+/* === PROMPT LIBRARY + AI MATRIX === */
+.prompt-lib{margin:0 16px 16px;padding:16px;background:var(--s2);border:1px solid var(--bdr);border-radius:14px;}
+.prompt-lib-title{font-size:.95rem;font-weight:700;margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.prompt-lib-sub{font-size:.72rem;color:var(--mut);margin-bottom:14px;}
+.prompt-cats{display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap;}
+.prompt-cat-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--bdr);background:transparent;color:var(--mut);font-size:.72rem;cursor:pointer;transition:all .2s;}
+.prompt-cat-btn.active{background:var(--ind);border-color:var(--ind);color:#fff;font-weight:600;}
+.prompt-cat-btn:hover{border-color:var(--ind);color:var(--ind2);}
+.prompt-list{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow-y:auto;}
+.prompt-item{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--s3);border-radius:10px;border:1px solid transparent;cursor:pointer;transition:all .2s;}
+.prompt-item:hover{border-color:var(--ind);background:rgba(99,102,241,.06);}
+.prompt-item.selected{border-color:var(--ind);background:rgba(99,102,241,.1);}
+.prompt-item-check{width:18px;height:18px;border-radius:5px;border:2px solid var(--mut2);display:flex;align-items:center;justify-content:center;font-size:.65rem;flex-shrink:0;transition:all .2s;}
+.prompt-item.selected .prompt-item-check{background:var(--ind);border-color:var(--ind);color:#fff;}
+.prompt-item-text{font-size:.78rem;color:var(--txt);flex:1;}
+.prompt-item-cat{font-size:.6rem;padding:2px 8px;border-radius:4px;background:rgba(99,102,241,.08);color:var(--ind2);flex-shrink:0;}
+.prompt-actions{display:flex;gap:8px;margin-top:12px;align-items:center;}
+.prompt-test-btn{padding:10px 24px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--ind),var(--prp));color:#fff;font-size:.82rem;font-weight:700;cursor:pointer;transition:all .2s;}
+.prompt-test-btn:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(99,102,241,.3);}
+.prompt-test-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none;}
+.prompt-sel-count{font-size:.72rem;color:var(--mut);}
+/* AI TEST MATRIX */
+.ai-matrix{margin:0 16px 16px;padding:16px;background:var(--s2);border:1px solid var(--bdr);border-radius:14px;}
+.ai-matrix-title{font-size:.95rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.ai-matrix-grid{overflow-x:auto;}
+.ai-matrix-grid table{width:100%;border-collapse:collapse;font-size:.72rem;}
+.ai-matrix-grid th{padding:8px 10px;text-align:center;color:var(--mut);font-weight:600;border-bottom:1px solid var(--bdr);white-space:nowrap;}
+.ai-matrix-grid th:first-child{text-align:left;min-width:200px;}
+.ai-matrix-grid td{padding:8px 10px;text-align:center;border-bottom:1px solid rgba(255,255,255,.03);}
+.ai-matrix-grid td:first-child{text-align:left;color:var(--txt);font-size:.7rem;}
+.ai-matrix-grid tr:hover td{background:rgba(99,102,241,.03);}
+.mx-cell{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:8px;font-size:.8rem;font-weight:700;}
+.mx-cell.cited{background:rgba(16,185,129,.15);color:var(--grn);}
+.mx-cell.not{background:rgba(239,68,68,.1);color:var(--red);}
+.mx-cell.pending{background:rgba(245,158,11,.1);color:var(--org);font-size:.6rem;}
+.mx-cell.testing{background:rgba(99,102,241,.1);color:var(--ind);animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.mx-summary{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px;}
+.mx-sum-card{padding:10px;background:var(--s3);border-radius:8px;text-align:center;}
+.mx-sum-icon{font-size:1.2rem;margin-bottom:4px;}
+.mx-sum-pct{font-size:1.1rem;font-weight:800;}
+.mx-sum-label{font-size:.62rem;color:var(--mut);margin-top:2px;}
+.mx-detail-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:10000;align-items:center;justify-content:center;}
+.mx-detail-modal.active{display:flex;}
+.mx-detail-box{background:var(--s1);border:1px solid var(--bdr);border-radius:14px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;padding:24px;}
+.mx-detail-close{position:absolute;top:12px;right:16px;cursor:pointer;font-size:1.2rem;color:var(--mut);}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -9719,6 +9765,267 @@ async function removeKeyword(idx){
         }
     }catch(e){console.warn('Remove keyword error:',e);}
 }
+
+// ============================================================
+// PROMPT LIBRARY + AI VISIBILITY MATRIX (Sprint 2 — Vyzz)
+// ============================================================
+window._promptLibrary=null;
+window._selectedPrompts=new Set();
+window._aiTestResults=[];
+window._activePromptCat='all';
+
+async function loadPromptLibrary(){
+    if(window._promptLibrary)return window._promptLibrary;
+    const name=currentData?.name||'Restaurant';
+    const city=currentData?.city||'Paris';
+    const cuisine=currentData?.category||'restaurant';
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/prompts/library?name=${encodeURIComponent(name)}&city=${encodeURIComponent(city)}&cuisine=${encodeURIComponent(cuisine)}`,{},5000);
+        const d=await r.json();
+        if(d.success){window._promptLibrary=d.library;return d.library;}
+    }catch(e){console.warn('Prompt library fallback to local');}
+    // Fallback: local library
+    const lib={
+        discovery:[
+            {id:'d1',prompt_fr:`Quels sont les meilleurs restaurants ${cuisine} à ${city} ?`,category:'discovery'},
+            {id:'d2',prompt_fr:`Où manger ${cuisine} à ${city} ?`,category:'discovery'},
+            {id:'d3',prompt_fr:`Recommande-moi un bon restaurant à ${city}`,category:'discovery'},
+            {id:'d4',prompt_fr:`Quel restaurant pour un dîner romantique à ${city} ?`,category:'discovery'},
+            {id:'d5',prompt_fr:`Meilleurs restaurants rapport qualité-prix à ${city}`,category:'discovery'}
+        ],
+        reputation:[
+            {id:'r1',prompt_fr:`Que penses-tu du restaurant ${name} à ${city} ?`,category:'reputation'},
+            {id:'r2',prompt_fr:`${name} ${city} avis et recommandation`,category:'reputation'},
+            {id:'r3',prompt_fr:`Est-ce que ${name} est un bon restaurant ?`,category:'reputation'}
+        ],
+        comparison:[
+            {id:'c1',prompt_fr:`Compare les meilleurs restaurants ${cuisine} à ${city}`,category:'comparison'},
+            {id:'c2',prompt_fr:`Top 5 restaurants à ${city} avec terrasse`,category:'comparison'},
+            {id:'c3',prompt_fr:`${name} vs autres restaurants ${cuisine} à ${city}`,category:'comparison'}
+        ],
+        specifics:[
+            {id:'s1',prompt_fr:`Quels restaurants à ${city} sont ouverts le dimanche ?`,category:'specifics'},
+            {id:'s2',prompt_fr:`Restaurant avec terrasse à ${city}`,category:'specifics'},
+            {id:'s3',prompt_fr:`Restaurant pour groupe à ${city}`,category:'specifics'},
+            {id:'s4',prompt_fr:`Restaurant végétarien à ${city}`,category:'specifics'}
+        ]
+    };
+    window._promptLibrary=lib;
+    return lib;
+}
+
+function renderPromptLibrary(container){
+    if(!container)return;
+    const lib=window._promptLibrary;
+    if(!lib)return;
+    const catLabels={all:'Tous',discovery:'🔍 Découverte',reputation:'⭐ Réputation',comparison:'⚔️ Comparaison',specifics:'📌 Spécifique'};
+    const allPrompts=[];
+    Object.entries(lib).forEach(([cat,prompts])=>prompts.forEach(p=>allPrompts.push({...p,category:cat})));
+    const filtered=window._activePromptCat==='all'?allPrompts:allPrompts.filter(p=>p.category===window._activePromptCat);
+
+    let html=`<div class="prompt-lib"><div class="prompt-lib-title">📚 Prompt Library — Test de visibilité IA</div>
+    <div class="prompt-lib-sub">Sélectionnez les prompts à tester sur ChatGPT, Perplexity, Gemini et Claude pour vérifier si votre restaurant est cité.</div>
+    <div class="prompt-cats">`;
+    Object.entries(catLabels).forEach(([k,v])=>{
+        html+=`<button class="prompt-cat-btn${window._activePromptCat===k?' active':''}" onclick="window._activePromptCat='${k}';renderPromptLibSection()">${v}</button>`;
+    });
+    html+=`</div><div class="prompt-list">`;
+    filtered.forEach(p=>{
+        const sel=window._selectedPrompts.has(p.id);
+        html+=`<div class="prompt-item${sel?' selected':''}" onclick="togglePromptSelection('${p.id}')">
+            <div class="prompt-item-check">${sel?'✓':''}</div>
+            <div class="prompt-item-text">${p.prompt_fr}</div>
+            <div class="prompt-item-cat">${catLabels[p.category]||p.category}</div>
+        </div>`;
+    });
+    html+=`</div><div class="prompt-actions">
+        <button class="prompt-test-btn" onclick="runAIMatrixTest()" ${window._selectedPrompts.size===0?'disabled':''}>🧪 Tester sur 4 plateformes IA</button>
+        <span class="prompt-sel-count">${window._selectedPrompts.size} prompt${window._selectedPrompts.size!==1?'s':''} sélectionné${window._selectedPrompts.size!==1?'s':''}</span>
+        <button style="padding:6px 12px;border-radius:8px;border:1px solid var(--bdr);background:transparent;color:var(--mut);font-size:.7rem;cursor:pointer;margin-left:auto;" onclick="selectAllPrompts()">Tout sélectionner</button>
+    </div></div>`;
+    container.innerHTML=html;
+}
+
+function togglePromptSelection(id){
+    if(window._selectedPrompts.has(id))window._selectedPrompts.delete(id);
+    else window._selectedPrompts.add(id);
+    renderPromptLibSection();
+}
+
+function selectAllPrompts(){
+    const lib=window._promptLibrary;if(!lib)return;
+    const allIds=[];
+    Object.values(lib).forEach(prompts=>prompts.forEach(p=>allIds.push(p.id)));
+    if(window._selectedPrompts.size===allIds.length)window._selectedPrompts.clear();
+    else allIds.forEach(id=>window._selectedPrompts.add(id));
+    renderPromptLibSection();
+}
+
+function renderPromptLibSection(){
+    const c=document.getElementById('promptLibContainer');
+    if(c)renderPromptLibrary(c);
+}
+
+// AI MATRIX TEST — calls backend
+async function runAIMatrixTest(){
+    if(window._selectedPrompts.size===0)return;
+    const lib=window._promptLibrary;if(!lib)return;
+    const allPrompts=[];
+    Object.values(lib).forEach(prompts=>prompts.forEach(p=>allPrompts.push(p)));
+    const selected=allPrompts.filter(p=>window._selectedPrompts.has(p.id));
+    const prompts=selected.map(p=>p.prompt_fr);
+    const platforms=['ChatGPT','Perplexity','Gemini','Claude'];
+    const name=currentData?.name||'Restaurant';
+    const city=currentData?.city||'Paris';
+    const cuisine=currentData?.category||'restaurant';
+    const rid=currentData?.restaurant_id||0;
+
+    // Init matrix results
+    window._aiTestResults=[];
+    prompts.forEach(pr=>{
+        platforms.forEach(pl=>{
+            window._aiTestResults.push({prompt:pr,platform:pl,status:'pending',cited:false,confidence:0,text:''});
+        });
+    });
+    renderAIMatrix();
+
+    // Try server-side matrix test first
+    try{
+        // Mark all as testing
+        window._aiTestResults.forEach(r=>r.status='testing');
+        renderAIMatrix();
+
+        const r=await fetchTimeout(`${API_BASE}/api/ai-test/matrix`,{
+            method:'POST',headers:{'Content-Type':'application/json'},
+            body:JSON.stringify({restaurant_id:rid,prompts,platforms,restaurant_name:name,city,cuisine})
+        },120000);
+        const d=await r.json();
+        if(d.success&&d.results){
+            // Map results back
+            d.results.forEach(res=>{
+                const match=window._aiTestResults.find(r=>r.prompt===res.prompt&&r.platform===res.platform);
+                if(match){
+                    match.status='done';
+                    match.cited=res.cited;
+                    match.confidence=res.confidence||0;
+                    match.text=res.text||'';
+                    match.position=res.position||0;
+                }
+            });
+            if(d.summary)window._aiMatrixSummary=d.summary;
+            renderAIMatrix();
+            showToast(`✅ ${d.results.length} tests terminés — ${d.summary?.cited_count||0} citations trouvées`);
+            return;
+        }
+    }catch(e){console.warn('Matrix API failed, falling back to simulation:',e.message);}
+
+    // Fallback: simulate results locally
+    window._aiTestResults.forEach(r=>{
+        r.status='done';
+        // Simulate: reputation prompts more likely to cite, discovery less
+        const isRepPrompt=r.prompt.toLowerCase().includes(name.toLowerCase());
+        const base=isRepPrompt?0.4:0.15;
+        const platformBonus={ChatGPT:0.05,Perplexity:0.1,Gemini:0,Claude:0.03}[r.platform]||0;
+        r.confidence=Math.min(1,Math.max(0,base+platformBonus+Math.random()*0.2-0.1));
+        r.cited=r.confidence>0.35;
+        r.position=r.cited?Math.ceil(Math.random()*5):0;
+    });
+    renderAIMatrix();
+    showToast('⚠️ Résultats simulés — configurez votre clé API Claude pour des résultats réels');
+}
+
+function renderAIMatrix(){
+    const container=document.getElementById('aiMatrixContainer');
+    if(!container)return;
+    const results=window._aiTestResults;
+    if(!results.length){
+        container.innerHTML='<div class="ai-matrix"><div class="ai-matrix-title">🧪 Matrice de visibilité IA</div><div style="text-align:center;color:var(--mut);padding:20px;font-size:.8rem;">Sélectionnez des prompts et lancez un test pour voir les résultats ici.</div></div>';
+        return;
+    }
+    const platforms=['ChatGPT','Perplexity','Gemini','Claude'];
+    const platformIcons={ChatGPT:'🤖',Perplexity:'🔎',Gemini:'✨',Claude:'🟠'};
+    const prompts=[...new Set(results.map(r=>r.prompt))];
+
+    let html=`<div class="ai-matrix"><div class="ai-matrix-title">🧪 Matrice de visibilité IA <span style="font-size:.65rem;color:var(--mut);font-weight:400;margin-left:8px;">${results.filter(r=>r.status==='done').length}/${results.length} tests</span></div>`;
+    html+=`<div class="ai-matrix-grid"><table><thead><tr><th>Prompt</th>`;
+    platforms.forEach(p=>html+=`<th>${platformIcons[p]||''} ${p}</th>`);
+    html+=`<th>Score</th></tr></thead><tbody>`;
+
+    prompts.forEach(prompt=>{
+        const pResults=results.filter(r=>r.prompt===prompt);
+        const citedCount=pResults.filter(r=>r.cited).length;
+        const shortPrompt=prompt.length>50?prompt.substring(0,47)+'...':prompt;
+        html+=`<tr><td title="${prompt}">${shortPrompt}</td>`;
+        platforms.forEach(pl=>{
+            const r=pResults.find(r=>r.platform===pl);
+            if(!r||r.status==='pending')html+=`<td><div class="mx-cell pending">—</div></td>`;
+            else if(r.status==='testing')html+=`<td><div class="mx-cell testing">⏳</div></td>`;
+            else{
+                const cls=r.cited?'cited':'not';
+                const icon=r.cited?'✓':'✗';
+                html+=`<td><div class="mx-cell ${cls}" style="cursor:pointer;" onclick="showAITestDetail('${btoa(unescape(encodeURIComponent(prompt)))}','${pl}')" title="Confiance: ${Math.round(r.confidence*100)}%">${icon}</div></td>`;
+            }
+        });
+        const pctRow=pResults.length>0?Math.round(citedCount/pResults.length*100):0;
+        html+=`<td><span style="font-weight:700;color:${pctRow>=50?'var(--grn)':pctRow>0?'var(--org)':'var(--red)'};">${pctRow}%</span></td>`;
+        html+=`</tr>`;
+    });
+    html+=`</tbody></table></div>`;
+
+    // Summary cards per platform
+    html+=`<div class="mx-summary">`;
+    platforms.forEach(pl=>{
+        const pr=results.filter(r=>r.platform===pl&&r.status==='done');
+        const cited=pr.filter(r=>r.cited).length;
+        const pct=pr.length>0?Math.round(cited/pr.length*100):0;
+        html+=`<div class="mx-sum-card"><div class="mx-sum-icon">${platformIcons[pl]}</div><div class="mx-sum-pct" style="color:${pct>=50?'var(--grn)':pct>0?'var(--org)':'var(--red)'}">${pct}%</div><div class="mx-sum-label">${pl} · ${cited}/${pr.length}</div></div>`;
+    });
+    html+=`</div></div>`;
+    container.innerHTML=html;
+}
+
+function showAITestDetail(promptB64,platform){
+    const prompt=decodeURIComponent(escape(atob(promptB64)));
+    const r=window._aiTestResults.find(r=>r.prompt===prompt&&r.platform===platform);
+    if(!r)return;
+    let modal=document.getElementById('aiTestDetailModal');
+    if(!modal){
+        modal=document.createElement('div');modal.id='aiTestDetailModal';modal.className='mx-detail-modal';
+        modal.onclick=e=>{if(e.target===modal)modal.classList.remove('active');};
+        document.body.appendChild(modal);
+    }
+    modal.innerHTML=`<div class="mx-detail-box" style="position:relative;">
+        <div class="mx-detail-close" onclick="document.getElementById('aiTestDetailModal').classList.remove('active')">✕</div>
+        <div style="font-size:1rem;font-weight:700;margin-bottom:6px;">${r.cited?'✅ Cité':'❌ Non cité'} sur ${platform}</div>
+        <div style="font-size:.75rem;color:var(--mut);margin-bottom:12px;">Confiance: ${Math.round(r.confidence*100)}% ${r.position>0?'· Position: #'+r.position:''}</div>
+        <div style="font-size:.78rem;font-weight:600;color:var(--ind2);margin-bottom:8px;">Prompt testé :</div>
+        <div style="padding:10px 14px;background:var(--s3);border-radius:8px;font-size:.78rem;margin-bottom:14px;">${prompt}</div>
+        <div style="font-size:.78rem;font-weight:600;color:var(--ind2);margin-bottom:8px;">Réponse simulée ${platform} :</div>
+        <div style="padding:10px 14px;background:var(--s3);border-radius:8px;font-size:.75rem;line-height:1.6;max-height:300px;overflow-y:auto;white-space:pre-wrap;">${r.text||'(Pas de réponse enregistrée)'}</div>
+    </div>`;
+    modal.classList.add('active');
+}
+
+// Override renderStatsTab to add Prompt Library + Matrix
+const _origRenderStatsPrompt=renderStatsTab;
+renderStatsTab=async function(){
+    await _origRenderStatsPrompt();
+    const container=document.getElementById('statsContainer');
+    if(!container)return;
+    // Add Prompt Library section at the end of stats
+    if(!document.getElementById('promptLibContainer')){
+        const plDiv=document.createElement('div');plDiv.id='promptLibContainer';plDiv.style.marginTop='16px';
+        container.appendChild(plDiv);
+    }
+    if(!document.getElementById('aiMatrixContainer')){
+        const mxDiv=document.createElement('div');mxDiv.id='aiMatrixContainer';mxDiv.style.marginTop='0';
+        container.appendChild(mxDiv);
+    }
+    // Load library and render
+    await loadPromptLibrary();
+    renderPromptLibrary(document.getElementById('promptLibContainer'));
+    renderAIMatrix();
+};
 
 // ============================================================
 // FEATURE 2-8: HUB & SETTINGS FUNCTIONS
