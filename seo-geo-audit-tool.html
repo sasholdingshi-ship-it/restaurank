@@ -3859,32 +3859,6 @@ function generateAuditData(name,city){
     _auditSource:'default',_pendingGBP:true,_pendingAI:true};
 }
 
-function generateSimulatedData(name,city){
-    const seed=_seedHash((name+city).toLowerCase());
-    let _si=seed;
-    const _next=()=>{_si=(_si*1103515245+12345)&0x7fffffff;return _si/0x7fffffff;};
-    const r=(a,b)=>Math.floor(_next()*(b-a+1))+a;
-    const rb=p=>_next()<p;
-    const rc=()=>{const x=_next();return x<.15?'cited':x<.35?'partial':'not';};
-    return{name,city,
-    // GBP (simulated)
-    hasPrimaryCategory:rb(.7),primaryCategorySpecific:rb(.5),secondaryCategories:r(0,5),descriptionLength:r(50,350),photoCount:r(2,30),hoursComplete:rb(.6),specialHours:rb(.3),attributeCount:r(1,12),postsPerMonth:r(0,4),menuUploaded:rb(.5),menuStructured:rb(.3),bookingLink:rb(.4),
-    // Avis
-    rating:+(3.2+_next()*1.8).toFixed(1),reviewCount:r(5,250),recentReviewsPerMonth:r(0,15),responseRate:r(10,90),platformsWithReviews:r(1,5),
-    // Citations
-    napConsistency:r(40,95),directoryPresence:r(2,8),listingCompleteness:r(30,85),
-    // SEO site web
-    hasSchemaRestaurant:rb(.4),schemaComplete:rb(.2),hasFAQ:rb(.3),faqCount:r(0,8),titleOptimized:rb(.5),hasTitle:rb(.8),mobileSpeed:r(40,95),contentRichness:r(20,80),napOnSite:rb(.5),
-    // SEO on-page
-    hasMetaDesc:rb(.6),metaDescLength:r(0,160),hasOpenGraph:rb(.4),hasPhoneLink:rb(.5),hasMapEmbed:rb(.4),hasSocialLinks:rb(.5),hasSitemap:rb(.4),hasRobotsTxt:rb(.5),hasBookingLink:rb(.3),hasCanonical:rb(.4),hasAltTags:rb(.4),headingCount:r(1,8),hasHreflang:rb(.15),httpsRedirect:rb(.85),
-    // IA
-    citedByChatGPT:rc(),citedByPerplexity:rc(),citedByGemini:rc(),citedByClaude:rc(),bestOfListings:r(0,4),yelpOptimized:r(0,3),foursquarePresent:rb(.4),foursquareOptimized:rb(.2),ugcPresence:r(0,5),inAIOverviews:rb(.2)?'yes':'no',socialScore:r(10,80),brandMentions:r(0,20),
-    // GEO avancé
-    hasWikipedia:rb(.1),localBacklinks:r(0,15),gbpQACount:r(0,10),contentFreshness:rb(.5),hasBlog:rb(.3),
-    // Source tracking
-    _auditSource:'simulated',_simulated:true,_pendingGBP:true,_pendingAI:true};
-}
-
 // ============================================================
 // CONFIRMATION
 // ============================================================
@@ -5349,9 +5323,9 @@ function startScan(name,city){
                 currentData = _prepareRealData(window._realAuditData, name, city);
                 console.log('✅ USING REAL AUDIT DATA — sources:', Object.entries(window._realAuditSources||{}).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '));
             } else {
-                // Fallback: use simulated realistic data so dashboard is never empty
-                currentData = generateSimulatedData(name, city);
-                console.warn('⚠️ Real audit API unavailable — using simulated data');
+                // Fallback: real structure with empty/default values — NO fake data
+                currentData = _prepareRealData({name,city,_auditSource:'api_unavailable'}, name, city);
+                console.warn('⚠️ Real audit API unavailable — showing only verified data');
             }
             // Inject CMS detection results
             if(detectedCMS&&detectedCMS.detected){currentData.detectedCMS=detectedCMS.detected;currentData.websiteUrl=storedWebsite;currentData.seoAnalysis=detectedCMS.seoAnalysis||{};}
@@ -9320,46 +9294,40 @@ async function loadGSCChart(){
                 renderGSCChart(data);
                 return;
             }
-            // needsAuth → fall through to estimated data (don't show empty connect prompt)
         }catch(e){console.warn('GSC load error:',e);}
     }
 
-    // No real data — show estimated performance chart
-    const name=currentData?.name||storedName||'Restaurant';
-    const city=currentData?.city||storedCity||'';
-    const seo=currentScores?.seo||50;
-    // Generate 90 days of estimated data based on SEO score
-    const baseClicks=Math.round(seo*1.2+10);
-    const baseImpr=Math.round(baseClicks*18+200);
-    const days90=[];
-    const now=new Date();
-    for(let i=89;i>=0;i--){
-        const d=new Date(now);d.setDate(d.getDate()-i);
-        const day=d.getDay();
-        const weekendBoost=day===5||day===6?1.4:day===0?1.2:1;
-        const trend=1+((89-i)/89)*0.15;
-        const noise=0.8+Math.random()*0.4;
-        const clicks=Math.round(baseClicks*weekendBoost*trend*noise);
-        const impressions=Math.round(baseImpr*weekendBoost*trend*(0.85+Math.random()*0.3));
-        days90.push({date:d.toISOString().slice(0,10),clicks,impressions,ctr:+(clicks/Math.max(impressions,1)*100).toFixed(1),position:+(3.5+Math.random()*12-seo/20).toFixed(1)});
-    }
-    const totClicks=days90.reduce((s,d)=>s+d.clicks,0);
-    const totImpr=days90.reduce((s,d)=>s+d.impressions,0);
-    const avgCtr=+(totClicks/Math.max(totImpr,1)*100).toFixed(1);
-    const avgPos=+(days90.reduce((s,d)=>s+d.position,0)/90).toFixed(1);
-    // Render estimated chart using the same renderGSCChart path
-    window._gscData={daily:days90,totals:{clicks:totClicks,impressions:totImpr,ctr:avgCtr,position:avgPos},queries:[],pages:[],estimated:true};
-    renderGSCChart(window._gscData);
-    // Add estimated banner
-    const chart=document.getElementById('gscChart');
-    if(chart){
-        chart.insertAdjacentHTML('afterbegin',`<div style="padding:8px 16px;background:linear-gradient(90deg,#f59e0b22,#f59e0b11);border-bottom:1px solid var(--bdr);display:flex;align-items:center;gap:8px;">
-            <span style="font-size:.75rem;">📊</span>
-            <span style="font-size:.72rem;color:var(--org);font-weight:600;">Données estimées</span>
-            <span style="font-size:.68rem;color:var(--mut);flex:1;">Basées sur votre score SEO (${seo}%) et le secteur restauration. Connectez GSC pour des données réelles.</span>
-            <button onclick="connectGSC()" style="padding:4px 12px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.68rem;font-weight:600;">Connecter GSC</button>
-        </div>`);
-    }
+    // No real GSC data — show unlock preview card
+    container.innerHTML=`<div style="padding:28px 24px;text-align:center;">
+        <div style="display:flex;justify-content:center;gap:24px;margin-bottom:20px;opacity:.4;pointer-events:none;">
+            <div style="padding:12px 20px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);min-width:100px;">
+                <div style="font-size:.6rem;color:#4285f4;font-weight:600;text-transform:uppercase;">Clics</div>
+                <div style="font-size:1.2rem;font-weight:700;color:var(--txt);">—</div>
+            </div>
+            <div style="padding:12px 20px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);min-width:100px;">
+                <div style="font-size:.6rem;color:#a855f7;font-weight:600;text-transform:uppercase;">Impressions</div>
+                <div style="font-size:1.2rem;font-weight:700;color:var(--txt);">—</div>
+            </div>
+            <div style="padding:12px 20px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);min-width:100px;">
+                <div style="font-size:.6rem;color:#10b981;font-weight:600;text-transform:uppercase;">CTR</div>
+                <div style="font-size:1.2rem;font-weight:700;color:var(--txt);">—</div>
+            </div>
+            <div style="padding:12px 20px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);min-width:100px;">
+                <div style="font-size:.6rem;color:#f59e0b;font-weight:600;text-transform:uppercase;">Position</div>
+                <div style="font-size:1.2rem;font-weight:700;color:var(--txt);">—</div>
+            </div>
+        </div>
+        <div style="height:120px;background:var(--s2);border-radius:10px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;opacity:.3;">
+            <svg width="100%" height="80" viewBox="0 0 400 80" style="max-width:400px;">
+                <path d="M0,60 Q50,40 100,50 T200,30 T300,45 T400,20" fill="none" stroke="var(--ind)" stroke-width="2" opacity=".5"/>
+                <path d="M0,70 Q50,55 100,60 T200,50 T300,55 T400,40" fill="none" stroke="#a855f7" stroke-width="2" opacity=".3"/>
+            </svg>
+        </div>
+        <div style="font-size:1.1rem;margin-bottom:6px;">🔗</div>
+        <div style="font-weight:700;color:var(--txt);font-size:.9rem;margin-bottom:6px;">Connectez Google Search Console</div>
+        <div style="font-size:.75rem;color:var(--mut);margin-bottom:14px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5;">Visualisez vos clics, impressions, CTR et position moyenne sur Google. Suivez l'évolution de votre visibilité en temps réel.</div>
+        <button onclick="connectGSC()" style="padding:10px 28px;background:linear-gradient(135deg,var(--ind),#6366f1);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:.82rem;box-shadow:0 4px 12px rgba(99,102,241,.3);">🔗 Connecter Google Search Console</button>
+    </div>`;
 }
 
 function connectGSC(){
@@ -9536,28 +9504,33 @@ async function loadBacklinks(){
             renderBacklinks(data);
             return;
         }
-    }catch(e){console.warn('Backlinks API unavailable, using estimates');}
+    }catch(e){console.warn('Backlinks API error:',e);}
 
-    // Estimated backlinks based on website URL domain analysis
-    const seo=currentScores?.seo||50;
+    // No real backlink data — show unlock card
     const domain=websiteUrl.replace(/^https?:\/\//,'').replace(/\/.*$/,'');
-    const isCustomDomain=!domain.includes('wix')&&!domain.includes('squarespace')&&!domain.includes('webflow.io');
-    const baseLinks=isCustomDomain?Math.round(seo*2.5+15):Math.round(seo*1.2+5);
-    const uniqueDomains=Math.round(baseLinks*0.35+3);
-    const da=Math.min(100,Math.round(seo*0.55+5+(isCustomDomain?10:0)));
-    const referrers=['google.com','facebook.com','yelp.com','tripadvisor.com','instagram.com','pagesjaunes.fr','thefork.com','maps.google.com','foursquare.com','resto.fr','sortir.com','guide-resto.info','cityvox.fr','linternaute.com','timeout.com'];
-    const topLinks=referrers.slice(0,Math.min(referrers.length,uniqueDomains));
-    const estData={success:true,estimated:true,totalLinks:baseLinks,uniqueDomains,domainAuthority:da,topLinks,doFollow:Math.round(baseLinks*0.65),noFollow:Math.round(baseLinks*0.35)};
-    window._backlinkData=estData;
-    renderBacklinks(estData);
-    // Add estimated banner
-    const bl=document.getElementById('backlinksContainer');
-    if(bl){
-        bl.insertAdjacentHTML('afterbegin',`<div style="padding:6px 12px;background:linear-gradient(90deg,#f59e0b22,transparent);border-radius:8px 8px 0 0;margin:-20px -20px 12px;padding:8px 16px;border-bottom:1px solid var(--bdr);">
-            <span style="font-size:.7rem;color:var(--org);font-weight:600;">📊 Estimation</span>
-            <span style="font-size:.66rem;color:var(--mut);margin-left:6px;">Basée sur l'analyse du domaine ${domain} et votre score SEO. Les données réelles nécessitent un service tiers (Ahrefs, Moz).</span>
-        </div>`);
-    }
+    container.innerHTML=`<div style="text-align:center;padding:24px;">
+        <div style="display:flex;justify-content:center;gap:20px;margin-bottom:18px;opacity:.35;pointer-events:none;">
+            <div style="padding:12px 18px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);">
+                <div style="font-size:1.2rem;font-weight:700;color:var(--ind);">—</div>
+                <div style="font-size:.65rem;color:var(--mut);">Backlinks</div>
+            </div>
+            <div style="padding:12px 18px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);">
+                <div style="font-size:1.2rem;font-weight:700;color:#10b981;">—</div>
+                <div style="font-size:.65rem;color:var(--mut);">Domaines</div>
+            </div>
+            <div style="padding:12px 18px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);">
+                <div style="font-size:1.2rem;font-weight:700;color:var(--org);">—</div>
+                <div style="font-size:.65rem;color:var(--mut);">Authority</div>
+            </div>
+        </div>
+        <div style="font-size:1.1rem;margin-bottom:6px;">🔗</div>
+        <div style="font-weight:700;color:var(--txt);font-size:.85rem;margin-bottom:6px;">Analyse de backlinks</div>
+        <div style="font-size:.75rem;color:var(--mut);margin-bottom:12px;line-height:1.5;max-width:380px;margin-left:auto;margin-right:auto;">
+            ${domain?'Domaine détecté : <strong style="color:var(--cyn);">'+domain+'</strong><br>':''}
+            Les données de backlinks nécessitent une intégration avec Ahrefs, Moz ou Majestic. Disponible bientôt.
+        </div>
+        <span style="display:inline-block;padding:8px 20px;background:var(--s2);color:var(--mut);border:1px solid var(--bdr);border-radius:8px;font-size:.75rem;font-weight:600;">🔒 Bientôt disponible</span>
+    </div>`;
 }
 
 function renderBacklinks(data){
@@ -10128,19 +10101,10 @@ async function runAIMatrixTest(){
         }
     }catch(e){console.warn('Matrix API failed, falling back to simulation:',e.message);}
 
-    // Fallback: simulate results locally
-    window._aiTestResults.forEach(r=>{
-        r.status='done';
-        // Simulate: reputation prompts more likely to cite, discovery less
-        const isRepPrompt=r.prompt.toLowerCase().includes(name.toLowerCase());
-        const base=isRepPrompt?0.4:0.15;
-        const platformBonus={ChatGPT:0.05,Perplexity:0.1,Gemini:0,Claude:0.03}[r.platform]||0;
-        r.confidence=Math.min(1,Math.max(0,base+platformBonus+Math.random()*0.2-0.1));
-        r.cited=r.confidence>0.35;
-        r.position=r.cited?Math.ceil(Math.random()*5):0;
-    });
+    // No API — show configure message instead of fake results
+    window._aiTestResults.forEach(r=>{r.status='error';r.error='Clé API requise';r.cited=false;r.confidence=0;r.position=0;});
     renderAIMatrix();
-    showToast('⚠️ Résultats simulés — configurez votre clé API Claude pour des résultats réels');
+    showToast('⚠️ Configurez votre clé API dans Paramètres pour tester la visibilité IA','error',5000);
 }
 
 function renderAIMatrix(){
