@@ -973,6 +973,47 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
 .ai-row input,.ai-row select{padding:6px;border-radius:4px;border:1px solid var(--bdr);background:var(--s3);color:var(--txt);font-size:.8rem;}
 .stats-full-width{grid-column:1/-1;}
 .full-width-table{overflow-x:auto;}
+
+/* === ANALYST BRIEFING === */
+.analyst-briefing{margin:0 16px 16px;padding:16px 20px;background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(6,182,212,.06));border:1px solid rgba(99,102,241,.2);border-radius:14px;position:relative;overflow:hidden;}
+.analyst-briefing::before{content:'';position:absolute;top:-30px;right:-30px;width:80px;height:80px;background:radial-gradient(circle,rgba(99,102,241,.15),transparent);border-radius:50%;}
+.ab-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+.ab-icon{font-size:1.4rem;}
+.ab-title{font-size:.95rem;font-weight:700;color:var(--ind2);}
+.ab-date{font-size:.7rem;color:var(--mut);margin-left:auto;}
+.ab-text{font-size:.82rem;color:var(--txt);line-height:1.65;opacity:.9;}
+.ab-text strong{color:var(--ind2);font-weight:600;}
+
+/* === GAP TO TARGET === */
+.gap-target-row{display:flex;gap:12px;margin:0 16px 14px;flex-wrap:wrap;}
+.gap-card{flex:1;min-width:160px;padding:14px 16px;background:var(--s2);border:1px solid var(--bdr);border-radius:12px;display:flex;align-items:center;gap:12px;}
+.gap-card-icon{font-size:1.6rem;}
+.gap-card-info{display:flex;flex-direction:column;}
+.gap-card-value{font-size:1.3rem;font-weight:800;line-height:1.1;}
+.gap-card-label{font-size:.7rem;color:var(--mut);margin-top:2px;}
+
+/* === PLATFORM BREAKDOWN === */
+.platform-breakdown{margin:0 16px 16px;padding:16px;background:var(--s2);border:1px solid var(--bdr);border-radius:14px;}
+.pb-title{font-size:.9rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.pb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;}
+.pb-card{padding:12px;background:var(--s3);border:1px solid var(--bdr);border-radius:10px;text-align:center;transition:all .3s;}
+.pb-card:hover{border-color:var(--ind);transform:translateY(-2px);}
+.pb-card-name{font-size:.78rem;font-weight:600;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:5px;}
+.pb-card-status{font-size:.7rem;padding:3px 8px;border-radius:6px;display:inline-block;font-weight:600;}
+.pb-card-status.cited{background:rgba(16,185,129,.15);color:var(--grn);}
+.pb-card-status.partial{background:rgba(245,158,11,.15);color:var(--org);}
+.pb-card-status.not{background:rgba(239,68,68,.15);color:var(--red);}
+.pb-card-score{font-size:1.1rem;font-weight:800;margin-top:4px;}
+
+/* === SCORE TREND === */
+.score-trend{margin:0 16px 16px;padding:16px;background:var(--s2);border:1px solid var(--bdr);border-radius:14px;}
+.st-title{font-size:.9rem;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.st-chart{width:100%;height:140px;position:relative;}
+.st-chart svg{width:100%;height:100%;}
+.st-legend{display:flex;gap:16px;margin-top:8px;justify-content:center;}
+.st-legend-item{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--mut);}
+.st-legend-dot{width:8px;height:8px;border-radius:50%;}
+.st-no-data{text-align:center;color:var(--mut);font-size:.8rem;padding:30px 0;}
 </style>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -1426,6 +1467,31 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         <div class="gs-item" id="gs_cms" onclick="gsAction('cms')"><div class="gs-check"></div><div><strong>Connecter votre site web</strong> — Pour appliquer les optimisations SEO automatiquement</div></div>
         <div class="gs-item" id="gs_dirs" onclick="gsAction('dirs')"><div class="gs-check"></div><div><strong>Vérifier les annuaires</strong> — Yelp, TripAdvisor, PagesJaunes et + scannés</div></div>
         <div class="gs-item" id="gs_auto" onclick="gsAction('auto')"><div class="gs-check"></div><div><strong>Lancer l'auto-pilot</strong> — Tout optimiser en 1 clic</div></div>
+    </div>
+    <!-- ANALYST BRIEFING (inspired by Vyzz) -->
+    <div class="analyst-briefing" id="analystBriefing" style="display:none;">
+        <div class="ab-header">
+            <div class="ab-icon">📋</div>
+            <div class="ab-title">Rapport d'analyse</div>
+            <div class="ab-date" id="abDate"></div>
+        </div>
+        <div class="ab-text" id="abText"></div>
+    </div>
+    <!-- GAP TO TARGET + KPI CARDS -->
+    <div class="gap-target-row" id="gapTargetRow" style="display:none;"></div>
+    <!-- PLATFORM BREAKDOWN (GEO by AI platform) -->
+    <div class="platform-breakdown" id="platformBreakdown" style="display:none;">
+        <div class="pb-title">🤖 Visibilité par plateforme IA</div>
+        <div class="pb-grid" id="pbGrid"></div>
+    </div>
+    <!-- SCORE TREND (history chart) -->
+    <div class="score-trend" id="scoreTrend" style="display:none;">
+        <div class="st-title">📈 Évolution des scores</div>
+        <div class="st-chart" id="stChart"></div>
+        <div class="st-legend">
+            <div class="st-legend-item"><div class="st-legend-dot" style="background:var(--ind)"></div>SEO</div>
+            <div class="st-legend-item"><div class="st-legend-dot" style="background:var(--cyn)"></div>GEO</div>
+        </div>
     </div>
     <!-- TAB BAR -->
     <div class="dash-tabs" id="dashTabs">
@@ -4111,6 +4177,195 @@ function renderDashboard(){
     html+='</div>';
     panel.innerHTML=html;
 }
+
+// ============================================================
+// VYZZ-INSPIRED FEATURES: Briefing, Gap, Platforms, Trend
+// ============================================================
+const _origRenderDashVyzz=renderDashboard;
+renderDashboard=function(){
+    _origRenderDashVyzz();
+    if(!currentScores||!currentData)return;
+    const s=currentScores,d=currentData;
+
+    // --- 1. ANALYST BRIEFING ---
+    const abEl=document.getElementById('analystBriefing');
+    const abText=document.getElementById('abText');
+    const abDate=document.getElementById('abDate');
+    if(abEl&&abText){
+        const avg=Math.round((s.seo+s.geo)/2);
+        const seoG=gradeInfo(s.seo),geoG=gradeInfo(s.geo);
+        const errCount=Object.values(s.categories).reduce((a,c)=>a+c.items.filter(i=>i.status==='err').length,0);
+        const warnCount=Object.values(s.categories).reduce((a,c)=>a+c.items.filter(i=>i.status==='warn').length,0);
+        const okCount=Object.values(s.categories).reduce((a,c)=>a+c.items.filter(i=>i.status==='ok').length,0);
+        const total=errCount+warnCount+okCount;
+
+        // Platform visibility summary
+        const platforms=[
+            {name:'ChatGPT',key:'citedByChatGPT'},
+            {name:'Perplexity',key:'citedByPerplexity'},
+            {name:'Gemini',key:'citedByGemini'},
+            {name:'Claude',key:'citedByClaude'}
+        ];
+        const citedPlatforms=platforms.filter(p=>d[p.key]==='cited'||d[p.key]==='partial');
+        const bestPlatform=platforms.reduce((best,p)=>{
+            const v=d[p.key]==='cited'?2:d[p.key]==='partial'?1:0;
+            return v>best.v?{name:p.name,v}:best;
+        },{name:'Aucune',v:-1});
+
+        // History comparison
+        const hist=getScoreHistory();
+        let deltaText='';
+        if(hist.length>=2){
+            const prev=hist[hist.length-2];
+            const dSeo=s.seo-prev.seo;
+            const dGeo=s.geo-prev.geo;
+            deltaText=` Par rapport au dernier audit : SEO <strong>${dSeo>=0?'+':''}${dSeo} pts</strong>, GEO <strong>${dGeo>=0?'+':''}${dGeo} pts</strong>.`;
+        }
+
+        let brief=`<strong>${d.name}</strong> obtient un score SEO de <strong>${s.seo}/100</strong> (${seoG.text}) et un score GEO de <strong>${s.geo}/100</strong> (${geoG.text}).`;
+        brief+=` Sur ${total} critères analysés, <strong style="color:var(--red)">${errCount} sont critiques</strong>, <strong style="color:var(--org)">${warnCount} à améliorer</strong> et <strong style="color:var(--grn)">${okCount} sont OK</strong>.`;
+        brief+=` Vous êtes cité par <strong>${citedPlatforms.length}/4 plateformes IA</strong>${bestPlatform.v>0?' (meilleure : '+bestPlatform.name+')':''}.`;
+        if(errCount>0) brief+=` Priorité : corriger les ${errCount} points critiques pour gagner jusqu'à <strong>+${Math.min(30,errCount*3)} pts</strong>.`;
+        brief+=deltaText;
+
+        abText.innerHTML=brief;
+        abDate.textContent=new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+        abEl.style.display='';
+    }
+
+    // --- 2. GAP TO TARGET ---
+    const gapRow=document.getElementById('gapTargetRow');
+    if(gapRow){
+        const target=85;
+        const gapSeo=Math.max(0,target-s.seo);
+        const gapGeo=Math.max(0,target-s.geo);
+        const citedCount=[d.citedByChatGPT,d.citedByPerplexity,d.citedByGemini,d.citedByClaude].filter(v=>v==='cited'||v==='partial').length;
+        const errTotal=Object.values(s.categories).reduce((a,c)=>a+c.items.filter(i=>i.status==='err').length,0);
+
+        gapRow.innerHTML=`
+            <div class="gap-card"><div class="gap-card-icon">🎯</div><div class="gap-card-info"><div class="gap-card-value" style="color:${gapSeo>0?'var(--org)':'var(--grn)'}">+${gapSeo}</div><div class="gap-card-label">pts SEO pour atteindre ${target}</div></div></div>
+            <div class="gap-card"><div class="gap-card-icon">🤖</div><div class="gap-card-info"><div class="gap-card-value" style="color:${gapGeo>0?'var(--org)':'var(--grn)'}">+${gapGeo}</div><div class="gap-card-label">pts GEO pour atteindre ${target}</div></div></div>
+            <div class="gap-card"><div class="gap-card-icon">💬</div><div class="gap-card-info"><div class="gap-card-value" style="color:${citedCount>=3?'var(--grn)':citedCount>=1?'var(--org)':'var(--red)'}">${citedCount}/4</div><div class="gap-card-label">plateformes IA vous citent</div></div></div>
+            <div class="gap-card"><div class="gap-card-icon">🔴</div><div class="gap-card-info"><div class="gap-card-value" style="color:${errTotal>0?'var(--red)':'var(--grn)'}">${errTotal}</div><div class="gap-card-label">points critiques à corriger</div></div></div>
+        `;
+        gapRow.style.display='';
+    }
+
+    // --- 3. PLATFORM BREAKDOWN ---
+    const pbEl=document.getElementById('platformBreakdown');
+    const pbGrid=document.getElementById('pbGrid');
+    if(pbEl&&pbGrid){
+        const platforms=[
+            {name:'ChatGPT',icon:'🤖',key:'citedByChatGPT',itemId:'geo_chatgpt'},
+            {name:'Perplexity',icon:'🔎',key:'citedByPerplexity',itemId:'geo_perp'},
+            {name:'Gemini',icon:'✨',key:'citedByGemini',itemId:'geo_gemini'},
+            {name:'Claude',icon:'🟠',key:'citedByClaude',itemId:'geo_claude'}
+        ];
+        pbGrid.innerHTML=platforms.map(p=>{
+            const val=d[p.key]||'not';
+            const statusCls=val==='cited'?'cited':val==='partial'?'partial':'not';
+            const statusTxt=val==='cited'?'Recommandé':val==='partial'?'Mentionné':'Non cité';
+            // Get score from computed categories
+            let itemScore=0;
+            Object.values(s.categories).forEach(cat=>{
+                cat.items.forEach(item=>{if(item.id===p.itemId)itemScore=item.score;});
+            });
+            return `<div class="pb-card"><div class="pb-card-name">${p.icon} ${p.name}</div><div class="pb-card-score" style="color:${scoreColor(itemScore*10)}">${itemScore*10}/100</div><div class="pb-card-status ${statusCls}">${statusTxt}</div></div>`;
+        }).join('');
+        pbEl.style.display='';
+    }
+
+    // --- 4. SCORE TREND ---
+    renderScoreTrend();
+};
+
+// Score history management
+function getScoreHistory(){
+    try{
+        const key=currentData?makeKey(currentData.name,currentData.city):'_default';
+        const raw=localStorage.getItem('restaurank_score_history_'+key);
+        return raw?JSON.parse(raw):[];
+    }catch(e){return[];}
+}
+
+function saveScoreToHistory(){
+    if(!currentScores||!currentData)return;
+    try{
+        const key=makeKey(currentData.name,currentData.city);
+        const hist=getScoreHistory();
+        const now=new Date().toISOString();
+        // Avoid duplicate entries within same hour
+        const lastEntry=hist[hist.length-1];
+        if(lastEntry){
+            const diff=new Date(now)-new Date(lastEntry.date);
+            if(diff<3600000)return; // skip if <1h
+        }
+        hist.push({date:now,seo:currentScores.seo,geo:currentScores.geo});
+        // Keep max 30 entries
+        while(hist.length>30)hist.shift();
+        localStorage.setItem('restaurank_score_history_'+key,JSON.stringify(hist));
+    }catch(e){}
+}
+
+function renderScoreTrend(){
+    const el=document.getElementById('scoreTrend');
+    const chart=document.getElementById('stChart');
+    if(!el||!chart)return;
+
+    const hist=getScoreHistory();
+    if(hist.length<2){
+        chart.innerHTML='<div class="st-no-data">Les données de tendance apparaîtront après votre prochain audit</div>';
+        el.style.display='';
+        return;
+    }
+
+    const W=600,H=130,padL=35,padR=10,padT=10,padB=25;
+    const plotW=W-padL-padR,plotH=H-padT-padB;
+    const n=hist.length;
+    const maxScore=100;
+
+    const xStep=n>1?plotW/(n-1):plotW;
+    const toX=i=>padL+i*xStep;
+    const toY=v=>padT+plotH-(v/maxScore)*plotH;
+
+    // Build polylines
+    const seoPoints=hist.map((h,i)=>`${toX(i)},${toY(h.seo)}`).join(' ');
+    const geoPoints=hist.map((h,i)=>`${toX(i)},${toY(h.geo)}`).join(' ');
+
+    // Grid lines
+    let gridLines='';
+    [0,25,50,75,100].forEach(v=>{
+        const y=toY(v);
+        gridLines+=`<line x1="${padL}" y1="${y}" x2="${W-padR}" y2="${y}" stroke="rgba(110,116,144,.15)" stroke-width="1"/>`;
+        gridLines+=`<text x="${padL-5}" y="${y+3}" fill="var(--mut)" font-size="9" text-anchor="end">${v}</text>`;
+    });
+
+    // Date labels
+    let dateLabels='';
+    const showDates=[0,Math.floor(n/2),n-1].filter((v,i,a)=>a.indexOf(v)===i);
+    showDates.forEach(i=>{
+        const dt=new Date(hist[i].date);
+        const label=dt.toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+        dateLabels+=`<text x="${toX(i)}" y="${H-2}" fill="var(--mut)" font-size="9" text-anchor="middle">${label}</text>`;
+    });
+
+    // Dots
+    let dots='';
+    hist.forEach((h,i)=>{
+        dots+=`<circle cx="${toX(i)}" cy="${toY(h.seo)}" r="3" fill="var(--ind)" opacity=".8"/>`;
+        dots+=`<circle cx="${toX(i)}" cy="${toY(h.geo)}" r="3" fill="var(--cyn)" opacity=".8"/>`;
+    });
+
+    chart.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${gridLines}<polyline points="${seoPoints}" fill="none" stroke="var(--ind)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${geoPoints}" fill="none" stroke="var(--cyn)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${dateLabels}</svg>`;
+    el.style.display='';
+}
+
+// Hook into scan completion to save score history
+const _origSaveAllVyzz=saveAllData;
+saveAllData=async function(){
+    await _origSaveAllVyzz();
+    saveScoreToHistory();
+};
 
 // ============================================================
 // ACTION MODAL — AUTO-GENERATION ENGINE
