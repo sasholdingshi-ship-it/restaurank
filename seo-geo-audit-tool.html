@@ -9325,8 +9325,8 @@ async function loadGSCChart(){
     }
 
     // No real data — show estimated performance chart
-    const name=currentRestaurant?.name||currentData?.name||'Restaurant';
-    const city=currentRestaurant?.city||currentData?.city||'';
+    const name=currentData?.name||storedName||'Restaurant';
+    const city=currentData?.city||storedCity||'';
     const seo=currentScores?.seo||50;
     // Generate 90 days of estimated data based on SEO score
     const baseClicks=Math.round(seo*1.2+10);
