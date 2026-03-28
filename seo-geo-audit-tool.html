@@ -6713,7 +6713,7 @@ renderReviews=function(){
 };
 
 // SEO-optimized review reply generator — includes local keywords naturally
-function generateReviewReply(idx){
+async function generateReviewReply(idx){
     const reviews=window._currentReviews||[];
     if(!reviews.length)return;
     const r=reviews[idx]||reviews[0];
