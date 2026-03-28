@@ -5241,6 +5241,11 @@ function startScan(name,city){
     // Plan limit: restaurant count (new restaurants only)
     const existing=getStoredRestaurants().find(r=>r.name===name&&r.city===city);
     if(!existing){const restCheck=canDoAction('restaurant');if(!restCheck.allowed)return showUpgradeModal(restCheck.reason,restCheck.upgrade);}
+    // ── AUTO-CONNECT GOOGLE — silently trigger OAuth if not connected ──
+    if(!googleAuth.connected&&!window._googleAuthTriggered){
+        window._googleAuthTriggered=true;
+        startGoogleAuth({onSuccess:()=>{console.log('✅ Google auto-connected during scan');}});
+    }
     incrementScanCount();
     showScreen('scanning');
     detectedCMS=null;
@@ -5998,11 +6003,16 @@ function updateAuthUI(){
             btn.after(dc);
         }
     } else {
-        text.innerHTML='Connectez Google Business Profile pour appliquer les améliorations automatiquement<small>Description, catégories, posts, photos — tout en 1 clic</small>';
+        text.innerHTML='Connexion Google en cours…<small>RestauRank se connecte automatiquement à votre compte Google.</small>';
         btn.className='gauth-btn connect';
         btn.textContent='Connecter Google';
         btn.onclick=startGoogleAuth;
         const dc=document.getElementById('gauthDisconnect');if(dc)dc.remove();
+        // Auto-trigger Google auth silently if not already attempted
+        if(!window._googleAuthTriggered){
+            window._googleAuthTriggered=true;
+            setTimeout(()=>startGoogleAuth({onSuccess:()=>{console.log('✅ Google auto-connected from dashboard');}}),1500);
+        }
     }
 }
 
@@ -9314,7 +9324,19 @@ async function loadGSCChart(){
         }catch(e){console.warn('GSC load error:',e);}
     }
 
-    // No real GSC data — show unlock preview card
+    // No real GSC data — show status based on connection state
+    const isConnected=googleAuth?.connected;
+    const noSiteMsg=isConnected
+        ? `<div style="font-weight:700;color:var(--txt);font-size:.9rem;margin-bottom:6px;">Aucun site vérifié dans Search Console</div>
+           <div style="font-size:.75rem;color:var(--mut);margin-bottom:14px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5;">
+               Google est connecté mais le site du restaurant n'est pas vérifié dans votre Search Console.
+               Les données GSC apparaîtront automatiquement une fois le site vérifié.
+           </div>
+           <div style="font-size:.7rem;color:var(--mut);">💡 Vérifiez votre site sur <a href="https://search.google.com/search-console" target="_blank" style="color:var(--ind);">search.google.com/search-console</a></div>`
+        : `<div style="font-weight:700;color:var(--txt);font-size:.9rem;margin-bottom:6px;">Connexion Google en cours…</div>
+           <div style="font-size:.75rem;color:var(--mut);margin-bottom:14px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5;">
+               RestauRank se connecte automatiquement à votre compte Google pour récupérer vos données Search Console.
+           </div>`;
     container.innerHTML=`<div style="padding:28px 24px;text-align:center;">
         <div style="display:flex;justify-content:center;gap:24px;margin-bottom:20px;opacity:.4;pointer-events:none;">
             <div style="padding:12px 20px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);min-width:100px;">
@@ -9334,16 +9356,7 @@ async function loadGSCChart(){
                 <div style="font-size:1.2rem;font-weight:700;color:var(--txt);">—</div>
             </div>
         </div>
-        <div style="height:120px;background:var(--s2);border-radius:10px;margin-bottom:20px;display:flex;align-items:center;justify-content:center;opacity:.3;">
-            <svg width="100%" height="80" viewBox="0 0 400 80" style="max-width:400px;">
-                <path d="M0,60 Q50,40 100,50 T200,30 T300,45 T400,20" fill="none" stroke="var(--ind)" stroke-width="2" opacity=".5"/>
-                <path d="M0,70 Q50,55 100,60 T200,50 T300,55 T400,40" fill="none" stroke="#a855f7" stroke-width="2" opacity=".3"/>
-            </svg>
-        </div>
-        <div style="font-size:1.1rem;margin-bottom:6px;">🔗</div>
-        <div style="font-weight:700;color:var(--txt);font-size:.9rem;margin-bottom:6px;">Connectez Google Search Console</div>
-        <div style="font-size:.75rem;color:var(--mut);margin-bottom:14px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5;">Visualisez vos clics, impressions, CTR et position moyenne sur Google. Suivez l'évolution de votre visibilité en temps réel.</div>
-        <button onclick="connectGSC()" style="padding:10px 28px;background:linear-gradient(135deg,var(--ind),#6366f1);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:700;font-size:.82rem;box-shadow:0 4px 12px rgba(99,102,241,.3);">🔗 Connecter Google Search Console</button>
+        ${noSiteMsg}
     </div>`;
 }
 
