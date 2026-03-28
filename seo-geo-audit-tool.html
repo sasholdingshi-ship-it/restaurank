@@ -1922,15 +1922,15 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         <div class="reviews-container">
             <div class="review-stats">
                 <div class="stat-card">
-                    <div class="stat-val" id="reviewCount">12</div>
+                    <div class="stat-val" id="reviewCount">—</div>
                     <div class="stat-label">Avis</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-val" id="avgRating">4.2</div>
+                    <div class="stat-val" id="avgRating">—</div>
                     <div class="stat-label">Note moy.</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-val" id="responseRate">67%</div>
+                    <div class="stat-val" id="responseRate">—</div>
                     <div class="stat-label">Réponses</div>
                 </div>
                 <div class="stat-card">
@@ -6619,26 +6619,20 @@ function renderReviews(){
         else{window._currentReviews=taRevs;window._reviewsSource='tripadvisor';}
         window._taMerged=true;
     }
-    const data=window._currentReviews||[
-        {author:'Marie D.',rating:5,text:'Excellente cuisine, personnel très accueillant !',replied:false},
-        {author:'Jean P.',rating:4,text:'Bon restaurant, légèrement bruyant.',replied:false},
-        {author:'Sophie M.',rating:5,text:'Un délice à chaque fois !',replied:false},
-        {author:'Pierre L.',rating:3,text:'Service un peu lent mais bonne qualité.',replied:false},
-        {author:'Lucas R.',rating:2,text:'Attente trop longue, plats froids.',replied:false},
-        {author:'Emma V.',rating:5,text:'Le meilleur ramen de Paris ! Ambiance top.',replied:false},
-    ];
+    const data=window._currentReviews||[];
     window._currentReviews=data;
-    const isDemo=!window._reviewsSource;
     const unanswered=data.filter(r=>!r.replied).length;
     const list=document.getElementById('reviewsList');
 
-    // Demo banner if not real data
-    const demoBanner=isDemo?`<div style="padding:8px 12px;border-radius:8px;background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);margin-bottom:10px;font-size:.72rem;color:#f59e0b;">
-        ⚠️ Avis de démonstration — les vrais avis Google seront chargés automatiquement dès que l'API GBP sera activée (en attente d'approbation Google).
+    // No reviews banner
+    const noReviewsBanner=data.length===0?`<div style="padding:20px;border-radius:10px;background:var(--s1);border:1px solid var(--bdr);text-align:center;margin-bottom:10px;">
+        <div style="font-size:1.5rem;margin-bottom:8px;">💬</div>
+        <div style="font-weight:700;color:var(--txt);margin-bottom:4px;">Aucun avis chargé</div>
+        <div style="font-size:.78rem;color:var(--mut);line-height:1.5;">Les avis Google seront récupérés automatiquement lors du prochain scan.<br>Connectez Google Business Profile pour accéder aux avis en temps réel.</div>
     </div>`:'';
 
     // Auto-reply-all button at top
-    const headerHtml=demoBanner+`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+    const headerHtml=noReviewsBanner+`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
         <button class="auto-btn-full" id="btnAutoReplyAll" onclick="autoReplyAllReviews()" style="flex:1;min-width:200px;padding:12px;font-size:.85rem;background:linear-gradient(135deg,#f59e0b,var(--ind));">
             🤖 Répondre à tous les avis (${unanswered} sans réponse)
         </button>
