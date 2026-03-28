@@ -8545,9 +8545,7 @@ app.post('/api/competitors/discover', async (req, res) => {
 
     const apiKey = getAIKey(restaurant_id);
     if (!apiKey) {
-      // Fallback: return simulated competitors
-      const simulated = generateSimulatedCompetitors(restaurant_name, city, cuisine);
-      return res.json({ success: true, source: 'simulated', competitors: simulated });
+      return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour l\'analyse concurrentielle' });
     }
 
     const prompt = `Tu es un expert en restauration locale. Identifie les 5-8 principaux concurrents directs du restaurant "${restaurant_name}" situé à ${city}${address ? ' ('+address+')' : ''}${cuisine ? ', cuisine: '+cuisine : ''}.
@@ -8575,8 +8573,7 @@ Réponds UNIQUEMENT avec un JSON array, rien d'autre. Exemple:
       if (jsonMatch) competitors = JSON.parse(jsonMatch[0]);
     } catch(e) {
       console.error('Failed to parse competitors JSON:', e.message);
-      competitors = generateSimulatedCompetitors(restaurant_name, city, cuisine);
-      return res.json({ success: true, source: 'simulated_fallback', competitors });
+      return res.json({ success: false, error: 'parse_error', message: 'Erreur de parsing de la réponse IA' });
     }
 
     // Store in DB
@@ -8591,8 +8588,7 @@ Réponds UNIQUEMENT avec un JSON array, rien d'autre. Exemple:
     res.json({ success: true, source: 'ai', competitors });
   } catch(e) {
     console.error('Competitor discover error:', e.message);
-    const simulated = generateSimulatedCompetitors(req.body.restaurant_name, req.body.city, req.body.cuisine);
-    res.json({ success: true, source: 'simulated_error', competitors: simulated });
+    res.json({ success: false, error: e.message });
   }
 });
 
@@ -8604,7 +8600,7 @@ app.post('/api/competitors/compare', async (req, res) => {
 
     const apiKey = getAIKey(restaurant_id);
     if (!apiKey) {
-      return res.json({ success: true, source: 'simulated', comparison: generateSimulatedComparison(restaurant_name, competitor_name) });
+      return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour la comparaison' });
     }
 
     const prompt = `Compare ces 2 restaurants à ${city}: "${restaurant_name}" vs "${competitor_name}"${cuisine ? ' (cuisine: '+cuisine+')' : ''}.
@@ -8635,14 +8631,13 @@ Réponds UNIQUEMENT avec le JSON, rien d'autre.`;
       if (jsonMatch) comparison = JSON.parse(jsonMatch[0]);
       else throw new Error('No JSON found');
     } catch(e) {
-      comparison = generateSimulatedComparison(restaurant_name, competitor_name);
-      return res.json({ success: true, source: 'simulated_fallback', comparison });
+      return res.json({ success: false, error: 'parse_error', message: 'Erreur de parsing de la réponse IA' });
     }
 
     res.json({ success: true, source: 'ai', comparison });
   } catch(e) {
     console.error('Competitor compare error:', e.message);
-    res.json({ success: true, source: 'simulated_error', comparison: generateSimulatedComparison(req.body.restaurant_name, req.body.competitor_name) });
+    res.json({ success: false, error: e.message });
   }
 });
 
@@ -8656,53 +8651,7 @@ app.get('/api/competitors/:restaurant_id', (req, res) => {
   }
 });
 
-// Helper: generate simulated competitors
-function generateSimulatedCompetitors(name, city, cuisine) {
-  const types = cuisine ? [cuisine, 'Bistrot', 'Brasserie', 'Gastro'] : ['Français', 'Italien', 'Bistrot', 'Brasserie', 'Fusion'];
-  const prefixes = ['Le Petit', 'Chez', 'La Table de', 'Maison', 'L\'Atelier', 'Au Bon', 'Le Grand'];
-  const suffixes = ['Marcel', 'Pierre', 'Marie', 'Jules', 'Victor', 'Paul', 'Louis'];
-  const competitors = [];
-  const count = 5 + Math.floor(Math.random() * 3);
-  for (let i = 0; i < count; i++) {
-    const prefix = prefixes[Math.floor(Math.random() * prefixes.length)];
-    const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-    const cName = `${prefix} ${suffix}`;
-    const rating = (3.5 + Math.random() * 1.4).toFixed(1);
-    const reviews = Math.floor(100 + Math.random() * 2000);
-    competitors.push({
-      name: cName,
-      address: `${Math.floor(1+Math.random()*150)} rue du ${['Commerce','Marché','Temple','Faubourg','Château'][Math.floor(Math.random()*5)]}, ${city}`,
-      cuisine: types[Math.floor(Math.random() * types.length)],
-      rating: parseFloat(rating),
-      reviews,
-      strengths: ['Bonne visibilité locale', 'Avis positifs récents', 'Menu bien référencé'].slice(0, 2 + Math.floor(Math.random()*2)),
-      weaknesses: ['Site web lent', 'Pas de schema.org', 'Peu actif sur les réseaux'].slice(0, 1 + Math.floor(Math.random()*2)),
-      threat_level: ['high','medium','low'][Math.floor(Math.random()*3)],
-      why_competitor: `Même zone que ${name}, ${reviews > 500 ? 'forte notoriété' : 'concurrent émergent'}`
-    });
-  }
-  return competitors;
-}
-
-// Helper: generate simulated comparison
-function generateSimulatedComparison(restaurantName, competitorName) {
-  const rnd = (min,max) => Math.floor(min + Math.random()*(max-min));
-  return {
-    categories: [
-      { name: 'Visibilité Google', restaurant_score: rnd(20,60), competitor_score: rnd(30,80), insight: 'Écart sur les requêtes locales' },
-      { name: 'Présence IA (GEO)', restaurant_score: rnd(5,30), competitor_score: rnd(5,40), insight: 'Les deux restaurants peu cités par les IA' },
-      { name: 'Avis & Réputation', restaurant_score: rnd(40,80), competitor_score: rnd(40,80), insight: 'Notes similaires mais volume différent' },
-      { name: 'Site Web & SEO', restaurant_score: rnd(20,60), competitor_score: rnd(20,70), insight: 'Optimisation on-page à améliorer' },
-      { name: 'Réseaux sociaux', restaurant_score: rnd(10,50), competitor_score: rnd(15,60), insight: 'Présence irrégulière des deux côtés' },
-      { name: 'Annuaires locaux', restaurant_score: rnd(20,50), competitor_score: rnd(25,60), insight: 'Couverture annuaires à renforcer' }
-    ],
-    overall_restaurant: rnd(25,55),
-    overall_competitor: rnd(35,65),
-    key_advantages: ['Menu mieux décrit', 'Photos plus récentes'],
-    key_gaps: ['Moins d\'avis récents', 'Fiche Google moins complète'],
-    action_plan: ['Répondre à tous les avis récents', 'Ajouter schema.org Restaurant', 'Publier 2 Google Posts par semaine']
-  };
-}
+// (removed generateSimulatedCompetitors and generateSimulatedComparison — no fake data)
 
 // ============================================================
 // SPRINT 4A: INDUSTRY BENCHMARK
@@ -8728,8 +8677,6 @@ app.post('/api/benchmark', async (req, res) => {
     };
 
     const bench = benchmarks[cat] || benchmarks['Restaurant'];
-    // Add some randomness to simulate real data
-    const vary = (v, pct) => Math.round(v * (1 + (Math.random() - 0.5) * pct));
 
     const seoS = seo_score || 0;
     const geoS = geo_score || 0;
@@ -8741,16 +8688,16 @@ app.post('/api/benchmark', async (req, res) => {
       city: city || 'France',
       your_scores: { seo: seoS, geo: geoS, rating: ratingS, reviews: reviewsS },
       industry_avg: {
-        seo: vary(bench.seo_avg, 0.1),
-        geo: vary(bench.geo_avg, 0.15),
-        rating: parseFloat((bench.rating_avg + (Math.random() - 0.5) * 0.2).toFixed(1)),
-        reviews: vary(bench.reviews_avg, 0.2)
+        seo: bench.seo_avg,
+        geo: bench.geo_avg,
+        rating: bench.rating_avg,
+        reviews: bench.reviews_avg
       },
       top_10_pct: {
-        seo: vary(bench.top10_seo, 0.08),
-        geo: vary(bench.top10_geo, 0.1),
-        rating: parseFloat((4.6 + Math.random() * 0.3).toFixed(1)),
-        reviews: vary(bench.reviews_avg * 3, 0.2)
+        seo: bench.top10_seo,
+        geo: bench.top10_geo,
+        rating: 4.7,
+        reviews: bench.reviews_avg * 3
       },
       percentile: {
         seo: Math.min(99, Math.max(1, Math.round((seoS / (bench.top10_seo * 1.1)) * 100))),
@@ -8791,7 +8738,7 @@ app.post('/api/sentiment/analyze', async (req, res) => {
 
     const apiKey = getAIKey(restaurant_id);
     if (!apiKey) {
-      return res.json({ success: true, source: 'simulated', sentiment: generateSimulatedSentiment(restaurant_name) });
+      return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour l\'analyse de sentiment' });
     }
 
     const reviewText = (reviews_sample || []).slice(0, 10).map((r, i) => `Avis ${i+1}: "${r}"`).join('\n');
@@ -8822,32 +8769,16 @@ Réponds UNIQUEMENT avec un JSON:
       if (jsonMatch) sentiment = JSON.parse(jsonMatch[0]);
       else throw new Error('No JSON');
     } catch(e) {
-      sentiment = generateSimulatedSentiment(restaurant_name);
-      return res.json({ success: true, source: 'simulated_fallback', sentiment });
+      return res.json({ success: false, error: 'parse_error', message: 'Erreur de parsing de la réponse IA' });
     }
 
     res.json({ success: true, source: 'ai', sentiment });
   } catch(e) {
-    res.json({ success: true, source: 'simulated_error', sentiment: generateSimulatedSentiment(req.body.restaurant_name) });
+    res.json({ success: false, error: e.message });
   }
 });
 
-function generateSimulatedSentiment(name) {
-  return {
-    overall: 'positif',
-    score: parseFloat((0.6 + Math.random() * 0.3).toFixed(2)),
-    themes: [
-      { name: 'Cuisine', sentiment: 'positif', score: parseFloat((0.7+Math.random()*0.25).toFixed(2)), mentions: 8+Math.floor(Math.random()*10), keywords: ['savoureux','frais','copieux','goûteux'] },
-      { name: 'Service', sentiment: Math.random()>0.4?'positif':'neutre', score: parseFloat((0.5+Math.random()*0.4).toFixed(2)), mentions: 5+Math.floor(Math.random()*8), keywords: ['rapide','souriant','attentif'] },
-      { name: 'Ambiance', sentiment: 'positif', score: parseFloat((0.6+Math.random()*0.3).toFixed(2)), mentions: 3+Math.floor(Math.random()*6), keywords: ['chaleureux','authentique','convivial'] },
-      { name: 'Prix', sentiment: Math.random()>0.5?'positif':'neutre', score: parseFloat((0.5+Math.random()*0.35).toFixed(2)), mentions: 4+Math.floor(Math.random()*5), keywords: ['raisonnable','rapport qualité-prix','correct'] },
-      { name: 'Attente', sentiment: Math.random()>0.6?'neutre':'négatif', score: parseFloat((0.3+Math.random()*0.4).toFixed(2)), mentions: 2+Math.floor(Math.random()*4), keywords: ['file','attente','bondé'] }
-    ],
-    positive_keywords: ['excellent','délicieux','accueil','tradition','portions généreuses'],
-    negative_keywords: ['bruyant','attente','exigu'],
-    recommendation: 'Améliorer la gestion de l\'attente aux heures de pointe'
-  };
-}
+// (removed generateSimulatedSentiment — no fake data)
 
 // ============================================================
 // SPRINT 4C: WEEKLY REPORT CONFIG

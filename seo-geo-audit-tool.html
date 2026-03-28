@@ -3811,7 +3811,7 @@ document.addEventListener('DOMContentLoaded',()=>{if(!handleUrlParams()){checkSe
 // SIMULATION — deterministic seed based on name+city (stable scores)
 // ============================================================
 let storedName='',storedCity='';
-function _seedHash(s){let h=0;for(let i=0;i<s.length;i++){h=((h<<5)-h)+s.charCodeAt(i);h|=0;}return Math.abs(h);}
+// (removed _seedHash — no longer needed, all audit data comes from real APIs)
 // Prepare real audit data for the scoring engine
 // null = "couldn't check" → score as 0 but mark as unavailable
 function _prepareRealData(raw, name, city) {
@@ -3832,14 +3832,7 @@ function _prepareRealData(raw, name, city) {
 }
 
 function generateAuditData(name,city){
-    const seed=_seedHash((name+city).toLowerCase());
-    let _si=seed;
-    const _next=()=>{_si=(_si*1103515245+12345)&0x7fffffff;return _si/0x7fffffff;};
-    const r=(a,b)=>Math.floor(_next()*(b-a+1))+a;
-    const rb=p=>_next()<p;
-    const rc=()=>{const x=_next();return x<.15?'cited':x<.35?'partial':'not';};
-    // GBP fields: defaults pessimistes (non vérifiable sans API GBP)
-    // Site web fields: defaults pessimistes (seront remplacés par le crawl réel)
+    // Returns pessimistic defaults — real data comes from API crawl/GBP
     return{name,city,
     // --- GBP (en attente API — valeurs par défaut basses) ---
     hasPrimaryCategory:false,primaryCategorySpecific:false,secondaryCategories:0,descriptionLength:0,photoCount:0,hoursComplete:false,specialHours:false,attributeCount:0,postsPerMonth:0,menuUploaded:false,menuStructured:false,bookingLink:false,
@@ -8759,7 +8752,7 @@ function renderHubSources(){
     const sources=[
         {icon:'📊',name:'Google Places',status:currentData?._placesApiUsed?'ok':window._hubData?.source==='google_places_api'?'ok':googleAuth?.connected?'ok':'err',label:currentData?._placesApiUsed?'✅ Places API':window._hubData?.source==='google_places_api'?'✅ Places API':googleAuth?.connected?'Connecté':'Non connecté'},
         {icon:'🌐',name:'Site web',status:storedWebsite?'ok':'err',label:storedWebsite||'Pas de site'},
-        {icon:'🔍',name:'Audit SEO',status:window._realAudit?'ok':currentData?'warn':'err',label:window._realAudit?'Données réelles':currentData?'Données simulées':'Non lancé'},
+        {icon:'🔍',name:'Audit SEO',status:window._realAudit?'ok':currentData?'warn':'err',label:window._realAudit?'Données réelles':currentData?'Audit en attente':'Non lancé'},
         {icon:'📸',name:'Photos',status:hubPhotos.length>10?'ok':hubPhotos.length>0?'warn':'err',label:hubPhotos.length+' photos'},
         {icon:'📋',name:'Annuaires',status:Object.keys(dirCheckResults).length>5?'ok':'warn',label:Object.keys(dirCheckResults).length+'/11 scannés'},
         {icon:'🤖',name:'CMS',status:detectedCMS?.detected?'ok':'warn',label:detectedCMS?.detected?detectedCMS.detected.cms:'Non détecté'},
@@ -10239,26 +10232,11 @@ async function discoverCompetitors(){
         const json=await resp.json();
         if(json.success&&json.competitors){window._competitors=json.competitors;}
     }catch(e){
-        console.log('Competitor discover fallback to local');
-        window._competitors=generateLocalCompetitors(name,city,cuisine);
+        console.log('Competitor discover: API unavailable');
+        window._competitors=[];window._compNoAPI=true;
     }
     window._compDiscovering=false;
     renderCompetitorWatch();
-}
-
-function generateLocalCompetitors(name,city,cuisine){
-    const types=cuisine?[cuisine,'Bistrot','Brasserie']:['Français','Italien','Bistrot','Brasserie','Japonais'];
-    const prefixes=['Le Petit','Chez','La Table de','Maison','L\'Atelier','Au Bon','Le Grand'];
-    const suffixes=['Marcel','Pierre','Marie','Jules','Victor','Paul','Louis','Antoine'];
-    const comps=[];
-    const count=5+Math.floor(Math.random()*3);
-    for(let i=0;i<count;i++){
-        const cName=prefixes[i%prefixes.length]+' '+suffixes[i%suffixes.length];
-        const rating=(3.5+Math.random()*1.4).toFixed(1);
-        const reviews=Math.floor(100+Math.random()*2000);
-        comps.push({name:cName,address:`${Math.floor(1+Math.random()*150)} rue, ${city}`,cuisine:types[Math.floor(Math.random()*types.length)],rating:parseFloat(rating),reviews,strengths:['Bonne visibilité','Avis positifs'].slice(0,1+Math.floor(Math.random()*2)),weaknesses:['Site web lent','Pas de schema.org'].slice(0,1+Math.floor(Math.random()*2)),threat_level:['high','medium','low'][Math.floor(Math.random()*3)],why_competitor:`Même zone que ${name}`});
-    }
-    return comps;
 }
 
 async function compareWithCompetitor(compName){
@@ -10275,23 +10253,11 @@ async function compareWithCompetitor(compName){
         const json=await resp.json();
         if(json.success&&json.comparison){window._compComparison=json.comparison;}
     }catch(e){
-        console.log('Competitor compare fallback to local');
-        window._compComparison=generateLocalComparison(name,compName);
+        console.log('Competitor compare: API unavailable');
+        window._compComparison=null;window._compCompareNoAPI=true;
     }
     window._compComparing=false;
     renderCompetitorCompare();
-}
-
-function generateLocalComparison(rName,cName){
-    const rnd=(a,b)=>Math.floor(a+Math.random()*(b-a));
-    return{categories:[
-        {name:'Visibilité Google',restaurant_score:rnd(20,60),competitor_score:rnd(30,75),insight:'Écart sur les requêtes locales'},
-        {name:'Présence IA (GEO)',restaurant_score:rnd(5,30),competitor_score:rnd(5,35),insight:'Faible citation par les moteurs IA'},
-        {name:'Avis & Réputation',restaurant_score:rnd(40,80),competitor_score:rnd(40,80),insight:'Notes proches, volume différent'},
-        {name:'Site Web & SEO',restaurant_score:rnd(20,55),competitor_score:rnd(25,65),insight:'SEO on-page à améliorer'},
-        {name:'Réseaux sociaux',restaurant_score:rnd(10,45),competitor_score:rnd(15,55),insight:'Présence irrégulière'},
-        {name:'Annuaires locaux',restaurant_score:rnd(20,50),competitor_score:rnd(25,60),insight:'Couverture à renforcer'}
-    ],overall_restaurant:rnd(25,55),overall_competitor:rnd(35,65),key_advantages:['Menu mieux décrit','Photos récentes'],key_gaps:['Moins d\'avis','Fiche Google incomplète'],action_plan:['Répondre aux avis récents','Ajouter schema.org','Publier 2 Google Posts/semaine']};
 }
 
 function renderCompetitorWatch(){
@@ -10304,10 +10270,21 @@ function renderCompetitorWatch(){
     }
     const comps=window._competitors||[];
     if(comps.length===0){
+        const noAPI=window._compNoAPI;
         c.innerHTML=`<div class="comp-watch">
             <div class="comp-watch-title">🔎 Competitor Watch</div>
-            <div class="comp-watch-desc">Découvrez automatiquement vos concurrents directs et comparez votre visibilité en ligne.</div>
-            <button class="comp-discover-btn" onclick="discoverCompetitors()">🔍 Découvrir mes concurrents</button>
+            ${noAPI?`<div style="text-align:center;padding:20px 16px;">
+                <div style="display:flex;justify-content:center;gap:16px;margin-bottom:16px;opacity:.35;pointer-events:none;">
+                    <div style="background:var(--s3);border-radius:10px;padding:14px 20px;width:100px;"><div style="font-size:1.1rem;font-weight:700;">—</div><div style="font-size:.65rem;color:var(--mut);">Concurrent 1</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:14px 20px;width:100px;"><div style="font-size:1.1rem;font-weight:700;">—</div><div style="font-size:.65rem;color:var(--mut);">Concurrent 2</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:14px 20px;width:100px;"><div style="font-size:1.1rem;font-weight:700;">—</div><div style="font-size:.65rem;color:var(--mut);">Concurrent 3</div></div>
+                </div>
+                <div style="font-size:1.4rem;margin-bottom:6px;">🤖</div>
+                <div style="font-weight:600;margin-bottom:4px;">Analyse concurrentielle IA</div>
+                <div style="font-size:.8rem;color:var(--mut);margin-bottom:14px;">Nécessite une clé API (Claude ou OpenAI) pour analyser vos concurrents directs.</div>
+                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">🔒 Configurer dans Paramètres → Clé API</span>
+            </div>`:`<div class="comp-watch-desc">Découvrez automatiquement vos concurrents directs et comparez votre visibilité en ligne.</div>
+            <button class="comp-discover-btn" onclick="discoverCompetitors()">🔍 Découvrir mes concurrents</button>`}
         </div>`;
         return;
     }
@@ -10351,7 +10328,11 @@ function renderCompetitorCompare(){
         return;
     }
     const comp=window._compComparison;
-    if(!comp){c.innerHTML='';return;}
+    if(!comp){
+        if(window._compCompareNoAPI){c.innerHTML=`<div class="comp-compare"><div class="comp-compare-title">⚔️ ${rName} vs ${cName}</div><div style="text-align:center;padding:20px;"><div style="font-size:1.2rem;margin-bottom:8px;">🤖</div><div style="font-weight:600;margin-bottom:4px;">Comparaison IA indisponible</div><div style="font-size:.8rem;color:var(--mut);">Configurez une clé API IA dans Paramètres pour activer la comparaison détaillée.</div></div></div>`;}
+        else c.innerHTML='';
+        return;
+    }
 
     const cats=comp.categories||[];
     c.innerHTML=`<div class="comp-compare">
@@ -10450,9 +10431,8 @@ async function loadBenchmark(){
         const json=await resp.json();
         if(json.success)window._benchmarkData=json.benchmark;
     }catch(e){
-        // Local fallback
-        const seo=scores.seo||0,geo=scores.geo||0;
-        window._benchmarkData={category:d.cuisine||'Restaurant',city:d.city||'France',your_scores:{seo,geo,rating:d.rating||0,reviews:d.totalReviews||0},industry_avg:{seo:42,geo:18,rating:4.1,reviews:320},top_10_pct:{seo:72,geo:55,rating:4.7,reviews:900},percentile:{seo:Math.min(99,Math.round(seo/80*100)),geo:Math.min(99,Math.round(geo/60*100)),rating:Math.min(99,Math.round((d.rating||0)/5*100)),reviews:Math.min(99,Math.round(Math.min((d.totalReviews||0)/640,1)*100))},insights:[{type:'info',text:'Données benchmark simulées — connectez GBP pour des données réelles'}]};
+        console.log('Benchmark: API unavailable');
+        window._benchmarkData=null;window._benchmarkNoAPI=true;
     }
     window._benchmarkLoading=false;
     renderBenchmark();
@@ -10462,7 +10442,24 @@ function renderBenchmark(){
     const c=document.getElementById('benchmarkContainer');
     if(!c)return;
     const b=window._benchmarkData;
-    if(!b){c.innerHTML='';return;}
+    if(!b){
+        if(window._benchmarkNoAPI){
+            const d=window.currentData||{};
+            c.innerHTML=`<div class="bench-section" style="text-align:center;padding:24px 16px;">
+                <div class="bench-title">📊 Benchmark Industrie — ${d.cuisine||'Restaurant'} à ${d.city||'France'}</div>
+                <div style="display:flex;justify-content:center;gap:14px;margin:16px 0;opacity:.3;pointer-events:none;">
+                    <div style="background:var(--s3);border-radius:10px;padding:14px 18px;"><div style="font-size:1.2rem;font-weight:700;">—%</div><div style="font-size:.65rem;color:var(--mut);">Percentile SEO</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:14px 18px;"><div style="font-size:1.2rem;font-weight:700;">—%</div><div style="font-size:.65rem;color:var(--mut);">Percentile GEO</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:14px 18px;"><div style="font-size:1.2rem;font-weight:700;">—%</div><div style="font-size:.65rem;color:var(--mut);">Note</div></div>
+                </div>
+                <div style="font-size:1.4rem;margin-bottom:6px;">📊</div>
+                <div style="font-weight:600;margin-bottom:4px;">Benchmark sectoriel</div>
+                <div style="font-size:.8rem;color:var(--mut);margin-bottom:14px;">Comparez vos scores SEO/GEO aux moyennes du secteur et au top 10%.<br>Nécessite les données GBP ou une clé API IA.</div>
+                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">🔒 Bientôt disponible</span>
+            </div>`;
+        } else c.innerHTML='';
+        return;
+    }
     const pctColor=v=>v>=70?'var(--grn)':v>=40?'var(--org)':'var(--red)';
     const metrics=[
         {key:'seo',label:'Score SEO',max:100,color:'var(--ind)'},
@@ -10532,13 +10529,8 @@ async function loadSentiment(){
         const json=await resp.json();
         if(json.success)window._sentimentData=json.sentiment;
     }catch(e){
-        window._sentimentData={overall:'positif',score:0.72,themes:[
-            {name:'Cuisine',sentiment:'positif',score:0.82,mentions:12,keywords:['savoureux','copieux']},
-            {name:'Service',sentiment:'neutre',score:0.6,mentions:8,keywords:['correct','variable']},
-            {name:'Ambiance',sentiment:'positif',score:0.75,mentions:6,keywords:['authentique','convivial']},
-            {name:'Prix',sentiment:'positif',score:0.7,mentions:5,keywords:['raisonnable','bon rapport']},
-            {name:'Attente',sentiment:'negatif',score:0.35,mentions:4,keywords:['file','long']}
-        ],positive_keywords:['excellent','tradition','portions','accueil','frais'],negative_keywords:['bruyant','attente','bondé'],recommendation:'Améliorer la gestion de l\'attente'};
+        console.log('Sentiment: API unavailable');
+        window._sentimentData=null;window._sentimentNoAPI=true;
     }
     window._sentimentLoading=false;
     renderSentiment();
@@ -10548,7 +10540,24 @@ function renderSentiment(){
     const c=document.getElementById('sentimentContainer');
     if(!c)return;
     const s=window._sentimentData;
-    if(!s){c.innerHTML='';return;}
+    if(!s){
+        if(window._sentimentNoAPI){
+            c.innerHTML=`<div class="sentiment-section" style="text-align:center;padding:24px 16px;">
+                <div class="sentiment-title">💬 Analyse de Sentiment — Avis clients</div>
+                <div style="display:flex;justify-content:center;gap:14px;margin:16px 0;opacity:.3;pointer-events:none;">
+                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;">😊</div><div style="font-size:.65rem;color:var(--mut);">Cuisine</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;">😐</div><div style="font-size:.65rem;color:var(--mut);">Service</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;">😊</div><div style="font-size:.65rem;color:var(--mut);">Ambiance</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;">😟</div><div style="font-size:.65rem;color:var(--mut);">Attente</div></div>
+                </div>
+                <div style="font-size:1.4rem;margin-bottom:6px;">🤖</div>
+                <div style="font-weight:600;margin-bottom:4px;">Analyse IA des avis</div>
+                <div style="font-size:.8rem;color:var(--mut);margin-bottom:14px;">Nécessite une clé API IA pour analyser le sentiment de vos avis clients.</div>
+                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">🔒 Configurer dans Paramètres → Clé API</span>
+            </div>`;
+        } else c.innerHTML='';
+        return;
+    }
     const emoji=s.score>=0.7?'😊':s.score>=0.4?'😐':'😟';
     const sentColor=v=>v>=0.7?'var(--grn)':v>=0.4?'var(--org)':'var(--red)';
     c.innerHTML=`<div class="sentiment-section">
