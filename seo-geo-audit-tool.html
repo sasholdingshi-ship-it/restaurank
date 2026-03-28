@@ -2126,6 +2126,54 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                 <button class="btn-dispatch-all" style="background:linear-gradient(135deg,#8b5cf6,var(--ind));color:#fff;" onclick="openBillingPortal()">💳 Gérer mon abonnement</button>
             </div>
 
+            <!-- SOCIAL MEDIA CONNECTIONS -->
+            <div style="margin-top:20px;padding:16px;background:linear-gradient(135deg,rgba(236,72,153,.06),rgba(99,102,241,.06));border:1px solid rgba(236,72,153,.2);border-radius:12px;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+                    <span style="font-size:1.1rem;">📱</span>
+                    <h3 style="font-size:.95rem;font-weight:800;margin:0;">Publication automatique — Réseaux sociaux</h3>
+                </div>
+                <p style="font-size:.75rem;color:var(--mut);margin:0 0 12px;line-height:1.5;">Connectez vos comptes pour que RestauRank publie automatiquement après chaque audit. Le contenu est généré par IA et adapté à chaque plateforme.</p>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="socialConnections">
+                    <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">📸 Instagram</div>
+                        <input type="text" id="settingsMetaToken" placeholder="Meta Page Access Token" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
+                        <input type="text" id="settingsIgAccountId" placeholder="Instagram Business Account ID" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
+                        <a href="https://developers.facebook.com/docs/instagram-api/getting-started" target="_blank" style="font-size:.6rem;color:var(--ind);">Guide de configuration →</a>
+                    </div>
+                    <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">📘 Facebook</div>
+                        <input type="text" id="settingsFbPageId" placeholder="Facebook Page ID" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
+                        <div style="font-size:.6rem;color:var(--mut);margin-top:4px;">Utilise le même Meta Token qu'Instagram</div>
+                    </div>
+                    <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">💼 LinkedIn</div>
+                        <input type="text" id="settingsLinkedinToken" placeholder="LinkedIn Access Token" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
+                        <input type="text" id="settingsLinkedinOrgId" placeholder="Organization ID (page entreprise)" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
+                        <a href="https://www.linkedin.com/developers/apps" target="_blank" style="font-size:.6rem;color:var(--ind);">Créer une app →</a>
+                    </div>
+                    <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">🎵 TikTok</div>
+                        <input type="text" id="settingsTiktokToken" placeholder="TikTok Access Token" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
+                        <a href="https://developers.tiktok.com" target="_blank" style="font-size:.6rem;color:var(--ind);">Configurer →</a>
+                    </div>
+                    <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">🤖 Reddit</div>
+                        <input type="text" id="settingsRedditClientId" placeholder="Client ID" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
+                        <input type="text" id="settingsRedditSecret" placeholder="Client Secret" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
+                        <input type="text" id="settingsRedditUser" placeholder="Username" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
+                        <input type="password" id="settingsRedditPass" placeholder="Password" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
+                        <a href="https://www.reddit.com/prefs/apps" target="_blank" style="font-size:.6rem;color:var(--ind);">Créer une app Script →</a>
+                    </div>
+                    <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">⭐ Yelp</div>
+                        <input type="text" id="settingsYelpKey" placeholder="Yelp Fusion API Key" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
+                        <a href="https://www.yelp.com/developers/v3/manage_app" target="_blank" style="font-size:.6rem;color:var(--ind);">Créer une app →</a>
+                    </div>
+                </div>
+                <button onclick="saveSocialSettings()" style="margin-top:10px;padding:8px 20px;background:linear-gradient(135deg,#ec4899,#6366f1);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.78rem;font-weight:700;">💾 Sauvegarder les connexions sociales</button>
+                <div id="socialSaveStatus" style="font-size:.7rem;margin-top:6px;"></div>
+            </div>
+
             <!-- AUTOMATED REVIEWS RESPONSE -->
             <div class="review-auto-section" style="margin-top:20px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
@@ -7186,6 +7234,58 @@ async function saveSettings(){
     alert('✅ Paramètres enregistrés !');
 }
 
+// Save social media connection settings
+async function saveSocialSettings(){
+    const social={
+        meta_token:document.getElementById('settingsMetaToken')?.value.trim()||'',
+        ig_account_id:document.getElementById('settingsIgAccountId')?.value.trim()||'',
+        fb_page_id:document.getElementById('settingsFbPageId')?.value.trim()||'',
+        linkedin_token:document.getElementById('settingsLinkedinToken')?.value.trim()||'',
+        linkedin_org_id:document.getElementById('settingsLinkedinOrgId')?.value.trim()||'',
+        tiktok_token:document.getElementById('settingsTiktokToken')?.value.trim()||'',
+        reddit_client_id:document.getElementById('settingsRedditClientId')?.value.trim()||'',
+        reddit_secret:document.getElementById('settingsRedditSecret')?.value.trim()||'',
+        reddit_user:document.getElementById('settingsRedditUser')?.value.trim()||'',
+        reddit_pass:document.getElementById('settingsRedditPass')?.value.trim()||'',
+        yelp_key:document.getElementById('settingsYelpKey')?.value.trim()||''
+    };
+    window._socialTokens=social;
+    // Save to server
+    const rid=currentData?.restaurant_id||1;
+    try{
+        await fetchTimeout(`${API_BASE}/api/settings/social`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:rid,data:social})},5000);
+        const statusEl=document.getElementById('socialSaveStatus');
+        const connected=Object.values(social).filter(v=>v).length;
+        if(statusEl)statusEl.innerHTML=`<span style="color:var(--grn);">✅ ${connected} connexions sauvegardées</span>`;
+        showToast(`✅ ${connected} connexions sociales sauvegardées`,'success');
+    }catch(e){
+        // Fallback localStorage
+        try{localStorage.setItem('restaurank_social_tokens',JSON.stringify(social));}catch{}
+        const statusEl=document.getElementById('socialSaveStatus');
+        if(statusEl)statusEl.innerHTML=`<span style="color:var(--org);">⚠️ Sauvegardé localement (serveur indisponible)</span>`;
+        showToast('⚠️ Sauvegardé localement','info');
+    }
+}
+
+// Load social settings on tab open
+function loadSocialSettings(){
+    try{
+        const saved=JSON.parse(localStorage.getItem('restaurank_social_tokens')||'{}');
+        if(saved.meta_token)document.getElementById('settingsMetaToken').value=saved.meta_token;
+        if(saved.ig_account_id)document.getElementById('settingsIgAccountId').value=saved.ig_account_id;
+        if(saved.fb_page_id)document.getElementById('settingsFbPageId').value=saved.fb_page_id;
+        if(saved.linkedin_token)document.getElementById('settingsLinkedinToken').value=saved.linkedin_token;
+        if(saved.linkedin_org_id)document.getElementById('settingsLinkedinOrgId').value=saved.linkedin_org_id;
+        if(saved.tiktok_token)document.getElementById('settingsTiktokToken').value=saved.tiktok_token;
+        if(saved.reddit_client_id)document.getElementById('settingsRedditClientId').value=saved.reddit_client_id;
+        if(saved.reddit_secret)document.getElementById('settingsRedditSecret').value=saved.reddit_secret;
+        if(saved.reddit_user)document.getElementById('settingsRedditUser').value=saved.reddit_user;
+        if(saved.reddit_pass)document.getElementById('settingsRedditPass').value=saved.reddit_pass;
+        if(saved.yelp_key)document.getElementById('settingsYelpKey').value=saved.yelp_key;
+        window._socialTokens=saved;
+    }catch(e){}
+}
+
 // Save directory API keys
 async function saveDirectoryApiKeys(){
     const keys={
@@ -9109,6 +9209,52 @@ async function runPostScanAutomation(){
         }
     }catch(e){}
 
+    // ── 12. Auto-publish to connected social platforms ──
+    try{
+        const tokens=window._socialTokens||JSON.parse(localStorage.getItem('restaurank_social_tokens')||'{}');
+        let published=0;
+
+        // Auto-publish to Facebook if token configured
+        if(tokens.meta_token&&tokens.fb_page_id&&window._autoSocialPosts){
+            try{
+                const fbPost=window._autoSocialPosts.split('---SEPARATOR---')[2]||window._autoSocialPosts.substring(0,500);
+                await fetchTimeout(`${API_BASE}/api/meta/publish`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({platform:'facebook',message:fbPost.trim()})},15000);
+                published++;
+            }catch(e){console.warn('Auto-publish Facebook failed:',e.message);}
+        }
+
+        // Auto-publish to LinkedIn if token configured
+        if(tokens.linkedin_token&&window._autoSocialPosts){
+            try{
+                const liPost=window._autoSocialPosts.split('---SEPARATOR---')[5]||window._autoSocialPosts.substring(0,500);
+                await fetchTimeout(`${API_BASE}/api/linkedin/publish`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:liPost.trim()})},15000);
+                published++;
+            }catch(e){console.warn('Auto-publish LinkedIn failed:',e.message);}
+        }
+
+        // Auto-publish blog to WordPress if CMS detected
+        if(detectedCMS?.detected?.cms==='wordpress'&&window._autoBlogPost){
+            try{
+                const wpCreds=window._wpCredentials||{};
+                if(wpCreds.site_url){
+                    await fetchTimeout(`${API_BASE}/api/wordpress/publish`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...wpCreds,title:`${name} — Guide complet`,content:window._autoBlogPost,status:'draft'})},15000);
+                    published++;
+                }
+            }catch(e){console.warn('Auto-publish WordPress failed:',e.message);}
+        }
+
+        // Auto-apply SEO fixes via CMS if detected
+        if(detectedCMS?.detected?.cms&&window._autoFAQ){
+            try{
+                const cmsType=detectedCMS.detected.cms;
+                await fetchTimeout(`${API_BASE}/api/cms/auto-apply`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cms_type:cmsType,improvements:{faq_page:window._autoFAQ}})},15000);
+                published++;
+            }catch(e){console.warn('Auto-apply CMS FAQ failed:',e.message);}
+        }
+
+        if(published>0) summary.autoPublish={ok:true,detail:`${published} publications automatiques`};
+    }catch(e){summary.autoPublish={ok:false,detail:e.message};}
+
     // ── Show non-intrusive notification toast ──
     const elapsed=((Date.now()-t0)/1000).toFixed(1);
     console.log(`🤖 AutoPilot: terminé en ${elapsed}s`,summary);
@@ -9122,8 +9268,8 @@ function showAutoPilotToast(summary,elapsed){
     if(old)old.remove();
 
     const actions=Object.entries(summary).filter(([k,v])=>v&&v.ok).map(([k,v])=>{
-        const icons={hub:'🏠',reviews:'⭐',semantic:'🔬',posts:'📱',directories:'📋',fixes:'🔧',keywords:'🎯',blog:'📝',reddit:'🤖',social:'📱',faq:'❓',napSync:'🔗',weeklyReport:'📩'};
-        const labels={hub:'Hub Central',reviews:'Avis',semantic:'Analyse sémantique',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations',keywords:'Mots-clés',blog:'Blog GEO',reddit:'Reddit GEO',social:'Posts sociaux',faq:'FAQ GEO',napSync:'Sync NAP',weeklyReport:'Rapport hebdo'};
+        const icons={hub:'🏠',reviews:'⭐',semantic:'🔬',posts:'📱',directories:'📋',fixes:'🔧',keywords:'🎯',blog:'📝',reddit:'🤖',social:'📱',faq:'❓',napSync:'🔗',autoPublish:'🚀'};
+        const labels={hub:'Hub Central',reviews:'Avis',semantic:'Analyse sémantique',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations',keywords:'Mots-clés',blog:'Blog GEO',reddit:'Reddit GEO',social:'Posts sociaux',faq:'FAQ GEO',napSync:'Sync NAP',autoPublish:'Publication auto'};
         return `<div style="display:flex;align-items:center;gap:6px;font-size:.72rem;"><span>${icons[k]||'•'}</span><span style="color:var(--txt);">${labels[k]||k}</span><span style="color:var(--grn);margin-left:auto;">${v.detail}</span></div>`;
     });
 
