@@ -273,11 +273,15 @@ function getMailTransporter() {
     console.warn('⚠️ SMTP non configuré — les emails seront loggés en console uniquement');
     return null;
   }
+  const port = parseInt(process.env.SMTP_PORT || '465');
   mailTransporter = nodemailer.createTransport({
     host,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: { user, pass }
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 15000
   });
   console.log(`📧 SMTP configuré: ${host}`);
   return mailTransporter;
@@ -5972,11 +5976,15 @@ app.post('/api/send-welcome-email', requireAuth, async (req, res) => {
   }
 
   try {
+    const port = parseInt(process.env.SMTP_PORT || '465');
     const transporter = nodemailer.createTransport({
       host: smtpHost,
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: false,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
+      port,
+      secure: port === 465,
+      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
+      socketTimeout: 15000
     });
 
     await transporter.sendMail({
