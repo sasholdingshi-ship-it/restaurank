@@ -3747,6 +3747,8 @@ app.post('/api/directories/foursquare/claim', async (req, res) => {
 async function checkPlatformListing(platform, name, city) {
   const q = encodeURIComponent(`${name} ${city}`);
   const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  // Normalize city for APIs: "Paris 9" → "Paris", "Lyon 3e" → "Lyon"
+  const cityClean = city.replace(/\s*\d+e?$/, '').trim();
 
   // Platform-specific claim/manage URLs
   const urlsMap = {
@@ -3766,7 +3768,7 @@ async function checkPlatformListing(platform, name, city) {
   try {
     // ── API-based checks (preferred — stable, structured data) ──
     if (platform === 'tripadvisor' && process.env.TRIPADVISOR_API_KEY) {
-      const resp = await fetch(`https://api.content.tripadvisor.com/api/v1/location/search?searchQuery=${encodeURIComponent(name+' '+city)}&language=fr&key=${process.env.TRIPADVISOR_API_KEY}`, { signal: AbortSignal.timeout(10000) });
+      const resp = await fetch(`https://api.content.tripadvisor.com/api/v1/location/search?searchQuery=${encodeURIComponent(name+' '+city)}&language=fr&key=${process.env.TRIPADVISOR_API_KEY}&address=${encodeURIComponent(cityClean)}`, { signal: AbortSignal.timeout(10000) });
       if (resp.ok) {
         const data = await resp.json();
         const match = (data.data || []).find(r => r.name && r.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
@@ -3775,20 +3777,30 @@ async function checkPlatformListing(platform, name, city) {
       }
     }
 
-    if (platform === 'foursquare' && process.env.FOURSQUARE_API_KEY) {
-      const resp = await fetch(`https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(name)}&near=${encodeURIComponent(city+',France')}&limit=5`, {
-        headers: { 'Authorization': process.env.FOURSQUARE_API_KEY, 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000)
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        const match = (data.results || []).find(r => r.name && r.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
-        return { platform, found: !!match, status: match ? 'found' : 'not_found', method: 'api', urls: urlsMap[platform],
-          details: match ? { name: match.name, address: match.location?.formatted_address, fsq_id: match.fsq_id } : null };
+    if (platform === 'foursquare') {
+      const fsqId = process.env.FOURSQUARE_CLIENT_ID;
+      const fsqSecret = process.env.FOURSQUARE_CLIENT_SECRET;
+      if (fsqId && fsqSecret) {
+        try {
+          const fsqUrl = `https://api.foursquare.com/v2/venues/search?query=${encodeURIComponent(name)}&near=${encodeURIComponent(cityClean+', France')}&client_id=${fsqId}&client_secret=${fsqSecret}&v=20240101&limit=5`;
+          const resp = await fetch(fsqUrl, { signal: AbortSignal.timeout(10000) });
+          const data = await resp.json();
+          const venues = data.response?.venues || [];
+          const match = venues.find(r => {
+            if (!r.name) return false;
+            const rn = r.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+            return rn.includes(nameNorm) || nameNorm.includes(rn) || rn.split(/\s+/).filter(w => w.length > 2).every(w => nameNorm.includes(w));
+          });
+          return { platform, found: !!match, status: match ? 'found' : 'not_found', method: 'api', urls: urlsMap[platform],
+            details: match ? { name: match.name, address: match.location?.address, fsq_id: match.id } : null };
+        } catch(e) {
+          return { platform, status: 'error', found: false, error: e.message, method: 'api_failed', urls: urlsMap[platform] };
+        }
       }
     }
 
     if (platform === 'yelp' && process.env.YELP_API_KEY) {
-      const resp = await fetch(`https://api.yelp.com/v3/businesses/search?term=${encodeURIComponent(name)}&location=${encodeURIComponent(city+', France')}&limit=5`, {
+      const resp = await fetch(`https://api.yelp.com/v3/businesses/search?term=${encodeURIComponent(name)}&location=${encodeURIComponent(cityClean+', France')}&limit=5`, {
         headers: { 'Authorization': `Bearer ${process.env.YELP_API_KEY}` }, signal: AbortSignal.timeout(10000)
       });
       if (resp.ok) {
