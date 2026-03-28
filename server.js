@@ -4056,23 +4056,101 @@ app.post('/api/reviews/auto-respond', async (req, res) => {
   const restoName = req.body.restaurant_name || 'Notre restaurant';
 
   try {
-    const prompt = `Tu es le community manager de "${restoName}". Génère une réponse professionnelle à cet avis ${platform} (note: ${review_rating}/5, auteur: ${reviewer_name}):
+    const city = req.body.city || '';
+    const cuisine = req.body.cuisine || '';
+    const prompt = `Tu es le community manager et expert SEO/GEO de "${restoName}"${city ? ' à ' + city : ''}${cuisine ? ' (' + cuisine + ')' : ''}. Génère une réponse à cet avis ${platform} (note: ${review_rating}/5, auteur: ${reviewer_name}):
 
 "${review_text}"
 
-Règles:
+RÈGLES DE RÉPONSE:
 - Si positif (4-5★): remercie, mentionne un détail spécifique de l'avis, invite à revenir
-- Si négatif (1-2★): empathie, excuse si justifié, propose une solution, invite à recontacter en privé
-- Si mitigé (3★): remercie, reconnais les points positifs, adresse les points négatifs
-- Adapte le ton à la plateforme: ${platform === 'ubereats' || platform === 'deliveroo' ? 'court et direct (livraison)' : platform === 'tripadvisor' ? 'professionnel tourisme' : 'chaleureux restaurant'}
+- Si négatif (1-2★): empathie, excuse si justifié, propose solution, invite à recontacter en privé
+- Si mitigé (3★): remercie, reconnais positifs, adresse négatifs
+- Adapte le ton: ${platform === 'ubereats' || platform === 'deliveroo' ? 'court et direct (livraison)' : platform === 'tripadvisor' ? 'professionnel tourisme' : 'chaleureux restaurant'}
+
+RÈGLES SEO/GEO OBLIGATOIRES (pour que les IA citent ce restaurant):
+- Mentionne TOUJOURS le nom complet "${restoName}" au moins 1 fois (entité nommée)
+- Mentionne la ville "${city || 'Paris'}" naturellement (signal géographique)
+- Inclus 1-2 mots-clés pertinents NATURELLEMENT: "${cuisine || 'restaurant'}", spécialité, quartier
+- Si positif: ancre un mot-clé cuisine ("notre ${cuisine || 'cuisine'}${city ? ' à ' + city : ''}")
+- Si négatif: reste factuel pour ne pas nourrir le négatif en mots-clés
+- JAMAIS de keyword stuffing — doit rester 100% naturel et humain
+
 - Max 150 mots
 - En français (sauf si l'avis est en anglais → réponds en anglais)
-- Signe "${restoName}"`;
+- Signe "${restoName}"
+- NE JAMAIS mentionner le SEO, le GEO, les mots-clés ou l'optimisation dans la réponse`;
 
     const reply = await callClaudeAPI(apiKey, prompt, 500);
     res.json({ success: true, platform, review_id, reply: reply.trim() });
   } catch(e) {
     res.json({ success: false, error: e.message });
+  }
+});
+
+// PLATFORM AUTO-LOGIN — Client enters credentials, RestauRank connects automatically
+app.post('/api/platform/auto-connect', async (req, res) => {
+  const { platform, email, password, restaurant_id } = req.body;
+  if (!platform || !email || !password) return res.status(400).json({ error: 'platform, email, password required' });
+
+  const loginConfigs = {
+    ubereats: { url: 'https://merchants.ubereats.com/auth/login', emailField: 'input[name="email"],input[type="email"]', passField: 'input[name="password"],input[type="password"]', submitBtn: 'button[type="submit"]' },
+    deliveroo: { url: 'https://restaurant-hub.deliveroo.net/login', emailField: 'input[name="email"],input[type="email"]', passField: 'input[name="password"],input[type="password"]', submitBtn: 'button[type="submit"]' },
+    thefork: { url: 'https://manager.thefork.com/login', emailField: 'input[name="email"],input[type="email"]', passField: 'input[name="password"],input[type="password"]', submitBtn: 'button[type="submit"]' },
+    yelp: { url: 'https://biz.yelp.com/login', emailField: '#email', passField: '#password', submitBtn: 'button[type="submit"]' },
+    zenchef: { url: 'https://app.zenchef.com/login', emailField: 'input[name="email"],input[type="email"]', passField: 'input[name="password"],input[type="password"]', submitBtn: 'button[type="submit"]' },
+    opentable: { url: 'https://restaurant.opentable.com/login', emailField: 'input[name="email"],input[type="email"]', passField: 'input[name="password"],input[type="password"]', submitBtn: 'button[type="submit"]' }
+  };
+
+  const config = loginConfigs[platform];
+  if (!config) return res.json({ success: false, error: `Plateforme "${platform}" non supportée pour l'auto-connexion` });
+
+  let browser = null;
+  try {
+    browser = await launchBrowser();
+    const page = await browser.newPage();
+    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+
+    // Navigate to login page
+    await page.goto(config.url, { waitUntil: 'networkidle2', timeout: 30000 });
+
+    // Fill email
+    await page.waitForSelector(config.emailField, { timeout: 10000 });
+    await page.type(config.emailField, email, { delay: 50 });
+
+    // Fill password
+    await page.type(config.passField, password, { delay: 50 });
+
+    // Submit
+    await page.click(config.submitBtn);
+    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
+
+    // Check if login succeeded (no login form visible anymore)
+    const stillOnLogin = await page.$(config.emailField).catch(() => null);
+    const currentUrl = page.url();
+
+    // Get cookies for session persistence
+    const cookies = await page.cookies();
+    const sessionCookies = cookies.filter(c => c.name.includes('session') || c.name.includes('token') || c.name.includes('auth') || c.name.includes('sid'));
+
+    if (!stillOnLogin && !currentUrl.includes('login')) {
+      // Success — store session
+      try {
+        db.prepare(`INSERT OR REPLACE INTO restaurant_settings (restaurant_id, type, data, updated_at)
+          VALUES (?, ?, ?, datetime('now'))`)
+          .run(restaurant_id || 0, `platform_session_${platform}`, JSON.stringify({ platform, email, cookies: sessionCookies, connected_at: new Date().toISOString(), url: currentUrl }));
+      } catch(e) {}
+
+      await browser.close();
+      res.json({ success: true, platform, status: 'connected', detail: `Connecté à ${platform} en tant que ${email}`, session_cookies: sessionCookies.length });
+    } else {
+      const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 50 });
+      await browser.close();
+      res.json({ success: false, platform, status: 'login_failed', detail: 'Identifiants incorrects ou 2FA requis', screenshot: `data:image/jpeg;base64,${screenshot}` });
+    }
+  } catch(e) {
+    if (browser) try { await browser.close(); } catch {}
+    res.json({ success: false, platform, error: e.message });
   }
 });
 
