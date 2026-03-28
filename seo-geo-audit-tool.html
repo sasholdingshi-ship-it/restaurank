@@ -1765,6 +1765,30 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                         <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Horaires</label>
                         <textarea id="hubHours" class="hub-input" style="height:60px;resize:vertical;" placeholder="Lun-Ven: 12h-14h30, 19h-22h30&#10;Sam-Dim: 12h-15h, 19h-23h"></textarea>
                     </div>
+                    <div class="hub-field">
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🖼️ Logo (URL)</label>
+                        <input type="text" id="hubLogo" class="hub-input" placeholder="https://...logo.png">
+                    </div>
+                    <div class="hub-field">
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📘 Page Facebook</label>
+                        <input type="text" id="hubFacebook" class="hub-input" placeholder="https://facebook.com/...">
+                    </div>
+                    <div class="hub-field">
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🐦 Page X (Twitter)</label>
+                        <input type="text" id="hubTwitter" class="hub-input" placeholder="https://x.com/...">
+                    </div>
+                    <div class="hub-field">
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📸 Page Instagram</label>
+                        <input type="text" id="hubInstagram" class="hub-input" placeholder="https://instagram.com/...">
+                    </div>
+                    <div class="hub-field">
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📅 Lien de réservation</label>
+                        <input type="text" id="hubReservation" class="hub-input" placeholder="https://thefork.fr/... ou https://...">
+                    </div>
+                    <div class="hub-field">
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🛵 Lien de commande</label>
+                        <input type="text" id="hubOrder" class="hub-input" placeholder="https://ubereats.com/... ou https://...">
+                    </div>
                 </div>
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
                     <button class="btn-gen" style="background:linear-gradient(135deg,var(--grn),#059669);color:#fff;font-size:.78rem;padding:10px 16px;" onclick="saveHubData()">💾 Sauvegarder</button>
@@ -8721,6 +8745,12 @@ function saveHubData(){
         website:document.getElementById('hubWebsite').value,
         description:document.getElementById('hubDescription').value,
         hours:document.getElementById('hubHours').value,
+        logo:document.getElementById('hubLogo')?.value||'',
+        facebook:document.getElementById('hubFacebook')?.value||'',
+        twitter:document.getElementById('hubTwitter')?.value||'',
+        instagram:document.getElementById('hubInstagram')?.value||'',
+        reservation_url:document.getElementById('hubReservation')?.value||'',
+        order_url:document.getElementById('hubOrder')?.value||'',
         photos:hubPhotos.filter(p=>p.selected).map(p=>p.url),
         savedAt:new Date().toISOString()
     };
