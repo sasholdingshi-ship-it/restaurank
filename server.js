@@ -26,14 +26,51 @@ function getPuppeteer() {
 // Active browser sessions per restaurant
 const activeBrowserSessions = {};
 
+// Random realistic viewport sizes to avoid fingerprinting
+const VIEWPORTS = [
+  { width: 1366, height: 768 }, { width: 1440, height: 900 }, { width: 1536, height: 864 },
+  { width: 1280, height: 720 }, { width: 1920, height: 1080 }, { width: 1600, height: 900 }
+];
+const USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:125.0) Gecko/20100101 Firefox/125.0',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+];
+
 async function launchBrowser() {
   const ppt = getPuppeteer();
+  const vp = VIEWPORTS[Math.floor(Math.random() * VIEWPORTS.length)];
   return ppt.launch({
     headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu',
-           '--window-size=1280,900', '--lang=fr-FR,fr'],
-    defaultViewport: { width: 1280, height: 900 }
+           `--window-size=${vp.width},${vp.height}`, '--lang=fr-FR,fr',
+           '--disable-blink-features=AutomationControlled'],
+    defaultViewport: vp
   });
+}
+
+// Anti-bot stealth: apply to every new page
+async function stealthPage(page) {
+  const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  await page.setUserAgent(ua);
+  // Remove webdriver flag
+  await page.evaluateOnNewDocument(() => {
+    Object.defineProperty(navigator, 'webdriver', { get: () => false });
+    // Fake plugins
+    Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
+    // Fake languages
+    Object.defineProperty(navigator, 'languages', { get: () => ['fr-FR', 'fr', 'en-US', 'en'] });
+    // Override permissions
+    const origQuery = window.navigator.permissions.query;
+    window.navigator.permissions.query = (params) => params.name === 'notifications' ? Promise.resolve({ state: Notification.permission }) : origQuery(params);
+    // Chrome runtime
+    window.chrome = { runtime: {} };
+  });
+  // Random delay before actions (human-like)
+  page._humanDelay = () => new Promise(r => setTimeout(r, 800 + Math.random() * 2000));
+  return page;
 }
 
 async function autoFillAndScreenshot(page, step) {
@@ -3017,28 +3054,33 @@ const https = require('https');
 const { URL } = require('url');
 
 // Realistic browser headers to avoid bot detection
-const BROWSER_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-  'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
-  'Accept-Encoding': 'gzip, deflate, br',
-  'Cache-Control': 'no-cache',
-  'Sec-Ch-Ua': '"Chromium";v="123", "Google Chrome";v="123", "Not:A-Brand";v="99"',
-  'Sec-Ch-Ua-Mobile': '?0',
-  'Sec-Ch-Ua-Platform': '"macOS"',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'none',
-  'Sec-Fetch-User': '?1',
-  'Upgrade-Insecure-Requests': '1',
-};
+function getBrowserHeaders() {
+  const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+  const isChrome = ua.includes('Chrome');
+  const version = (ua.match(/Chrome\/(\d+)/)||['','124'])[1];
+  return {
+    'User-Agent': ua,
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
+    'Accept-Language': 'fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Cache-Control': 'no-cache',
+    ...(isChrome ? {
+      'Sec-Ch-Ua': `"Chromium";v="${version}", "Google Chrome";v="${version}", "Not:A-Brand";v="99"`,
+      'Sec-Ch-Ua-Mobile': '?0',
+      'Sec-Ch-Ua-Platform': ua.includes('Mac') ? '"macOS"' : ua.includes('Windows') ? '"Windows"' : '"Linux"',
+      'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'navigate', 'Sec-Fetch-Site': 'none', 'Sec-Fetch-User': '?1',
+    } : {}),
+    'Upgrade-Insecure-Requests': '1',
+  };
+}
+const BROWSER_HEADERS = getBrowserHeaders();
 
 function fetchPage(url, redirects = 3) {
   return new Promise((resolve, reject) => {
     if (redirects <= 0) return reject(new Error('Too many redirects'));
     const parsed = new URL(url);
     const mod = parsed.protocol === 'https:' ? https : http;
-    const req = mod.get(url, { headers: { ...BROWSER_HEADERS, 'Referer': `https://www.google.com/search?q=${encodeURIComponent(parsed.hostname)}` }, timeout: 15000, rejectUnauthorized: false }, (res) => {
+    const req = mod.get(url, { headers: { ...getBrowserHeaders(), 'Referer': `https://www.google.com/search?q=${encodeURIComponent(parsed.hostname)}` }, timeout: 15000, rejectUnauthorized: false }, (res) => {
       if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location) {
         const next = res.headers.location.startsWith('http') ? res.headers.location : new URL(res.headers.location, url).href;
         return fetchPage(next, redirects - 1).then(resolve).catch(reject);
@@ -4180,7 +4222,7 @@ app.post('/api/platform/auto-connect', async (req, res) => {
   try {
     browser = await launchBrowser();
     const page = await browser.newPage();
-    await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await stealthPage(page);
 
     // Navigate to login page
     await page.goto(config.url, { waitUntil: 'networkidle2', timeout: 30000 });
@@ -4708,7 +4750,7 @@ app.post('/api/directories/auto-do', async (req, res) => {
       browser = await launchBrowser();
       const page = await browser.newPage();
       await page.setExtraHTTPHeaders({ 'Accept-Language': 'fr-FR,fr;q=0.9,en;q=0.8' });
-      await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+      await stealthPage(page);
       const steps = await automationFn(page, { name, city: city || 'Paris', address, phone, website, email });
       const needsManual = steps.some(s => s.needsManual);
       const lastStep = steps[steps.length - 1] || {};
