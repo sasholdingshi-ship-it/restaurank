@@ -9109,15 +9109,6 @@ async function runPostScanAutomation(){
         }
     }catch(e){}
 
-    // ── 12. Auto-activate weekly report ──
-    try{
-        if(currentAccount?.email){
-            const rid=currentData?.restaurant_id||1;
-            await fetchTimeout(`${API_BASE}/api/reports/subscribe`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:rid,email:currentAccount.email,frequency:'weekly',include_competitors:true,include_sentiment:true})},5000);
-            summary.weeklyReport={ok:true,detail:`Rapport hebdo activé → ${currentAccount.email}`};
-        }
-    }catch(e){summary.weeklyReport={ok:false,detail:e.message};}
-
     // ── Show non-intrusive notification toast ──
     const elapsed=((Date.now()-t0)/1000).toFixed(1);
     console.log(`🤖 AutoPilot: terminé en ${elapsed}s`,summary);
