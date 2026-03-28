@@ -8736,71 +8736,102 @@ app.get('/api/competitors/:restaurant_id', (req, res) => {
 // SPRINT 4A: INDUSTRY BENCHMARK
 // ============================================================
 
-// POST /api/benchmark — Get industry benchmark data for a restaurant category
+// POST /api/benchmark — Get industry benchmark via AI analysis
 app.post('/api/benchmark', async (req, res) => {
   try {
     const { restaurant_name, city, cuisine, seo_score, geo_score, rating, reviews } = req.body;
     const cat = cuisine || 'Restaurant';
-
-    // Industry benchmark averages (based on research data)
-    const benchmarks = {
-      'Restaurant': { seo_avg: 42, geo_avg: 18, rating_avg: 4.1, reviews_avg: 320, top10_seo: 72, top10_geo: 55 },
-      'Français': { seo_avg: 45, geo_avg: 20, rating_avg: 4.2, reviews_avg: 280, top10_seo: 75, top10_geo: 58 },
-      'Italien': { seo_avg: 44, geo_avg: 19, rating_avg: 4.0, reviews_avg: 350, top10_seo: 73, top10_geo: 56 },
-      'Japonais': { seo_avg: 40, geo_avg: 22, rating_avg: 4.3, reviews_avg: 420, top10_seo: 70, top10_geo: 60 },
-      'Bistrot': { seo_avg: 38, geo_avg: 15, rating_avg: 4.0, reviews_avg: 180, top10_seo: 68, top10_geo: 50 },
-      'Brasserie': { seo_avg: 41, geo_avg: 16, rating_avg: 3.9, reviews_avg: 250, top10_seo: 70, top10_geo: 52 },
-      'Gastro': { seo_avg: 52, geo_avg: 28, rating_avg: 4.5, reviews_avg: 180, top10_seo: 80, top10_geo: 65 },
-      'Fast-food': { seo_avg: 35, geo_avg: 12, rating_avg: 3.7, reviews_avg: 500, top10_seo: 65, top10_geo: 45 },
-      'Pizza': { seo_avg: 39, geo_avg: 16, rating_avg: 3.9, reviews_avg: 400, top10_seo: 68, top10_geo: 50 },
-    };
-
-    const bench = benchmarks[cat] || benchmarks['Restaurant'];
-
     const seoS = seo_score || 0;
     const geoS = geo_score || 0;
     const ratingS = rating || 0;
     const reviewsS = reviews || 0;
 
-    const result = {
-      category: cat,
-      city: city || 'France',
+    const apiKey = getAIKey(0);
+    if (apiKey) {
+      // Use AI for real benchmark analysis
+      const prompt = `Tu es un analyste SEO local expert. Compare les métriques du restaurant "${restaurant_name}" à ${city} (cuisine: ${cat}) avec les moyennes réelles du secteur en France.
+
+Métriques du restaurant: SEO=${seoS}/100, GEO(IA)=${geoS}/100, Note Google=${ratingS}/5, Avis=${reviewsS}
+
+Retourne UNIQUEMENT un JSON valide (pas de texte avant/après):
+{
+  "industry_avg": {"seo": <int>, "geo": <int>, "rating": <float>, "reviews": <int>},
+  "top_10_pct": {"seo": <int>, "geo": <int>, "rating": <float>, "reviews": <int>},
+  "percentile": {"seo": <int 1-99>, "geo": <int 1-99>, "rating": <int 1-99>, "reviews": <int 1-99>},
+  "insights": [{"type": "success|warning|info", "text": "..."}]
+}
+Base-toi sur des données réalistes du marché français de la restauration ${cat} en 2024-2026. 4-5 insights max.`;
+
+      try {
+        const result = await callClaudeAPI(apiKey, prompt, 1000);
+        const jsonMatch = result.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const parsed = JSON.parse(jsonMatch[0]);
+          return res.json({ success: true, source: 'ai', benchmark: {
+            category: cat, city: city || 'France',
+            your_scores: { seo: seoS, geo: geoS, rating: ratingS, reviews: reviewsS },
+            ...parsed
+          }});
+        }
+      } catch(e) { console.warn('AI benchmark failed, using calculated fallback:', e.message); }
+    }
+
+    // Fallback: calculate percentiles from real scores (no fake averages)
+    res.json({ success: true, source: 'calculated', benchmark: {
+      category: cat, city: city || 'France',
       your_scores: { seo: seoS, geo: geoS, rating: ratingS, reviews: reviewsS },
-      industry_avg: {
-        seo: bench.seo_avg,
-        geo: bench.geo_avg,
-        rating: bench.rating_avg,
-        reviews: bench.reviews_avg
-      },
-      top_10_pct: {
-        seo: bench.top10_seo,
-        geo: bench.top10_geo,
-        rating: 4.7,
-        reviews: bench.reviews_avg * 3
-      },
-      percentile: {
-        seo: Math.min(99, Math.max(1, Math.round((seoS / (bench.top10_seo * 1.1)) * 100))),
-        geo: Math.min(99, Math.max(1, Math.round((geoS / (bench.top10_geo * 1.1)) * 100))),
-        rating: Math.min(99, Math.max(1, Math.round((ratingS / 5) * 100))),
-        reviews: Math.min(99, Math.max(1, Math.round(Math.min(reviewsS / (bench.reviews_avg * 2), 1) * 100)))
-      },
-      insights: []
-    };
+      industry_avg: { seo: null, geo: null, rating: null, reviews: null },
+      top_10_pct: { seo: null, geo: null, rating: null, reviews: null },
+      percentile: { seo: null, geo: null, rating: null, reviews: null },
+      insights: [{ type: 'info', text: 'Benchmark IA indisponible — connectez une clé API Claude pour obtenir des comparaisons sectorielles réelles.' }]
+    }});
+  } catch(e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
-    // Generate insights
-    if (seoS < result.industry_avg.seo) result.insights.push({ type: 'warning', text: `Votre score SEO (${seoS}) est en dessous de la moyenne du secteur (${result.industry_avg.seo})` });
-    else result.insights.push({ type: 'success', text: `Votre score SEO (${seoS}) dépasse la moyenne du secteur (${result.industry_avg.seo})` });
+// POST /api/weekly-report — Generate and send weekly SEO report
+app.post('/api/weekly-report', requireAuth, async (req, res) => {
+  try {
+    const { restaurant_id, email, include_competitors, include_sentiment } = req.body;
+    const rid = restaurant_id || 1;
+    const targetEmail = email || req.account?.email;
 
-    if (geoS < result.industry_avg.geo) result.insights.push({ type: 'warning', text: `Votre score GEO (${geoS}) est inférieur à la moyenne IA du secteur (${result.industry_avg.geo})` });
-    else result.insights.push({ type: 'success', text: `Votre score GEO (${geoS}) est au-dessus de la moyenne IA (${result.industry_avg.geo})` });
+    // Gather real data
+    const restaurant = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(rid);
+    const keywords = db.prepare('SELECT * FROM keyword_tracking WHERE restaurant_id = ?').all(rid);
+    const stats = db.prepare('SELECT * FROM seo_stats_history WHERE restaurant_id = ? ORDER BY recorded_at DESC LIMIT 2').all(rid);
+    const name = restaurant?.name || 'Votre restaurant';
 
-    if (ratingS >= 4.0) result.insights.push({ type: 'success', text: `Votre note (${ratingS}/5) est compétitive` });
-    else result.insights.push({ type: 'warning', text: `Votre note (${ratingS}/5) peut être améliorée` });
+    // Build report with AI
+    const apiKey = getAIKey(rid);
+    let reportHtml = '';
+    if (apiKey) {
+      const prompt = `Génère un rapport hebdomadaire SEO/GEO concis en HTML pour "${name}".
+Données: ${keywords.length} mots-clés suivis, ${stats.length} audits historiques.
+${stats[0] ? 'Dernier audit: SEO=' + (stats[0].seo_score || '?') + ', GEO=' + (stats[0].geo_score || '?') : 'Aucun audit enregistré.'}
+Mots-clés: ${keywords.map(k => k.keyword).join(', ') || 'aucun'}
+Génère un email HTML professionnel avec: résumé, évolution, actions prioritaires. Style sobre, mobile-friendly. En français.`;
+      try {
+        reportHtml = await callClaudeAPI(apiKey, prompt, 2000);
+      } catch(e) { console.warn('AI report gen failed:', e.message); }
+    }
 
-    const gapToTop = result.top_10_pct.seo - seoS;
-    if (gapToTop > 0) result.insights.push({ type: 'info', text: `Il vous manque ${gapToTop} pts SEO pour atteindre le top 10% du secteur` });
+    if (!reportHtml) {
+      reportHtml = `<h2>Rapport hebdomadaire — ${name}</h2><p>Mots-clés suivis: ${keywords.length}</p><p>Audits historiques: ${stats.length}</p><p><em>Connectez une clé API Claude pour un rapport détaillé avec recommandations.</em></p>`;
+    }
 
-    res.json({ success: true, benchmark: result });
+    // Send via email
+    if (targetEmail) {
+      try {
+        await sendEmail(targetEmail, `📊 Rapport SEO — ${name} — ${new Date().toLocaleDateString('fr-FR')}`, reportHtml);
+        res.json({ success: true, sent_to: targetEmail, report_length: reportHtml.length });
+      } catch(e) {
+        res.json({ success: true, sent: false, error: e.message, report_html: reportHtml });
+      }
+    } else {
+      res.json({ success: true, report_html: reportHtml });
+    }
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
   }
@@ -8905,35 +8936,51 @@ app.get('/api/reports/subscription/:restaurant_id', (req, res) => {
   }
 });
 
-// POST /api/reports/preview — Generate a preview of the weekly report
+// POST /api/reports/preview — Generate report preview from real DB data
 app.post('/api/reports/preview', async (req, res) => {
   try {
-    const { restaurant_name, city, seo_score, geo_score, rating, reviews, competitors_count } = req.body;
+    const { restaurant_id, restaurant_name, city, seo_score, geo_score, rating, reviews, competitors_count } = req.body;
+    const rid = restaurant_id || 0;
+
+    // Get real historical data for change calculation
+    const history = db.prepare('SELECT * FROM seo_stats_history WHERE restaurant_id = ? ORDER BY recorded_at DESC LIMIT 2').all(rid);
+    const prev = history[1] || null;
+    const seoChange = prev ? (seo_score || 0) - (prev.seo_score || 0) : null;
+    const geoChange = prev ? (geo_score || 0) - (prev.geo_score || 0) : null;
+
+    // Get real review count change
+    const prevReviews = prev?.review_count || reviews || 0;
+    const newReviews = (reviews || 0) - prevReviews;
+
+    // Real competitors from DB
+    const competitors = db.prepare('SELECT COUNT(*) as cnt FROM competitors WHERE restaurant_id = ?').get(rid);
 
     const report = {
-      title: `Rapport Hebdomadaire — ${restaurant_name}`,
+      title: `Rapport Hebdomadaire — ${restaurant_name || 'Restaurant'}`,
       period: `Semaine du ${new Date(Date.now()-7*86400000).toLocaleDateString('fr-FR')} au ${new Date().toLocaleDateString('fr-FR')}`,
       summary: {
         seo_score: seo_score || 0,
-        seo_change: Math.floor(Math.random()*6) - 2,
+        seo_change: seoChange,
         geo_score: geo_score || 0,
-        geo_change: Math.floor(Math.random()*4) - 1,
+        geo_change: geoChange,
         rating: rating || 0,
-        new_reviews: Math.floor(Math.random()*15),
-        competitors_tracked: competitors_count || 0
+        new_reviews: newReviews > 0 ? newReviews : null,
+        competitors_tracked: competitors?.cnt || competitors_count || 0
       },
       highlights: [
         seo_score > 50 ? '✅ Score SEO au-dessus de la moyenne' : '⚠️ Score SEO en dessous de la moyenne — actions recommandées',
         geo_score > 20 ? '✅ Bonne visibilité IA' : '⚠️ Faible visibilité sur les moteurs IA',
-        `📊 ${Math.floor(Math.random()*5)+1} nouvelles opportunités détectées`
+        seoChange !== null ? (seoChange > 0 ? `📈 SEO en hausse de +${seoChange} pts` : seoChange < 0 ? `📉 SEO en baisse de ${seoChange} pts` : '➡️ SEO stable cette semaine') : '📊 Premier rapport — les tendances apparaîtront la semaine prochaine'
       ],
-      actions: [
-        { priority: 'high', text: 'Répondre aux avis non traités', status: 'pending' },
-        { priority: 'medium', text: 'Publier un Google Post cette semaine', status: 'pending' },
-        { priority: 'low', text: 'Vérifier la cohérence NAP sur les annuaires', status: 'done' }
-      ],
-      generated_at: new Date().toISOString()
+      actions: [],
+      generated_at: new Date().toISOString(),
+      data_source: prev ? 'historical_comparison' : 'first_report'
     };
+
+    // Real actions based on audit data
+    if (seo_score < 50) report.actions.push({ priority: 'high', text: 'Corriger les points critiques SEO (score < 50)', status: 'pending' });
+    if (geo_score < 20) report.actions.push({ priority: 'high', text: 'Améliorer la visibilité IA (GEO < 20)', status: 'pending' });
+    if (rating < 4.0) report.actions.push({ priority: 'medium', text: 'Améliorer la note Google (actuellement ' + rating + ')', status: 'pending' });
 
     res.json({ success: true, report });
   } catch(e) {
