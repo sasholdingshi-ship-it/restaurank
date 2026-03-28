@@ -1640,6 +1640,21 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         <div class="pb-title">🤖 Visibilité par plateforme IA</div>
         <div class="pb-grid" id="pbGrid"></div>
     </div>
+    <!-- RRF SCORE (ChatGPT citation probability) -->
+    <div class="rrf-score-section" id="rrfScoreSection" style="display:none;margin-bottom:16px;">
+        <div style="padding:16px;background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(16,185,129,.08));border:1px solid rgba(99,102,241,.2);border-radius:12px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,var(--ind),var(--grn));display:flex;align-items:center;justify-content:center;">
+                    <span id="rrfScoreVal" style="font-size:1.4rem;font-weight:900;color:#fff;">—</span>
+                </div>
+                <div>
+                    <div style="font-weight:800;font-size:.9rem;color:var(--txt);">Score RRF — Probabilité de citation ChatGPT</div>
+                    <div id="rrfScoreDesc" style="font-size:.72rem;color:var(--mut);margin-top:2px;">Basé sur le Reciprocal Rank Fusion de Bing (méthode utilisée par ChatGPT)</div>
+                </div>
+                <div id="rrfSourcesInfo" style="margin-left:auto;text-align:right;font-size:.7rem;color:var(--mut);"></div>
+            </div>
+        </div>
+    </div>
     <!-- SCORE TREND (history chart) -->
     <div class="score-trend" id="scoreTrend" style="display:none;">
         <div class="st-title">📈 Évolution des scores</div>
@@ -4475,6 +4490,18 @@ renderDashboard=function(){
             return `<div class="pb-card"><div class="pb-card-name">${p.icon} ${p.name}</div><div class="pb-card-score" style="color:${scoreColor(itemScore*10)}">${itemScore*10}/100</div><div class="pb-card-status ${statusCls}">${statusTxt}</div></div>`;
         }).join('');
         pbEl.style.display='';
+    }
+
+    // --- 3b. RRF SCORE DISPLAY ---
+    const rrfSection=document.getElementById('rrfScoreSection');
+    if(rrfSection&&window._rrfScore){
+        const rrf=window._rrfScore;
+        document.getElementById('rrfScoreVal').textContent=rrf.rrf_score;
+        const color=rrf.rrf_score>=70?'var(--grn)':rrf.rrf_score>=40?'var(--org)':'var(--red)';
+        document.getElementById('rrfScoreVal').parentElement.style.background=`linear-gradient(135deg,${color},var(--ind))`;
+        document.getElementById('rrfScoreDesc').textContent=rrf.interpretation;
+        document.getElementById('rrfSourcesInfo').innerHTML=Object.entries(rrf.sources||{}).map(([k,v])=>v.found?`<span style="color:var(--grn);">✓ ${k} #${v.rank}</span>`:`<span style="color:var(--red);">✗ ${k}</span>`).join('<br>');
+        rrfSection.style.display='';
     }
 
     // --- 4. SCORE TREND ---
@@ -9255,6 +9282,62 @@ async function runPostScanAutomation(){
         if(published>0) summary.autoPublish={ok:true,detail:`${published} publications automatiques`};
     }catch(e){summary.autoPublish={ok:false,detail:e.message};}
 
+    // ── 13. GEO: Calculate RRF Score (ChatGPT citation probability) ──
+    try{
+        const rrfResp=await fetchTimeout(`${API_BASE}/api/geo/rrf-score`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,website_url:storedWebsite||''})},30000);
+        const rrfData=await rrfResp.json();
+        if(rrfData.success){
+            window._rrfScore=rrfData;
+            summary.rrf={ok:true,detail:`RRF ${rrfData.rrf_score}/100 — ${rrfData.sources_found}/${rrfData.sources_total} sources`};
+        }
+    }catch(e){summary.rrf={ok:false,detail:e.message};}
+
+    // ── 14. GEO: Generate Schema Menu for AI engines ──
+    try{
+        const resto=_getRestoContext();
+        const menuResp=await fetchTimeout(`${API_BASE}/api/geo/schema-menu`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_name:resto.name,city:resto.city,cuisine:resto.cuisine,restaurant_id:resto.id})},30000);
+        const menuData=await menuResp.json();
+        if(menuData.success){
+            window._autoSchemaMenu=menuData;
+            summary.schemaMenu={ok:true,detail:'Schema Menu JSON-LD généré'};
+        }
+    }catch(e){summary.schemaMenu={ok:false,detail:e.message};}
+
+    // ── 15. GEO: Generate SameAs links for entity disambiguation ──
+    try{
+        const sameAsResp=await fetchTimeout(`${API_BASE}/api/geo/sameas`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,website_url:storedWebsite||'',restaurant_id:currentData?.restaurant_id||0})},10000);
+        const sameAsData=await sameAsResp.json();
+        if(sameAsData.success){
+            window._autoSameAs=sameAsData;
+            summary.sameAs={ok:true,detail:`${sameAsData.count} liens SameAs`};
+        }
+    }catch(e){summary.sameAs={ok:false,detail:e.message};}
+
+    // ── 16. GEO: Generate Unique Claims for AI citation ──
+    try{
+        const resto=_getRestoContext();
+        const claimsResp=await fetchTimeout(`${API_BASE}/api/geo/unique-claims`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_name:resto.name,city:resto.city,cuisine:resto.cuisine,rating:resto.rating,reviews:currentData?.reviewCount||0,restaurant_id:resto.id})},30000);
+        const claimsData=await claimsResp.json();
+        if(claimsData.success){
+            window._autoUniqueClaims=claimsData.claims;
+            summary.claims={ok:true,detail:`${claimsData.claims.length} claims citables`};
+        }
+    }catch(e){summary.claims={ok:false,detail:e.message};}
+
+    // ── 17. GEO: Auto-inject Schema (Menu + SameAs + FAQ) into CMS ──
+    try{
+        if(detectedCMS?.detected?.cms&&(window._autoSchemaMenu||window._autoSameAs)){
+            const cmsType=detectedCMS.detected.cms;
+            const schemaToInject=[];
+            if(window._autoSchemaMenu?.html) schemaToInject.push(window._autoSchemaMenu.html);
+            if(window._autoSameAs?.schema_html) schemaToInject.push(window._autoSameAs.schema_html);
+            if(schemaToInject.length>0){
+                await fetchTimeout(`${API_BASE}/api/cms/auto-apply`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cms_type:cmsType,improvements:{schema_org:schemaToInject.join('\n')}})},15000);
+                summary.cmsInject={ok:true,detail:`Schema injecté via ${cmsType}`};
+            }
+        }
+    }catch(e){summary.cmsInject={ok:false,detail:e.message};}
+
     // ── Show non-intrusive notification toast ──
     const elapsed=((Date.now()-t0)/1000).toFixed(1);
     console.log(`🤖 AutoPilot: terminé en ${elapsed}s`,summary);
@@ -9268,8 +9351,8 @@ function showAutoPilotToast(summary,elapsed){
     if(old)old.remove();
 
     const actions=Object.entries(summary).filter(([k,v])=>v&&v.ok).map(([k,v])=>{
-        const icons={hub:'🏠',reviews:'⭐',semantic:'🔬',posts:'📱',directories:'📋',fixes:'🔧',keywords:'🎯',blog:'📝',reddit:'🤖',social:'📱',faq:'❓',napSync:'🔗',autoPublish:'🚀'};
-        const labels={hub:'Hub Central',reviews:'Avis',semantic:'Analyse sémantique',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations',keywords:'Mots-clés',blog:'Blog GEO',reddit:'Reddit GEO',social:'Posts sociaux',faq:'FAQ GEO',napSync:'Sync NAP',autoPublish:'Publication auto'};
+        const icons={hub:'🏠',reviews:'⭐',semantic:'🔬',posts:'📱',directories:'📋',fixes:'🔧',keywords:'🎯',blog:'📝',reddit:'🤖',social:'📱',faq:'❓',napSync:'🔗',autoPublish:'🚀',rrf:'📊',schemaMenu:'🍽️',sameAs:'🔗',claims:'💎',cmsInject:'💉'};
+        const labels={hub:'Hub Central',reviews:'Avis',semantic:'Analyse sémantique',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations',keywords:'Mots-clés',blog:'Blog GEO',reddit:'Reddit GEO',social:'Posts sociaux',faq:'FAQ GEO',napSync:'Sync NAP',autoPublish:'Publication auto',rrf:'Score RRF (ChatGPT)',schemaMenu:'Schema Menu',sameAs:'SameAs Links',claims:'Unique Claims',cmsInject:'Injection CMS'};
         return `<div style="display:flex;align-items:center;gap:6px;font-size:.72rem;"><span>${icons[k]||'•'}</span><span style="color:var(--txt);">${labels[k]||k}</span><span style="color:var(--grn);margin-left:auto;">${v.detail}</span></div>`;
     });
 
