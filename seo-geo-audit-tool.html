@@ -9012,6 +9012,32 @@ async function runPostScanAutomation(){
         }
     }catch(e){summary.fixes={ok:false,detail:e.message};}
 
+    // ── 6. Auto-generate keyword tracking from restaurant data ──
+    try{
+        const cuisine=currentData?.category||window._hubData?.category||currentData?.cuisine||'';
+        const rid=currentData?.restaurant_id||1;
+        const kwBase=name.toLowerCase();const cityBase=city.toLowerCase().replace(/\d+/g,'').trim();
+        const autoKws=[
+            {keyword:`restaurant ${cityBase}`,popularity:'Élevée',competitors:12},
+            {keyword:`meilleur resto ${cityBase}`,popularity:'Moyenne',competitors:8},
+            {keyword:`restaurant ${cuisine||'gastronomique'} ${cityBase}`,popularity:'Élevée',competitors:5},
+            {keyword:`${cuisine||'restaurant'} ${cityBase}`,popularity:'Faible',competitors:15},
+            {keyword:`où manger ${cityBase}`,popularity:'Moyenne',competitors:20}
+        ];
+        if(cuisine){autoKws.push({keyword:`meilleur ${cuisine} ${cityBase}`,popularity:'Moyenne',competitors:6});}
+        // Only insert if no keywords exist yet
+        try{
+            const existingResp=await fetchTimeout(`${API_BASE}/api/keywords?restaurant_id=${rid}`,{},5000);
+            const existing=await existingResp.json();
+            if(!existing.keywords||existing.keywords.length===0){
+                await fetchTimeout(`${API_BASE}/api/keywords/bulk`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,keywords:autoKws})},5000);
+                summary.keywords={ok:true,detail:`${autoKws.length} mots-clés auto-générés`};
+            } else {
+                summary.keywords={ok:true,detail:`${existing.keywords.length} mots-clés existants`};
+            }
+        }catch(e){summary.keywords={ok:false,detail:e.message};}
+    }catch(e){summary.keywords={ok:false,detail:e.message};}
+
     // ── Show non-intrusive notification toast ──
     const elapsed=((Date.now()-t0)/1000).toFixed(1);
     console.log(`🤖 AutoPilot: terminé en ${elapsed}s`,summary);
@@ -9025,8 +9051,8 @@ function showAutoPilotToast(summary,elapsed){
     if(old)old.remove();
 
     const actions=Object.entries(summary).filter(([k,v])=>v&&v.ok).map(([k,v])=>{
-        const icons={hub:'🏠',reviews:'⭐',semantic:'🔬',posts:'📱',directories:'📋',fixes:'🔧'};
-        const labels={hub:'Hub Central',reviews:'Avis',semantic:'Analyse sémantique',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations'};
+        const icons={hub:'🏠',reviews:'⭐',semantic:'🔬',posts:'📱',directories:'📋',fixes:'🔧',keywords:'🎯'};
+        const labels={hub:'Hub Central',reviews:'Avis',semantic:'Analyse sémantique',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations',keywords:'Mots-clés'};
         return `<div style="display:flex;align-items:center;gap:6px;font-size:.72rem;"><span>${icons[k]||'•'}</span><span style="color:var(--txt);">${labels[k]||k}</span><span style="color:var(--grn);margin-left:auto;">${v.detail}</span></div>`;
     });
 
