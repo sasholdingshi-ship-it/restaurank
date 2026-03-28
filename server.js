@@ -5956,6 +5956,13 @@ IMPORTANT: Réponds UNIQUEMENT en JSON valide, sans markdown.`;
 });
 
 // ============================================================
+// EMAIL CONFIG DIAGNOSTIC
+// ============================================================
+app.get('/api/email-config', (req, res) => {
+  res.json({ resend: !!RESEND_API_KEY, smtp: !!(process.env.SMTP_HOST && process.env.SMTP_USER), from: MAIL_FROM });
+});
+
+// ============================================================
 // WELCOME EMAIL — Send after registration
 // ============================================================
 app.post('/api/send-welcome-email', requireAuth, async (req, res) => {
@@ -9167,6 +9174,7 @@ app.listen(PORT, '0.0.0.0', () => {
 ║  Clés centralisées:                                  ║
 ║  ${process.env.ANTHROPIC_API_KEY?'✅':'❌'} Claude AI  ${process.env.YELP_API_KEY?'✅':'❌'} Yelp  ${process.env.FOURSQUARE_API_KEY?'✅':'❌'} Foursquare          ║
 ║  ${process.env.TRIPADVISOR_API_KEY?'✅':'❌'} TripAdvisor  ${process.env.STRIPE_SECRET_KEY?'✅':'❌'} Stripe  ${process.env.GOOGLE_PLACES_API_KEY?'✅':'❌'} Places    ║
+║  ${RESEND_API_KEY?'✅':'❌'} Resend Email                                       ║
 ╚══════════════════════════════════════════════════════╝
   `);
 });
