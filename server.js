@@ -6,7 +6,7 @@ require('dotenv').config({ override: true });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const Database = require('better-sqlite3');
+const { createDB } = require('./db-adapter');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -402,6 +402,14 @@ if (NODE_ENV === 'production') {
 
 const app = express();
 app.use(cors());
+
+// Rate limiting — prevent API abuse
+const expressRateLimit = require('express-rate-limit');
+app.use('/api/', expressRateLimit({ windowMs: 15 * 60 * 1000, max: 200, message: { error: 'Trop de requêtes. Réessayez dans 15 minutes.' } }));
+app.use('/auth/', expressRateLimit({ windowMs: 15 * 60 * 1000, max: 30, message: { error: 'Trop de tentatives. Réessayez dans 15 minutes.' } }));
+app.use('/api/real-audit', expressRateLimit({ windowMs: 60 * 60 * 1000, max: 10, message: { error: 'Limite d\'audits atteinte (10/heure). Réessayez plus tard.' } }));
+app.use('/api/content/generate', expressRateLimit({ windowMs: 60 * 60 * 1000, max: 30, message: { error: 'Limite de génération IA atteinte (30/heure).' } }));
+
 app.use((req,res,next)=>{if(req.method==='POST')console.log(`[REQ] ${req.method} ${req.url} from ${req.headers['user-agent']?.substring(0,30)}`);next();});
 app.use(express.json());
 app.use(express.static(path.join(__dirname)));
@@ -409,12 +417,9 @@ app.use(express.static(path.join(__dirname)));
 const PORT = process.env.PORT || 8765;
 
 // ============================================================
-// DATABASE — SQLite
+// DATABASE — SQLite (local) or PostgreSQL (production via DATABASE_URL)
 // ============================================================
-// Use /tmp for SQLite to avoid I/O issues on mounted volumes
-const dbPath = process.env.DB_PATH || path.join(__dirname, 'restaurank.db');
-const db = new Database(dbPath);
-try { db.pragma('journal_mode = WAL'); } catch(e) { console.warn('WAL mode unavailable, using default'); }
+const db = createDB();
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
