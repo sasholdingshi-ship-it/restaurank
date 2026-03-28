@@ -9147,6 +9147,169 @@ Base-toi sur des données réalistes du marché français de la restauration ${c
   }
 });
 
+// ============================================================
+// GEO: RRF SCORE — Reciprocal Rank Fusion (how ChatGPT ranks you)
+// ChatGPT uses Bing + RRF to fuse results from multiple sources.
+// Score = Σ 1/(k + rank_i) where k=60, across all source lists.
+// ============================================================
+app.post('/api/geo/rrf-score', async (req, res) => {
+  const { name, city, website_url } = req.body;
+  if (!name) return res.status(400).json({ error: 'name required' });
+  const q = `${name} ${city} restaurant`;
+  const k = 60;
+  const sources = {};
+  const tasks = [];
+
+  // Check Google Places
+  if (process.env.GOOGLE_PLACES_API_KEY) {
+    tasks.push((async () => {
+      try {
+        const gResp = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(q)}&key=${process.env.GOOGLE_PLACES_API_KEY}`, { signal: AbortSignal.timeout(10000) });
+        const data = await gResp.json();
+        const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const idx = (data.results || []).findIndex(r => r.name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
+        sources.google = { found: idx > -1, rank: idx > -1 ? idx + 1 : null };
+      } catch(e) { sources.google = { found: false, error: e.message }; }
+    })());
+  }
+
+  // Check TripAdvisor
+  if (process.env.TRIPADVISOR_API_KEY) {
+    tasks.push((async () => {
+      try {
+        const cityClean = city.replace(/\s*\d+e?$/, '').trim();
+        const resp = await fetch(`https://api.content.tripadvisor.com/api/v1/location/search?searchQuery=${encodeURIComponent(name+' '+cityClean)}&language=fr&key=${process.env.TRIPADVISOR_API_KEY}&address=${encodeURIComponent(cityClean)}`, { signal: AbortSignal.timeout(10000) });
+        const data = await resp.json();
+        const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const idx = (data.data || []).findIndex(r => r.name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
+        sources.tripadvisor = { found: idx > -1, rank: idx > -1 ? idx + 1 : null };
+      } catch(e) { sources.tripadvisor = { found: false, error: e.message }; }
+    })());
+  }
+
+  // Check Foursquare
+  if (process.env.FOURSQUARE_CLIENT_ID && process.env.FOURSQUARE_CLIENT_SECRET) {
+    tasks.push((async () => {
+      try {
+        const cityClean = city.replace(/\s*\d+e?$/, '').trim();
+        const resp = await fetch(`https://api.foursquare.com/v2/venues/search?query=${encodeURIComponent(name)}&near=${encodeURIComponent(cityClean+', France')}&client_id=${process.env.FOURSQUARE_CLIENT_ID}&client_secret=${process.env.FOURSQUARE_CLIENT_SECRET}&v=20240101&limit=10`, { signal: AbortSignal.timeout(10000) });
+        const data = await resp.json();
+        const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+        const venues = data.response?.venues || [];
+        const idx = venues.findIndex(v => v.name?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
+        sources.foursquare = { found: idx > -1, rank: idx > -1 ? idx + 1 : null };
+      } catch(e) { sources.foursquare = { found: false, error: e.message }; }
+    })());
+  }
+
+  // Check Bing (ChatGPT's primary source)
+  tasks.push((async () => {
+    try {
+      const bingResp = await fetchPage(`https://www.bing.com/search?q=${encodeURIComponent(q)}&count=20`);
+      const html = typeof bingResp === 'string' ? bingResp : bingResp?.body || '';
+      const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const lower = html.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      if (lower.includes(nameNorm)) {
+        const before = lower.substring(0, lower.indexOf(nameNorm));
+        const rank = (before.match(/class="b_algo"/g) || []).length + 1;
+        sources.bing = { found: true, rank };
+      } else {
+        sources.bing = { found: false, rank: null };
+      }
+    } catch(e) { sources.bing = { found: false, error: e.message }; }
+  })());
+
+  await Promise.allSettled(tasks);
+
+  // Calculate RRF score
+  let rrfScore = 0;
+  let sourcesFound = 0;
+  const maxPossible = Object.keys(sources).length;
+  for (const [src, data] of Object.entries(sources)) {
+    if (data.found && data.rank) { rrfScore += 1 / (k + data.rank); sourcesFound++; }
+  }
+  const maxRRF = maxPossible * (1 / (k + 1));
+  const normalizedScore = maxRRF > 0 ? Math.round((rrfScore / maxRRF) * 100) : 0;
+
+  res.json({
+    success: true, rrf_score: normalizedScore, rrf_raw: rrfScore.toFixed(6),
+    sources_found: sourcesFound, sources_total: maxPossible, k: k, sources,
+    interpretation: normalizedScore >= 70 ? 'Excellent — ChatGPT vous citera probablement' :
+                    normalizedScore >= 40 ? 'Bon — visible sur plusieurs sources' :
+                    normalizedScore >= 15 ? 'Moyen — présent mais mal classé' : 'Faible — peu visible pour les IA'
+  });
+});
+
+// ============================================================
+// GEO: Schema Menu — Structured menu for AI engines
+// ============================================================
+app.post('/api/geo/schema-menu', async (req, res) => {
+  const { restaurant_name, city, cuisine, restaurant_id } = req.body;
+  const apiKey = getAIKey(restaurant_id);
+  if (!apiKey) return res.json({ success: false, error: 'Clé API IA requise' });
+  try {
+    const prompt = `Pour "${restaurant_name}" à ${city} (${cuisine || 'français'}), génère un Schema.org Menu JSON-LD valide. 3-4 sections, 4-6 items/section. Prix réalistes en EUR. Retourne UNIQUEMENT le JSON:
+{"@context":"https://schema.org","@type":"Menu","name":"Menu ${restaurant_name}","hasMenuSection":[{"@type":"MenuSection","name":"Entrées","hasMenuItem":[{"@type":"MenuItem","name":"...","description":"...","offers":{"@type":"Offer","price":"...","priceCurrency":"EUR"}}]}]}`;
+    const result = await callClaudeAPI(apiKey, prompt, 2000);
+    const jsonMatch = result.match(/\{[\s\S]*\}/);
+    if (jsonMatch) { const schema = JSON.parse(jsonMatch[0]); return res.json({ success: true, schema, html: `<script type="application/ld+json">${JSON.stringify(schema)}</script>` }); }
+    res.json({ success: false, error: 'Parse error' });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
+// ============================================================
+// GEO: SameAs Links — Entity disambiguation
+// ============================================================
+app.post('/api/geo/sameas', async (req, res) => {
+  const { name, city, website_url, restaurant_id } = req.body;
+  const sameAs = []; const q = encodeURIComponent(`${name} ${city}`);
+  try { const dirs = db.prepare('SELECT claim_url FROM directory_automation WHERE restaurant_id = ?').all(restaurant_id || 0);
+    dirs.forEach(d => { try { const u = JSON.parse(d.claim_url || '{}'); if (u.listing) sameAs.push(u.listing); } catch {} });
+  } catch {}
+  [website_url, `https://www.google.com/maps/search/${q}`, `https://www.tripadvisor.fr/Search?q=${q}`, `https://www.yelp.fr/search?find_desc=${q}`, `https://foursquare.com/explore?q=${q}`].filter(Boolean).forEach(u => sameAs.push(u));
+  const schema = { "@context": "https://schema.org", "@type": "Restaurant", "name": name, "sameAs": [...new Set(sameAs)] };
+  res.json({ success: true, sameAs: schema.sameAs, schema_html: `<script type="application/ld+json">${JSON.stringify(schema)}</script>`, count: schema.sameAs.length });
+});
+
+// ============================================================
+// GEO: Auto-Pitch Press — Email food bloggers
+// ============================================================
+app.post('/api/geo/pitch-press', async (req, res) => {
+  const { restaurant_name, city, cuisine, rating, restaurant_id, target_emails } = req.body;
+  const apiKey = getAIKey(restaurant_id);
+  if (!apiKey) return res.json({ success: false, error: 'Clé API IA requise' });
+  try {
+    const prompt = `Génère un email de pitch PR food pour "${restaurant_name}" (${cuisine}) à ${city}, note ${rating}/5. Destiné à un food blogger. En français. 200 mots. Format: OBJET---SEPARATOR---CORPS---SEPARATOR---SIGNATURE`;
+    const result = await callClaudeAPI(apiKey, prompt, 800);
+    const parts = result.split('---SEPARATOR---').map(p => p.trim());
+    const subject = parts[0] || `Découvrez ${restaurant_name}`;
+    const body = parts[1] || result;
+    const sent = [];
+    if (target_emails?.length) {
+      for (const email of target_emails.slice(0, 5)) {
+        try { await sendEmail(email, subject, `<div style="font-family:Georgia,serif;max-width:600px;line-height:1.7;">${body.replace(/\n/g,'<br>')}</div>`); sent.push(email); } catch {}
+      }
+    }
+    res.json({ success: true, pitch: { subject, body }, sent_to: sent });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
+// ============================================================
+// GEO: Unique Claims — Quotable facts for AI citation
+// ============================================================
+app.post('/api/geo/unique-claims', async (req, res) => {
+  const { restaurant_name, city, cuisine, rating, reviews, restaurant_id } = req.body;
+  const apiKey = getAIKey(restaurant_id);
+  if (!apiKey) return res.json({ success: false, error: 'Clé API IA requise' });
+  try {
+    const prompt = `Pour "${restaurant_name}" à ${city} (${cuisine}, ${rating}/5, ${reviews} avis), génère 10 "unique claims" citables par les IA. JSON array: [{"claim":"...","type":"stat|award|process|heritage|sourcing","citation_score":1-10}]. Réalistes pour un ${cuisine} à ${city}.`;
+    const result = await callClaudeAPI(apiKey, prompt, 1500);
+    const jsonMatch = result.match(/\[[\s\S]*\]/);
+    if (jsonMatch) { const claims = JSON.parse(jsonMatch[0]); return res.json({ success: true, claims }); }
+    res.json({ success: false, error: 'Parse error' });
+  } catch(e) { res.json({ success: false, error: e.message }); }
+});
+
 // POST /api/weekly-report — Generate and send weekly SEO report
 app.post('/api/weekly-report', requireAuth, async (req, res) => {
   try {
