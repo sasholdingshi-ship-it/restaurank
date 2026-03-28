@@ -261,50 +261,43 @@ function getGoogle() {
 }
 
 // ============================================================
-// EMAIL TRANSPORTER — Nodemailer
+// EMAIL — Resend HTTP API (primary) + Nodemailer SMTP (fallback)
 // ============================================================
-let mailTransporter = null;
-function getMailTransporter() {
-  if (mailTransporter) return mailTransporter;
-  const host = process.env.SMTP_HOST;
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
-  if (!host || !user || !pass) {
-    console.warn('⚠️ SMTP non configuré — les emails seront loggés en console uniquement');
-    return null;
-  }
-  const port = parseInt(process.env.SMTP_PORT || '465');
-  mailTransporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465,
-    auth: { user, pass },
-    connectionTimeout: 10000,
-    greetingTimeout: 10000,
-    socketTimeout: 15000
-  });
-  console.log(`📧 SMTP configuré: ${host}`);
-  return mailTransporter;
-}
-
-const MAIL_FROM = process.env.SMTP_FROM || 'RestauRank <noreply@restaurank.com>';
+const RESEND_API_KEY = process.env.RESEND_API_KEY;
+const MAIL_FROM = process.env.SMTP_FROM || 'RestauRank <onboarding@resend.dev>';
 const APP_URL = process.env.APP_URL || 'http://localhost:8765';
 
+if (RESEND_API_KEY) console.log('📧 Resend API configuré ✅');
+else console.warn('⚠️ RESEND_API_KEY manquante — emails en mode dev_log');
+
 async function sendEmail(to, subject, html) {
-  const transporter = getMailTransporter();
-  if (!transporter) {
-    console.log(`📧 [DEV] Email to ${to}: ${subject}`);
-    console.log(`📧 [DEV] ${html.replace(/<[^>]*>/g, '').substring(0, 200)}`);
-    return { success: true, mode: 'dev_log' };
+  // 1) Resend HTTP API (works on Render free tier — no SMTP needed)
+  if (RESEND_API_KEY) {
+    try {
+      const resp = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, html })
+      });
+      const data = await resp.json();
+      if (data.id) { console.log(`📧 Email envoyé via Resend à ${to}: ${subject} (id: ${data.id})`); return { success: true, mode: 'resend', id: data.id }; }
+      console.error(`❌ Resend error:`, data); return { success: false, error: data.message || JSON.stringify(data) };
+    } catch (e) { console.error(`❌ Resend fetch error:`, e.message); return { success: false, error: e.message }; }
   }
-  try {
-    await transporter.sendMail({ from: MAIL_FROM, to, subject, html });
-    console.log(`📧 Email envoyé à ${to}: ${subject}`);
-    return { success: true, mode: 'smtp' };
-  } catch (e) {
-    console.error(`❌ Email failed to ${to}:`, e.message);
-    return { success: false, error: e.message };
+  // 2) SMTP fallback (Nodemailer)
+  const host = process.env.SMTP_HOST, user = process.env.SMTP_USER, pass = process.env.SMTP_PASS;
+  if (host && user && pass) {
+    try {
+      const port = parseInt(process.env.SMTP_PORT || '465');
+      const transporter = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass }, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
+      await transporter.sendMail({ from: MAIL_FROM, to, subject, html });
+      console.log(`📧 Email envoyé via SMTP à ${to}: ${subject}`); return { success: true, mode: 'smtp' };
+    } catch (e) { console.error(`❌ SMTP failed to ${to}:`, e.message); return { success: false, error: e.message }; }
   }
+  // 3) Dev log fallback
+  console.log(`📧 [DEV] Email to ${to}: ${subject}`);
+  console.log(`📧 [DEV] ${html.replace(/<[^>]*>/g, '').substring(0, 200)}`);
+  return { success: true, mode: 'dev_log' };
 }
 
 function emailResetPassword(email, token) {
@@ -5969,46 +5962,23 @@ app.post('/api/send-welcome-email', requireAuth, async (req, res) => {
   const email = req.account.email;
   const name = req.account.name || email.split('@')[0];
 
-  const smtpHost = process.env.SMTP_HOST;
-  if (!smtpHost) {
-    console.log(`📧 Welcome email would be sent to ${email} (SMTP not configured)`);
-    return res.json({ success: true, mode: 'dry_run', message: 'SMTP non configuré — email simulé' });
-  }
-
   try {
-    const port = parseInt(process.env.SMTP_PORT || '465');
-    const transporter = nodemailer.createTransport({
-      host: smtpHost,
-      port,
-      secure: port === 465,
-      auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
-      connectionTimeout: 10000,
-      greetingTimeout: 10000,
-      socketTimeout: 15000
-    });
-
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM || 'RestauRank <noreply@restaurank.fr>',
-      to: email,
-      subject: `Bienvenue sur RestauRank, ${name} ! 🎉`,
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
-          <h1 style="color:#6366f1;">Bienvenue sur RestauRank !</h1>
-          <p>Bonjour ${name},</p>
-          <p>Votre compte RestauRank est prêt. Voici comment démarrer en 2 minutes :</p>
-          <ol>
-            <li><strong>Entrez le nom de votre restaurant</strong> — on fait le reste automatiquement</li>
-            <li><strong>Connectez Google Business Profile</strong> — pour modifier votre fiche en 1 clic</li>
-            <li><strong>Lancez l'audit</strong> — scores SEO + GEO + recommandations IA personnalisées</li>
-          </ol>
-          <p><a href="${process.env.APP_URL || 'http://localhost:8765'}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Lancer mon premier audit →</a></p>
-          <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
-          <p style="color:#999;font-size:12px;">RestauRank — Audit SEO + GEO automatique pour restaurants</p>
-        </div>
-      `
-    });
-    console.log(`📧 Welcome email sent to ${email}`);
-    res.json({ success: true, mode: 'sent' });
+    const result = await sendEmail(email, `Bienvenue sur RestauRank, ${name} ! 🎉`, `
+      <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px;">
+        <h1 style="color:#6366f1;">Bienvenue sur RestauRank !</h1>
+        <p>Bonjour ${name},</p>
+        <p>Votre compte RestauRank est prêt. Voici comment démarrer en 2 minutes :</p>
+        <ol>
+          <li><strong>Entrez le nom de votre restaurant</strong> — on fait le reste automatiquement</li>
+          <li><strong>Connectez Google Business Profile</strong> — pour modifier votre fiche en 1 clic</li>
+          <li><strong>Lancez l'audit</strong> — scores SEO + GEO + recommandations IA personnalisées</li>
+        </ol>
+        <p><a href="${APP_URL}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Lancer mon premier audit →</a></p>
+        <hr style="border:none;border-top:1px solid #eee;margin:20px 0;">
+        <p style="color:#999;font-size:12px;">RestauRank — Audit SEO + GEO automatique pour restaurants</p>
+      </div>
+    `);
+    res.json(result);
   } catch (e) {
     console.warn(`📧 Welcome email failed for ${email}:`, e.message);
     res.json({ success: false, error: e.message });
