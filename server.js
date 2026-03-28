@@ -3746,53 +3746,96 @@ app.post('/api/directories/foursquare/claim', async (req, res) => {
 // ============================================================
 async function checkPlatformListing(platform, name, city) {
   const q = encodeURIComponent(`${name} ${city}`);
-  const checks = {
-    yelp: { url: `https://www.yelp.com/search?find_desc=${q}&find_loc=${encodeURIComponent(city)}`, pattern: /biz-name|organic-search-result|searchResult/i },
-    tripadvisor: { url: `https://www.tripadvisor.com/Search?q=${q}`, pattern: /data-test-target="restaurants|result-title/i },
-    thefork: { url: `https://www.thefork.fr/recherche?queryText=${q}`, pattern: /restaurantResult|searchResult/i },
-    bing: { url: `https://www.bing.com/maps?q=${q}+restaurant`, pattern: /taskCard|entity-hero|listing/i },
-    foursquare: { url: `https://foursquare.com/explore?near=${encodeURIComponent(city)}&q=${encodeURIComponent(name)}`, pattern: /venue|venueDetail/i },
-    apple: { url: `https://maps.apple.com/?q=${q}`, pattern: null },
-    pagesjaunes: { url: `https://www.pagesjaunes.fr/pagesblanches/recherche?quoiqui=${encodeURIComponent(name)}&ou=${encodeURIComponent(city)}`, pattern: /bi-denomination|bi-address/i },
-    facebook: { url: `https://www.facebook.com/search/pages/?q=${q}`, pattern: null },
-    instagram: { url: `https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,'').toLowerCase())}`, pattern: null },
-    ubereats: { url: `https://www.ubereats.com/fr/search?q=${encodeURIComponent(name)}`, pattern: /store-card|storeCard/i },
-    waze: { url: `https://www.waze.com/live-map/directions?q=${q}`, pattern: null }
+  const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+  // Platform-specific claim/manage URLs
+  const urlsMap = {
+    yelp: { claim: `https://biz.yelp.com/claim/search?q=${q}`, manage: `https://biz.yelp.com`, search: `https://www.yelp.com/search?find_desc=${q}` },
+    tripadvisor: { claim: `https://www.tripadvisor.com/Owners`, manage: `https://www.tripadvisor.com/Owners`, search: `https://www.tripadvisor.com/Search?q=${q}` },
+    thefork: { claim: `https://manager.thefork.com`, manage: `https://manager.thefork.com`, search: `https://www.thefork.fr/recherche?queryText=${q}` },
+    bing: { claim: `https://www.bingplaces.com/Dashboard/ImportFromGoogle`, manage: `https://www.bingplaces.com/Dashboard`, search: `https://www.bing.com/maps?q=${q}+restaurant` },
+    foursquare: { claim: `https://foursquare.com/manage/home`, manage: `https://foursquare.com/manage/home`, search: `https://foursquare.com/explore?q=${q}` },
+    apple: { claim: `https://businessconnect.apple.com/search?term=${q}`, manage: `https://businessconnect.apple.com`, search: `https://maps.apple.com/?q=${q}` },
+    pagesjaunes: { claim: `https://www.solocal.com/inscription`, manage: `https://www.solocal.com`, search: `https://www.pagesjaunes.fr/pagesblanches/recherche?quoiqui=${encodeURIComponent(name)}&ou=${encodeURIComponent(city)}` },
+    facebook: { claim: `https://www.facebook.com/pages/create/`, manage: `https://business.facebook.com`, search: `https://www.facebook.com/search/pages/?q=${q}` },
+    instagram: { claim: `https://business.instagram.com`, manage: `https://business.instagram.com`, search: `https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,'').toLowerCase())}` },
+    ubereats: { claim: `https://merchants.ubereats.com/signup`, manage: `https://merchants.ubereats.com`, search: `https://www.ubereats.com/fr/search?q=${encodeURIComponent(name)}` },
+    waze: { claim: `https://ads.waze.com/register`, manage: `https://ads.waze.com`, search: `https://www.waze.com/live-map/directions?q=${q}` }
   };
 
-  const check = checks[platform];
-  if (!check) return { platform, status: 'unknown', found: false };
-
   try {
-    const html = await fetchPage(check.url);
-    const nameNorm = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const bodyLower = html.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const nameFound = bodyLower.includes(nameNorm) || bodyLower.includes(nameNorm.replace(/\s+/g, '-'));
+    // ── API-based checks (preferred — stable, structured data) ──
+    if (platform === 'tripadvisor' && process.env.TRIPADVISOR_API_KEY) {
+      const resp = await fetch(`https://api.content.tripadvisor.com/api/v1/location/search?searchQuery=${encodeURIComponent(name+' '+city)}&language=fr&key=${process.env.TRIPADVISOR_API_KEY}`, { signal: AbortSignal.timeout(10000) });
+      if (resp.ok) {
+        const data = await resp.json();
+        const match = (data.data || []).find(r => r.name && r.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
+        return { platform, found: !!match, status: match ? 'found' : 'not_found', method: 'api', urls: urlsMap[platform],
+          details: match ? { name: match.name, address: match.address_obj?.address_string, location_id: match.location_id, url: `https://www.tripadvisor.com/Restaurant_Review-d${match.location_id}` } : null };
+      }
+    }
 
-    // Build claim/manage URLs per platform
-    const urls = {
-      yelp: { claim: `https://biz.yelp.com/claim/search?q=${q}`, manage: `https://biz.yelp.com`, search: check.url },
-      tripadvisor: { claim: `https://www.tripadvisor.com/Owners`, manage: `https://www.tripadvisor.com/Owners`, search: check.url },
-      thefork: { claim: `https://manager.thefork.com`, manage: `https://manager.thefork.com`, search: `https://www.thefork.fr/recherche?queryText=${q}` },
-      bing: { claim: `https://www.bingplaces.com/Dashboard/ImportFromGoogle`, manage: `https://www.bingplaces.com/Dashboard`, search: check.url },
-      foursquare: { claim: `https://foursquare.com/manage/home`, manage: `https://foursquare.com/manage/home`, search: check.url },
-      apple: { claim: `https://businessconnect.apple.com/search?term=${q}`, manage: `https://businessconnect.apple.com`, search: `https://maps.apple.com/?q=${q}` },
-      pagesjaunes: { claim: `https://www.solocal.com/inscription`, manage: `https://www.solocal.com`, search: check.url },
-      facebook: { claim: `https://www.facebook.com/pages/create/?ref_type=launch_point`, manage: `https://business.facebook.com`, search: `https://www.facebook.com/search/pages/?q=${q}` },
-      instagram: { claim: `https://business.instagram.com`, manage: `https://business.instagram.com`, search: `https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,'').toLowerCase())}` },
-      ubereats: { claim: `https://merchants.ubereats.com/signup`, manage: `https://merchants.ubereats.com`, search: check.url },
-      waze: { claim: `https://ads.waze.com/register`, manage: `https://ads.waze.com`, search: check.url }
+    if (platform === 'foursquare' && process.env.FOURSQUARE_API_KEY) {
+      const resp = await fetch(`https://api.foursquare.com/v3/places/search?query=${encodeURIComponent(name)}&near=${encodeURIComponent(city+',France')}&limit=5`, {
+        headers: { 'Authorization': process.env.FOURSQUARE_API_KEY, 'Accept': 'application/json' }, signal: AbortSignal.timeout(10000)
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const match = (data.results || []).find(r => r.name && r.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
+        return { platform, found: !!match, status: match ? 'found' : 'not_found', method: 'api', urls: urlsMap[platform],
+          details: match ? { name: match.name, address: match.location?.formatted_address, fsq_id: match.fsq_id } : null };
+      }
+    }
+
+    if (platform === 'yelp' && process.env.YELP_API_KEY) {
+      const resp = await fetch(`https://api.yelp.com/v3/businesses/search?term=${encodeURIComponent(name)}&location=${encodeURIComponent(city+', France')}&limit=5`, {
+        headers: { 'Authorization': `Bearer ${process.env.YELP_API_KEY}` }, signal: AbortSignal.timeout(10000)
+      });
+      if (resp.ok) {
+        const data = await resp.json();
+        const match = (data.businesses || []).find(b => b.name && b.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
+        return { platform, found: !!match, status: match ? 'found' : 'not_found', method: 'api', urls: urlsMap[platform],
+          details: match ? { name: match.name, rating: match.rating, review_count: match.review_count, url: match.url } : null };
+      }
+    }
+
+    // Google Places for bing/apple/waze (if listed on Google, likely on these too)
+    if (['bing', 'apple', 'waze'].includes(platform) && process.env.GOOGLE_PLACES_API_KEY) {
+      const resp = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(name+' '+city+' restaurant')}&key=${process.env.GOOGLE_PLACES_API_KEY}`, { signal: AbortSignal.timeout(10000) });
+      if (resp.ok) {
+        const data = await resp.json();
+        const match = (data.results || []).find(r => r.name && r.name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes(nameNorm));
+        if (match) {
+          return { platform, found: true, status: 'found', method: 'google_places_proxy', urls: urlsMap[platform],
+            details: { name: match.name, address: match.formatted_address, rating: match.rating, place_id: match.place_id } };
+        }
+      }
+    }
+
+    // ── Fallback: HTTP scraping for platforms without API ──
+    const scrapeUrls = {
+      yelp: `https://www.yelp.com/search?find_desc=${q}&find_loc=${encodeURIComponent(city)}`,
+      thefork: `https://www.thefork.fr/recherche?queryText=${q}`,
+      pagesjaunes: `https://www.pagesjaunes.fr/pagesblanches/recherche?quoiqui=${encodeURIComponent(name)}&ou=${encodeURIComponent(city)}`,
+      ubereats: `https://www.ubereats.com/fr/search?q=${encodeURIComponent(name)}`,
+      facebook: `https://www.facebook.com/search/pages/?q=${q}`,
+      instagram: `https://www.instagram.com/explore/tags/${encodeURIComponent(name.replace(/\s+/g,'').toLowerCase())}`,
+      bing: `https://www.bing.com/maps?q=${q}+restaurant`,
+      waze: `https://www.waze.com/live-map/directions?q=${q}`
     };
 
-    return {
-      platform,
-      found: nameFound,
-      status: nameFound ? 'found' : 'not_found',
-      urls: urls[platform] || {},
-      snippet: nameFound ? extractSnippet(bodyLower, nameNorm) : null
-    };
+    const scrapeUrl = scrapeUrls[platform];
+    if (scrapeUrl) {
+      const html = await fetchPage(scrapeUrl);
+      const bodyLower = html.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+      const nameFound = bodyLower.includes(nameNorm) || bodyLower.includes(nameNorm.replace(/\s+/g, '-'));
+      return { platform, found: nameFound, status: nameFound ? 'found' : 'not_found', method: 'scrape', urls: urlsMap[platform],
+        snippet: nameFound ? extractSnippet(bodyLower, nameNorm) : null };
+    }
+
+    return { platform, status: 'not_checked', found: false, urls: urlsMap[platform] };
   } catch (e) {
-    return { platform, status: 'error', found: false, error: e.message, urls: {} };
+    return { platform, status: 'error', found: false, error: e.message, urls: urlsMap[platform] || {} };
   }
 }
 
