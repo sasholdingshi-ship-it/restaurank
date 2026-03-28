@@ -4059,11 +4059,15 @@ app.post('/api/reviews/auto-respond', async (req, res) => {
     const city = req.body.city || '';
     const cuisine = req.body.cuisine || '';
     const address = req.body.address || '';
+    const specialties = req.body.specialties || ''; // plats signatures du restaurant
+    const menu_items = req.body.menu_items || []; // items du menu
     // Extract neighborhood/quartier from address or city
     const quartier = address.match(/\d{5}\s+(.+)/)?.[1] || city.replace(/\d+e?$/, '').trim() || '';
     const arrondissement = (city.match(/(\d+)e?$/)||address.match(/750(\d{2})/)||[])[1] || '';
     // Extract first name from reviewer
     const firstName = reviewer_name.split(/\s+/)[0] || reviewer_name;
+    // Build dish keywords from specialties + menu
+    const dishKeywords = [specialties, ...menu_items].filter(Boolean).join(', ');
 
     const prompt = `Tu es le community manager et expert SEO/GEO de "${restoName}"${city ? ' à ' + city : ''}${cuisine ? ' (' + cuisine + ')' : ''}. Génère une réponse à cet avis ${platform} (note: ${review_rating}/5, auteur: ${reviewer_name}):
 
@@ -4075,28 +4079,81 @@ INFORMATIONS CONTEXTUELLES:
 - Quartier/arrondissement: ${quartier || arrondissement ? (quartier + (arrondissement ? ' (' + arrondissement + 'e arrondissement)' : '')) : 'non précisé'}
 - Adresse restaurant: ${address || 'non précisée'}
 
-RÈGLES DE RÉPONSE:
-- COMMENCE par "Bonjour ${firstName}" ou "Cher(e) ${firstName}" (personnalisation)
-- Si positif (4-5★): remercie ${firstName} par son prénom, mentionne un détail spécifique, invite à revenir
-- Si négatif (1-2★): empathie avec ${firstName}, excuse si justifié, propose solution, invite à recontacter
-- Si mitigé (3★): remercie ${firstName}, reconnais positifs, adresse négatifs
-- Adapte le ton: ${platform === 'ubereats' || platform === 'deliveroo' ? 'court et direct (livraison)' : platform === 'tripadvisor' ? 'professionnel tourisme' : 'chaleureux restaurant'}
+STRUCTURE OBLIGATOIRE EN 4 BLOCS:
+
+BLOC 1 — Remerciement personnalisé:
+- "Bonjour ${firstName}," + remerciement + référence au plat/service mentionné dans l'avis
+- Objectif: signal d'engagement humain
+
+BLOC 2 — Mot-clé naturel:
+- Mentionne "${restoName}" + "${cuisine || 'restaurant'}" + "${quartier || city}" en 1 phrase fluide
+- Ex: "Chez ${restoName}, notre ${cuisine} ${quartier ? 'au cœur de ' + quartier : 'à ' + city}..."
+- Objectif: indexation locale pour les moteurs IA
+
+BLOC 3 — Valeur ajoutée:
+- Si positif: mentionne un plat signature, un concept, une promesse (ex: "notre bouillon 18h", "nos gyozas maison")
+- Si négatif: excuse factuelle + solution concrète (pas de mention de plat en négatif)
+- Si mitigé: reconnais le positif + adresse le négatif avec promesse d'amélioration
+- Objectif: renforcer les requêtes sémantiques
+
+BLOC 4 — Appel à revenir:
+- Invitation courte et chaleureuse à revenir, avec mention d'un plat à découvrir
+- Signe "${restoName}"
+- Objectif: signal d'activité continue
+
+ADAPTATION PAR PLATEFORME:
+- ${platform === 'ubereats' || platform === 'deliveroo' ? 'Livraison: blocs 1+3+4 seulement, max 80 mots, ton direct' : platform === 'tripadvisor' ? 'TripAdvisor: 4 blocs, ton professionnel tourisme, max 150 mots' : '4 blocs, ton chaleureux, max 150 mots'}
+
+PLATS SIGNATURES DU RESTAURANT (à mentionner naturellement si pertinent):
+${dishKeywords ? '- Spécialités: ' + dishKeywords : '- Pas de plats spécifiques renseignés — mentionne la cuisine ' + (cuisine || 'du restaurant') + ' de manière générique'}
 
 RÈGLES SEO/GEO OBLIGATOIRES:
 - Mentionne "${restoName}" au moins 1 fois (entité nommée pour les IA)
 - Mentionne le quartier "${quartier || city}" naturellement (ex: "notre restaurant du ${arrondissement ? arrondissement + 'e' : quartier}")
-- Inclus 1-2 mots-clés: "${cuisine || 'restaurant'}", nom de quartier, spécialité
-- Si positif: ancre géographiquement ("${restoName}${quartier ? ', au cœur de ' + quartier : ''}")
-- Si négatif: reste factuel, pas de mots-clés négatifs
+- Inclus 1-2 mots-clés: "${cuisine || 'restaurant'}", nom de quartier, NOM D'UN PLAT
+- Si le client mentionne un plat dans son avis → reprends-le par son nom exact + ajoute un détail (ingrédient, technique)
+- Si positif: suggère un AUTRE plat signature à essayer lors de la prochaine visite
+- Si négatif: ne mentionne PAS de plats pour ne pas associer le négatif à un plat
+- Ancre géographiquement: "${restoName}${quartier ? ', au cœur de ' + quartier : ''}"
 - JAMAIS de keyword stuffing — 100% naturel et humain
+
+ANTI-DÉTECTION (varier les réponses):
+- VARIE la structure: parfois commence par le prénom, parfois par un remerciement, parfois par une question rhétorique
+- VARIE les formules: JAMAIS 2 réponses identiques. Alterne entre tutoiement et vouvoiement selon le ton de l'avis
+- VARIE la longueur: entre 60 et 150 mots aléatoirement
+- VARIE les expressions: alterne "merci", "un grand merci", "mille mercis", "quel plaisir", "c'est un bonheur"
+- VARIE les signatures: alterne "${restoName}", "L'équipe ${restoName}", "Toute l'équipe de ${restoName}", "L'équipe"
+- Utilise occasionnellement des emojis (1 max, pas systématique)
+- NE PAS commencer TOUTES les réponses par "Bonjour" — varier avec "Cher", "Hello", "Merci", prénom seul
 
 - Max 150 mots
 - En français (sauf si avis en anglais → réponds en anglais)
-- Signe "${restoName}"
 - NE JAMAIS mentionner SEO, GEO, mots-clés ou optimisation`;
 
     const reply = await callClaudeAPI(apiKey, prompt, 500);
-    res.json({ success: true, platform, review_id, reply: reply.trim() });
+
+    // Anti-detection: schedule response with random delay (1h to 47h)
+    const minDelayMs = 1 * 60 * 60 * 1000; // 1 hour
+    const maxDelayMs = 47 * 60 * 60 * 1000; // 47 hours
+    const randomDelay = Math.floor(minDelayMs + Math.random() * (maxDelayMs - minDelayMs));
+    const scheduledAt = new Date(Date.now() + randomDelay);
+    const delayHours = (randomDelay / 3600000).toFixed(1);
+
+    // Store scheduled response in DB
+    try {
+      db.prepare(`INSERT INTO scheduled_responses (restaurant_id, platform, review_id, reply_text, scheduled_at, status, created_at)
+        VALUES (?, ?, ?, ?, ?, 'pending', datetime('now'))`)
+        .run(restaurant_id || 0, platform, review_id || '', reply.trim(), scheduledAt.toISOString());
+    } catch(e) {
+      // Table might not exist yet, create it
+      try {
+        db.exec(`CREATE TABLE IF NOT EXISTS scheduled_responses (id INTEGER PRIMARY KEY, restaurant_id INTEGER, platform TEXT, review_id TEXT, reply_text TEXT, scheduled_at TEXT, status TEXT DEFAULT 'pending', created_at TEXT DEFAULT (datetime('now')))`);
+        db.prepare(`INSERT INTO scheduled_responses (restaurant_id, platform, review_id, reply_text, scheduled_at, status) VALUES (?, ?, ?, ?, ?, 'pending')`)
+          .run(restaurant_id || 0, platform, review_id || '', reply.trim(), scheduledAt.toISOString());
+      } catch {}
+    }
+
+    res.json({ success: true, platform, review_id, reply: reply.trim(), scheduled_at: scheduledAt.toISOString(), delay_hours: parseFloat(delayHours), note: `Réponse programmée dans ${delayHours}h pour éviter la détection` });
   } catch(e) {
     res.json({ success: false, error: e.message });
   }
