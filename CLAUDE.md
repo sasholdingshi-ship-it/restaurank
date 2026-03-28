@@ -1,141 +1,238 @@
-# RestauRank — Audit SEO + GEO pour restaurants
+# RestauRank — Guide complet pour Claude Code
 
-## Contexte projet
-SaaS webapp single-file HTML (`seo-geo-audit-tool.html`) qui audite la visibilité en ligne d'un restaurant sur Google (SEO local) ET sur les moteurs IA (ChatGPT, Perplexity, Gemini, Claude). Modèle économique : abonnement mensuel.
+## TL;DR
+SaaS webapp qui audite la visibilité en ligne d'un restaurant sur Google (SEO local) ET sur les moteurs IA (ChatGPT, Perplexity, Gemini, Claude). Single-file HTML frontend + Node.js/Express/SQLite backend. Déployé sur Render. 50 commits, ~20k lignes de code total.
 **Vision** : outil 100% autonome — le client n'a presque rien à faire. RestauRank détecte le CMS, se connecte aux APIs, et applique les améliorations automatiquement.
 
-## Stack technique
-- **Single-file HTML** (~3100 lignes) — pas de framework, pas de build
-- Vanilla JS, CSS custom properties (dark theme)
-- localStorage pour la persistance (`restaurank_data`)
-- Backend Node.js (`server.js` ~1020 lignes) avec SQLite — OAuth Google, GBP API, CMS detection, auto-apply
-- Audit simulé côté client via `generateAuditData()` (en attendant données réelles GBP)
+---
 
-## Architecture des fichiers
+## 🔑 ACCÈS CRITIQUES
 
-### seo-geo-audit-tool.html
+> **⚠️ Les secrets (API keys, tokens, passwords) sont dans `.secrets.md` (gitignored) et `.env`.**
+> Claude Code : lis `.secrets.md` pour les credentials. Ne jamais les mettre dans un fichier commité.
+
+### GitHub
+- **Repo** : `https://github.com/sasholdingshi-ship-it/restaurank.git`
+- **Git config** : `git config user.name "James"` + `git config user.email "sasholdingshi@gmail.com"`
+- PAT et clone URL → voir `.secrets.md`
+
+### Render (hébergement)
+- **URL live** : `https://restaurank.onrender.com`
+- **Service ID** : `srv-d71tgi5m5p6s73a18kv0`
+- **Dashboard** : `https://dashboard.render.com` (login avec GitHub)
+- **Auto-deploy** : chaque push sur `main` → deploy en ~3-5 min
+- **⚠️** : Render free tier reset SQLite à chaque deploy + bloque SMTP (587/465)
+- Env vars configurées sur Render (20 vars) → voir `.secrets.md` pour la liste complète
+
+### Resend (emails)
+- **From actuel** : `RestauRank <onboarding@resend.dev>` (domaine test)
+- **Pour production** : vérifier un domaine custom dans https://resend.com/domains
+- Le code utilise `RESEND_FROM` séparé de `SMTP_FROM`. Sans `RESEND_FROM`, fallback sur `onboarding@resend.dev`
+
+### Stripe (paiements — MODE TEST)
+- Les Price IDs (STRIPE_PRICE_STARTER, PRO, PREMIUM) ne sont pas encore créés
+
+### Google Cloud
+- **GBP API** : demande d'accès soumise 2026-03-22, ticket #6569000040778, en attente (~2-4 semaines)
+
+---
+
+## 📁 Architecture des fichiers
+
 ```
-[CSS]                    → lignes 1-450 (includes autonomous system styles)
+restaurank/
+├── seo-geo-audit-tool.html   # Frontend single-file (~11500 lignes)
+├── server.js                  # Backend Node.js (~9180 lignes)
+├── package.json               # express, better-sqlite3, stripe, puppeteer, nodemailer, googleapis
+├── .env                       # Env vars locales (gitignored)
+├── .env.example               # Template env vars
+├── .gitignore                 # .env, node_modules/, *.db
+├── Dockerfile                 # Docker Node 20
+├── Procfile                   # `web: node server.js`
+├── railway.json               # Config Railway (backup)
+├── build.js                   # Obfuscation JS
+├── deploy.sh                  # Script déploiement
+├── restaurank-wp-plugin/      # Plugin WordPress auto-apply SEO
+└── restaurank-wp-plugin.zip
+```
+
+### Structure du frontend (seo-geo-audit-tool.html)
+```
+[CSS]                    → lignes 1-450
 [HTML screens]           → lignes 453-850
-  - #landing             → page d'accueil + historique + champ URL site web
-  - #confirmation        → vérification Google Maps
-  - #scanning            → animation scan 11 étapes (inclut CMS detection)
-  - #dashboard           → scores SEO/GEO + items détaillés + tabs
-    - tabAudit           → audit items par catégorie
-    - tabReviews         → gestion des avis
-    - tabSocial          → Google Posts + social
-    - tabDispatch        → 🤖 PANNEAU AUTONOME (CMS + auto-apply + directories)
-    - tabSettings        → paramètres
-  - #groupDash           → tableau de bord multi-sites
-  - #actionModal         → modal amélioration (contenu auto-généré)
-  - #cmdPanel            → command center annuaires (12 plateformes)
-[JS]                     → lignes 850-3128
-  - CATEGORIES[]         → 7 catégories, ~47 items avec check(), getStatus(), action{}
-  - generateAuditData()  → données simulées aléatoires
-  - computeScores()      → calcul SEO/GEO scores
-  - renderDashboard()    → rendu scores + items (overridé 3x)
-  - showAction()         → modal avec auto-apply GBP + website code
-  - CMS_INFO{}           → config par CMS (WordPress, Webflow, Wix, etc.)
-  - renderCMSPanel()     → affiche CMS détecté + formulaire connexion
-  - runFullAutonomous()  → exécution automatique complète (GBP + site + annuaires)
-  - buildWebsiteImprovements() → génère schema.org, meta tags, FAQ, NAP
-  - dirClaimData{}       → cache claim data par plateforme (survit re-render)
-  - dirCheckResults{}    → cache scan results par plateforme
-  - renderDirAutoGrid()  → grille annuaires avec statuts + instructions inline
-  - autoCheckAllPlatforms() → scan 11 plateformes via /api/directories/auto-check
-  - autoClaimPlatform()  → fetch claim data + open URL + show instructions
-  - autoConnectAllPlatforms() → fetch parallèle claim data → instructions sans popup
-  - markPlatformDone()   → marque connecté + clean dirClaimData + re-render
+  #landing               → page d'accueil + historique + champ URL
+  #confirmation          → vérification Google Maps
+  #scanning              → animation scan 11 étapes
+  #dashboard             → scores SEO/GEO + tabs
+    tabAudit             → items par catégorie
+    tabReviews           → gestion avis
+    tabSocial            → Google Posts + social
+    tabDispatch          → panneau autonome CMS + annuaires
+    tabSettings          → paramètres
+  #groupDash             → multi-sites
+  #actionModal           → modal amélioration
+  #cmdPanel              → command center annuaires (12 plateformes)
+[JS]                     → lignes 850-11500
+  CATEGORIES[]           → 7 catégories, ~49 items
+  generateAuditData()    → données simulées (fallback)
+  computeScores()        → calcul SEO/GEO scores
+  renderDashboard()      → rendu (overridé 3x)
+  showAction()           → modal avec auto-apply
+  CMS_INFO{}             → config par CMS
+  renderCMSPanel()       → CMS détecté + connexion
+  runFullAutonomous()    → automatisation complète
+  buildWebsiteImprovements() → schema.org, meta, FAQ, NAP
+  dirClaimData{}         → cache claim par plateforme
+  renderDirAutoGrid()    → grille annuaires
 ```
 
-### server.js
+### Structure du backend (server.js)
 ```
-[Database]               → SQLite: users, restaurants, action_log, cms_connections, directory_automation
-[Google OAuth]           → /auth/google, /auth/google/callback
-[GBP API]                → /api/gbp/accounts, locations, update-*, bulk-apply
-[CMS Detection]          → POST /api/detect-cms — fetch website HTML, detect WP/Webflow/Wix/etc.
-[CMS Auto-Apply]         → POST /api/cms/connect, /api/cms/wordpress/apply, /api/cms/webflow/apply, /api/cms/generic/apply
-[Directory Automation]   → POST /api/directories/bing/import, apple/claim, foursquare/claim
-[Autonomous Scan]        → POST /api/autonomous-scan — orchestrates CMS + directories
+[Imports + Setup]        → lignes 1-260
+[Email system]           → lignes 263-340 (Resend + SMTP + dev_log)
+[Database schema]        → lignes ~340-500 (SQLite tables)
+[Auth routes]            → /auth/register, login, logout, me, forgot/reset-password
 [Restaurant CRUD]        → /api/restaurants
+[GBP API routes]         → /api/gbp/* (en attente d'accès)
+[CMS routes]             → /api/detect-cms, /api/cms/connect, /api/cms/*/apply
+[Directory routes]       → /api/directories/*
+[AI routes]              → /api/ai/generate, bulk-generate
+[Audit routes]           → /api/audit-website, /api/scrape-gmb, /api/scrape-photos
+[Email routes]           → /api/send-welcome-email, /api/email-config
+[Stripe routes]          → /api/subscription/*, /api/stripe/webhook
+[Admin routes]           → /api/admin/*
+[Static serving]         → seo-geo-audit-tool.html on GET /
+[Startup banner]         → ASCII art avec status des API keys
 ```
 
-## Patterns importants
-- `computeScores()` retourne des items enrichis via `{...item, score, status, tip}` — TOUJOURS utiliser `currentScores.categories` pour accéder aux items avec scores, JAMAIS le tableau statique `CATEGORIES`
-- Function overrides pattern : `const _orig=fn; fn=function(){_orig();...}` — utilisé pour renderDashboard (3 overrides), renderHistory, goLanding, showAction
-- Les items d'audit ont un `action.steps[]` (étapes manuelles) ET du contenu auto-généré via `generateContent(itemId)`
-- `PLATFORMS[].claimUrl` sont des FONCTIONS `q=>url`, pas des strings
-- CMS detection: server-side fetch + regex analysis (signatures: wp-content, data-wf-site, wix.com, squarespace-cdn, cdn.shopify.com)
+---
 
-## Langue
-- UI et commentaires en français
-- Noms de variables/fonctions en anglais
+## 🔧 Lancer en local
 
-## Conventions de code
-- Code compact (one-liners quand possible)
-- Template literals pour le HTML dynamique
-- Pas de dépendances externes (sauf Google Fonts + Google Maps embed)
-- Try/catch autour des opérations localStorage
+```bash
+# Clone URL avec PAT → voir .secrets.md
+git clone https://github.com/sasholdingshi-ship-it/restaurank.git
+cd restaurank
+npm install
+node server.js
+# → http://localhost:8765
+# Login admin → voir .secrets.md
+```
 
-## Ce qui fonctionne
-- Landing → confirmation Google Maps → scan animé → dashboard SEO/GEO
-- Scores duaux SEO + GEO avec rings animés
-- 7 catégories d'audit avec 35 items détaillés
-- Command center annuaires (12 plateformes, lancement séquentiel)
-- Persistance localStorage (restaurants, actions, plateformes)
-- Multi-site : group dashboard, NAP consistency, schema.org hiérarchique
-- Historique des restaurants audités
-- Système d'amélioration auto : 35 items avec contenu auto-généré, modal tabs, copier-coller, markDone
-- Enhanced showAction : section auto-apply GBP + code website intégré
-- **CMS Detection** : détecte WordPress, Webflow, Wix, Squarespace, Shopify, PrestaShop, Drupal, Joomla
-- **CMS Auto-Connect** : formulaire de connexion par CMS avec credentials API
-- **WordPress Auto-Apply** : Schema.org, meta tags, FAQ page, NAP contact via REST API
-- **Webflow Auto-Apply** : préparé pour MCP Webflow (site_id + tasks)
-- **Directory Auto-Check** : POST /api/directories/auto-check scrape 11 plateformes en parallèle (batches de 4)
-- **Directory Auto-Claim** : POST /api/directories/auto-claim retourne prefill + instructions par plateforme
-- **Directory Grid v2** : cards avec statuts persistants (pending/checking/found/not_found/claiming/connected), instructions inline via `dirClaimData{}`, boutons Ouvrir/C'est fait/Fermer
-- **Tout connecter** : fetch parallel de toutes les claim data → affiche instructions sans popup → user clique "Ouvrir" par plateforme
-- **Background scan** : CMS detection + directory auto-check lancés en parallèle pendant l'animation de scan
-- **Full Autonomous Button** : "Tout automatiser" — GBP + Site + Annuaires + Social en 1 clic
-- **Scan with CMS detection** : le champ URL site web déclenche /api/autonomous-scan pendant le scan
+---
 
-## Système d'amélioration auto (✅ fonctionne)
-Flow complet : cliquer item audit → déplier → voir bouton "⚡ Améliorer auto" → cliquer → modal s'ouvre avec tabs "Contenu prêt à l'emploi" + "Étapes détaillées" → copier le contenu → marquer comme fait.
-- 35/35 items ont un `action` + `generateContent()` associé
-- Override pattern : `_origShowAction` → ajoute section auto-apply GBP + website code
-- `switchActionTab()`, `copyGen()`, `markDone()` — tous fonctionnels
+## 🎯 Patterns critiques
 
-## Système autonome (✅ v4.0 — Full AutoPilot)
-- **CMS Detection** : POST /api/detect-cms analyse les signatures HTML (wp-content, data-wf-site, etc.)
-- **CMS Connect** : formulaire par CMS, credentials stockées dans SQLite (cms_connections table)
-- **WordPress REST API** : auto-inject Schema.org, update title/meta, create FAQ page, update contact NAP
-- **Webflow MCP** : tasks générées, prêtes pour application via MCP tools
-- **Wix/Squarespace/Shopify** : instructions étape-par-étape générées automatiquement
-- **runFullAutonomous() v2** : 5 étapes (Audit 47 items → ALL GBP + réponses avis → Site/CMS + SEO on-page → Annuaires scan+claim → Social + GEO contenu)
-- **runPostScanAutomation()** : s'exécute silencieusement 500ms après chaque scan — auto-populate Hub, auto-reply reviews, auto-generate posts, auto-prepare directories, pré-génère contenu pour TOUS les items en erreur
-- **showAutoPilotToast()** : notification non-intrusive en bas à droite résumant ce qui a été auto-fait, disparaît après 15s
-- **Directory Auto-Grid v2** : 11 plateformes avec statuts persistants, instructions inline, `dirClaimData{}` survit aux re-renders
-- **autoConnectAllPlatforms()** : fetch parallèle de toutes les claim data → affiche instructions sans ouvrir de popups → zéro blocage navigateur
-- **autoConnectAndFinalize()** : scan + claim + ouverture séquentielle avec délai anti-bot (2-5s)
-- **markPlatformDone()/closePlatformInstr()** : gestion propre des statuts avec re-render
-- **Pre-generated content** : `window._autoContent_{itemId}` stocke le contenu pré-généré pour chaque item en erreur
+### 1. Override pattern (frontend)
+```javascript
+const _origFn = renderDashboard;
+renderDashboard = function() { _origFn(); /* extensions */ };
+```
+Utilisé 3x pour renderDashboard, et pour renderHistory, goLanding, showAction.
 
-## Hub Central (✅ nouveau)
-- **Tab "🏠 Hub Central"** dans le dashboard — centralise TOUTES les infos du restaurant
-- **NAP centralisé** : nom, catégorie, adresse, téléphone, site web, description, horaires — source unique de vérité
-- **POST /api/scrape-gmb** : scrape Google Maps + site web pour récupérer nom, adresse, tél, horaires, photos, schema.org
-- **POST /api/scrape-photos** : récupère les photos depuis GMB et le site web, catégorise (plat, ambiance, façade, équipe, terrasse)
-- **Gestionnaire de photos** : galerie avec filtres par type, sélection multiple, publication sur tous les annuaires
-- **pushHubToAll()** : pousse les infos centralisées sur GBP + CMS + tous les annuaires en 1 clic
-- **checkNapConsistency()** : vérifie la cohérence NAP entre Hub, GBP, et chaque annuaire scanné
-- **renderHubSources()** : affiche les sources de données (GBP, site, audit, photos, annuaires, CMS) avec statut
+### 2. Scores — TOUJOURS utiliser currentScores.categories
+```javascript
+computeScores()  // → { seo, geo, categories: [...items enrichis avec score/status/tip] }
+// CORRECT : currentScores.categories[i].score
+// FAUX :    CATEGORIES[i].score  ← le tableau statique n'a PAS de scores
+```
 
-## Audit réel (✅ nouveau)
-- **POST /api/audit-website** : crawl réel du site web — title, meta desc, schema.org, FAQ, NAP, OG tags, etc.
-- **Intégré dans startScan()** : pendant l'animation de scan, `/api/audit-website` + `/api/scrape-gmb` sont appelés en parallèle
-- **Merge dans currentData** : les résultats réels (hasTitle, hasSchemaRestaurant, napOnSite, etc.) remplacent les données simulées
-- **`window._realAudit`** : stocke les résultats d'audit réel, `window._hubData` pour les données scrappées
-- `generateAuditData()` reste le fallback pour les champs non couverts par le crawl réel
+### 3. PLATFORMS[].claimUrl sont des FONCTIONS
+```javascript
+platform.claimUrl(restaurantName)  // → URL string
+// PAS : platform.claimUrl         // ← c'est une fonction !
+```
+
+### 4. Email fallback chain
+```
+Resend API (RESEND_API_KEY) → SMTP Nodemailer (SMTP_HOST) → console dev_log
+```
+`RESEND_FROM` et `SMTP_FROM` sont séparés car Resend refuse les domaines non vérifiés.
+
+### 5. Auth
+- Routes = `/auth/*` (PAS `/api/auth/*`)
+- Header = `Authorization: Bearer <session_token>`
+- Login retourne `{ session: "..." }` (PAS `{ token: "..." }`)
+- Admin créé auto au startup via `ADMIN_EMAIL` + `ADMIN_PASSWORD`
+
+---
+
+## ✅ Ce qui fonctionne
+
+- Landing → Google Maps confirmation → scan animé → dashboard SEO/GEO
+- 7 catégories, 49 items d'audit avec contenu auto-généré
+- Hub Central : NAP centralisé, photos, push all
+- CMS Detection (8 CMS supportés)
+- WordPress Auto-Apply via REST API
+- Directory auto-check 11 plateformes + auto-claim
+- Audit réel site web (crawl title, meta, schema, FAQ, NAP, OG)
+- Auth complète (inscription, login, sessions, reset password)
+- Email Resend fonctionnel (testé 2026-03-28)
+- Stripe intégration (mode test)
+- Admin dashboard
+- Multi-site + localStorage persistence
+
+## ⏳ En attente / À faire
+
+- **GBP API access** : ticket #6569000040778 (2026-03-22)
+- **DB persistante** : migrer SQLite → PostgreSQL (Render reset SQLite à chaque deploy)
+- **Stripe Price IDs** : créer les plans dans Stripe dashboard
+- **Domaine email custom** : vérifier domaine dans Resend
+- **Wix/Squarespace/Shopify APIs** : actuellement instructions manuelles
+- **Tests automatisés** : aucun test existant
+- **Séparer le frontend** : 11500 lignes en un seul fichier
+
+## 🐛 Problèmes connus
+
+- Render cold start ~30s après 15 min d'inactivité
+- SMTP bloqué sur Render → contourné via Resend
+- Le .env local a un SMTP_PASS différent de celui sur Render
+- Google Maps scrape limité (JS rendering) → GBP API résoudra ça
+
+---
+
+## 📐 Conventions
+
+- **UI** : français
+- **Variables/fonctions** : anglais
+- **Code compact** : one-liners, template literals
+- **Zéro dépendances frontend** (sauf Google Fonts + Maps)
+- **Try/catch** autour de localStorage
+- **Single-file** : tout le frontend dans un fichier, tout le backend dans un autre
+
+---
+
+## 🚀 Workflow de déploiement
+
+```bash
+# Modifier → tester local → commit → push → Render auto-deploy (3-5 min)
+git add server.js seo-geo-audit-tool.html
+git commit -m "Description"
+git push origin main
+```
+
+Test email après deploy :
+```bash
+TOKEN=$(curl -s -X POST https://restaurank.onrender.com/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"sasholdingshi@gmail.com","password":"RestauRank2026!"}' | jq -r '.session')
+curl -X POST https://restaurank.onrender.com/api/send-welcome-email \
+  -H "Authorization: Bearer $TOKEN"
+```
+
+---
+
+## 📝 Décisions techniques
+
+| Date | Décision | Raison |
+|------|----------|--------|
+| 2026-03-22 | Single-file HTML | Simplicité, pas de build step |
+| 2026-03-23 | SQLite | Zéro config, suffisant pour MVP |
+| 2026-03-23 | Render | Free tier avec Docker |
+| 2026-03-24 | Sessions token (pas JWT) | Plus simple, invalidation instantanée |
+| 2026-03-25 | Puppeteer scraping | JS rendering pour Google Maps |
+| 2026-03-28 | Resend (pas SMTP) | Render bloque SMTP sortant |
+| 2026-03-28 | RESEND_FROM séparé | Resend exige domaine vérifié |
 
 ## Permissions
 ```json
@@ -147,10 +244,3 @@ Flow complet : cliquer item audit → déplier → voir bouton "⚡ Améliorer a
   }
 }
 ```
-
-## En attente
-- GBP API access (ticket #6569000040778, soumis 2026-03-22, ~2-4 semaines)
-- Auto-apply réel via GBP API une fois quota accordé
-- Wix/Squarespace APIs réelles (actuellement instructions manuelles)
-- Browser automation pour claim annuaires (Yelp, TripAdvisor — pas d'API publique)
-- Google Maps scrape limité (rendu JS côté client) — données réelles viendront de GBP API
