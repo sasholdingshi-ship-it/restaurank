@@ -4058,28 +4058,42 @@ app.post('/api/reviews/auto-respond', async (req, res) => {
   try {
     const city = req.body.city || '';
     const cuisine = req.body.cuisine || '';
+    const address = req.body.address || '';
+    // Extract neighborhood/quartier from address or city
+    const quartier = address.match(/\d{5}\s+(.+)/)?.[1] || city.replace(/\d+e?$/, '').trim() || '';
+    const arrondissement = (city.match(/(\d+)e?$/)||address.match(/750(\d{2})/)||[])[1] || '';
+    // Extract first name from reviewer
+    const firstName = reviewer_name.split(/\s+/)[0] || reviewer_name;
+
     const prompt = `Tu es le community manager et expert SEO/GEO de "${restoName}"${city ? ' à ' + city : ''}${cuisine ? ' (' + cuisine + ')' : ''}. Génère une réponse à cet avis ${platform} (note: ${review_rating}/5, auteur: ${reviewer_name}):
 
 "${review_text}"
 
+INFORMATIONS CONTEXTUELLES:
+- Prénom du client: ${firstName}
+- Nom complet: ${reviewer_name}
+- Quartier/arrondissement: ${quartier || arrondissement ? (quartier + (arrondissement ? ' (' + arrondissement + 'e arrondissement)' : '')) : 'non précisé'}
+- Adresse restaurant: ${address || 'non précisée'}
+
 RÈGLES DE RÉPONSE:
-- Si positif (4-5★): remercie, mentionne un détail spécifique de l'avis, invite à revenir
-- Si négatif (1-2★): empathie, excuse si justifié, propose solution, invite à recontacter en privé
-- Si mitigé (3★): remercie, reconnais positifs, adresse négatifs
+- COMMENCE par "Bonjour ${firstName}" ou "Cher(e) ${firstName}" (personnalisation)
+- Si positif (4-5★): remercie ${firstName} par son prénom, mentionne un détail spécifique, invite à revenir
+- Si négatif (1-2★): empathie avec ${firstName}, excuse si justifié, propose solution, invite à recontacter
+- Si mitigé (3★): remercie ${firstName}, reconnais positifs, adresse négatifs
 - Adapte le ton: ${platform === 'ubereats' || platform === 'deliveroo' ? 'court et direct (livraison)' : platform === 'tripadvisor' ? 'professionnel tourisme' : 'chaleureux restaurant'}
 
-RÈGLES SEO/GEO OBLIGATOIRES (pour que les IA citent ce restaurant):
-- Mentionne TOUJOURS le nom complet "${restoName}" au moins 1 fois (entité nommée)
-- Mentionne la ville "${city || 'Paris'}" naturellement (signal géographique)
-- Inclus 1-2 mots-clés pertinents NATURELLEMENT: "${cuisine || 'restaurant'}", spécialité, quartier
-- Si positif: ancre un mot-clé cuisine ("notre ${cuisine || 'cuisine'}${city ? ' à ' + city : ''}")
-- Si négatif: reste factuel pour ne pas nourrir le négatif en mots-clés
-- JAMAIS de keyword stuffing — doit rester 100% naturel et humain
+RÈGLES SEO/GEO OBLIGATOIRES:
+- Mentionne "${restoName}" au moins 1 fois (entité nommée pour les IA)
+- Mentionne le quartier "${quartier || city}" naturellement (ex: "notre restaurant du ${arrondissement ? arrondissement + 'e' : quartier}")
+- Inclus 1-2 mots-clés: "${cuisine || 'restaurant'}", nom de quartier, spécialité
+- Si positif: ancre géographiquement ("${restoName}${quartier ? ', au cœur de ' + quartier : ''}")
+- Si négatif: reste factuel, pas de mots-clés négatifs
+- JAMAIS de keyword stuffing — 100% naturel et humain
 
 - Max 150 mots
-- En français (sauf si l'avis est en anglais → réponds en anglais)
+- En français (sauf si avis en anglais → réponds en anglais)
 - Signe "${restoName}"
-- NE JAMAIS mentionner le SEO, le GEO, les mots-clés ou l'optimisation dans la réponse`;
+- NE JAMAIS mentionner SEO, GEO, mots-clés ou optimisation`;
 
     const reply = await callClaudeAPI(apiKey, prompt, 500);
     res.json({ success: true, platform, review_id, reply: reply.trim() });
