@@ -264,7 +264,8 @@ function getGoogle() {
 // EMAIL — Resend HTTP API (primary) + Nodemailer SMTP (fallback)
 // ============================================================
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const MAIL_FROM = process.env.SMTP_FROM || 'RestauRank <onboarding@resend.dev>';
+const RESEND_FROM = process.env.RESEND_FROM || 'RestauRank <onboarding@resend.dev>';
+const SMTP_FROM = process.env.SMTP_FROM || 'RestauRank <noreply@restaurank.com>';
 const APP_URL = process.env.APP_URL || 'http://localhost:8765';
 
 if (RESEND_API_KEY) console.log('📧 Resend API configuré ✅');
@@ -277,7 +278,7 @@ async function sendEmail(to, subject, html) {
       const resp = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ from: MAIL_FROM, to: [to], subject, html })
+        body: JSON.stringify({ from: RESEND_FROM, to: [to], subject, html })
       });
       const data = await resp.json();
       if (data.id) { console.log(`📧 Email envoyé via Resend à ${to}: ${subject} (id: ${data.id})`); return { success: true, mode: 'resend', id: data.id }; }
@@ -290,7 +291,7 @@ async function sendEmail(to, subject, html) {
     try {
       const port = parseInt(process.env.SMTP_PORT || '465');
       const transporter = nodemailer.createTransport({ host, port, secure: port === 465, auth: { user, pass }, connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000 });
-      await transporter.sendMail({ from: MAIL_FROM, to, subject, html });
+      await transporter.sendMail({ from: SMTP_FROM, to, subject, html });
       console.log(`📧 Email envoyé via SMTP à ${to}: ${subject}`); return { success: true, mode: 'smtp' };
     } catch (e) { console.error(`❌ SMTP failed to ${to}:`, e.message); return { success: false, error: e.message }; }
   }
@@ -5959,7 +5960,7 @@ IMPORTANT: Réponds UNIQUEMENT en JSON valide, sans markdown.`;
 // EMAIL CONFIG DIAGNOSTIC
 // ============================================================
 app.get('/api/email-config', (req, res) => {
-  res.json({ resend: !!RESEND_API_KEY, smtp: !!(process.env.SMTP_HOST && process.env.SMTP_USER), from: MAIL_FROM });
+  res.json({ resend: !!RESEND_API_KEY, smtp: !!(process.env.SMTP_HOST && process.env.SMTP_USER), resendFrom: RESEND_FROM, smtpFrom: SMTP_FROM });
 });
 
 // ============================================================
