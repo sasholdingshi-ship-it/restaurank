@@ -5086,7 +5086,7 @@ function guessPhotoType(url, alt = '') {
 app.get('/api/settings/:type', (req, res) => {
   const { type } = req.params;
   const restaurantId = req.query.restaurant_id || 1;
-  const valid = ['ai_settings', 'review_automation', 'characteristics', 'holiday_hours'];
+  const valid = ['ai_settings', 'review_automation', 'characteristics', 'holiday_hours', 'social'];
   if (!valid.includes(type)) return res.status(400).json({ error: 'Invalid setting type' });
   const row = db.prepare('SELECT setting_data FROM seo_settings WHERE restaurant_id = ? AND setting_type = ?').get(restaurantId, type);
   res.json({ success: true, type, data: row ? JSON.parse(row.setting_data) : null });
@@ -5095,7 +5095,7 @@ app.get('/api/settings/:type', (req, res) => {
 app.post('/api/settings/:type', (req, res) => {
   const { type } = req.params;
   const restaurantId = req.body.restaurant_id || 1;
-  const valid = ['ai_settings', 'review_automation', 'characteristics', 'holiday_hours'];
+  const valid = ['ai_settings', 'review_automation', 'characteristics', 'holiday_hours', 'social'];
   if (!valid.includes(type)) return res.status(400).json({ error: 'Invalid setting type' });
   const data = JSON.stringify(req.body.data || {});
   db.prepare('INSERT INTO seo_settings (restaurant_id, setting_type, setting_data, updated_at) VALUES (?, ?, ?, datetime(\'now\')) ON CONFLICT(restaurant_id, setting_type) DO UPDATE SET setting_data = excluded.setting_data, updated_at = datetime(\'now\')').run(restaurantId, type, data);
