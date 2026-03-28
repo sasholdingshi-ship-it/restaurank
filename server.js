@@ -2268,7 +2268,54 @@ Les questions DOIVENT correspondre aux requêtes que les gens posent AUX MOTEURS
 11-15: Variations locales et saisonnières
 
 Format: HTML avec schema.org FAQPage (application/ld+json) + itemscope/itemprop.
-Chaque réponse: 2-4 phrases factuelles avec données précises. Les IA extraient les FAQ comme source de réponse directe.`
+Chaque réponse: 2-4 phrases factuelles avec données précises. Les IA extraient les FAQ comme source de réponse directe.`,
+
+    tiktok_kit: `${geoContext}
+
+Tu es un expert TikTok food/restaurant. Crée un KIT DE CRÉATION TIKTOK COMPLET pour "${name}" à ${city} (${cuisine}, note ${rating}/5).
+
+Génère 3 concepts de vidéos TikTok différents. Pour CHAQUE concept :
+
+🎬 CONCEPT [numéro] — [titre accrocheur]
+
+HOOK (0-3 sec):
+- Phrase d'accroche exacte à dire face caméra (max 10 mots, punchy)
+- Texte à afficher en overlay
+
+PLAN DE TOURNAGE (shot by shot):
+- 00:00-00:03 — [description du plan] — [ce qu'on dit/montre]
+- 00:03-00:08 — [plan suivant]
+- 00:08-00:15 — [plan suivant]
+- 00:15-00:25 — [plan suivant]
+- 00:25-00:30 — [plan final + CTA]
+
+TEXTE EN OVERLAY (ce qui s'affiche à l'écran):
+- Ligne 1: [texte]
+- Ligne 2: [texte]
+- etc.
+
+CAPTION:
+[caption complète avec emojis, max 150 caractères]
+
+HASHTAGS:
+[10-15 hashtags optimisés: #restaurant${city.replace(/\s/g,'')} #food${city.replace(/\s/g,'')} #${cuisine.replace(/\s/g,'')} #foodtiktok #restauranttiktok etc.]
+
+SON SUGGÉRÉ:
+[nom de la tendance musicale TikTok qui fonctionne pour ce type de contenu]
+
+TIPS DE TOURNAGE:
+- Éclairage: [conseil]
+- Angle: [conseil]
+- Montage: [conseil]
+
+---
+
+CONCEPT 1: Style "POV découverte" — le viewer découvre le restaurant
+CONCEPT 2: Style "Top/Classement" — les X meilleurs plats / raisons
+CONCEPT 3: Style "Behind the scenes" — en cuisine avec le chef
+
+Sépare chaque concept par "===CONCEPT===".
+Sois TRÈS spécifique aux plats et à l'ambiance de ${name}. Le restaurateur doit pouvoir filmer directement en suivant ton script.`
   };
 
   const prompt = prompts[type] || prompts.blog;

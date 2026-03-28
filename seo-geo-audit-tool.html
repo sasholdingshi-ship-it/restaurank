@@ -9420,6 +9420,9 @@ async function renderStatsTab(){
                 <button onclick="generateSocialPosts()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#ec4899,#be185d);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
                     📱 Social x7
                 </button>
+                <button onclick="generateTikTokKit()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#000,#25f4ee);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                    🎵 TikTok Kit x3
+                </button>
                 <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#14b8a6,#0d9488);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
                     ❓ FAQ GEO x15
                 </button>
@@ -9995,6 +9998,25 @@ async function publishBlogPost(){
         const d=await r.json();
         alert(d.success?'✅ Article publié sur le site !':'❌ Erreur : '+(d.error||'voir console'));
     }catch(e){alert('Erreur de publication : '+e.message);}
+}
+
+async function generateTikTokKit(){
+    const results=document.getElementById('contentAutoResults');
+    if(!results)return;
+    results.style.display='block';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">🎵 Création du kit TikTok (3 concepts de vidéos)...</div>';
+    try{
+        const data=await _callContentAPI('tiktok_kit');
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
+        const concepts=data.content.split('===CONCEPT===').filter(c=>c.trim());
+        let html='';
+        concepts.forEach((concept,i)=>{
+            html+=_contentCard(`tiktokConcept${i}`,`🎬 Concept TikTok ${i+1}`,'🎵',concept.replace(/\n/g,'<br>').replace(/(HOOK|PLAN DE TOURNAGE|TEXTE EN OVERLAY|CAPTION|HASHTAGS|SON SUGGÉRÉ|TIPS DE TOURNAGE)/g,'<strong style="color:var(--cyn);">$1</strong>'),'');
+        });
+        if(!html)html=_contentCard('tiktokFull','Kit TikTok complet','🎵',data.content.replace(/\n/g,'<br>'),'');
+        results.innerHTML=html;
+        window._autoTikTokKit=data.content;
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
 }
 
 async function generateFAQContent(){
