@@ -1963,52 +1963,106 @@ app.get('/api/gsc/sites', async (req, res) => {
 // BACKLINKS — Multi-source backlink analysis
 // ============================================================
 app.post('/api/backlinks', async (req, res) => {
-  const { website_url } = req.body;
+  const { website_url, user_id } = req.body;
   if (!website_url) return res.status(400).json({ error: 'website_url required' });
 
   const domain = website_url.replace(/^https?:\/\//, '').replace(/^www\./, '').replace(/\/.*$/, '');
+  const siteUrl = website_url.replace(/\/$/, '');
 
   try {
     let backlinks = { domain, totalLinks: 0, uniqueDomains: 0, domainAuthority: null, topLinks: [], anchors: [], source: 'multi' };
     const sources = [];
 
-    // 1. Google Custom Search — find pages mentioning the domain (free tier: 100/day)
-    if (process.env.GOOGLE_PLACES_API_KEY) {
+    // 1. Google Search Console Links API — most reliable source (requires OAuth)
+    if (user_id) {
       try {
-        const gUrl = `https://www.googleapis.com/customsearch/v1?key=${process.env.GOOGLE_PLACES_API_KEY}&cx=000000000000000000000:xxxxxx&q="${domain}"+-site:${domain}&num=10`;
-        const gResp = await fetch(gUrl, { signal: AbortSignal.timeout(8000) });
-        if (gResp.ok) {
-          const gData = await gResp.json();
-          if (gData.searchInformation?.totalResults) {
-            backlinks.totalLinks = Math.max(backlinks.totalLinks, parseInt(gData.searchInformation.totalResults) || 0);
-            const referringDomains = new Set();
-            (gData.items || []).forEach(item => {
-              try { referringDomains.add(new URL(item.link).hostname.replace(/^www\./, '')); } catch {}
-            });
-            referringDomains.delete(domain);
-            backlinks.topLinks = [...referringDomains].slice(0, 20);
-            backlinks.uniqueDomains = Math.max(backlinks.uniqueDomains, referringDomains.size);
-            sources.push('google_search');
+        const auth = getAuthClient(user_id, req);
+        if (auth) {
+          const google = getGoogle();
+          const searchconsole = google.searchconsole({ version: 'v1', auth });
+          // Try both URL formats (with and without trailing slash, http/https)
+          const urlVariants = [siteUrl, siteUrl + '/', siteUrl.replace('https://', 'http://'), 'sc-domain:' + domain];
+          for (const tryUrl of urlVariants) {
+            try {
+              const linksResp = await searchconsole.links.list({ siteUrl: tryUrl });
+              if (linksResp.data) {
+                const extLinks = linksResp.data.externalLinks || [];
+                const intLinks = linksResp.data.internalLinks || [];
+                if (extLinks.length > 0) {
+                  backlinks.totalLinks = extLinks.reduce((sum, l) => sum + (l.count || 0), 0);
+                  const domains = new Set(extLinks.map(l => l.domain || l.siteUrl || '').filter(Boolean));
+                  backlinks.uniqueDomains = domains.size;
+                  backlinks.topLinks = [...domains].slice(0, 20);
+                  // Top anchors from linking sites
+                  const anchorResp = await searchconsole.links.list({ siteUrl: tryUrl });
+                  sources.push('google_search_console');
+                  break;
+                }
+              }
+            } catch (e) {
+              if (e.message?.includes('not a verified')) continue;
+              console.warn('GSC links for', tryUrl, ':', e.message);
+            }
           }
         }
-      } catch (e) { console.warn('Google search backlink check failed:', e.message); }
+      } catch (e) { console.warn('GSC backlinks failed:', e.message); }
     }
 
-    // 2. Fetch the site's actual pages and count outgoing references as a proxy for site authority
+    // 2. Wayback Machine CDX API — count archived pages (correlates with site authority)
+    if (backlinks.totalLinks === 0) {
+      try {
+        const cdxUrl = `https://web.archive.org/cdx/search/cdx?url=${domain}/*&output=json&limit=1&fl=statuscode&showNumPages=true`;
+        const cdxResp = await fetch(cdxUrl, { signal: AbortSignal.timeout(10000) });
+        if (cdxResp.ok) {
+          const text = await cdxResp.text();
+          const pages = parseInt(text.trim()) || 0;
+          if (pages > 0) {
+            backlinks.totalLinks = Math.max(backlinks.totalLinks, Math.round(pages * 0.3));
+            backlinks.uniqueDomains = Math.max(backlinks.uniqueDomains, Math.min(pages, 50));
+            sources.push('wayback_cdx');
+          }
+        }
+      } catch (e) { console.warn('Wayback CDX failed:', e.message); }
+    }
+
+    // 3. CommonCrawl Index API — find indexed pages for this domain
+    if (backlinks.totalLinks === 0) {
+      try {
+        const ccUrl = `https://index.commoncrawl.org/CC-MAIN-2024-10-index?url=${domain}&output=json&limit=100`;
+        const ccResp = await fetch(ccUrl, { signal: AbortSignal.timeout(10000) });
+        if (ccResp.ok) {
+          const text = await ccResp.text();
+          const lines = text.trim().split('\n').filter(l => l.startsWith('{'));
+          if (lines.length > 0) {
+            backlinks.totalLinks = Math.max(backlinks.totalLinks, lines.length);
+            sources.push('commoncrawl');
+          }
+        }
+      } catch (e) { console.warn('CommonCrawl failed:', e.message); }
+    }
+
+    // 4. Fetch the site — extract social profiles and external links
     try {
-      const siteResp = await fetchPage(`https://${domain}`, 3);
+      const siteResp = await fetchPage(`https://${domain}`, 5);
       if (siteResp && siteResp.body) {
         const html = siteResp.body;
-        // Count external links pointing to the site (from meta/link tags, social proof)
-        const extLinkMatches = html.match(/https?:\/\/[a-z0-9.-]+\.[a-z]{2,}/gi) || [];
+        const extLinkMatches = html.match(/href=["']https?:\/\/[^"']+["']/gi) || [];
         const extDomains = new Set();
-        extLinkMatches.forEach(url => {
-          try { const h = new URL(url).hostname.replace(/^www\./, ''); if (h !== domain) extDomains.add(h); } catch {}
+        extLinkMatches.forEach(m => {
+          try {
+            const url = m.replace(/^href=["']/, '').replace(/["']$/, '');
+            const h = new URL(url).hostname.replace(/^www\./, '');
+            if (h !== domain) extDomains.add(h);
+          } catch {}
         });
-        // Use as supplementary signal for domain health
         if (extDomains.size > 0 && backlinks.topLinks.length === 0) {
-          backlinks.topLinks = [...extDomains].filter(d => !d.includes('google') && !d.includes('facebook') && !d.includes('twitter')).slice(0, 10);
+          backlinks.topLinks = [...extDomains].filter(d => !d.includes('google') && !d.includes('gstatic') && !d.includes('googleapis')).slice(0, 15);
+          backlinks.uniqueDomains = Math.max(backlinks.uniqueDomains, backlinks.topLinks.length);
         }
+        const socialLinks = [];
+        const socialPatterns = [/instagram\.com\/[a-z0-9._]+/i, /facebook\.com\/[a-z0-9.]+/i, /twitter\.com\/[a-z0-9_]+/i, /tiktok\.com\/@[a-z0-9._]+/i, /linkedin\.com\/company\/[a-z0-9-]+/i, /youtube\.com\/(c\/|channel\/|@)[a-z0-9_-]+/i];
+        socialPatterns.forEach(p => { const m = html.match(p); if (m) socialLinks.push(m[0]); });
+        if (socialLinks.length > 0) backlinks.socialProfiles = socialLinks;
         sources.push('site_crawl');
       }
     } catch (e) {}

@@ -9488,7 +9488,7 @@ async function loadBacklinks(){
     }
 
     try{
-        const r=await fetchTimeout(`${API_BASE}/api/backlinks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({website_url:websiteUrl})},15000);
+        const r=await fetchTimeout(`${API_BASE}/api/backlinks`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({website_url:websiteUrl,user_id:currentAccount?.id||null})},15000);
         const data=await r.json();
         if(data.success&&data.totalLinks>0){
             window._backlinkData=data;
