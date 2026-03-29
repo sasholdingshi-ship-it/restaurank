@@ -5866,7 +5866,21 @@ Inclus les corrections exactes, le code à ajouter, les textes à copier.`
 };
 
 // Call Claude API
+// API Response Cache — avoid duplicate Claude calls (1h TTL)
+const _apiCache = new Map();
+const API_CACHE_TTL = 60 * 60 * 1000; // 1 hour
+function getCacheKey(prompt, maxTokens) { return crypto.createHash('md5').update(prompt + maxTokens).digest('hex'); }
+setInterval(() => { const now = Date.now(); for (const [k, v] of _apiCache) { if (now - v.ts > API_CACHE_TTL) _apiCache.delete(k); } }, 5 * 60 * 1000);
+
 async function callClaudeAPI(apiKey, prompt, maxTokens = 2000) {
+  // Check cache first
+  const cacheKey = getCacheKey(prompt, maxTokens);
+  const cached = _apiCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < API_CACHE_TTL) {
+    console.log(`[CACHE HIT] Saved ~$0.01 — ${cacheKey.substring(0, 8)}`);
+    return cached.result;
+  }
+
   const response = await fetch('https://api.anthropic.com/v1/messages', {
     method: 'POST',
     headers: {
@@ -5892,7 +5906,9 @@ async function callClaudeAPI(apiKey, prompt, maxTokens = 2000) {
     throw new Error(`Claude API error ${response.status}: ${err}`);
   }
   const data = await response.json();
-  return data.content[0].text;
+  const result = data.content[0].text;
+  _apiCache.set(cacheKey, { result, ts: Date.now() });
+  return result;
 }
 
 // Get API key from settings or env
