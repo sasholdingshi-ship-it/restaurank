@@ -451,56 +451,57 @@ async function toggleClient(id){
   } catch(e){ toast('Erreur', 'err'); }
 }
 
-// ══ AUDIT ITEMS DEFINITION (mirrored from client app) ══
+// ══ AUDIT ITEMS DEFINITION + AI TYPE MAPPING ══
+// aiType = which AI_PROMPTS template to use on server (null = no direct AI generation)
 const AUDIT_ITEMS = [
   {cat:'📊 Google Business Profile',items:[
-    {id:'gbp_cat_primary',name:'Catégorie principale GBP',tip:'Utilisez la catégorie la plus spécifique (ex: "Pizzeria" au lieu de "Restaurant")'},
-    {id:'gbp_secondary',name:'Catégories secondaires (max 9)',tip:'Ajoutez Livraison, Terrasse, Traiteur si pertinent'},
-    {id:'gbp_desc',name:'Description GBP (750 car.)',tip:'Incluez cuisine + quartier + spécialités + ambiance'},
-    {id:'gbp_photos',name:'Photos (min. 25)',tip:'Façade, intérieur, 10-15 plats, équipe. Géotaggées.'},
-    {id:'gbp_hours',name:'Horaires complets + spéciaux',tip:'7 jours + fériés + More hours'},
-    {id:'gbp_attr',name:'Attributs (terrasse, wifi…)',tip:'Cochez les ~80 attributs pertinents'},
-    {id:'gbp_posts',name:'Google Posts (fréquence)',tip:'1 post/semaine avec photo + CTA'},
-    {id:'gbp_menu',name:'Menu uploadé et structuré',tip:'Ajoutez chaque plat : nom, prix, description'},
-    {id:'gbp_booking',name:'Lien de réservation',tip:'TheFork, OpenTable ou lien direct'},
+    {id:'gbp_cat_primary',name:'Catégorie principale GBP',tip:'Utilisez la catégorie la plus spécifique',aiType:'full_audit_content'},
+    {id:'gbp_secondary',name:'Catégories secondaires (max 9)',tip:'Ajoutez Livraison, Terrasse, Traiteur',aiType:'full_audit_content'},
+    {id:'gbp_desc',name:'Description GBP (750 car.)',tip:'Cuisine + quartier + spécialités + ambiance',aiType:'gbp_description'},
+    {id:'gbp_photos',name:'Photos (min. 25)',tip:'Façade, intérieur, plats, équipe',aiType:'full_audit_content'},
+    {id:'gbp_hours',name:'Horaires complets + spéciaux',tip:'7 jours + fériés + More hours',aiType:null},
+    {id:'gbp_attr',name:'Attributs (terrasse, wifi…)',tip:'Cochez les ~80 attributs pertinents',aiType:'full_audit_content'},
+    {id:'gbp_posts',name:'Google Posts (fréquence)',tip:'1 post/semaine avec photo + CTA',aiType:'google_post'},
+    {id:'gbp_menu',name:'Menu uploadé et structuré',tip:'Nom, prix, description par plat',aiType:'full_audit_content'},
+    {id:'gbp_booking',name:'Lien de réservation',tip:'TheFork, OpenTable ou lien direct',aiType:null},
   ]},
   {cat:'⭐ Avis & E-Réputation',items:[
-    {id:'rev_rating',name:'Note moyenne Google',tip:'Objectif ≥ 4.2 pour le Local Pack'},
-    {id:'rev_count',name:'Volume d\'avis (texte)',tip:'QR code + totem NFC. +10 avis/mois'},
-    {id:'rev_recency',name:'Fraîcheur des avis',tip:'Flux régulier : 5-10 avis/mois'},
-    {id:'rev_responses',name:'Taux de réponse',tip:'100% négatifs sous 24h + 80% positifs'},
-    {id:'rev_multi',name:'Avis multi-plateformes',tip:'Google + TripAdvisor + TheFork + Yelp'},
+    {id:'rev_rating',name:'Note moyenne Google',tip:'Objectif ≥ 4.2 pour le Local Pack',aiType:'full_audit_content'},
+    {id:'rev_count',name:'Volume d\'avis (texte)',tip:'QR code + totem NFC. +10 avis/mois',aiType:'full_audit_content'},
+    {id:'rev_recency',name:'Fraîcheur des avis',tip:'Flux régulier : 5-10 avis/mois',aiType:'full_audit_content'},
+    {id:'rev_responses',name:'Taux de réponse',tip:'100% négatifs sous 24h + 80% positifs',aiType:'review_response'},
+    {id:'rev_multi',name:'Avis multi-plateformes',tip:'Google + TripAdvisor + TheFork + Yelp',aiType:'full_audit_content'},
   ]},
   {cat:'📌 Citations & NAP',items:[
-    {id:'cit_nap',name:'Cohérence NAP',tip:'Nom, Adresse, Téléphone identiques partout'},
-    {id:'cit_presence',name:'Présence annuaires clés',tip:'Yelp, Foursquare, Apple Maps, Bing, TripAdvisor'},
-    {id:'cit_completeness',name:'Complétude des fiches',tip:'Description + photos + horaires sur chaque annuaire'},
+    {id:'cit_nap',name:'Cohérence NAP',tip:'Nom, Adresse, Téléphone identiques partout',aiType:'directory_descriptions'},
+    {id:'cit_presence',name:'Présence annuaires clés',tip:'Yelp, Foursquare, Apple Maps, Bing',aiType:'directory_descriptions'},
+    {id:'cit_completeness',name:'Complétude des fiches',tip:'Description + photos + horaires',aiType:'directory_descriptions'},
   ]},
   {cat:'🌐 On-Page SEO',items:[
-    {id:'web_title',name:'Title tag optimisé',tip:'[Type] [Nom] [Ville] — max 60 car.'},
-    {id:'web_meta',name:'Meta description',tip:'155 car. avec cuisine + ville + CTA'},
-    {id:'web_h1',name:'H1 avec localité',tip:'Un seul H1 avec type + ville'},
-    {id:'web_schema',name:'Schema.org Restaurant',tip:'LocalBusiness + menu + openingHours + geo'},
-    {id:'web_mobile',name:'Mobile-friendly',tip:'Responsive + vitesse < 3s'},
-    {id:'web_speed',name:'Core Web Vitals',tip:'LCP < 2.5s, FID < 100ms, CLS < 0.1'},
-    {id:'web_ssl',name:'HTTPS',tip:'Certificat SSL valide'},
-    {id:'web_faq',name:'FAQ Schema',tip:'5-10 questions avec FAQPage schema'},
+    {id:'web_title',name:'Title tag optimisé',tip:'[Type] [Nom] [Ville] — max 60 car.',aiType:'meta_tags'},
+    {id:'web_meta',name:'Meta description',tip:'155 car. avec cuisine + ville + CTA',aiType:'meta_tags'},
+    {id:'web_h1',name:'H1 avec localité',tip:'Un seul H1 avec type + ville',aiType:'meta_tags'},
+    {id:'web_schema',name:'Schema.org Restaurant',tip:'LocalBusiness + menu + geo',aiType:'schema_org'},
+    {id:'web_mobile',name:'Mobile-friendly',tip:'Responsive + vitesse < 3s',aiType:null},
+    {id:'web_speed',name:'Core Web Vitals',tip:'LCP < 2.5s, FID < 100ms',aiType:null},
+    {id:'web_ssl',name:'HTTPS',tip:'Certificat SSL valide',aiType:null},
+    {id:'web_faq',name:'FAQ Schema',tip:'5-10 questions FAQPage',aiType:'faq_content'},
   ]},
   {cat:'🤖 GEO (IA Visibility)',items:[
-    {id:'geo_structured',name:'Données structurées pour IA',tip:'Schema.org complet pour ChatGPT/Gemini/Claude'},
-    {id:'geo_yelp',name:'Présence Yelp (48.7% ChatGPT)',tip:'Yelp = source #1 de ChatGPT'},
-    {id:'geo_tripadvisor',name:'TripAdvisor (32.8% Perplexity)',tip:'Source #1 de Perplexity'},
-    {id:'geo_uniqueness',name:'Contenu unique vs concurrents',tip:'USP claire : ce qui vous différencie'},
-    {id:'geo_freshness',name:'Fraîcheur du contenu',tip:'Mise à jour régulière du site + GBP'},
+    {id:'geo_structured',name:'Données structurées pour IA',tip:'Schema.org pour ChatGPT/Gemini/Claude',aiType:'schema_org'},
+    {id:'geo_yelp',name:'Présence Yelp (48.7% ChatGPT)',tip:'Yelp = source #1 de ChatGPT',aiType:'yelp_description'},
+    {id:'geo_tripadvisor',name:'TripAdvisor (32.8% Perplexity)',tip:'Source #1 de Perplexity',aiType:'directory_descriptions'},
+    {id:'geo_uniqueness',name:'Contenu unique vs concurrents',tip:'USP claire',aiType:'full_audit_content'},
+    {id:'geo_freshness',name:'Fraîcheur du contenu',tip:'Mise à jour régulière',aiType:'social_calendar'},
   ]},
   {cat:'🔗 Backlinks',items:[
-    {id:'bl_local',name:'Liens locaux (mairie, presse)',tip:'Annuaires locaux, blogs food, presse régionale'},
-    {id:'bl_food',name:'Blogs food & média',tip:'Collaborations blogueurs + articles'},
+    {id:'bl_local',name:'Liens locaux (mairie, presse)',tip:'Annuaires locaux, blogs food',aiType:'full_audit_content'},
+    {id:'bl_food',name:'Blogs food & média',tip:'Collaborations blogueurs',aiType:'full_audit_content'},
   ]},
   {cat:'📱 Social & CMS',items:[
-    {id:'soc_facebook',name:'Page Facebook active',tip:'3+ posts/semaine avec photos'},
-    {id:'soc_instagram',name:'Compte Instagram',tip:'Feed esthétique, Stories régulières'},
-    {id:'soc_website',name:'Site web avec CMS',tip:'WordPress, Webflow, Squarespace optimisé'},
+    {id:'soc_facebook',name:'Page Facebook active',tip:'3+ posts/semaine',aiType:'social_calendar'},
+    {id:'soc_instagram',name:'Compte Instagram',tip:'Feed esthétique, Stories',aiType:'social_calendar'},
+    {id:'soc_website',name:'Site web avec CMS',tip:'WordPress, Webflow optimisé',aiType:'meta_tags'},
   ]},
 ];
 
@@ -517,6 +518,13 @@ async function openClientDetail(id){
     const rests = await restR.json();
     const rList = Array.isArray(rests) ? rests : rests.restaurants || [];
     const conn = await connR.json();
+
+    // Merge into allRestaurants so AI context works
+    rList.forEach(r => {
+      const existing = allRestaurants.findIndex(x => x.id === r.id);
+      if (existing >= 0) allRestaurants[existing] = {...allRestaurants[existing], ...r};
+      else allRestaurants.push(r);
+    });
 
     const avgSeo = Math.round(rList.reduce((s,r)=>{const sc=tryParse(r.scores);return s+(sc.seo||0);},0)/Math.max(1,rList.length));
     const avgGeo = Math.round(rList.reduce((s,r)=>{const sc=tryParse(r.scores);return s+(sc.geo||0);},0)/Math.max(1,rList.length));
@@ -557,12 +565,17 @@ async function openClientDetail(id){
           const icon = status==='ok'?'✅':status==='warn'?'⚠️':status==='err'?'❌':'⬜';
           const color = status==='ok'?'var(--grn)':status==='warn'?'var(--org)':status==='err'?'var(--red)':'var(--mut)';
           const isDone = completed[item.id];
-          return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-bottom:1px solid var(--bdr);font-size:.73rem;">
+          const aiBtn = item.aiType ? `<button class="action-btn" onclick="event.stopPropagation();aiGenerate('${item.id}','${item.aiType}',${r.id})" id="ai-btn-${r.id}-${item.id}" style="font-size:.6rem;padding:2px 6px;white-space:nowrap;">🤖 IA</button>` : '';
+          return `<div style="display:flex;align-items:center;gap:6px;padding:5px 8px;border-bottom:1px solid var(--bdr);font-size:.73rem;">
             <span style="width:22px;text-align:center;">${icon}</span>
             <span style="flex:1;${isDone?'text-decoration:line-through;opacity:.5;':''}">${esc(item.name)}</span>
             <span style="color:${color};font-weight:700;width:30px;text-align:right;">${score}/10</span>
-            <details style="margin-left:4px;cursor:pointer;"><summary style="font-size:.65rem;color:var(--ind);">Prompt</summary>
-              <div style="padding:6px 0;font-size:.7rem;color:var(--mut);max-width:400px;">💡 ${esc(item.tip)}</div>
+            ${aiBtn}
+            <details style="cursor:pointer;"><summary style="font-size:.62rem;color:var(--ind);">▾</summary>
+              <div style="padding:6px 0;font-size:.7rem;color:var(--mut);max-width:500px;">
+                <div>💡 ${esc(item.tip)}</div>
+                <div id="ai-result-${r.id}-${item.id}" style="margin-top:6px;display:none;background:var(--s2);padding:8px;border-radius:6px;border:1px solid var(--bdr);white-space:pre-wrap;font-size:.68rem;max-height:300px;overflow-y:auto;"></div>
+              </div>
             </details>
           </div>`;
         }).join('');
@@ -620,6 +633,7 @@ async function openClientDetail(id){
         <div style="display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--bdr);">
           <button class="rest-tab active" onclick="switchRestTab(this,'audit-${r.id}')" style="padding:5px 12px;background:none;border:none;color:var(--ind);font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;border-bottom:2px solid var(--ind);margin-bottom:-1px;">📊 Audit (${Object.values(itemScores).filter(i=>i.status==='ok').length}/${Object.keys(itemScores).length})</button>
           <button class="rest-tab" onclick="switchRestTab(this,'hub-${r.id}')" style="padding:5px 12px;background:none;border:none;color:var(--mut);font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;">🏠 Hub Central</button>
+          <button class="rest-tab" onclick="switchRestTab(this,'ai-${r.id}')" style="padding:5px 12px;background:none;border:none;color:var(--mut);font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;">🤖 IA Contenu</button>
         </div>
 
         <!-- AUDIT panel -->
@@ -629,10 +643,31 @@ async function openClientDetail(id){
 
         <!-- HUB panel -->
         <div id="hub-${r.id}" class="rest-panel" style="display:none;">
+          <div style="display:flex;gap:8px;margin-bottom:10px;">
+            <button class="action-btn grn" onclick="saveHub(${r.id})">💾 Sauvegarder</button>
+            <button class="action-btn" id="ai-hub-btn-${r.id}" onclick="aiGenerateHub(${r.id},'${esc(r.name||'')}','${esc(r.city||'')}')">🤖 Remplir via IA</button>
+          </div>
           <div style="max-height:400px;overflow-y:auto;padding-right:4px;">
             ${hubHtml}
           </div>
-          <button class="action-btn grn" style="margin-top:10px;" onclick="saveHub(${r.id})">💾 Sauvegarder Hub Central</button>
+        </div>
+
+        <!-- AI CONTENT panel -->
+        <div id="ai-${r.id}" class="rest-panel" style="display:none;">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">
+            <button class="action-btn" id="ai-all-btn-${r.id}" onclick="aiBulkGenerate(${r.id},'${esc(r.name||'')}','${esc(r.city||'')}')">🤖 Tout Générer (6 types)</button>
+            <button class="action-btn" onclick="aiGenerate('gbp_desc','gbp_description',${r.id})">📝 Description GBP</button>
+            <button class="action-btn" onclick="aiGenerate('meta','meta_tags',${r.id})">🏷️ Meta Tags</button>
+            <button class="action-btn" onclick="aiGenerate('faq','faq_content',${r.id})">❓ FAQ</button>
+            <button class="action-btn" onclick="aiGenerate('schema','schema_org',${r.id})">🔧 Schema.org</button>
+            <button class="action-btn" onclick="aiGenerate('social','social_calendar',${r.id})">📅 Calendrier Social</button>
+            <button class="action-btn" onclick="aiGenerate('dirs','directory_descriptions',${r.id})">📋 Descriptions Annuaires</button>
+            <button class="action-btn" onclick="aiGenerate('post','google_post',${r.id})">📢 Google Post</button>
+            <button class="action-btn" onclick="aiGenerate('yelp','yelp_description',${r.id})">⭐ Description Yelp</button>
+          </div>
+          <div id="ai-panel-${r.id}" style="max-height:500px;overflow-y:auto;">
+            <div class="empty" style="padding:20px;">Cliquez sur un bouton pour générer du contenu via Claude AI</div>
+          </div>
         </div>
 
         <div style="font-size:.65rem;color:var(--mut);margin-top:8px;">Dernier audit : ${r.last_audit?new Date(r.last_audit).toLocaleDateString('fr-FR'):'Aucun'}</div>
@@ -685,6 +720,191 @@ function switchRestTab(btn, panelId){
   btn.style.color='var(--ind)';btn.style.borderBottomColor='var(--ind)';
   parent.querySelectorAll('.rest-panel').forEach(p=>p.style.display='none');
   document.getElementById(panelId).style.display='block';
+}
+
+// ══ AI GENERATION ══
+// Get restaurant context for AI prompts
+function getRestContext(restaurantId) {
+  const r = allRestaurants.find(x => x.id === restaurantId);
+  if (!r) return {name:'Restaurant',city:'Paris'};
+  const hub = tryParse(r.hub_data);
+  const audit = tryParse(r.audit_data);
+  return {
+    name: r.name || hub.name || 'Restaurant',
+    city: r.city || hub.city || '',
+    cuisine: hub.cuisine || audit.cuisine || '',
+    specialties: hub.specialties || '',
+    ambiance: hub.ambiance || '',
+    phone: hub.phone || audit.phone || '',
+    website: hub.website || audit.websiteUrl || '',
+    address: hub.address || audit.address || '',
+    hours: hub.hours || '',
+    priceRange: hub.priceRange || '€€',
+    rating: audit.rating || hub.rating || '',
+    reviewCount: audit.reviewCount || hub.reviewCount || '',
+    services: hub.services || 'Sur place, à emporter',
+    restaurant_id: restaurantId
+  };
+}
+
+// Single item AI generation
+async function aiGenerate(itemId, aiType, restaurantId) {
+  const btn = document.getElementById(`ai-btn-${restaurantId}-${itemId}`);
+  const resultEl = document.getElementById(`ai-result-${restaurantId}-${itemId}`);
+  const panelEl = document.getElementById(`ai-panel-${restaurantId}`);
+
+  // Update button state
+  if (btn) { btn.disabled = true; btn.textContent = '⏳…'; }
+
+  const ctx = getRestContext(restaurantId);
+  try {
+    const r = await fetch(`${API}/api/ai/generate`, {
+      method: 'POST', headers: hdrs(),
+      body: JSON.stringify({ type: aiType, context: ctx, restaurant_id: restaurantId })
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || d.message || 'Erreur IA');
+
+    const content = typeof d.result === 'object' ? JSON.stringify(d.result, null, 2) : d.result;
+
+    // Show in item details if exists
+    if (resultEl) {
+      resultEl.style.display = 'block';
+      resultEl.textContent = content;
+      // Open the parent details
+      const details = resultEl.closest('details');
+      if (details) details.open = true;
+    }
+
+    // Also show in AI panel if exists
+    if (panelEl) {
+      const existing = panelEl.querySelector('.empty');
+      if (existing) existing.remove();
+      const block = document.createElement('div');
+      block.style.cssText = 'background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:10px;';
+      block.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <strong style="font-size:.75rem;color:var(--ind);">🤖 ${esc(aiType)} — ${esc(ctx.name)}</strong>
+          <button class="action-btn" onclick="copyToClipboard(this.parentElement.nextElementSibling.textContent)" style="font-size:.6rem;">📋 Copier</button>
+        </div>
+        <pre style="white-space:pre-wrap;font-size:.7rem;color:var(--txt);max-height:300px;overflow-y:auto;margin:0;">${esc(content)}</pre>
+      `;
+      panelEl.prepend(block);
+    }
+
+    toast(`✅ ${aiType} généré pour ${ctx.name}`, 'ok');
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 IA'; }
+  } catch(e) {
+    toast('❌ ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 IA'; }
+  }
+}
+
+// Bulk generate ALL content types for a restaurant
+async function aiBulkGenerate(restaurantId, name, city) {
+  const btn = document.getElementById(`ai-all-btn-${restaurantId}`);
+  const panelEl = document.getElementById(`ai-panel-${restaurantId}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Génération en cours…'; }
+
+  const ctx = getRestContext(restaurantId);
+  try {
+    const r = await fetch(`${API}/api/ai/bulk-generate`, {
+      method: 'POST', headers: hdrs(),
+      body: JSON.stringify({ restaurant_id: restaurantId, context: ctx })
+    });
+    const d = await r.json();
+    if (!d.success) throw new Error(d.error || 'Erreur IA');
+
+    // Display all results
+    if (panelEl) {
+      panelEl.innerHTML = '';
+      const typeLabels = {
+        gbp_description: '📝 Description GBP',
+        meta_tags: '🏷️ Meta Tags SEO',
+        faq_content: '❓ FAQ (10 Q&A)',
+        schema_org: '🔧 Schema.org JSON-LD',
+        directory_descriptions: '📋 Descriptions Annuaires',
+        social_calendar: '📅 Calendrier Social (7 jours)'
+      };
+      for (const [type, result] of Object.entries(d.results || {})) {
+        const content = typeof result === 'object' ? JSON.stringify(result, null, 2) : result;
+        const block = document.createElement('div');
+        block.style.cssText = 'background:var(--s2);border:1px solid var(--bdr);border-radius:8px;padding:12px;margin-bottom:10px;';
+        block.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <strong style="font-size:.78rem;color:var(--ind);">${typeLabels[type] || type}</strong>
+            <button class="action-btn" onclick="copyToClipboard(this.parentElement.nextElementSibling.textContent)" style="font-size:.6rem;">📋 Copier</button>
+          </div>
+          <pre style="white-space:pre-wrap;font-size:.7rem;color:var(--txt);max-height:250px;overflow-y:auto;margin:0;">${esc(content)}</pre>
+        `;
+        panelEl.appendChild(block);
+      }
+    }
+
+    toast(`✅ 6 contenus générés pour ${name}`, 'ok');
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Tout Générer (6 types)'; }
+  } catch(e) {
+    toast('❌ ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Tout Générer (6 types)'; }
+  }
+}
+
+// AI generate Hub Central data
+async function aiGenerateHub(restaurantId, name, city) {
+  const btn = document.getElementById(`ai-hub-btn-${restaurantId}`);
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ IA en cours…'; }
+
+  try {
+    // Generate description via AI
+    const ctx = getRestContext(restaurantId);
+    const r = await fetch(`${API}/api/ai/generate`, {
+      method: 'POST', headers: hdrs(),
+      body: JSON.stringify({
+        type: 'gbp_description',
+        context: { ...ctx, name, city },
+        restaurant_id: restaurantId
+      })
+    });
+    const d = await r.json();
+    if (d.success && d.result) {
+      // Fill the description field
+      const descField = document.querySelector(`.hub-field[data-rid="${restaurantId}"][data-key="description"]`);
+      if (descField) descField.value = d.result;
+    }
+
+    // Generate FAQ for specialties insight
+    const r2 = await fetch(`${API}/api/ai/generate`, {
+      method: 'POST', headers: hdrs(),
+      body: JSON.stringify({
+        type: 'full_audit_content',
+        context: { ...ctx, name, city, issues: 'description manquante, spécialités inconnues' },
+        restaurant_id: restaurantId
+      })
+    });
+    const d2 = await r2.json();
+    if (d2.success && d2.result) {
+      // Try to extract specialties/ambiance from AI response
+      const result = typeof d2.result === 'object' ? d2.result : {};
+      if (result.specialties) {
+        const f = document.querySelector(`.hub-field[data-rid="${restaurantId}"][data-key="specialties"]`);
+        if (f && !f.value) f.value = result.specialties;
+      }
+      if (result.ambiance) {
+        const f = document.querySelector(`.hub-field[data-rid="${restaurantId}"][data-key="ambiance"]`);
+        if (f && !f.value) f.value = result.ambiance;
+      }
+    }
+
+    toast('🤖 Hub rempli via IA — vérifiez et sauvegardez', 'ok');
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Remplir via IA'; }
+  } catch(e) {
+    toast('❌ ' + e.message, 'err');
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Remplir via IA'; }
+  }
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => toast('📋 Copié !', 'ok'));
 }
 
 async function saveHub(restaurantId){
