@@ -421,41 +421,33 @@ const PORT = process.env.PORT || 8765;
 // ============================================================
 const db = createDB();
 
-// PostgreSQL: init tables using native PG SQL (not converted SQLite)
-if (db._isPostgres) {
-  try {
-    const initSQL = require('fs').readFileSync(require('path').join(__dirname, 'init-db.sql'), 'utf8');
-    // Split by semicolons, filter comments, execute each via deasync (truly sync)
-    const stmts = initSQL.split(';').map(s => s.trim()).filter(s => s.length > 0 && !s.startsWith('--'));
-    let pgInitOk = 0;
-    for (const stmt of stmts) {
-      try {
-        // Use prepare().run() which goes through deasync — truly synchronous
-        db.prepare(stmt).run();
-        pgInitOk++;
-      } catch(e) {
-        // Ignore "already exists" — that's fine
-        if (!e.message?.includes('already exists') && !e.message?.includes('duplicate'))
-          console.warn('PG init:', e.message?.substring(0, 80));
-      }
+// PostgreSQL: skip SQLite table creation below (handled by db.exec conversion)
+// But FIRST ensure all required columns exist via direct pool queries
+if (db._isPostgres && db._pool) {
+  const loopWhile = require('deasync').loopWhile;
+  const alters = [
+    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS salt TEXT',
+    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT',
+    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT',
+    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0',
+    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS verification_token TEXT',
+    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reset_token TEXT',
+    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP',
+    'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS hub_data TEXT',
+    'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_id INTEGER',
+    'ALTER TABLE users ADD COLUMN IF NOT EXISTS social_tokens TEXT DEFAULT \'{}\'',
+    'CREATE TABLE IF NOT EXISTS data_quality_log (id SERIAL PRIMARY KEY, restaurant_id INTEGER NOT NULL, field TEXT NOT NULL, status TEXT DEFAULT \'error\', message TEXT, old_value TEXT, new_value TEXT, source TEXT, auto_fixed INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())',
+    'CREATE TABLE IF NOT EXISTS sync_history (id SERIAL PRIMARY KEY, restaurant_id INTEGER, sync_type TEXT NOT NULL, status TEXT DEFAULT \'pending\', details TEXT, started_at TIMESTAMP DEFAULT NOW(), finished_at TIMESTAMP)',
+  ];
+  let altersDone = false;
+  (async () => {
+    for (const sql of alters) {
+      try { await db._pool.query(sql); } catch(e) {}
     }
-    console.log(`🐘 PostgreSQL: ${pgInitOk} init statements OK`);
-    // Add columns missing from init-db.sql but needed by server.js
-    const alters = [
-      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS salt TEXT',
-      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT',
-      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT',
-      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0',
-      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS verification_token TEXT',
-      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reset_token TEXT',
-      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP',
-      'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS hub_data TEXT',
-      'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_id INTEGER',
-      'ALTER TABLE users ADD COLUMN IF NOT EXISTS social_tokens TEXT DEFAULT \'{}\'',
-    ];
-    for (const sql of alters) { try { db.prepare(sql).run(); } catch(e) {} }
-    console.log('🐘 PostgreSQL columns synced');
-  } catch(e) { console.warn('PG init error:', e.message); }
+    altersDone = true;
+  })();
+  loopWhile(() => !altersDone);
+  console.log('🐘 PostgreSQL columns synced');
 }
 
 db.exec(`
