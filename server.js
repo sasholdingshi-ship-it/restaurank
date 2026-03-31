@@ -5538,14 +5538,178 @@ app.post('/api/scrape-gmb', async (req, res) => {
           }
         }
 
+        // ═══════════════════════════════════════════
+        // ENHANCED: Logo detection
+        // ═══════════════════════════════════════════
+        result.branding = result.branding || {};
+
+        // Favicon
+        const faviconMatch = siteHtml.match(/<link[^>]*rel=["'](?:icon|shortcut icon|apple-touch-icon)["'][^>]*href=["']([^"']+)["']/i);
+        if (faviconMatch) {
+          let favUrl = faviconMatch[1];
+          if (favUrl.startsWith('//')) favUrl = 'https:' + favUrl;
+          else if (favUrl.startsWith('/')) favUrl = new URL(favUrl, normalized).href;
+          result.branding.favicon = favUrl;
+        }
+
+        // og:image (often the logo or main brand image)
+        const ogImage = siteHtml.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+        if (ogImage) result.branding.ogImage = ogImage[1];
+
+        // Logo from <img> tags with "logo" in src, alt, or class
+        const logoImgMatch = siteHtml.match(/<img[^>]*(?:class=["'][^"']*logo[^"']*["']|alt=["'][^"']*logo[^"']*["']|src=["'][^"']*logo[^"']*["'])[^>]*src=["']([^"']+)["']/i)
+          || siteHtml.match(/<img[^>]*src=["']([^"']*logo[^"']+)["']/i);
+        if (logoImgMatch) {
+          let logoUrl = logoImgMatch[1];
+          if (logoUrl.startsWith('//')) logoUrl = 'https:' + logoUrl;
+          else if (logoUrl.startsWith('/')) logoUrl = new URL(logoUrl, normalized).href;
+          result.branding.logo = logoUrl;
+        }
+
+        // SVG logo in <header> or <nav>
+        if (!result.branding.logo) {
+          const svgLogo = siteHtml.match(/<(?:header|nav)[^>]*>[\s\S]{0,3000}?<(?:img|svg)[^>]*(?:logo|brand)[^>]*(?:src=["']([^"']+)["'])?/i);
+          if (svgLogo && svgLogo[1]) {
+            let svgUrl = svgLogo[1];
+            if (svgUrl.startsWith('/')) svgUrl = new URL(svgUrl, normalized).href;
+            result.branding.logo = svgUrl;
+          }
+        }
+
+        // ═══════════════════════════════════════════
+        // ENHANCED: Color extraction
+        // ═══════════════════════════════════════════
+        const colors = new Set();
+
+        // theme-color meta
+        const themeColor = siteHtml.match(/<meta[^>]*name=["']theme-color["'][^>]*content=["']([^"']+)["']/i);
+        if (themeColor) colors.add(themeColor[1]);
+
+        // CSS variables (--primary, --brand, --accent, etc.)
+        const cssVarMatches = siteHtml.matchAll(/--(?:primary|brand|accent|main|theme|color-primary)[^:]*:\s*([#][0-9a-fA-F]{3,8}|rgb[a]?\([^)]+\))/gi);
+        for (const m of cssVarMatches) colors.add(m[1]);
+
+        // Inline style backgrounds and colors (most common hex colors)
+        const hexMatches = siteHtml.matchAll(/(?:background(?:-color)?|color)\s*:\s*(#[0-9a-fA-F]{3,8})/gi);
+        const hexCount = {};
+        for (const m of hexMatches) {
+          const c = m[1].toLowerCase();
+          if (!['#fff','#ffffff','#000','#000000','#333','#333333','#666','#999','#ccc','#eee','#f5f5f5','#fafafa','#e5e7eb','#f3f4f6'].includes(c)) {
+            hexCount[c] = (hexCount[c] || 0) + 1;
+          }
+        }
+        // Top 5 most frequent brand colors
+        const topColors = Object.entries(hexCount).sort((a,b) => b[1] - a[1]).slice(0, 5).map(e => e[0]);
+        topColors.forEach(c => colors.add(c));
+
+        result.branding.colors = [...colors].slice(0, 8);
+
+        // ═══════════════════════════════════════════
+        // ENHANCED: Font detection
+        // ═══════════════════════════════════════════
+        const fonts = new Set();
+
+        // Google Fonts link
+        const googleFontsMatch = siteHtml.matchAll(/fonts\.googleapis\.com\/css2?\?family=([^"'&]+)/gi);
+        for (const m of googleFontsMatch) {
+          decodeURIComponent(m[1]).split('|').forEach(f => fonts.add(f.split(':')[0].replace(/\+/g, ' ')));
+        }
+
+        // font-family in CSS
+        const fontFamilyMatches = siteHtml.matchAll(/font-family\s*:\s*["']?([^;"'}]+)/gi);
+        for (const m of fontFamilyMatches) {
+          const fam = m[1].split(',')[0].trim().replace(/["']/g, '');
+          if (!['inherit','sans-serif','serif','monospace','system-ui','-apple-system','Arial','Helvetica','Times New Roman','Georgia','Courier'].includes(fam) && fam.length > 1 && fam.length < 40) {
+            fonts.add(fam);
+          }
+        }
+
+        // @font-face
+        const fontFaceMatches = siteHtml.matchAll(/@font-face\s*\{[^}]*font-family\s*:\s*["']?([^;"'}]+)/gi);
+        for (const m of fontFaceMatches) fonts.add(m[1].trim().replace(/["']/g, ''));
+
+        result.branding.fonts = [...fonts].slice(0, 6);
+
+        // ═══════════════════════════════════════════
+        // ENHANCED: Domain Authority (estimate or Moz)
+        // ═══════════════════════════════════════════
+        try {
+          if (process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) {
+            const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('base64');
+            const mozResp = await fetch('https://lsapi.seomoz.com/v2/url_metrics', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${mozAuth}` },
+              body: JSON.stringify({ targets: [normalized] }), signal: AbortSignal.timeout(8000)
+            });
+            const mozData = await mozResp.json();
+            if (mozData.results?.[0]) {
+              result.branding.domainAuthority = mozData.results[0].domain_authority || null;
+              result.branding.pageAuthority = mozData.results[0].page_authority || null;
+              result.branding.backlinks = mozData.results[0].external_pages_to_root_domain || null;
+            }
+          } else {
+            // Heuristic DA estimate based on available signals
+            let daEstimate = 10;
+            if (result.reviewCount > 200) daEstimate += 10;
+            else if (result.reviewCount > 50) daEstimate += 5;
+            if (result.rating >= 4.5) daEstimate += 5;
+            if (siteHtml.length > 30000) daEstimate += 5; // rich content
+            if (/schema\.org/i.test(siteHtml)) daEstimate += 5;
+            if (/<meta[^>]*property=["']og:/i.test(siteHtml)) daEstimate += 3;
+            if (/sitemap/i.test(siteHtml)) daEstimate += 2;
+            result.branding.domainAuthority = Math.min(daEstimate, 50);
+            result.branding.daSource = 'estimate';
+          }
+        } catch (e) { console.warn('DA estimation error:', e.message); }
+
         result.websiteUrl = normalized;
       } catch (e) {
         console.warn('Website scrape complement error:', e.message);
       }
     }
 
-    // Deduplicate photos + cap at 50
-    result.photos = [...new Set(result.photos)].slice(0, 50);
+    // ═══════════════════════════════════════════
+    // ENHANCED: Instagram photos scraping
+    // ═══════════════════════════════════════════
+    const igUrl = result.instagram || req.body.instagram_url;
+    if (igUrl) {
+      try {
+        const igHtml = await fetchPage(igUrl);
+        // Extract shared_data or meta images
+        const igImages = [];
+        const igOgMatch = igHtml.matchAll(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/gi);
+        for (const m of igOgMatch) igImages.push(m[1]);
+        // From scripts with image data
+        const igImgMatches = igHtml.matchAll(/"display_url"\s*:\s*"([^"]+)"/gi);
+        for (const m of igImgMatches) igImages.push(m[1].replace(/\\u0026/g, '&'));
+        if (igImages.length > 0) {
+          result.instagramPhotos = [...new Set(igImages)].slice(0, 30);
+        }
+      } catch (e) { console.warn('Instagram scrape error:', e.message); }
+    }
+
+    // Get ALL GMB photos (Google Places returns max 10 per detail call — use photo references)
+    if (placesKey && result.place_id) {
+      try {
+        // Places API already gave us photos, expand to full list
+        const photoFields = 'photos';
+        const pResp = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${result.place_id}&fields=${photoFields}&key=${placesKey}`, { signal: AbortSignal.timeout(8000) });
+        const pData = await pResp.json();
+        if (pData.status === 'OK' && pData.result?.photos) {
+          const gmbPhotos = pData.result.photos.map(p => ({
+            url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`,
+            width: p.width,
+            height: p.height,
+            attributions: p.html_attributions || [],
+            source: 'gmb'
+          }));
+          result.gmbPhotos = gmbPhotos; // Full list with metadata
+          result.gmbPhotoCount = pData.result.photos.length;
+        }
+      } catch (e) {}
+    }
+
+    // Deduplicate photos + cap at 100 (increased from 50)
+    result.photos = [...new Set(result.photos)].slice(0, 100);
 
     // Fallback category
     if (!result.category) result.category = 'Restaurant';

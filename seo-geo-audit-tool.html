@@ -1818,6 +1818,39 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                         <input type="text" id="hubOrder" class="hub-input" placeholder="https://ubereats.com/... ou https://...">
                     </div>
                 </div>
+
+                <!-- BRANDING SECTION -->
+                <div style="margin-top:16px;border-top:1px solid var(--bdr);padding-top:16px;">
+                    <div style="font-weight:800;font-size:.85rem;margin-bottom:10px;">🎨 Identité visuelle (scrapée automatiquement)</div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                        <div class="hub-field">
+                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🖼️ Logo (URL)</label>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <input type="text" id="hubLogo2" class="hub-input" style="flex:1;" placeholder="Détecté automatiquement...">
+                                <div id="hubLogoPreview" style="width:40px;height:40px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;"><span style="font-size:.6rem;color:var(--mut);">Logo</span></div>
+                            </div>
+                        </div>
+                        <div class="hub-field">
+                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📊 Domain Authority (DA)</label>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <input type="text" id="hubDA" class="hub-input" style="flex:1;" placeholder="Score DA..." readonly>
+                                <div id="hubDABadge" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:800;background:var(--s2);color:var(--mut);">—</div>
+                            </div>
+                        </div>
+                        <div class="hub-field" style="grid-column:1/-1;">
+                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🎨 Couleurs du site</label>
+                            <div id="hubColors" style="display:flex;gap:6px;flex-wrap:wrap;min-height:32px;align-items:center;">
+                                <span style="color:var(--mut);font-size:.7rem;">Pas encore scrapé</span>
+                            </div>
+                        </div>
+                        <div class="hub-field" style="grid-column:1/-1;">
+                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">✏️ Polices du site</label>
+                            <div id="hubFonts" style="display:flex;gap:6px;flex-wrap:wrap;min-height:28px;align-items:center;">
+                                <span style="color:var(--mut);font-size:.7rem;">Pas encore scrapé</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
                     <button class="btn-gen" style="background:linear-gradient(135deg,var(--grn),#059669);color:#fff;font-size:.78rem;padding:10px 16px;" onclick="saveHubData()">💾 Sauvegarder</button>
                     <button class="btn-gen" style="font-size:.78rem;padding:10px 16px;" onclick="pushHubToAll()">🚀 Pousser sur tous les annuaires</button>
@@ -8951,11 +8984,35 @@ async function scrapeHubData(){
             // Store photos
             if(data.data.photos?.length){
                 hubPhotos=data.data.photos.map((url,i)=>({url,source:url.includes('googleusercontent')?'gmb':'website',type:'autre',selected:false,id:'p'+i}));
+                // Add GMB photos with metadata if available
+                if(data.data.gmbPhotos?.length){
+                    data.data.gmbPhotos.forEach((p,i)=>{
+                        if(!hubPhotos.find(hp=>hp.url===p.url)){
+                            hubPhotos.push({url:p.url,source:'gmb',type:'autre',selected:false,id:'gmb'+i,width:p.width,height:p.height});
+                        }
+                    });
+                }
+                // Add Instagram photos if available
+                if(data.data.instagramPhotos?.length){
+                    data.data.instagramPhotos.forEach((url,i)=>{
+                        hubPhotos.push({url,source:'instagram',type:'autre',selected:false,id:'ig'+i});
+                    });
+                }
                 renderHubPhotos();
             }
-            if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✅ Données récupérées ! ${data.data.photos?.length||0} photos trouvées`;}
+            // Populate branding fields (logo, colors, fonts, DA)
+            populateHub(); // this now handles branding fields too
+            const br=data.data.branding||{};
+            const extras=[];
+            if(br.logo)extras.push('logo');
+            if(br.colors?.length)extras.push(br.colors.length+' couleurs');
+            if(br.fonts?.length)extras.push(br.fonts.length+' polices');
+            if(br.domainAuthority)extras.push('DA '+br.domainAuthority);
+            if(data.data.gmbPhotoCount)extras.push(data.data.gmbPhotoCount+' photos GMB');
+            if(data.data.instagramPhotos?.length)extras.push(data.data.instagramPhotos.length+' photos IG');
+            if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✅ Données récupérées ! ${data.data.photos?.length||0} photos${extras.length?' + '+extras.join(', '):''}`;}
             renderHubSources();
-            addToLog(`📥 Hub: données scrappées — ${data.data.photos?.length||0} photos, tel: ${data.data.phone||'non trouvé'}`);
+            addToLog(`📥 Hub: scrappé — ${data.data.photos?.length||0} photos, tel: ${data.data.phone||'—'}${extras.length?', '+extras.join(', '):''}`);
         }
     }catch(e){
         if(status){status.style.background='rgba(239,68,68,.1)';status.style.color='var(--red)';status.textContent='❌ Erreur: '+e.message;}
@@ -9031,6 +9088,15 @@ function saveHubData(){
         reservation_url:document.getElementById('hubReservation')?.value||'',
         order_url:document.getElementById('hubOrder')?.value||'',
         photos:hubPhotos.filter(p=>p.selected).map(p=>p.url),
+        branding:{
+            logo:document.getElementById('hubLogo2')?.value||document.getElementById('hubLogo')?.value||'',
+            colors:window._hubData?.branding?.colors||[],
+            fonts:window._hubData?.branding?.fonts||[],
+            domainAuthority:window._hubData?.branding?.domainAuthority||null,
+            daSource:window._hubData?.branding?.daSource||null,
+            favicon:window._hubData?.branding?.favicon||'',
+            ogImage:window._hubData?.branding?.ogImage||'',
+        },
         savedAt:new Date().toISOString()
     };
     // Update global _hubData so saveAllData() picks it up
@@ -9252,6 +9318,46 @@ function populateHub(){
         if(hd.hours&&!document.getElementById('hubHours').value)document.getElementById('hubHours').value=typeof hd.hours==='string'?hd.hours:JSON.stringify(hd.hours);
         if(hd.photos?.length&&!hubPhotos.length){
             hubPhotos=hd.photos.map((url,i)=>({url,source:url.includes('googleusercontent')?'gmb':'website',type:'autre',selected:false,id:'p'+i}));
+        }
+
+        // Branding: Logo
+        const branding=hd.branding||{};
+        const logoEl=document.getElementById('hubLogo2');
+        const logoPreview=document.getElementById('hubLogoPreview');
+        const logoUrl=branding.logo||branding.ogImage||branding.favicon||hd.logo||'';
+        if(logoEl&&logoUrl&&!logoEl.value){
+            logoEl.value=logoUrl;
+            if(logoPreview)logoPreview.innerHTML=`<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<span style=\\'font-size:.6rem;color:var(--mut);\\'>❌</span>'">`;
+        }
+        // Also update old hubLogo field
+        const oldLogo=document.getElementById('hubLogo');
+        if(oldLogo&&logoUrl&&!oldLogo.value)oldLogo.value=logoUrl;
+
+        // Branding: Domain Authority
+        const daEl=document.getElementById('hubDA');
+        const daBadge=document.getElementById('hubDABadge');
+        const da=branding.domainAuthority||hd.domainAuthority||null;
+        if(daEl&&da!==null){
+            daEl.value=da+(branding.daSource==='estimate'?' (estimé)':' (Moz)');
+            if(daBadge){
+                daBadge.textContent='DA '+da;
+                daBadge.style.background=da>=40?'rgba(16,185,129,.15)':da>=20?'rgba(245,158,11,.15)':'rgba(239,68,68,.15)';
+                daBadge.style.color=da>=40?'var(--grn)':da>=20?'var(--org)':'var(--red)';
+            }
+        }
+
+        // Branding: Colors
+        const colorsEl=document.getElementById('hubColors');
+        const siteColors=branding.colors||hd.colors||[];
+        if(colorsEl&&siteColors.length>0){
+            colorsEl.innerHTML=siteColors.map(c=>`<div style="display:flex;align-items:center;gap:4px;background:var(--s2);padding:3px 8px;border-radius:6px;border:1px solid var(--bdr);cursor:pointer;" onclick="navigator.clipboard.writeText('${c}');addToLog('📋 Couleur ${c} copiée');" title="Cliquer pour copier"><div style="width:18px;height:18px;border-radius:4px;background:${c};border:1px solid rgba(255,255,255,.15);"></div><span style="font-size:.68rem;font-family:monospace;color:var(--txt);">${c}</span></div>`).join('');
+        }
+
+        // Branding: Fonts
+        const fontsEl=document.getElementById('hubFonts');
+        const siteFonts=branding.fonts||hd.fonts||[];
+        if(fontsEl&&siteFonts.length>0){
+            fontsEl.innerHTML=siteFonts.map(f=>`<span style="background:var(--s2);padding:3px 10px;border-radius:6px;border:1px solid var(--bdr);font-size:.72rem;color:var(--txt);font-family:'${f}',sans-serif;">${f}</span>`).join('');
         }
     }
     const dc=document.getElementById('hubDescCount');

@@ -586,13 +586,14 @@ async function openClientDetail(id){
       }).join('');
 
       // Hub Central data
+      const branding = hub.branding || {};
       const hubFields = [
         {key:'name',label:'Nom du restaurant',val:hub.name||r.name||''},
         {key:'address',label:'Adresse complète',val:hub.address||''},
         {key:'phone',label:'Téléphone',val:hub.phone||''},
         {key:'email',label:'Email',val:hub.email||''},
-        {key:'website',label:'Site web',val:hub.website||''},
-        {key:'cuisine',label:'Type de cuisine',val:hub.cuisine||''},
+        {key:'website',label:'Site web',val:hub.website||hub.websiteUrl||''},
+        {key:'cuisine',label:'Type de cuisine',val:hub.cuisine||hub.category||''},
         {key:'description',label:'Description (750 car.)',val:hub.description||'',textarea:true},
         {key:'hours',label:'Horaires',val:hub.hours||'',textarea:true},
         {key:'priceRange',label:'Gamme de prix',val:hub.priceRange||''},
@@ -602,7 +603,32 @@ async function openClientDetail(id){
         {key:'parking',label:'Parking',val:hub.parking||''},
         {key:'reservation_url',label:'URL réservation',val:hub.reservation_url||hub.bookingUrl||''},
         {key:'menu_url',label:'URL menu',val:hub.menu_url||hub.menuUrl||''},
+        {key:'facebook',label:'📘 Facebook',val:hub.facebook||''},
+        {key:'instagram',label:'📸 Instagram',val:hub.instagram||''},
       ];
+
+      // Branding display
+      const brandingHtml = `
+        <div style="margin-top:10px;border-top:1px solid var(--bdr);padding-top:10px;">
+          <div style="font-size:.72rem;font-weight:700;margin-bottom:8px;">🎨 Identité visuelle</div>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:8px;">
+            ${branding.logo||branding.ogImage||branding.favicon
+              ? `<div style="display:flex;align-items:center;gap:8px;">
+                  <img src="${esc(branding.logo||branding.ogImage||branding.favicon)}" style="width:36px;height:36px;border-radius:6px;object-fit:contain;border:1px solid var(--bdr);background:var(--bg);" onerror="this.style.display='none'">
+                  <span style="font-size:.68rem;color:var(--mut);">Logo</span>
+                </div>`
+              : '<span style="font-size:.68rem;color:var(--mut);">Pas de logo détecté</span>'}
+            ${branding.domainAuthority
+              ? `<span style="padding:3px 8px;border-radius:5px;font-size:.68rem;font-weight:800;background:${branding.domainAuthority>=40?'rgba(16,185,129,.15)':branding.domainAuthority>=20?'rgba(245,158,11,.15)':'rgba(239,68,68,.15)'};color:${branding.domainAuthority>=40?'var(--grn)':branding.domainAuthority>=20?'var(--org)':'var(--red)'};">DA ${branding.domainAuthority}${branding.daSource==='estimate'?' (est.)':''}</span>`
+              : ''}
+          </div>
+          ${branding.colors?.length
+            ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px;">${branding.colors.map(c=>`<div style="display:flex;align-items:center;gap:3px;background:var(--bg);padding:2px 6px;border-radius:4px;border:1px solid var(--bdr);"><div style="width:14px;height:14px;border-radius:3px;background:${esc(c)};border:1px solid rgba(255,255,255,.1);"></div><span style="font-size:.6rem;font-family:monospace;color:var(--mut);">${esc(c)}</span></div>`).join('')}</div>`
+            : ''}
+          ${branding.fonts?.length
+            ? `<div style="display:flex;gap:4px;flex-wrap:wrap;">${branding.fonts.map(f=>`<span style="background:var(--bg);padding:2px 8px;border-radius:4px;border:1px solid var(--bdr);font-size:.65rem;color:var(--txt);">${esc(f)}</span>`).join('')}</div>`
+            : ''}
+        </div>`;
 
       const hubHtml = hubFields.map(f =>
         f.textarea
@@ -647,8 +673,9 @@ async function openClientDetail(id){
             <button class="action-btn grn" onclick="saveHub(${r.id})">💾 Sauvegarder</button>
             <button class="action-btn" id="ai-hub-btn-${r.id}" onclick="aiGenerateHub(${r.id},'${esc(r.name||'')}','${esc(r.city||'')}')">🤖 Remplir via IA</button>
           </div>
-          <div style="max-height:400px;overflow-y:auto;padding-right:4px;">
+          <div style="max-height:500px;overflow-y:auto;padding-right:4px;">
             ${hubHtml}
+            ${brandingHtml}
           </div>
         </div>
 
