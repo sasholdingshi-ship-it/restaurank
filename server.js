@@ -421,6 +421,37 @@ const PORT = process.env.PORT || 8765;
 // ============================================================
 const db = createDB();
 
+// PostgreSQL: use native PG SQL from init-db.sql (avoids SQLite→PG conversion bugs)
+if (db._isPostgres) {
+  try {
+    const initSQL = require('fs').readFileSync(require('path').join(__dirname, 'init-db.sql'), 'utf8');
+    // Execute each statement individually (init-db.sql uses PG-native syntax)
+    const stmts = initSQL.split(';').map(s => s.trim()).filter(s => s.length > 0 && !s.startsWith('--'));
+    for (const stmt of stmts) {
+      try { db._pool.query(stmt).catch(() => {}); } catch(e) {}
+    }
+    // Wait for all to complete
+    require('deasync').loopWhile(() => { let done = false; db._pool.query('SELECT 1').then(() => { done = true; }).catch(() => { done = true; }); require('deasync').loopWhile(() => !done); return false; });
+    console.log('🐘 PostgreSQL tables initialized from init-db.sql');
+    // Add missing columns from server.js schema
+    const alters = [
+      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS salt TEXT',
+      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT',
+      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT',
+      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0',
+      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS verification_token TEXT',
+      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reset_token TEXT',
+      'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP',
+      'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS hub_data TEXT',
+      'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_id INTEGER',
+      'ALTER TABLE users ADD COLUMN IF NOT EXISTS social_tokens TEXT DEFAULT \'{}\'',
+    ];
+    for (const sql of alters) {
+      try { db.prepare(sql).run(); } catch(e) {}
+    }
+  } catch(e) { console.warn('PG init-db.sql error:', e.message); }
+}
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
