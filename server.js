@@ -1311,8 +1311,21 @@ app.post('/auth/register', (req, res) => {
 
 // TEMP DEBUG: check admin password state
 app.get('/api/debug-auth', (req, res) => {
-  const admin = db.prepare('SELECT id, email, salt, role, is_active FROM accounts WHERE email = ?').get(process.env.ADMIN_EMAIL || 'admin@restaurank.com');
-  res.json({ admin: admin ? { id: admin.id, email: admin.email, hasSalt: !!admin.salt, saltLen: admin.salt?.length, role: admin.role, isActive: admin.is_active, isPostgres: !!db._isPostgres } : null });
+  try {
+    const email = process.env.ADMIN_EMAIL || 'admin@restaurank.com';
+    const allAccounts = db.prepare('SELECT id, email, role FROM accounts').all();
+    const admin = db.prepare('SELECT id, email, salt, role, is_active FROM accounts WHERE email = ?').get(email);
+    res.json({
+      lookingFor: email,
+      isPostgres: !!db._isPostgres,
+      hasDatabaseUrl: !!process.env.DATABASE_URL,
+      totalAccounts: allAccounts?.length || 0,
+      allEmails: allAccounts?.map(a => a.email) || [],
+      admin: admin ? { id: admin.id, email: admin.email, hasSalt: !!admin.salt, role: admin.role, isActive: admin.is_active } : null
+    });
+  } catch(e) {
+    res.json({ error: e.message, stack: e.stack?.substring(0, 300) });
+  }
 });
 
 app.post('/auth/login', (req, res) => {
