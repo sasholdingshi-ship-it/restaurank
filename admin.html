@@ -451,6 +451,59 @@ async function toggleClient(id){
   } catch(e){ toast('Erreur', 'err'); }
 }
 
+// ══ AUDIT ITEMS DEFINITION (mirrored from client app) ══
+const AUDIT_ITEMS = [
+  {cat:'📊 Google Business Profile',items:[
+    {id:'gbp_cat_primary',name:'Catégorie principale GBP',tip:'Utilisez la catégorie la plus spécifique (ex: "Pizzeria" au lieu de "Restaurant")'},
+    {id:'gbp_secondary',name:'Catégories secondaires (max 9)',tip:'Ajoutez Livraison, Terrasse, Traiteur si pertinent'},
+    {id:'gbp_desc',name:'Description GBP (750 car.)',tip:'Incluez cuisine + quartier + spécialités + ambiance'},
+    {id:'gbp_photos',name:'Photos (min. 25)',tip:'Façade, intérieur, 10-15 plats, équipe. Géotaggées.'},
+    {id:'gbp_hours',name:'Horaires complets + spéciaux',tip:'7 jours + fériés + More hours'},
+    {id:'gbp_attr',name:'Attributs (terrasse, wifi…)',tip:'Cochez les ~80 attributs pertinents'},
+    {id:'gbp_posts',name:'Google Posts (fréquence)',tip:'1 post/semaine avec photo + CTA'},
+    {id:'gbp_menu',name:'Menu uploadé et structuré',tip:'Ajoutez chaque plat : nom, prix, description'},
+    {id:'gbp_booking',name:'Lien de réservation',tip:'TheFork, OpenTable ou lien direct'},
+  ]},
+  {cat:'⭐ Avis & E-Réputation',items:[
+    {id:'rev_rating',name:'Note moyenne Google',tip:'Objectif ≥ 4.2 pour le Local Pack'},
+    {id:'rev_count',name:'Volume d\'avis (texte)',tip:'QR code + totem NFC. +10 avis/mois'},
+    {id:'rev_recency',name:'Fraîcheur des avis',tip:'Flux régulier : 5-10 avis/mois'},
+    {id:'rev_responses',name:'Taux de réponse',tip:'100% négatifs sous 24h + 80% positifs'},
+    {id:'rev_multi',name:'Avis multi-plateformes',tip:'Google + TripAdvisor + TheFork + Yelp'},
+  ]},
+  {cat:'📌 Citations & NAP',items:[
+    {id:'cit_nap',name:'Cohérence NAP',tip:'Nom, Adresse, Téléphone identiques partout'},
+    {id:'cit_presence',name:'Présence annuaires clés',tip:'Yelp, Foursquare, Apple Maps, Bing, TripAdvisor'},
+    {id:'cit_completeness',name:'Complétude des fiches',tip:'Description + photos + horaires sur chaque annuaire'},
+  ]},
+  {cat:'🌐 On-Page SEO',items:[
+    {id:'web_title',name:'Title tag optimisé',tip:'[Type] [Nom] [Ville] — max 60 car.'},
+    {id:'web_meta',name:'Meta description',tip:'155 car. avec cuisine + ville + CTA'},
+    {id:'web_h1',name:'H1 avec localité',tip:'Un seul H1 avec type + ville'},
+    {id:'web_schema',name:'Schema.org Restaurant',tip:'LocalBusiness + menu + openingHours + geo'},
+    {id:'web_mobile',name:'Mobile-friendly',tip:'Responsive + vitesse < 3s'},
+    {id:'web_speed',name:'Core Web Vitals',tip:'LCP < 2.5s, FID < 100ms, CLS < 0.1'},
+    {id:'web_ssl',name:'HTTPS',tip:'Certificat SSL valide'},
+    {id:'web_faq',name:'FAQ Schema',tip:'5-10 questions avec FAQPage schema'},
+  ]},
+  {cat:'🤖 GEO (IA Visibility)',items:[
+    {id:'geo_structured',name:'Données structurées pour IA',tip:'Schema.org complet pour ChatGPT/Gemini/Claude'},
+    {id:'geo_yelp',name:'Présence Yelp (48.7% ChatGPT)',tip:'Yelp = source #1 de ChatGPT'},
+    {id:'geo_tripadvisor',name:'TripAdvisor (32.8% Perplexity)',tip:'Source #1 de Perplexity'},
+    {id:'geo_uniqueness',name:'Contenu unique vs concurrents',tip:'USP claire : ce qui vous différencie'},
+    {id:'geo_freshness',name:'Fraîcheur du contenu',tip:'Mise à jour régulière du site + GBP'},
+  ]},
+  {cat:'🔗 Backlinks',items:[
+    {id:'bl_local',name:'Liens locaux (mairie, presse)',tip:'Annuaires locaux, blogs food, presse régionale'},
+    {id:'bl_food',name:'Blogs food & média',tip:'Collaborations blogueurs + articles'},
+  ]},
+  {cat:'📱 Social & CMS',items:[
+    {id:'soc_facebook',name:'Page Facebook active',tip:'3+ posts/semaine avec photos'},
+    {id:'soc_instagram',name:'Compte Instagram',tip:'Feed esthétique, Stories régulières'},
+    {id:'soc_website',name:'Site web avec CMS',tip:'WordPress, Webflow, Squarespace optimisé'},
+  ]},
+];
+
 // ══ CLIENT DETAIL ══
 async function openClientDetail(id){
   document.getElementById('clientDetail').innerHTML='<div class="empty">⏳ Chargement…</div>';
@@ -474,25 +527,117 @@ async function openClientDetail(id){
       ? Object.entries(conn.connections).map(([k])=>`<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:5px;font-size:.68rem;font-weight:700;">✅ ${k}</span>`).join(' ')
       : '<span style="color:var(--mut);font-size:.75rem;">Aucune connexion OAuth</span>';
 
-    const restHtml = rList.length ? rList.map(r=>{
+    // Build per-restaurant sections with audit items + hub data
+    const restSections = rList.map(r => {
       const sc = tryParse(r.scores);
       const auditData = tryParse(r.audit_data);
-      const cms = auditData?.cms || r.cms || '—';
-      return `<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;">
-        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      const completed = tryParse(r.completed_actions);
+      const hub = tryParse(r.hub_data);
+      const cats = sc.categories || [];
+      const cms = auditData?.cms || '—';
+
+      // Build scores lookup from scores.categories
+      const itemScores = {};
+      if (Array.isArray(cats)) {
+        cats.forEach(c => {
+          if (c.items && Array.isArray(c.items)) {
+            c.items.forEach(it => { itemScores[it.id] = it; });
+          } else if (c.id) {
+            itemScores[c.id] = c;
+          }
+        });
+      }
+
+      // Audit items grid
+      const auditHtml = AUDIT_ITEMS.map(group => {
+        const rows = group.items.map(item => {
+          const data = itemScores[item.id] || {};
+          const score = data.score != null ? Math.round(data.score) : '—';
+          const status = data.status || (score >= 7 ? 'ok' : score >= 4 ? 'warn' : score > 0 ? 'err' : '—');
+          const icon = status==='ok'?'✅':status==='warn'?'⚠️':status==='err'?'❌':'⬜';
+          const color = status==='ok'?'var(--grn)':status==='warn'?'var(--org)':status==='err'?'var(--red)':'var(--mut)';
+          const isDone = completed[item.id];
+          return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-bottom:1px solid var(--bdr);font-size:.73rem;">
+            <span style="width:22px;text-align:center;">${icon}</span>
+            <span style="flex:1;${isDone?'text-decoration:line-through;opacity:.5;':''}">${esc(item.name)}</span>
+            <span style="color:${color};font-weight:700;width:30px;text-align:right;">${score}/10</span>
+            <details style="margin-left:4px;cursor:pointer;"><summary style="font-size:.65rem;color:var(--ind);">Prompt</summary>
+              <div style="padding:6px 0;font-size:.7rem;color:var(--mut);max-width:400px;">💡 ${esc(item.tip)}</div>
+            </details>
+          </div>`;
+        }).join('');
+        return `<div style="margin-bottom:10px;">
+          <div style="font-size:.72rem;font-weight:700;padding:4px 8px;background:var(--s2);border-radius:5px 5px 0 0;border:1px solid var(--bdr);border-bottom:none;">${group.cat}</div>
+          <div style="border:1px solid var(--bdr);border-radius:0 0 5px 5px;">${rows}</div>
+        </div>`;
+      }).join('');
+
+      // Hub Central data
+      const hubFields = [
+        {key:'name',label:'Nom du restaurant',val:hub.name||r.name||''},
+        {key:'address',label:'Adresse complète',val:hub.address||''},
+        {key:'phone',label:'Téléphone',val:hub.phone||''},
+        {key:'email',label:'Email',val:hub.email||''},
+        {key:'website',label:'Site web',val:hub.website||''},
+        {key:'cuisine',label:'Type de cuisine',val:hub.cuisine||''},
+        {key:'description',label:'Description (750 car.)',val:hub.description||'',textarea:true},
+        {key:'hours',label:'Horaires',val:hub.hours||'',textarea:true},
+        {key:'priceRange',label:'Gamme de prix',val:hub.priceRange||''},
+        {key:'specialties',label:'Spécialités',val:hub.specialties||''},
+        {key:'ambiance',label:'Ambiance',val:hub.ambiance||''},
+        {key:'capacity',label:'Capacité (couverts)',val:hub.capacity||''},
+        {key:'parking',label:'Parking',val:hub.parking||''},
+        {key:'reservation_url',label:'URL réservation',val:hub.reservation_url||hub.bookingUrl||''},
+        {key:'menu_url',label:'URL menu',val:hub.menu_url||hub.menuUrl||''},
+      ];
+
+      const hubHtml = hubFields.map(f =>
+        f.textarea
+          ? `<div style="margin-bottom:6px;">
+              <label style="font-size:.62rem;color:var(--mut);display:block;margin-bottom:2px;">${f.label}</label>
+              <textarea class="hub-field" data-rid="${r.id}" data-key="${f.key}" rows="2" style="width:100%;padding:6px 8px;background:var(--bg);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-family:inherit;font-size:.73rem;resize:vertical;">${esc(f.val)}</textarea>
+            </div>`
+          : `<div style="margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+              <label style="font-size:.62rem;color:var(--mut);width:120px;flex-shrink:0;">${f.label}</label>
+              <input class="hub-field" data-rid="${r.id}" data-key="${f.key}" value="${esc(f.val)}" style="flex:1;padding:5px 8px;background:var(--bg);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-family:inherit;font-size:.73rem;">
+            </div>`
+      ).join('');
+
+      return `<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:14px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;">
           <div>
-            <strong>${esc(r.name||'—')}</strong>
+            <strong style="font-size:.95rem;">${esc(r.name||'—')}</strong>
             <span style="color:var(--mut);font-size:.75rem;"> — ${esc(r.city||'—')}</span>
             ${cms!=='—'?`<span style="background:var(--s2);color:var(--mut);padding:1px 6px;border-radius:4px;font-size:.65rem;margin-left:6px;">CMS: ${esc(cms)}</span>`:''}
           </div>
           <div style="display:flex;gap:10px;">
-            <span class="${scoreClass(sc.seo||0)}">SEO ${sc.seo||0}</span>
-            <span class="${scoreClass(sc.geo||0)}">GEO ${sc.geo||0}</span>
+            <span class="${scoreClass(sc.seo||0)}" style="font-size:.9rem;">SEO ${sc.seo||0}</span>
+            <span class="${scoreClass(sc.geo||0)}" style="font-size:.9rem;">GEO ${sc.geo||0}</span>
           </div>
         </div>
-        <div style="font-size:.68rem;color:var(--mut);margin-top:6px;">Dernier audit : ${r.last_audit?new Date(r.last_audit).toLocaleDateString('fr-FR'):'Aucun'}</div>
+
+        <!-- NAV tabs for this restaurant -->
+        <div style="display:flex;gap:4px;margin-bottom:12px;border-bottom:1px solid var(--bdr);">
+          <button class="rest-tab active" onclick="switchRestTab(this,'audit-${r.id}')" style="padding:5px 12px;background:none;border:none;color:var(--ind);font-family:inherit;font-size:.72rem;font-weight:700;cursor:pointer;border-bottom:2px solid var(--ind);margin-bottom:-1px;">📊 Audit (${Object.values(itemScores).filter(i=>i.status==='ok').length}/${Object.keys(itemScores).length})</button>
+          <button class="rest-tab" onclick="switchRestTab(this,'hub-${r.id}')" style="padding:5px 12px;background:none;border:none;color:var(--mut);font-family:inherit;font-size:.72rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;">🏠 Hub Central</button>
+        </div>
+
+        <!-- AUDIT panel -->
+        <div id="audit-${r.id}" class="rest-panel" style="max-height:400px;overflow-y:auto;">
+          ${Object.keys(itemScores).length ? auditHtml : '<div style="color:var(--mut);font-size:.8rem;padding:16px;text-align:center;">Aucun audit effectué — le client doit lancer un scan</div>'}
+        </div>
+
+        <!-- HUB panel -->
+        <div id="hub-${r.id}" class="rest-panel" style="display:none;">
+          <div style="max-height:400px;overflow-y:auto;padding-right:4px;">
+            ${hubHtml}
+          </div>
+          <button class="action-btn grn" style="margin-top:10px;" onclick="saveHub(${r.id})">💾 Sauvegarder Hub Central</button>
+        </div>
+
+        <div style="font-size:.65rem;color:var(--mut);margin-top:8px;">Dernier audit : ${r.last_audit?new Date(r.last_audit).toLocaleDateString('fr-FR'):'Aucun'}</div>
       </div>`;
-    }).join('') : '<div class="empty" style="padding:16px;">Aucun restaurant audité</div>';
+    }).join('');
 
     document.getElementById('clientDetail').innerHTML = `
       <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
@@ -516,8 +661,8 @@ async function openClientDetail(id){
       </div>
 
       <div style="margin-bottom:16px;">
-        <div style="font-size:.78rem;font-weight:700;margin-bottom:8px;">🍽️ Restaurants (${rList.length})</div>
-        ${restHtml}
+        <div style="font-size:.78rem;font-weight:700;margin-bottom:10px;">🍽️ Restaurants (${rList.length})</div>
+        ${rList.length ? restSections : '<div class="empty" style="padding:16px;">Aucun restaurant audité</div>'}
       </div>
 
       <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--bdr);">
@@ -532,6 +677,27 @@ async function openClientDetail(id){
   } catch(e){
     document.getElementById('clientDetail').innerHTML=`<div style="color:var(--red);padding:20px;">❌ Erreur : ${e.message}</div>`;
   }
+}
+
+function switchRestTab(btn, panelId){
+  const parent = btn.closest('[style*="background:var(--bg)"]');
+  parent.querySelectorAll('.rest-tab').forEach(t=>{t.style.color='var(--mut)';t.style.borderBottomColor='transparent';});
+  btn.style.color='var(--ind)';btn.style.borderBottomColor='var(--ind)';
+  parent.querySelectorAll('.rest-panel').forEach(p=>p.style.display='none');
+  document.getElementById(panelId).style.display='block';
+}
+
+async function saveHub(restaurantId){
+  const fields = document.querySelectorAll(`.hub-field[data-rid="${restaurantId}"]`);
+  const hub = {};
+  fields.forEach(f => { hub[f.dataset.key] = f.value; });
+  try {
+    const r = await fetch(`${API}/api/admin/restaurant/${restaurantId}/hub`, {
+      method:'POST', headers:hdrs(), body:JSON.stringify({hub_data:hub})
+    });
+    if (r.ok) toast('Hub Central sauvegardé ✓','ok');
+    else toast('Erreur sauvegarde','err');
+  } catch(e){ toast('Erreur: '+e.message,'err'); }
 }
 
 async function sendEmailToClient(id, email){
