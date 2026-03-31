@@ -1131,94 +1131,19 @@ db.exec(`
 // ============================================================
 
 // Google Sign-In for client login/register
+// REUSES the same redirect URI already configured in Google Cloud Console
+// (avoids needing to add a new URI — the callback path handles both flows)
 app.get('/auth/social/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
-  const redirectUri = (() => {
-    if (req.headers.host?.includes('onrender.com')) return `https://${req.headers.host}/auth/social/google/callback`;
-    return `http://localhost:${PORT}/auth/social/google/callback`;
-  })();
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/auth/google/callback`;
   const scopes = 'openid email profile';
-  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&prompt=select_account`;
+  // state=social tells the callback this is a social login, not GBP OAuth
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&prompt=select_account&state=social_login`;
   res.redirect(url);
 });
 
-app.get('/auth/social/google/callback', async (req, res) => {
-  try {
-    const { code } = req.query;
-    if (!code) throw new Error('No code');
-    const redirectUri = (() => {
-      if (req.headers.host?.includes('onrender.com')) return `https://${req.headers.host}/auth/social/google/callback`;
-      return `http://localhost:${PORT}/auth/social/google/callback`;
-    })();
-
-    // Exchange code for tokens
-    const tokenResp = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        code, client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: redirectUri, grant_type: 'authorization_code'
-      })
-    });
-    const tokens = await tokenResp.json();
-    if (tokens.error) throw new Error(tokens.error_description || tokens.error);
-
-    // Get user info
-    const userResp = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-      headers: { 'Authorization': `Bearer ${tokens.access_token}` }
-    });
-    const user = await userResp.json();
-    if (!user.email) throw new Error('No email from Google');
-
-    // Find or create account
-    let account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(user.email);
-    if (!account) {
-      // Auto-register via Google — no password needed
-      const salt = crypto.randomBytes(16).toString('hex');
-      const hash = hashPassword(crypto.randomBytes(32).toString('hex'), salt); // random password
-      db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
-        .run(user.email, hash, salt, user.name || user.email.split('@')[0], 'client', 'free', 1);
-      account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(user.email);
-      console.log(`🔑 Google Sign-In: new account created for ${user.email}`);
-    } else {
-      // Update name/picture if needed
-      if (user.name && !account.name) db.prepare('UPDATE accounts SET name = ? WHERE id = ?').run(user.name, account.id);
-      db.prepare('UPDATE accounts SET last_login = datetime(\'now\') WHERE id = ?').run(account.id);
-    }
-
-    if (!account.is_active) throw new Error('Compte désactivé');
-
-    // Create session
-    const sessionToken = generateSessionToken();
-    db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, datetime(\'now\', \'+30 days\'))').run(sessionToken, account.id);
-
-    // Return HTML that stores auth in localStorage and closes popup
-    const authData = JSON.stringify({
-      session: sessionToken,
-      account: { id: account.id, email: account.email, name: account.name || user.name, role: account.role, plan: account.plan, maxRestaurants: account.max_restaurants }
-    });
-
-    res.send(`<!DOCTYPE html><html><head><title>RestauRank</title></head><body style="background:#FAF3EB;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
-      <div style="text-align:center;color:#1B2A4A;">
-        <div style="font-size:2.5rem;margin-bottom:12px;">&#10003;</div>
-        <h2 style="font-weight:800;">Connect&eacute; !</h2>
-        <p style="color:#8B8177;">${user.name || user.email}</p>
-      </div>
-      <script>
-        try{localStorage.setItem('restaurank_social_auth',JSON.stringify(${authData}));}catch(e){}
-        if(window.opener){setTimeout(()=>window.close(),800);}
-        else{window.location.href='/';}
-      </script>
-    </body></html>`);
-  } catch(e) {
-    console.error('Google Sign-In error:', e.message);
-    res.send(`<!DOCTYPE html><html><body style="background:#FAF3EB;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
-      <div style="text-align:center;color:#C0392B;"><h2>Erreur</h2><p>${e.message}</p></div>
-      <script>if(window.opener)setTimeout(()=>window.close(),3000);else setTimeout(()=>window.location.href='/',3000);</script>
-    </body></html>`);
-  }
-});
+// The callback is handled by the EXISTING /auth/google/callback route below
+// It detects state=social_login to handle account creation vs GBP OAuth
 
 // Apple Sign-In redirect (requires Apple Developer account + Service ID configured)
 app.get('/auth/social/apple', (req, res) => {
@@ -2002,8 +1927,10 @@ app.get('/auth/google', (req, res) => {
   res.json({ url });
 });
 
-// Auth: OAuth callback
+// Auth: OAuth callback — handles BOTH GBP OAuth AND Social Login
 app.get('/auth/google/callback', async (req, res) => {
+  const isSocialLogin = req.query.state === 'social_login';
+
   try {
     const { code } = req.query;
     const client = getOAuth2Client(req);
@@ -2014,7 +1941,57 @@ app.get('/auth/google/callback', async (req, res) => {
     const oauth2 = getGoogle().oauth2({ version: 'v2', auth: client });
     const { data: userInfo } = await oauth2.userinfo.get();
 
-    // Store/update user
+    // ═══════════════════════════════════════════
+    // SOCIAL LOGIN FLOW — create/login client account
+    // ═══════════════════════════════════════════
+    if (isSocialLogin) {
+      let account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(userInfo.email);
+      if (!account) {
+        // Auto-register via Google — no password needed
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hash = hashPassword(crypto.randomBytes(32).toString('hex'), salt);
+        db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
+          .run(userInfo.email, hash, salt, userInfo.name || userInfo.email.split('@')[0], 'client', 'free', 1);
+        account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(userInfo.email);
+        console.log(`🔑 Google Sign-In: new account created for ${userInfo.email}`);
+      } else {
+        if (userInfo.name && !account.name) db.prepare('UPDATE accounts SET name = ? WHERE id = ?').run(userInfo.name, account.id);
+        db.prepare('UPDATE accounts SET last_login = datetime(\'now\') WHERE id = ?').run(account.id);
+      }
+
+      if (!account.is_active) throw new Error('Compte désactivé');
+
+      const sessToken = generateSessionToken();
+      db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, datetime(\'now\', \'+30 days\'))').run(sessToken, account.id);
+
+      // Also store Google tokens in users table (for GBP access later)
+      try {
+        db.prepare('INSERT INTO users (email, google_tokens) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET google_tokens = ?')
+          .run(userInfo.email, JSON.stringify(tokens), JSON.stringify(tokens));
+      } catch(e) {}
+
+      const authData = JSON.stringify({
+        session: sessToken,
+        account: { id: account.id, email: account.email, name: account.name || userInfo.name, role: account.role, plan: account.plan, maxRestaurants: account.max_restaurants }
+      });
+
+      return res.send(`<!DOCTYPE html><html><head><title>RestauRank</title></head><body style="background:#FAF3EB;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+        <div style="text-align:center;color:#1B2A4A;">
+          <div style="font-size:2.5rem;margin-bottom:12px;">&#10003;</div>
+          <h2 style="font-weight:800;">Connect&eacute; !</h2>
+          <p style="color:#8B8177;">${userInfo.name || userInfo.email}</p>
+        </div>
+        <script>
+          try{localStorage.setItem('restaurank_social_auth',JSON.stringify(${authData}));}catch(e){}
+          if(window.opener){setTimeout(()=>window.close(),800);}
+          else{window.location.href='/';}
+        </script>
+      </body></html>`);
+    }
+
+    // ═══════════════════════════════════════════
+    // GBP OAUTH FLOW — original behavior
+    // ═══════════════════════════════════════════
     const stmt = db.prepare(`
       INSERT INTO users (email, google_tokens) VALUES (?, ?)
       ON CONFLICT(email) DO UPDATE SET google_tokens = ?
@@ -2022,39 +1999,27 @@ app.get('/auth/google/callback', async (req, res) => {
     stmt.run(userInfo.email, JSON.stringify(tokens), JSON.stringify(tokens));
 
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(userInfo.email);
-
-    // Popup-friendly callback: write to localStorage and close popup
-    // If opened in popup, this page will auto-close
-    // If opened as redirect, it works the same as before
     const email = encodeURIComponent(userInfo.email);
-    res.send(`<!DOCTYPE html><html><head><title>RestauRank — Connexion réussie</title></head><body style="background:#06070b;color:#eaecf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-      <div style="text-align:center;">
-        <div style="font-size:3rem;margin-bottom:16px;">✅</div>
-        <h2>Google connecté !</h2>
-        <p style="color:#6e7490;">Retournez à RestauRank…</p>
+    res.send(`<!DOCTYPE html><html><head><title>RestauRank</title></head><body style="background:#FAF3EB;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+      <div style="text-align:center;color:#1B2A4A;">
+        <div style="font-size:2.5rem;margin-bottom:12px;">&#10003;</div>
+        <h2 style="font-weight:800;">Google connect&eacute; !</h2>
+        <p style="color:#8B8177;">GBP li&eacute; &agrave; ${userInfo.email}</p>
       </div>
       <script>
         try{
-          var authData=JSON.stringify({connected:true,email:decodeURIComponent('${email}'),userId:${user.id},accountId:null,locationName:null,locationTitle:null});
+          var authData=JSON.stringify({connected:true,email:decodeURIComponent('${email}'),userId:${user?.id||0},accountId:null,locationName:null,locationTitle:null});
           localStorage.setItem('restaurank_google_auth',authData);
         }catch(e){}
-        // If in popup, close; otherwise redirect
-        if(window.opener){
-          window.close();
-        }else{
-          window.location.href='/?auth=success&user_id=${user.id}&email=${email}';
-        }
+        if(window.opener){window.close();}
+        else{window.location.href='/?auth=success&user_id=${user?.id||0}&email=${email}';}
       </script>
     </body></html>`);
   } catch (err) {
     console.error('OAuth error:', err.message);
-    res.send(`<!DOCTYPE html><html><head><title>RestauRank — Erreur</title></head><body style="background:#06070b;color:#eaecf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-      <div style="text-align:center;">
-        <div style="font-size:3rem;margin-bottom:16px;">❌</div>
-        <h2>Erreur de connexion</h2>
-        <p style="color:#6e7490;">${err.message || 'Réessayez'}</p>
-      </div>
-      <script>if(window.opener){setTimeout(()=>window.close(),3000);}else{setTimeout(()=>window.location.href='/?auth=error',3000);}</script>
+    res.send(`<!DOCTYPE html><html><body style="background:#FAF3EB;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+      <div style="text-align:center;color:#C0392B;"><h2>Erreur</h2><p>${err.message || 'Réessayez'}</p></div>
+      <script>if(window.opener)setTimeout(()=>window.close(),3000);else setTimeout(()=>window.location.href='/?auth=error',3000);</script>
     </body></html>`);
   }
 });
