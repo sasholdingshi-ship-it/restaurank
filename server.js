@@ -1258,11 +1258,17 @@ app.get('/api/admin/account/:id/restaurants', requireAuth, requireAdmin, (req, r
   if (restaurants.length === 0) {
     restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, completed_actions FROM restaurants WHERE user_id = ?').all(req.params.id);
   }
-  // Also fetch generated_content per restaurant
+  // Also fetch hub_data from restaurant_settings + generated_content
   restaurants = restaurants.map(r => {
     let generated = [];
     try { generated = db.prepare('SELECT * FROM generated_content WHERE restaurant_id = ? ORDER BY created_at DESC').all(r.id); } catch(e){}
-    return { ...r, generated_content: generated };
+    // Hub data: prefer restaurant_settings (where client saves), fallback to restaurants.hub_data column
+    let hubData = null;
+    try {
+      const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(r.id, 'hub_data');
+      hubData = hubRow ? JSON.parse(hubRow.data) : (r.hub_data ? JSON.parse(r.hub_data) : null);
+    } catch(e) { try { hubData = r.hub_data ? JSON.parse(r.hub_data) : null; } catch(e2){} }
+    return { ...r, hub_data: hubData, generated_content: generated };
   });
   res.json({ restaurants });
 });
@@ -1270,8 +1276,17 @@ app.get('/api/admin/account/:id/restaurants', requireAuth, requireAdmin, (req, r
 // --- ADMIN: Update restaurant hub data ---
 app.post('/api/admin/restaurant/:id/hub', requireAuth, requireAdmin, (req, res) => {
   const { hub_data } = req.body;
+  const jsonData = JSON.stringify(hub_data);
   try {
-    db.prepare('UPDATE restaurants SET hub_data = ? WHERE id = ?').run(JSON.stringify(hub_data), req.params.id);
+    // Save in restaurant_settings (primary storage — same as client app)
+    const existing = db.prepare('SELECT id FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(req.params.id, 'hub_data');
+    if (existing) {
+      db.prepare('UPDATE restaurant_settings SET data = ?, updated_at = datetime(\'now\') WHERE id = ?').run(jsonData, existing.id);
+    } else {
+      db.prepare('INSERT INTO restaurant_settings (restaurant_id, type, data) VALUES (?, ?, ?)').run(req.params.id, 'hub_data', jsonData);
+    }
+    // Also update restaurants.hub_data column for quick access
+    db.prepare('UPDATE restaurants SET hub_data = ? WHERE id = ?').run(jsonData, req.params.id);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1350,7 +1365,15 @@ app.get('/api/admin/restaurants', requireAuth, requireAdmin, (req, res) => {
     LEFT JOIN accounts a ON r.owner_id = a.id
     ORDER BY r.created_at DESC
   `).all();
-  res.json(restaurants);
+  // Enrich with hub_data from restaurant_settings (primary source)
+  const enriched = restaurants.map(r => {
+    try {
+      const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(r.id, 'hub_data');
+      if (hubRow) r.hub_data = hubRow.data; // already JSON string
+    } catch(e) {}
+    return r;
+  });
+  res.json(enriched);
 });
 
 // --- ADMIN: Send email to client ---

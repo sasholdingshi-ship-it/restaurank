@@ -9033,6 +9033,8 @@ function saveHubData(){
         photos:hubPhotos.filter(p=>p.selected).map(p=>p.url),
         savedAt:new Date().toISOString()
     };
+    // Update global _hubData so saveAllData() picks it up
+    window._hubData={...(window._hubData||{}),...hubData};
     try{
         const store=loadAllData()||{restaurants:{}};
         const key=makeKey(storedName,storedCity);
@@ -9040,9 +9042,11 @@ function saveHubData(){
         _serverDataCache=store;
         try{localStorage.setItem(STORAGE_KEY,JSON.stringify(store));}catch(e2){}
     }catch(e){}
-    // Save to server
+    // Save to server via hub endpoint AND full-save for redundancy
     const _hubRid=currentData?.restaurant_id||0;
-    fetchTimeout(`${API_BASE}/api/hub/${_hubRid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:hubData})},5000).catch(()=>{});
+    fetchTimeout(`${API_BASE}/api/hub/${_hubRid}`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},body:JSON.stringify({data:hubData})},5000).catch(()=>{});
+    // Also trigger full save to keep everything in sync
+    saveAllData();
     addToLog('💾 Hub Central sauvegardé');
     const status=document.getElementById('hubNapStatus');
     if(status){status.style.display='block';status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent='✅ Données sauvegardées ! Prêtes à être poussées sur les annuaires.';}
