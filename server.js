@@ -5412,11 +5412,17 @@ app.post('/api/scrape-gmb', async (req, res) => {
             result.description = placeData.editorial_summary.overview;
           }
 
-          // Photos (up to 10 — each costs 1 API call when accessed)
+          // Photos — ALL available (Google returns up to 10 refs per detail call)
+          // No slice — take every photo reference at max resolution
           if (placeData.photos && placeData.photos.length > 0) {
-            result.photos = placeData.photos.slice(0, 10).map(p =>
-              `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`
-            );
+            result.photos = placeData.photos.map(p => ({
+              url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photo_reference=${p.photo_reference}&key=${placesKey}`,
+              width: p.width || null,
+              height: p.height || null,
+              attributions: p.html_attributions || [],
+              source: 'gmb'
+            }));
+            result.gmbPhotoCount = placeData.photos.length;
           }
 
           // Reviews (first 5 from Google)
@@ -5667,49 +5673,127 @@ app.post('/api/scrape-gmb', async (req, res) => {
       }
     }
 
-    // ═══════════════════════════════════════════
-    // ENHANCED: Instagram photos scraping
-    // ═══════════════════════════════════════════
-    const igUrl = result.instagram || req.body.instagram_url;
-    if (igUrl) {
-      try {
-        const igHtml = await fetchPage(igUrl);
-        // Extract shared_data or meta images
-        const igImages = [];
-        const igOgMatch = igHtml.matchAll(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/gi);
-        for (const m of igOgMatch) igImages.push(m[1]);
-        // From scripts with image data
-        const igImgMatches = igHtml.matchAll(/"display_url"\s*:\s*"([^"]+)"/gi);
-        for (const m of igImgMatches) igImages.push(m[1].replace(/\\u0026/g, '&'));
-        if (igImages.length > 0) {
-          result.instagramPhotos = [...new Set(igImages)].slice(0, 30);
-        }
-      } catch (e) { console.warn('Instagram scrape error:', e.message); }
-    }
+    // ═══════════════════════════════════════════════════════
+    // REAL INSTAGRAM PHOTOS — via Instagram Graph API
+    // Uses the Meta OAuth token stored in DB from /auth/facebook
+    // Falls back to Apify actor if no token available
+    // ═══════════════════════════════════════════════════════
+    result.instagramPhotos = [];
+    try {
+      // 1. Try Instagram Graph API with user's Meta OAuth token
+      let igToken = null, igAccountId = null;
 
-    // Get ALL GMB photos (Google Places returns max 10 per detail call — use photo references)
-    if (placesKey && result.place_id) {
-      try {
-        // Places API already gave us photos, expand to full list
-        const photoFields = 'photos';
-        const pResp = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${result.place_id}&fields=${photoFields}&key=${placesKey}`, { signal: AbortSignal.timeout(8000) });
-        const pData = await pResp.json();
-        if (pData.status === 'OK' && pData.result?.photos) {
-          const gmbPhotos = pData.result.photos.map(p => ({
-            url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`,
-            width: p.width,
-            height: p.height,
-            attributions: p.html_attributions || [],
-            source: 'gmb'
-          }));
-          result.gmbPhotos = gmbPhotos; // Full list with metadata
-          result.gmbPhotoCount = pData.result.photos.length;
-        }
-      } catch (e) {}
-    }
+      // Get token from request (authenticated user) or from restaurant owner
+      const authHeader = req.headers.authorization;
+      let userId = null;
+      if (authHeader?.startsWith('Bearer ')) {
+        const tok = authHeader.slice(7);
+        try {
+          const sess = db.prepare('SELECT account_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(tok);
+          if (sess) userId = sess.account_id;
+        } catch(e) {}
+      }
 
-    // Deduplicate photos + cap at 100 (increased from 50)
-    result.photos = [...new Set(result.photos)].slice(0, 100);
+      // Look for Meta token in users table (linked to this account) or accounts table
+      if (userId) {
+        try {
+          const userRow = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(userId)
+            || db.prepare('SELECT social_tokens FROM accounts WHERE id = ?').get(userId);
+          if (userRow?.social_tokens) {
+            const st = JSON.parse(userRow.social_tokens);
+            if (st.meta_token && st.ig_account_id) {
+              igToken = st.fb_pages?.[0]?.token || st.meta_token;
+              igAccountId = st.ig_account_id;
+            }
+          }
+        } catch(e) {}
+      }
+
+      if (igToken && igAccountId) {
+        // Real Instagram Graph API — get all recent media (max 100)
+        console.log('📸 Instagram Graph API: fetching media for IG account', igAccountId);
+        let mediaUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=id,media_type,media_url,thumbnail_url,timestamp,caption,permalink,like_count,comments_count&limit=100&access_token=${igToken}`;
+        let allMedia = [];
+        let pages = 0;
+
+        while (mediaUrl && pages < 5) {  // Max 5 pages = ~500 posts
+          const mediaResp = await fetch(mediaUrl, { signal: AbortSignal.timeout(10000) });
+          const mediaData = await mediaResp.json();
+          if (mediaData.error) {
+            console.warn('Instagram Graph API error:', mediaData.error.message);
+            break;
+          }
+          if (mediaData.data) allMedia = allMedia.concat(mediaData.data);
+          mediaUrl = mediaData.paging?.next || null;
+          pages++;
+        }
+
+        if (allMedia.length > 0) {
+          result.instagramPhotos = allMedia
+            .filter(m => m.media_type === 'IMAGE' || m.media_type === 'CAROUSEL_ALBUM')
+            .map(m => ({
+              url: m.media_url || m.thumbnail_url,
+              id: m.id,
+              caption: m.caption || '',
+              timestamp: m.timestamp,
+              permalink: m.permalink,
+              likes: m.like_count || 0,
+              comments: m.comments_count || 0,
+              source: 'instagram_api'
+            }));
+          result.instagramSource = 'graph_api';
+          console.log(`✅ Instagram: ${result.instagramPhotos.length} photos récupérées via Graph API`);
+        }
+      }
+
+      // 2. Fallback: try scraping Instagram profile page (limited, may fail)
+      if (result.instagramPhotos.length === 0) {
+        const igUrl = req.body.instagram_url;
+        if (igUrl) {
+          try {
+            const igHtml = await fetchPage(igUrl);
+            const igImages = [];
+            // og:image from profile
+            const ogMatch = igHtml.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+            if (ogMatch) igImages.push({ url: ogMatch[1], source: 'instagram_scrape' });
+            // shared_data JSON (only works if Instagram returns server-rendered HTML)
+            const sharedDataMatch = igHtml.match(/window\._sharedData\s*=\s*(\{[\s\S]*?\});<\/script>/);
+            if (sharedDataMatch) {
+              try {
+                const sd = JSON.parse(sharedDataMatch[1]);
+                const edges = sd?.entry_data?.ProfilePage?.[0]?.graphql?.user?.edge_owner_to_timeline_media?.edges || [];
+                edges.forEach(e => {
+                  if (e.node?.display_url) igImages.push({
+                    url: e.node.display_url,
+                    caption: e.node.edge_media_to_caption?.edges?.[0]?.node?.text || '',
+                    likes: e.node.edge_liked_by?.count || 0,
+                    source: 'instagram_scrape'
+                  });
+                });
+              } catch(e) {}
+            }
+            if (igImages.length > 0) {
+              result.instagramPhotos = igImages;
+              result.instagramSource = 'scrape_fallback';
+            }
+          } catch(e) { console.warn('Instagram fallback scrape failed:', e.message); }
+        }
+      }
+    } catch(e) { console.warn('Instagram fetch error:', e.message); }
+
+    // GMB photos already fetched above from Place Details (no duplicate call needed)
+    // result.photos contains photo objects with {url, width, height, source:'gmb'}
+    // Flatten photo URLs for backward compatibility + add website photos as URLs
+    const allPhotoUrls = [];
+    if (Array.isArray(result.photos)) {
+      result.photos.forEach(p => {
+        if (typeof p === 'string') allPhotoUrls.push(p);
+        else if (p.url) allPhotoUrls.push(p.url);
+      });
+    }
+    // Keep structured photos as gmbPhotos
+    result.gmbPhotos = Array.isArray(result.photos) ? result.photos.filter(p => typeof p === 'object' && p.source === 'gmb') : [];
+    result.photos = [...new Set(allPhotoUrls)];
 
     // Fallback category
     if (!result.category) result.category = 'Restaurant';
@@ -5927,6 +6011,101 @@ function guessPhotoType(url, alt = '') {
   if (u.match(/terrasse|outdoor|jardin|patio/)) return 'terrasse';
   return 'autre';
 }
+
+// ============================================================
+// INSTAGRAM PHOTOS — Real Graph API endpoint
+// ============================================================
+app.post('/api/instagram/photos', requireAuth, async (req, res) => {
+  try {
+    // Get Meta token from user's social_tokens
+    let igToken = null, igAccountId = null;
+    try {
+      const userRow = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(req.account.id)
+        || db.prepare('SELECT social_tokens FROM accounts WHERE id = ?').get(req.account.id);
+      if (userRow?.social_tokens) {
+        const st = JSON.parse(userRow.social_tokens);
+        igToken = st.fb_pages?.[0]?.token || st.meta_token;
+        igAccountId = st.ig_account_id;
+      }
+    } catch(e) {}
+
+    if (!igToken || !igAccountId) {
+      return res.json({ success: false, error: 'no_instagram', message: 'Connectez votre compte Instagram via Facebook OAuth (onglet Dispatch → 🔗 Connecter Meta)' });
+    }
+
+    // Fetch ALL media with pagination (up to 500 posts)
+    let mediaUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=id,media_type,media_url,thumbnail_url,timestamp,caption,permalink,like_count,comments_count&limit=100&access_token=${igToken}`;
+    let allMedia = [];
+    let pages = 0;
+
+    while (mediaUrl && pages < 5) {
+      const mediaResp = await fetch(mediaUrl, { signal: AbortSignal.timeout(15000) });
+      const mediaData = await mediaResp.json();
+      if (mediaData.error) {
+        return res.json({ success: false, error: 'ig_api_error', message: mediaData.error.message });
+      }
+      if (mediaData.data) allMedia = allMedia.concat(mediaData.data);
+      mediaUrl = mediaData.paging?.next || null;
+      pages++;
+    }
+
+    // Also get profile info
+    let profile = {};
+    try {
+      const profResp = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}?fields=id,username,name,profile_picture_url,followers_count,media_count,biography,website&access_token=${igToken}`);
+      profile = await profResp.json();
+    } catch(e) {}
+
+    const photos = allMedia
+      .filter(m => m.media_type === 'IMAGE' || m.media_type === 'CAROUSEL_ALBUM')
+      .map(m => ({
+        url: m.media_url || m.thumbnail_url,
+        id: m.id,
+        caption: (m.caption || '').substring(0, 300),
+        timestamp: m.timestamp,
+        permalink: m.permalink,
+        likes: m.like_count || 0,
+        comments: m.comments_count || 0,
+        source: 'instagram'
+      }));
+
+    const videos = allMedia
+      .filter(m => m.media_type === 'VIDEO')
+      .map(m => ({
+        url: m.thumbnail_url || m.media_url,
+        id: m.id,
+        caption: (m.caption || '').substring(0, 300),
+        timestamp: m.timestamp,
+        permalink: m.permalink,
+        likes: m.like_count || 0,
+        comments: m.comments_count || 0,
+        source: 'instagram',
+        type: 'video'
+      }));
+
+    console.log(`📸 Instagram API: ${photos.length} photos + ${videos.length} vidéos pour @${profile.username || igAccountId}`);
+
+    res.json({
+      success: true,
+      profile: {
+        username: profile.username,
+        name: profile.name,
+        picture: profile.profile_picture_url,
+        followers: profile.followers_count,
+        mediaCount: profile.media_count,
+        bio: profile.biography,
+        website: profile.website
+      },
+      photos,
+      videos,
+      total: photos.length + videos.length,
+      source: 'instagram_graph_api'
+    });
+  } catch(e) {
+    console.error('Instagram photos error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
 
 // ============================================================
 // SEO SETTINGS API — AI settings, review automation, characteristics, holidays

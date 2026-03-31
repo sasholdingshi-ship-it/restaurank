@@ -1869,7 +1869,10 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                             <div style="font-size:.72rem;color:var(--mut);">Récupère les photos existantes, publie partout</div>
                         </div>
                     </div>
-                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="scrapePhotos()">📥 Récupérer les photos</button>
+                    <div style="display:flex;gap:6px;">
+                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="scrapePhotos()">📥 Photos site + GMB</button>
+                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:linear-gradient(135deg,#E1306C,#F77737);" onclick="fetchInstagramPhotos()">📸 Photos Instagram</button>
+                    </div>
                 </div>
                 <div id="photoStatus" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:.75rem;"></div>
                 <div class="photo-filters" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
@@ -1879,6 +1882,7 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                     <button class="photo-filter" onclick="filterPhotos('facade')" data-filter="facade">🏠 Façade</button>
                     <button class="photo-filter" onclick="filterPhotos('equipe')" data-filter="equipe">👨‍🍳 Équipe</button>
                     <button class="photo-filter" onclick="filterPhotos('terrasse')" data-filter="terrasse">☀️ Terrasse</button>
+                    <button class="photo-filter" onclick="filterPhotos('instagram')" data-filter="instagram" style="background:linear-gradient(135deg,#E1306C,#F77737);color:#fff;">📸 Instagram</button>
                 </div>
                 <div class="photo-grid" id="photoGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:400px;overflow-y:auto;"></div>
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
@@ -8981,24 +8985,33 @@ async function scrapeHubData(){
             if(data.data.hours)document.getElementById('hubHours').value=typeof data.data.hours==='string'?data.data.hours:JSON.stringify(data.data.hours);
             // Update desc counter
             const dc=document.getElementById('hubDescCount');if(dc)dc.textContent=(document.getElementById('hubDescription').value||'').length;
-            // Store photos
+            // Store photos — handle both string URLs and structured objects
+            hubPhotos=[];
             if(data.data.photos?.length){
-                hubPhotos=data.data.photos.map((url,i)=>({url,source:url.includes('googleusercontent')?'gmb':'website',type:'autre',selected:false,id:'p'+i}));
-                // Add GMB photos with metadata if available
-                if(data.data.gmbPhotos?.length){
-                    data.data.gmbPhotos.forEach((p,i)=>{
-                        if(!hubPhotos.find(hp=>hp.url===p.url)){
-                            hubPhotos.push({url:p.url,source:'gmb',type:'autre',selected:false,id:'gmb'+i,width:p.width,height:p.height});
-                        }
-                    });
-                }
-                // Add Instagram photos if available
-                if(data.data.instagramPhotos?.length){
-                    data.data.instagramPhotos.forEach((url,i)=>{
-                        hubPhotos.push({url,source:'instagram',type:'autre',selected:false,id:'ig'+i});
-                    });
-                }
-                renderHubPhotos();
+                data.data.photos.forEach((p,i)=>{
+                    const url=typeof p==='string'?p:p.url;
+                    const source=typeof p==='object'&&p.source?p.source:(url.includes('googleusercontent')?'gmb':'website');
+                    if(url&&!hubPhotos.find(hp=>hp.url===url)){
+                        hubPhotos.push({url,source,type:typeof p==='object'&&p.type?p.type:'autre',selected:false,id:'p'+i,width:p?.width,height:p?.height});
+                    }
+                });
+            }
+            // Add GMB photos with metadata
+            if(data.data.gmbPhotos?.length){
+                data.data.gmbPhotos.forEach((p,i)=>{
+                    if(p.url&&!hubPhotos.find(hp=>hp.url===p.url)){
+                        hubPhotos.push({url:p.url,source:'gmb',type:'autre',selected:false,id:'gmb'+i,width:p.width,height:p.height});
+                    }
+                });
+            }
+            // Add Instagram photos (structured from Graph API)
+            if(data.data.instagramPhotos?.length){
+                data.data.instagramPhotos.forEach((p,i)=>{
+                    const url=typeof p==='string'?p:p.url;
+                    if(url) hubPhotos.push({url,source:'instagram',type:'instagram',selected:false,id:'ig'+i,caption:p?.caption,likes:p?.likes,permalink:p?.permalink});
+                });
+            }
+            if(hubPhotos.length) renderHubPhotos();
             }
             // Populate branding fields (logo, colors, fonts, DA)
             populateHub(); // this now handles branding fields too
@@ -9040,14 +9053,56 @@ async function scrapePhotos(){
     }
 }
 
+async function fetchInstagramPhotos(){
+    const status=document.getElementById('photoStatus');
+    if(status){status.style.display='block';status.style.background='linear-gradient(135deg,rgba(225,48,108,.1),rgba(247,119,55,.1))';status.style.color='#E1306C';status.textContent='📸 Connexion Instagram Graph API...';}
+    try{
+        const resp=await fetchTimeout(`${API_BASE}/api/instagram/photos`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')}},30000);
+        const data=await resp.json();
+        if(!data.success){
+            if(data.error==='no_instagram'){
+                if(status){status.textContent='⚠️ Connectez d\'abord Instagram via Facebook OAuth (onglet Dispatch → 🔗 Connecter Meta)';status.style.color='var(--org)';}
+            } else {
+                if(status){status.textContent='❌ '+data.message;status.style.color='var(--red)';}
+            }
+            return;
+        }
+        // Add Instagram photos to hub
+        const before=hubPhotos.filter(p=>p.source==='instagram').length;
+        // Remove old IG photos
+        hubPhotos=hubPhotos.filter(p=>p.source!=='instagram');
+        // Add new ones
+        data.photos.forEach((p,i)=>{
+            hubPhotos.push({url:p.url,source:'instagram',type:'instagram',selected:false,id:'ig'+i,caption:p.caption,likes:p.likes,comments:p.comments,permalink:p.permalink,timestamp:p.timestamp});
+        });
+        data.videos?.forEach((v,i)=>{
+            hubPhotos.push({url:v.url,source:'instagram',type:'instagram',selected:false,id:'igv'+i,caption:v.caption,likes:v.likes,permalink:v.permalink,isVideo:true});
+        });
+        renderHubPhotos();
+        // Store IG profile in hub data
+        if(data.profile){
+            window._hubData=window._hubData||{};
+            window._hubData.instagramProfile=data.profile;
+            if(data.profile.username&&!document.getElementById('hubInstagram')?.value){
+                document.getElementById('hubInstagram').value='https://instagram.com/'+data.profile.username;
+            }
+        }
+        if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✅ ${data.photos.length} photos + ${data.videos?.length||0} vidéos Instagram récupérées via Graph API${data.profile?.username?' (@'+data.profile.username+', '+data.profile.followers+' followers)':''}`;}
+        addToLog(`📸 Instagram: ${data.total} médias récupérés via Graph API — @${data.profile?.username||'?'}`);
+    }catch(e){
+        if(status){status.style.background='rgba(239,68,68,.1)';status.style.color='var(--red)';status.textContent='❌ Erreur Instagram: '+e.message;}
+    }
+}
+
 function renderHubPhotos(){
     const grid=document.getElementById('photoGrid');if(!grid)return;
-    const filtered=hubPhotoFilter==='all'?hubPhotos:hubPhotos.filter(p=>p.type===hubPhotoFilter);
+    // Instagram filter = filter by source, not by type
+    const filtered=hubPhotoFilter==='all'?hubPhotos:hubPhotoFilter==='instagram'?hubPhotos.filter(p=>p.source==='instagram'):hubPhotos.filter(p=>p.type===hubPhotoFilter);
     if(!filtered.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mut);font-size:.85rem;">Aucune photo. Cliquez "📥 Récupérer les photos" pour scanner GMB et votre site web.</div>';return;}
     grid.innerHTML=filtered.map(p=>`
-        <div class="photo-grid-item${p.selected?' selected':''}" onclick="togglePhoto('${p.id}')" title="${p.alt||p.type}">
-            <img src="${p.url}" alt="${p.alt||'Photo restaurant'}" loading="lazy" onerror="this.parentElement.style.display='none'">
-            <span class="photo-badge">${p.type==='plat'?'🍽️':p.type==='ambiance'?'🪑':p.type==='facade'?'🏠':p.type==='equipe'?'👨‍🍳':p.type==='terrasse'?'☀️':'📷'}</span>
+        <div class="photo-grid-item${p.selected?' selected':''}" onclick="togglePhoto('${p.id}')" title="${p.caption||p.alt||p.type}${p.likes?' — ❤️ '+p.likes:''}">
+            <img src="${p.url}" alt="${p.caption||p.alt||'Photo restaurant'}" loading="lazy" onerror="this.parentElement.style.display='none'">
+            <span class="photo-badge">${p.source==='instagram'?'📸':p.source==='gmb'?'📍':p.type==='plat'?'🍽️':p.type==='ambiance'?'🪑':p.type==='facade'?'🏠':p.type==='equipe'?'👨‍🍳':p.type==='terrasse'?'☀️':'🌐'}${p.likes?' ❤️'+p.likes:''}</span>${p.isVideo?'<span style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;font-size:.6rem;padding:1px 4px;border-radius:3px;">▶️</span>':''}
             <span class="photo-src ${p.source}">${p.source==='gmb'?'GMB':'Site'}</span>
             <div class="photo-check">✓</div>
         </div>
