@@ -1254,11 +1254,42 @@ app.post('/api/admin/account/:id/plan', requireAuth, requireAdmin, (req, res) =>
 
 app.get('/api/admin/account/:id/restaurants', requireAuth, requireAdmin, (req, res) => {
   // Search by owner_id first, fallback to user_id
-  let restaurants = db.prepare('SELECT id, name, city, last_audit, scores FROM restaurants WHERE owner_id = ?').all(req.params.id);
+  let restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, completed_actions FROM restaurants WHERE owner_id = ?').all(req.params.id);
   if (restaurants.length === 0) {
-    restaurants = db.prepare('SELECT id, name, city, last_audit, scores FROM restaurants WHERE user_id = ?').all(req.params.id);
+    restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, completed_actions FROM restaurants WHERE user_id = ?').all(req.params.id);
   }
+  // Also fetch generated_content per restaurant
+  restaurants = restaurants.map(r => {
+    let generated = [];
+    try { generated = db.prepare('SELECT * FROM generated_content WHERE restaurant_id = ? ORDER BY created_at DESC').all(r.id); } catch(e){}
+    return { ...r, generated_content: generated };
+  });
   res.json({ restaurants });
+});
+
+// --- ADMIN: Update restaurant hub data ---
+app.post('/api/admin/restaurant/:id/hub', requireAuth, requireAdmin, (req, res) => {
+  const { hub_data } = req.body;
+  try {
+    db.prepare('UPDATE restaurants SET hub_data = ? WHERE id = ?').run(JSON.stringify(hub_data), req.params.id);
+    res.json({ success: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// --- ADMIN: Update restaurant data (audit, scores, etc.) ---
+app.post('/api/admin/restaurant/:id/update', requireAuth, requireAdmin, (req, res) => {
+  const { audit_data, scores, completed_actions, hub_data, name, city } = req.body;
+  const updates = []; const params = [];
+  if (audit_data !== undefined) { updates.push('audit_data = ?'); params.push(JSON.stringify(audit_data)); }
+  if (scores !== undefined) { updates.push('scores = ?'); params.push(JSON.stringify(scores)); }
+  if (completed_actions !== undefined) { updates.push('completed_actions = ?'); params.push(JSON.stringify(completed_actions)); }
+  if (hub_data !== undefined) { updates.push('hub_data = ?'); params.push(JSON.stringify(hub_data)); }
+  if (name) { updates.push('name = ?'); params.push(name); }
+  if (city) { updates.push('city = ?'); params.push(city); }
+  if (!updates.length) return res.status(400).json({ error: 'Nothing to update' });
+  params.push(req.params.id);
+  db.prepare(`UPDATE restaurants SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+  res.json({ success: true });
 });
 
 // --- ADMIN: Invite Codes Management ---
