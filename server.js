@@ -623,6 +623,379 @@ if (!existingAdmin) {
 }
 
 // ============================================================
+// DATA QUALITY — tables, validation engine, daily sync
+// ============================================================
+db.exec(`
+  CREATE TABLE IF NOT EXISTS data_quality_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER NOT NULL,
+    field TEXT NOT NULL,
+    status TEXT DEFAULT 'error',
+    message TEXT,
+    old_value TEXT,
+    new_value TEXT,
+    source TEXT,
+    auto_fixed INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS sync_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER,
+    sync_type TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    details TEXT,
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    finished_at DATETIME
+  );
+`);
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_dq_restaurant ON data_quality_log(restaurant_id)'); } catch(e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_dq_field ON data_quality_log(field)'); } catch(e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_sync_restaurant ON sync_history(restaurant_id)'); } catch(e) {}
+
+// ── VALIDATION RULES ──
+const VALIDATION_RULES = {
+  phone: {
+    label: 'Téléphone',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Téléphone manquant' };
+      const cleaned = v.replace(/[\s\-\.\(\)]/g, '');
+      if (/^\+33[0-9]{9}$/.test(cleaned)) return { status: 'ok', normalized: cleaned.replace(/^\+33/, '+33 ').replace(/(\d{1})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5') };
+      if (/^0[1-9][0-9]{8}$/.test(cleaned)) return { status: 'ok', normalized: cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5') };
+      if (/^\+?[0-9]{10,15}$/.test(cleaned)) return { status: 'warn', message: 'Format téléphone non standard FR' };
+      return { status: 'error', message: 'Téléphone invalide: ' + v };
+    }
+  },
+  address: {
+    label: 'Adresse',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Adresse manquante' };
+      if (v.length < 10) return { status: 'error', message: 'Adresse trop courte' };
+      if (!/\d/.test(v)) return { status: 'warn', message: 'Pas de numéro de rue détecté' };
+      if (!/\d{5}/.test(v)) return { status: 'warn', message: 'Code postal manquant' };
+      return { status: 'ok' };
+    }
+  },
+  name: {
+    label: 'Nom',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Nom manquant' };
+      if (v.length < 2) return { status: 'error', message: 'Nom trop court' };
+      if (v === v.toUpperCase() && v.length > 3) return { status: 'warn', message: 'Nom tout en majuscules', normalized: v.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') };
+      return { status: 'ok' };
+    }
+  },
+  website: {
+    label: 'Site web',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Site web manquant' };
+      if (!/^https?:\/\/.+\..+/.test(v)) return { status: 'error', message: 'URL invalide' };
+      if (!v.startsWith('https://')) return { status: 'warn', message: 'Site non HTTPS', normalized: v.replace('http://', 'https://') };
+      return { status: 'ok' };
+    }
+  },
+  description: {
+    label: 'Description',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Description manquante' };
+      if (v.length < 100) return { status: 'error', message: `Description trop courte (${v.length}/750 car.)` };
+      if (v.length < 300) return { status: 'warn', message: `Description courte (${v.length}/750 car.)` };
+      return { status: 'ok' };
+    }
+  },
+  hours: {
+    label: 'Horaires',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Horaires manquants' };
+      const str = typeof v === 'string' ? v : JSON.stringify(v);
+      if (str.length < 10) return { status: 'error', message: 'Horaires incomplets' };
+      return { status: 'ok' };
+    }
+  },
+  category: {
+    label: 'Catégorie',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Catégorie manquante' };
+      if (v.toLowerCase() === 'restaurant') return { status: 'warn', message: 'Catégorie trop générique — spécifiez (ex: Restaurant italien)' };
+      return { status: 'ok' };
+    }
+  },
+  rating: {
+    label: 'Note Google',
+    validate: (v) => {
+      if (!v && v !== 0) return { status: 'missing', message: 'Note non récupérée' };
+      const n = parseFloat(v);
+      if (isNaN(n)) return { status: 'error', message: 'Note invalide' };
+      if (n < 3.5) return { status: 'error', message: `Note basse (${n}/5)` };
+      if (n < 4.2) return { status: 'warn', message: `Note à améliorer (${n}/5)` };
+      return { status: 'ok' };
+    }
+  },
+  photos: {
+    label: 'Photos',
+    validate: (v) => {
+      const count = Array.isArray(v) ? v.length : (parseInt(v) || 0);
+      if (count === 0) return { status: 'missing', message: 'Aucune photo' };
+      if (count < 5) return { status: 'error', message: `Seulement ${count} photos (min 25)` };
+      if (count < 25) return { status: 'warn', message: `${count} photos (objectif 25+)` };
+      return { status: 'ok' };
+    }
+  },
+  logo: {
+    label: 'Logo',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Logo non détecté' };
+      return { status: 'ok' };
+    }
+  },
+  menu: {
+    label: 'Menu',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Menu non uploadé sur GBP' };
+      return { status: 'ok' };
+    }
+  }
+};
+
+// ── VALIDATE & LOG a restaurant's data quality ──
+function validateRestaurant(restaurantId) {
+  const rest = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(restaurantId);
+  if (!rest) return null;
+
+  const audit = rest.audit_data ? JSON.parse(rest.audit_data) : {};
+  const scores = rest.scores ? JSON.parse(rest.scores) : {};
+  let hub = null;
+  try {
+    const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(restaurantId, 'hub_data');
+    hub = hubRow ? JSON.parse(hubRow.data) : {};
+  } catch(e) { hub = {}; }
+
+  const results = {};
+  const fieldMap = {
+    name: rest.name || hub?.name || audit?.name,
+    phone: hub?.phone || audit?.phone,
+    address: hub?.address || audit?.address,
+    website: hub?.website || hub?.websiteUrl || audit?.websiteUrl,
+    description: hub?.description || audit?.description,
+    hours: hub?.hours || audit?.hours,
+    category: hub?.category || hub?.cuisine || audit?.category,
+    rating: hub?.rating || audit?.rating,
+    photos: hub?.photos || audit?.photos || [],
+    logo: hub?.branding?.logo || hub?.logo,
+    menu: audit?.menuUploaded ? 'uploaded' : null
+  };
+
+  // Clear old logs for this restaurant
+  try { db.prepare('DELETE FROM data_quality_log WHERE restaurant_id = ? AND created_at > datetime(\'now\', \'-1 hour\')').run(restaurantId); } catch(e) {}
+
+  let okCount = 0, warnCount = 0, errCount = 0, missingCount = 0;
+
+  for (const [field, rule] of Object.entries(VALIDATION_RULES)) {
+    const value = fieldMap[field];
+    const result = rule.validate(value);
+    results[field] = { ...result, label: rule.label, value: value || null };
+
+    if (result.status === 'ok') okCount++;
+    else if (result.status === 'warn') warnCount++;
+    else if (result.status === 'missing') missingCount++;
+    else errCount++;
+
+    // Log issues
+    if (result.status !== 'ok') {
+      try {
+        db.prepare('INSERT INTO data_quality_log (restaurant_id, field, status, message, old_value, source) VALUES (?, ?, ?, ?, ?, ?)')
+          .run(restaurantId, field, result.status, result.message || '', typeof value === 'string' ? value?.substring(0, 200) : JSON.stringify(value)?.substring(0, 200), 'auto_validation');
+      } catch(e) {}
+    }
+
+    // Auto-fix if normalization available
+    if (result.normalized && result.status === 'warn') {
+      try {
+        db.prepare('INSERT INTO data_quality_log (restaurant_id, field, status, message, old_value, new_value, source, auto_fixed) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
+          .run(restaurantId, field, 'auto_fixed', `Normalisé: ${result.message}`, typeof value === 'string' ? value : '', result.normalized, 'auto_normalize');
+      } catch(e) {}
+    }
+  }
+
+  const total = Object.keys(VALIDATION_RULES).length;
+  const qualityScore = Math.round((okCount / total) * 100);
+
+  return { restaurantId, name: rest.name, city: rest.city, fields: results, qualityScore, ok: okCount, warn: warnCount, error: errCount, missing: missingCount, total };
+}
+
+// ── CROSS-CHECK with Google Places (official source) ──
+async function crossCheckWithGoogle(restaurantId) {
+  const rest = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(restaurantId);
+  if (!rest) return null;
+  const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!placesKey) return { error: 'No Google Places API key' };
+
+  let hub = {};
+  try {
+    const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(restaurantId, 'hub_data');
+    hub = hubRow ? JSON.parse(hubRow.data) : {};
+  } catch(e) {}
+
+  const placeId = rest.google_place_id || hub?.place_id;
+  if (!placeId) {
+    // Try to find by name+city
+    try {
+      const q = encodeURIComponent(`${rest.name} ${rest.city} restaurant`);
+      const searchResp = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr&type=restaurant`, { signal: AbortSignal.timeout(10000) });
+      const searchData = await searchResp.json();
+      if (searchData.status === 'OK' && searchData.results?.[0]?.place_id) {
+        db.prepare('UPDATE restaurants SET google_place_id = ? WHERE id = ?').run(searchData.results[0].place_id, restaurantId);
+      } else return { error: 'Restaurant non trouvé sur Google Places' };
+    } catch(e) { return { error: e.message }; }
+  }
+
+  // Fetch fresh data from Google
+  const freshPlaceId = placeId || db.prepare('SELECT google_place_id FROM restaurants WHERE id = ?').get(restaurantId)?.google_place_id;
+  if (!freshPlaceId) return { error: 'No place_id' };
+
+  try {
+    const fields = 'name,formatted_address,formatted_phone_number,website,rating,user_ratings_total,opening_hours,photos,editorial_summary,business_status';
+    const resp = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${freshPlaceId}&fields=${fields}&key=${placesKey}&language=fr`, { signal: AbortSignal.timeout(10000) });
+    const data = await resp.json();
+    if (data.status !== 'OK') return { error: 'Google API: ' + data.status };
+
+    const g = data.result;
+    const diffs = [];
+
+    // Compare each field
+    if (g.name && hub.name && g.name.toLowerCase() !== hub.name.toLowerCase()) diffs.push({ field: 'name', google: g.name, local: hub.name });
+    if (g.formatted_phone_number && hub.phone) {
+      const gPhone = g.formatted_phone_number.replace(/[\s\-\.]/g, '');
+      const lPhone = (hub.phone || '').replace(/[\s\-\.]/g, '');
+      if (gPhone !== lPhone) diffs.push({ field: 'phone', google: g.formatted_phone_number, local: hub.phone });
+    }
+    if (g.formatted_address && hub.address && !g.formatted_address.toLowerCase().includes(hub.address.toLowerCase().substring(0, 20))) diffs.push({ field: 'address', google: g.formatted_address, local: hub.address });
+    if (g.website && hub.website && new URL(g.website).hostname !== new URL(hub.website).hostname) diffs.push({ field: 'website', google: g.website, local: hub.website });
+    if (g.rating && hub.rating && Math.abs(g.rating - parseFloat(hub.rating)) > 0.1) diffs.push({ field: 'rating', google: g.rating, local: hub.rating });
+
+    // Log diffs
+    diffs.forEach(d => {
+      try {
+        db.prepare('INSERT INTO data_quality_log (restaurant_id, field, status, message, old_value, new_value, source) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .run(restaurantId, d.field, 'mismatch', `Différence Google vs local`, d.local || '', d.google || '', 'google_crosscheck');
+      } catch(e) {}
+    });
+
+    // Log sync
+    try {
+      db.prepare('INSERT INTO sync_history (restaurant_id, sync_type, status, details, finished_at) VALUES (?, ?, ?, ?, datetime(\'now\'))')
+        .run(restaurantId, 'google_crosscheck', 'done', JSON.stringify({ diffs: diffs.length, fields_checked: 5 }));
+    } catch(e) {}
+
+    return { success: true, diffs, google: { name: g.name, phone: g.formatted_phone_number, address: g.formatted_address, website: g.website, rating: g.rating, reviewCount: g.user_ratings_total, photoCount: g.photos?.length || 0, status: g.business_status } };
+  } catch(e) { return { error: e.message }; }
+}
+
+// ── DAILY SYNC CRON — runs every 24h ──
+async function dailySync() {
+  console.log('🔄 Daily sync started at', new Date().toISOString());
+  try {
+    const restaurants = db.prepare('SELECT id, name, city FROM restaurants').all();
+    let validated = 0, crossChecked = 0, errors = 0;
+
+    for (const r of restaurants) {
+      try {
+        // 1. Validate data quality
+        validateRestaurant(r.id);
+        validated++;
+
+        // 2. Cross-check with Google (rate-limited: 1 per 2 seconds)
+        if (process.env.GOOGLE_PLACES_API_KEY) {
+          await crossCheckWithGoogle(r.id);
+          crossChecked++;
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Rate limit
+        }
+      } catch(e) {
+        errors++;
+        console.warn(`Daily sync error for restaurant #${r.id}:`, e.message);
+      }
+    }
+
+    // Log the sync run
+    try {
+      db.prepare('INSERT INTO sync_history (sync_type, status, details, finished_at) VALUES (?, ?, ?, datetime(\'now\'))')
+        .run('daily_full', 'done', JSON.stringify({ restaurants: restaurants.length, validated, crossChecked, errors }));
+    } catch(e) {}
+
+    console.log(`✅ Daily sync done: ${validated} validated, ${crossChecked} cross-checked, ${errors} errors`);
+  } catch(e) { console.error('Daily sync failed:', e.message); }
+}
+
+// Schedule daily sync — run at 3 AM every day
+const DAILY_SYNC_INTERVAL = 24 * 60 * 60 * 1000; // 24h
+function scheduleDailySync() {
+  const now = new Date();
+  const next3am = new Date(now);
+  next3am.setHours(3, 0, 0, 0);
+  if (next3am <= now) next3am.setDate(next3am.getDate() + 1);
+  const delay = next3am - now;
+  console.log(`⏰ Daily sync scheduled in ${Math.round(delay / 60000)} minutes (at ${next3am.toISOString()})`);
+  setTimeout(() => {
+    dailySync();
+    setInterval(dailySync, DAILY_SYNC_INTERVAL);
+  }, delay);
+}
+scheduleDailySync();
+
+// ── ADMIN API: Data Quality endpoints ──
+app.get('/api/admin/data-quality', requireAuth, requireAdmin, (req, res) => {
+  const restaurants = db.prepare('SELECT id, name, city FROM restaurants').all();
+  const results = restaurants.map(r => validateRestaurant(r.id)).filter(Boolean);
+  const avgScore = results.length ? Math.round(results.reduce((s, r) => s + r.qualityScore, 0) / results.length) : 0;
+  const totalOk = results.reduce((s, r) => s + r.ok, 0);
+  const totalWarn = results.reduce((s, r) => s + r.warn, 0);
+  const totalErr = results.reduce((s, r) => s + r.error, 0);
+  const totalMissing = results.reduce((s, r) => s + r.missing, 0);
+
+  // Field-level stats
+  const fieldStats = {};
+  for (const field of Object.keys(VALIDATION_RULES)) {
+    let ok = 0, warn = 0, err = 0, missing = 0;
+    results.forEach(r => {
+      const f = r.fields[field];
+      if (f?.status === 'ok') ok++;
+      else if (f?.status === 'warn') warn++;
+      else if (f?.status === 'missing') missing++;
+      else err++;
+    });
+    fieldStats[field] = { label: VALIDATION_RULES[field].label, ok, warn, err, missing, total: results.length };
+  }
+
+  res.json({ avgScore, restaurants: results, fieldStats, summary: { total: results.length, ok: totalOk, warn: totalWarn, error: totalErr, missing: totalMissing } });
+});
+
+app.post('/api/admin/data-quality/validate/:id', requireAuth, requireAdmin, (req, res) => {
+  const result = validateRestaurant(parseInt(req.params.id));
+  if (!result) return res.status(404).json({ error: 'Restaurant not found' });
+  res.json(result);
+});
+
+app.post('/api/admin/data-quality/crosscheck/:id', requireAuth, requireAdmin, async (req, res) => {
+  const result = await crossCheckWithGoogle(parseInt(req.params.id));
+  res.json(result);
+});
+
+app.post('/api/admin/data-quality/sync-all', requireAuth, requireAdmin, async (req, res) => {
+  // Trigger manual full sync
+  dailySync();
+  res.json({ success: true, message: 'Sync lancée en arrière-plan' });
+});
+
+app.get('/api/admin/sync-history', requireAuth, requireAdmin, (req, res) => {
+  const history = db.prepare('SELECT * FROM sync_history ORDER BY started_at DESC LIMIT 50').all();
+  res.json(history);
+});
+
+app.get('/api/admin/data-quality/log/:id', requireAuth, requireAdmin, (req, res) => {
+  const logs = db.prepare('SELECT * FROM data_quality_log WHERE restaurant_id = ? ORDER BY created_at DESC LIMIT 100').all(req.params.id);
+  res.json(logs);
+});
+
+// ============================================================
 // AUTH HELPERS — hash, verify, session tokens
 // ============================================================
 function hashPassword(password, salt) {

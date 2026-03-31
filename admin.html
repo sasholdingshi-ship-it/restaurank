@@ -165,6 +165,7 @@ tbody tr:hover{background:rgba(99,102,241,.04);cursor:pointer;}
       <button class="tab active" onclick="switchTab('clients')">👥 Clients</button>
       <button class="tab" onclick="switchTab('restaurants')">🍽️ Restaurants</button>
       <button class="tab" onclick="switchTab('invites')">🎟️ Codes d'invitation</button>
+      <button class="tab" onclick="switchTab('quality')">📊 Qualité Data</button>
       <button class="tab" onclick="switchTab('settings')">⚙️ Paramètres</button>
     </div>
 
@@ -248,6 +249,43 @@ tbody tr:hover{background:rgba(99,102,241,.04);cursor:pointer;}
         </div>
       </div>
       <div id="invitesList"></div>
+    </div>
+
+    <!-- DATA QUALITY TAB -->
+    <div class="tab-panel" id="tab-quality">
+      <div style="display:flex;gap:8px;margin-bottom:16px;">
+        <button class="action-btn grn" onclick="loadDataQuality()">🔄 Actualiser</button>
+        <button class="action-btn" onclick="triggerFullSync()">🔁 Sync complète (Google cross-check)</button>
+      </div>
+
+      <!-- Global quality score -->
+      <div id="qualityOverview" class="card">
+        <div class="card-title">📊 Score qualité global</div>
+        <div style="text-align:center;padding:10px;color:var(--mut);">Chargement…</div>
+      </div>
+
+      <!-- Field-level breakdown -->
+      <div id="qualityFields" class="card" style="display:none;">
+        <div class="card-title">🔍 Qualité par champ</div>
+        <div id="qualityFieldsBody"></div>
+      </div>
+
+      <!-- Per-restaurant quality -->
+      <div id="qualityTable" class="card" style="display:none;">
+        <div class="card-title">🍽️ Qualité par restaurant</div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>#</th><th>Restaurant</th><th>Ville</th><th>Score</th><th>✅</th><th>⚠️</th><th>❌</th><th>❓</th><th>Actions</th></tr></thead>
+            <tbody id="qualityTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Sync history -->
+      <div id="syncHistory" class="card" style="display:none;">
+        <div class="card-title">🕐 Historique des syncs</div>
+        <div id="syncHistoryBody"></div>
+      </div>
     </div>
 
     <!-- SETTINGS TAB -->
@@ -934,6 +972,122 @@ function copyToClipboard(text) {
   navigator.clipboard.writeText(text).then(() => toast('📋 Copié !', 'ok'));
 }
 
+// ══ DATA QUALITY ══
+async function loadDataQuality() {
+  try {
+    const [qR, sR] = await Promise.all([
+      fetch(`${API}/api/admin/data-quality`, {headers: hdrs()}),
+      fetch(`${API}/api/admin/sync-history`, {headers: hdrs()})
+    ]);
+    const q = await qR.json();
+    const syncList = await sR.json();
+
+    // Overview
+    const ov = document.getElementById('qualityOverview');
+    const sc = q.avgScore || 0;
+    const scColor = sc >= 80 ? 'var(--grn)' : sc >= 50 ? 'var(--org)' : 'var(--red)';
+    ov.innerHTML = `
+      <div class="card-title">📊 Score qualité global</div>
+      <div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">
+        <div style="text-align:center;">
+          <div style="font-size:3rem;font-weight:900;color:${scColor};">${sc}%</div>
+          <div style="font-size:.7rem;color:var(--mut);">Score moyen</div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;">
+          <div class="stat-card" style="min-width:80px;"><div class="stat-val" style="color:var(--grn);font-size:1.3rem;">${q.summary?.ok||0}</div><div class="stat-label">✅ OK</div></div>
+          <div class="stat-card" style="min-width:80px;"><div class="stat-val" style="color:var(--org);font-size:1.3rem;">${q.summary?.warn||0}</div><div class="stat-label">⚠️ Avert.</div></div>
+          <div class="stat-card" style="min-width:80px;"><div class="stat-val" style="color:var(--red);font-size:1.3rem;">${q.summary?.error||0}</div><div class="stat-label">❌ Erreurs</div></div>
+          <div class="stat-card" style="min-width:80px;"><div class="stat-val" style="color:var(--mut);font-size:1.3rem;">${q.summary?.missing||0}</div><div class="stat-label">❓ Manquant</div></div>
+        </div>
+      </div>`;
+
+    // Field breakdown
+    const fieldsCard = document.getElementById('qualityFields');
+    fieldsCard.style.display = 'block';
+    const fb = document.getElementById('qualityFieldsBody');
+    const fs = q.fieldStats || {};
+    fb.innerHTML = Object.entries(fs).map(([key, f]) => {
+      const pct = f.total ? Math.round((f.ok / f.total) * 100) : 0;
+      const barColor = pct >= 80 ? 'var(--grn)' : pct >= 50 ? 'var(--org)' : 'var(--red)';
+      return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bdr);">
+        <span style="width:100px;font-size:.73rem;font-weight:600;">${f.label}</span>
+        <div style="flex:1;height:8px;background:var(--bg);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:${barColor};border-radius:4px;transition:width .3s;"></div>
+        </div>
+        <span style="width:40px;text-align:right;font-size:.72rem;font-weight:700;color:${barColor};">${pct}%</span>
+        <span style="font-size:.62rem;color:var(--mut);width:100px;">✅${f.ok} ⚠️${f.warn} ❌${f.err} ❓${f.missing}</span>
+      </div>`;
+    }).join('');
+
+    // Per-restaurant table
+    const tableCard = document.getElementById('qualityTable');
+    tableCard.style.display = 'block';
+    document.getElementById('qualityTableBody').innerHTML = (q.restaurants || []).map(r => {
+      const c = r.qualityScore >= 80 ? 'score-grn' : r.qualityScore >= 50 ? 'score-org' : 'score-red';
+      return `<tr>
+        <td style="color:var(--mut);">#${r.restaurantId}</td>
+        <td><strong>${esc(r.name||'—')}</strong></td>
+        <td style="color:var(--mut);">${esc(r.city||'—')}</td>
+        <td class="${c}" style="font-size:.9rem;">${r.qualityScore}%</td>
+        <td style="color:var(--grn);">${r.ok}</td>
+        <td style="color:var(--org);">${r.warn}</td>
+        <td style="color:var(--red);">${r.error}</td>
+        <td style="color:var(--mut);">${r.missing}</td>
+        <td style="white-space:nowrap;">
+          <button class="action-btn" onclick="validateOne(${r.restaurantId})">🔍 Valider</button>
+          <button class="action-btn" onclick="crosscheckOne(${r.restaurantId})">🔄 Cross-check</button>
+        </td>
+      </tr>`;
+    }).join('');
+
+    // Sync history
+    const syncCard = document.getElementById('syncHistory');
+    syncCard.style.display = 'block';
+    document.getElementById('syncHistoryBody').innerHTML = (Array.isArray(syncList) ? syncList : []).slice(0, 20).map(s => {
+      const d = s.details ? JSON.parse(s.details) : {};
+      return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--bdr);font-size:.72rem;">
+        <span class="badge ${s.status==='done'?'active':'inactive'}">${s.status}</span>
+        <span style="color:var(--mut);">${s.sync_type}</span>
+        <span style="flex:1;">${d.restaurants ? d.restaurants+' restaurants' : ''} ${d.validated ? '— '+d.validated+' validés' : ''} ${d.crossChecked ? '— '+d.crossChecked+' cross-checkés' : ''} ${d.diffs!==undefined ? '— '+d.diffs+' différences' : ''}</span>
+        <span style="color:var(--mut);font-size:.65rem;">${s.finished_at ? new Date(s.finished_at).toLocaleString('fr-FR') : s.started_at ? new Date(s.started_at).toLocaleString('fr-FR') : '—'}</span>
+      </div>`;
+    }).join('') || '<div class="empty">Aucune sync effectuée</div>';
+
+    toast('Qualité data chargée', 'ok');
+  } catch(e) { toast('Erreur: ' + e.message, 'err'); }
+}
+
+async function validateOne(id) {
+  try {
+    const r = await fetch(`${API}/api/admin/data-quality/validate/${id}`, {method:'POST', headers: hdrs()});
+    const d = await r.json();
+    toast(`Restaurant #${id}: qualité ${d.qualityScore}% (✅${d.ok} ⚠️${d.warn} ❌${d.error})`, d.qualityScore >= 60 ? 'ok' : 'err');
+    loadDataQuality();
+  } catch(e) { toast('Erreur', 'err'); }
+}
+
+async function crosscheckOne(id) {
+  toast('🔄 Cross-check Google en cours…', 'ok');
+  try {
+    const r = await fetch(`${API}/api/admin/data-quality/crosscheck/${id}`, {method:'POST', headers: hdrs()});
+    const d = await r.json();
+    if (d.success) {
+      toast(`Cross-check: ${d.diffs.length} différences trouvées`, d.diffs.length === 0 ? 'ok' : 'err');
+    } else {
+      toast('❌ ' + (d.error || 'Erreur'), 'err');
+    }
+    loadDataQuality();
+  } catch(e) { toast('Erreur', 'err'); }
+}
+
+async function triggerFullSync() {
+  toast('🔁 Sync complète lancée…', 'ok');
+  try {
+    await fetch(`${API}/api/admin/data-quality/sync-all`, {method:'POST', headers: hdrs()});
+    setTimeout(loadDataQuality, 5000);
+  } catch(e) { toast('Erreur', 'err'); }
+}
+
 async function saveHub(restaurantId){
   const fields = document.querySelectorAll(`.hub-field[data-rid="${restaurantId}"]`);
   const hub = {};
@@ -1100,8 +1254,9 @@ async function sendBroadcast(){
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function tryParse(s){ try{return typeof s==='string'?JSON.parse(s||'{}'):s||{};}catch(e){return{};} }
 function switchTab(name){
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', ['clients','restaurants','invites','settings'][i]===name));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', ['clients','restaurants','invites','quality','settings'][i]===name));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+name));
+  if (name === 'quality') loadDataQuality();
 }
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
