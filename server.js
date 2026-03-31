@@ -421,19 +421,26 @@ const PORT = process.env.PORT || 8765;
 // ============================================================
 const db = createDB();
 
-// PostgreSQL: use native PG SQL from init-db.sql (avoids SQLite→PG conversion bugs)
+// PostgreSQL: init tables using native PG SQL (not converted SQLite)
 if (db._isPostgres) {
   try {
     const initSQL = require('fs').readFileSync(require('path').join(__dirname, 'init-db.sql'), 'utf8');
-    // Execute each statement individually (init-db.sql uses PG-native syntax)
+    // Split by semicolons, filter comments, execute each via deasync (truly sync)
     const stmts = initSQL.split(';').map(s => s.trim()).filter(s => s.length > 0 && !s.startsWith('--'));
+    let pgInitOk = 0;
     for (const stmt of stmts) {
-      try { db._pool.query(stmt).catch(() => {}); } catch(e) {}
+      try {
+        // Use prepare().run() which goes through deasync — truly synchronous
+        db.prepare(stmt).run();
+        pgInitOk++;
+      } catch(e) {
+        // Ignore "already exists" — that's fine
+        if (!e.message?.includes('already exists') && !e.message?.includes('duplicate'))
+          console.warn('PG init:', e.message?.substring(0, 80));
+      }
     }
-    // Wait for all to complete
-    require('deasync').loopWhile(() => { let done = false; db._pool.query('SELECT 1').then(() => { done = true; }).catch(() => { done = true; }); require('deasync').loopWhile(() => !done); return false; });
-    console.log('🐘 PostgreSQL tables initialized from init-db.sql');
-    // Add missing columns from server.js schema
+    console.log(`🐘 PostgreSQL: ${pgInitOk} init statements OK`);
+    // Add columns missing from init-db.sql but needed by server.js
     const alters = [
       'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS salt TEXT',
       'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT',
@@ -446,10 +453,9 @@ if (db._isPostgres) {
       'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_id INTEGER',
       'ALTER TABLE users ADD COLUMN IF NOT EXISTS social_tokens TEXT DEFAULT \'{}\'',
     ];
-    for (const sql of alters) {
-      try { db.prepare(sql).run(); } catch(e) {}
-    }
-  } catch(e) { console.warn('PG init-db.sql error:', e.message); }
+    for (const sql of alters) { try { db.prepare(sql).run(); } catch(e) {} }
+    console.log('🐘 PostgreSQL columns synced');
+  } catch(e) { console.warn('PG init error:', e.message); }
 }
 
 db.exec(`
