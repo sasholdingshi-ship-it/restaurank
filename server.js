@@ -598,6 +598,19 @@ db.exec(`
 // Migrate: add owner_id to restaurants
 try { db.exec(`ALTER TABLE restaurants ADD COLUMN owner_id INTEGER REFERENCES accounts(id)`); } catch(e) {}
 
+// Migrate: link existing restaurants to accounts via email matching
+try {
+  const unlinked = db.prepare('SELECT r.id, r.user_id FROM restaurants r WHERE r.owner_id IS NULL').all();
+  if (unlinked.length > 0) {
+    // If there's only one account, assign all restaurants to it
+    const accounts = db.prepare('SELECT id FROM accounts').all();
+    if (accounts.length === 1) {
+      db.prepare('UPDATE restaurants SET owner_id = ? WHERE owner_id IS NULL').run(accounts[0].id);
+      console.log(`🔗 Linked ${unlinked.length} restaurants to account #${accounts[0].id}`);
+    }
+  }
+} catch(e) { console.warn('Migration owner_id:', e.message); }
+
 // Create default admin account if not exists
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@restaurank.com';
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'RestauRank2026!';
@@ -1190,10 +1203,22 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), (req,
 app.get('/api/admin/accounts', requireAuth, requireAdmin, (req, res) => {
   const accounts = db.prepare(`
     SELECT a.id, a.email, a.name, a.role, a.plan, a.plan_expires, a.max_restaurants, a.is_active, a.last_login, a.created_at,
-      (SELECT COUNT(*) FROM restaurants WHERE owner_id = a.id) as restaurant_count,
+      (SELECT COUNT(*) FROM restaurants WHERE owner_id = a.id OR (owner_id IS NULL AND user_id = a.id)) as restaurant_count,
       (SELECT COUNT(*) FROM sessions WHERE account_id = a.id AND expires_at > datetime('now')) as active_sessions
     FROM accounts a ORDER BY a.created_at DESC
   `).all();
+  // Enrich with avg scores
+  accounts.forEach(a => {
+    try {
+      const rests = db.prepare('SELECT scores FROM restaurants WHERE owner_id = ? OR (owner_id IS NULL AND user_id = ?)').all(a.id, a.id);
+      if (rests.length > 0) {
+        let totalSeo = 0, totalGeo = 0;
+        rests.forEach(r => { const s = JSON.parse(r.scores || '{}'); totalSeo += s.seo || 0; totalGeo += s.geo || 0; });
+        a.avg_seo = Math.round(totalSeo / rests.length);
+        a.avg_geo = Math.round(totalGeo / rests.length);
+      }
+    } catch (e) {}
+  });
   res.json(accounts);
 });
 
@@ -1228,8 +1253,12 @@ app.post('/api/admin/account/:id/plan', requireAuth, requireAdmin, (req, res) =>
 });
 
 app.get('/api/admin/account/:id/restaurants', requireAuth, requireAdmin, (req, res) => {
-  const restaurants = db.prepare('SELECT id, name, city, last_audit, scores FROM restaurants WHERE owner_id = ?').all(req.params.id);
-  res.json(restaurants);
+  // Search by owner_id first, fallback to user_id
+  let restaurants = db.prepare('SELECT id, name, city, last_audit, scores FROM restaurants WHERE owner_id = ?').all(req.params.id);
+  if (restaurants.length === 0) {
+    restaurants = db.prepare('SELECT id, name, city, last_audit, scores FROM restaurants WHERE user_id = ?').all(req.params.id);
+  }
+  res.json({ restaurants });
 });
 
 // --- ADMIN: Invite Codes Management ---
@@ -1239,17 +1268,20 @@ app.get('/api/admin/invite-codes', requireAuth, requireAdmin, (req, res) => {
 });
 
 app.post('/api/admin/invite-codes', requireAuth, requireAdmin, (req, res) => {
-  const { email_for, plan, max_uses, expires_days } = req.body;
+  // Accept both snake_case and camelCase
+  const email_for = req.body.email_for || req.body.emailFor || null;
+  const plan = req.body.plan || 'free';
+  const max_uses = req.body.max_uses || req.body.maxUses || 1;
+  const expires_days = req.body.expires_days || req.body.expiresInDays || 7;
   const code = 'RK-' + crypto.randomBytes(6).toString('hex').toUpperCase();
   const expiresAt = expires_days ? new Date(Date.now() + expires_days * 24 * 60 * 60 * 1000).toISOString() : null;
   db.prepare('INSERT INTO invite_codes (code, created_by, email_for, plan, max_uses, expires_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(code, req.account.id, email_for || null, plan || 'free', max_uses || 1, expiresAt);
-  console.log(`🎟️ Invite code created: ${code} (for: ${email_for || 'anyone'}, plan: ${plan || 'free'}, uses: ${max_uses || 1})`);
-  // Send invite code by email if email specified
+    .run(code, req.account.id, email_for || null, plan, max_uses, expiresAt);
+  console.log(`🎟️ Invite code created: ${code} (for: ${email_for || 'anyone'}, plan: ${plan}, uses: ${max_uses})`);
   if (email_for) {
-    emailInviteCode(email_for, code, plan || 'free').catch(e => console.warn('Email send error:', e));
+    emailInviteCode(email_for, code, plan).catch(e => console.warn('Email send error:', e));
   }
-  res.json({ success: true, code, email_for, plan: plan || 'free', max_uses: max_uses || 1, expires_at: expiresAt });
+  res.json({ success: true, code, email_for, plan, max_uses, expires_at: expiresAt });
 });
 
 app.post('/api/admin/invite-codes/:id/revoke', requireAuth, requireAdmin, (req, res) => {
@@ -1262,6 +1294,59 @@ app.get('/api/admin/registration-mode', requireAuth, requireAdmin, (req, res) =>
   res.json({ mode: REGISTRATION_MODE, code: REGISTRATION_MODE === 'code' ? REGISTRATION_CODE : null });
 });
 
+// --- ADMIN: Client connections (OAuth tokens) ---
+app.get('/api/admin/account/:id/connections', requireAuth, requireAdmin, (req, res) => {
+  try {
+    const user = db.prepare('SELECT social_tokens, google_tokens FROM users WHERE id = ?').get(req.params.id);
+    const account = db.prepare('SELECT social_tokens FROM accounts WHERE id = ?').get(req.params.id);
+    const socialTokens = JSON.parse(user?.social_tokens || account?.social_tokens || '{}');
+    const connections = {};
+    if (socialTokens.meta_token) connections.facebook = { connected: true, page: socialTokens.fb_pages?.[0]?.name, instagram: !!socialTokens.ig_account_id, connected_at: socialTokens.meta_connected_at };
+    if (socialTokens.linkedin_token) connections.linkedin = { connected: true, name: socialTokens.linkedin_name, connected_at: socialTokens.linkedin_connected_at };
+    if (socialTokens.tiktok_token) connections.tiktok = { connected: true, connected_at: socialTokens.tiktok_connected_at };
+    if (user?.google_tokens) connections.google = { connected: true };
+    res.json({ success: true, connections });
+  } catch (e) {
+    res.json({ success: true, connections: {} });
+  }
+});
+
+// --- ADMIN: All restaurants (for admin panel overview) ---
+app.get('/api/admin/restaurants', requireAuth, requireAdmin, (req, res) => {
+  const restaurants = db.prepare(`
+    SELECT r.*, a.email as owner_email, a.name as owner_name
+    FROM restaurants r
+    LEFT JOIN accounts a ON r.owner_id = a.id
+    ORDER BY r.created_at DESC
+  `).all();
+  res.json(restaurants);
+});
+
+// --- ADMIN: Send email to client ---
+app.post('/api/admin/send-email', requireAuth, requireAdmin, async (req, res) => {
+  // Accept both formats: {to, subject, body} and {email, accountId, subject, message}
+  const to = req.body.to || req.body.email;
+  const subject = req.body.subject;
+  const bodyText = req.body.body || req.body.message || '';
+  if (!to || !subject) return res.status(400).json({ error: 'to/email and subject required' });
+  try {
+    await sendEmail({ to, subject, html: `<div style="font-family:sans-serif;padding:20px;max-width:600px;"><h2 style="color:#6366f1;">${subject}</h2><p style="white-space:pre-wrap;">${bodyText.replace(/\n/g, '<br>')}</p><hr style="margin:24px 0;border-color:#e5e7eb;"><p style="color:#6b7280;font-size:12px;">— L'équipe RestauRank<br><a href="https://restaurank.onrender.com">restaurank.onrender.com</a></p></div>` });
+    res.json({ success: true });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// --- ADMIN: Set registration mode ---
+app.post('/api/admin/registration-mode', requireAuth, requireAdmin, (req, res) => {
+  const { mode } = req.body;
+  if (!['open','invite','closed','code'].includes(mode)) return res.status(400).json({ error: 'Invalid mode' });
+  // Update env var in memory (persists until restart; on Render set via dashboard)
+  process.env.REGISTRATION_MODE = mode;
+  console.log(`🔒 Registration mode changed to: ${mode} by ${req.account.email}`);
+  res.json({ success: true, mode });
+});
+
 // Migrate existing DB: add cache columns if missing
 try {
   db.exec(`ALTER TABLE users ADD COLUMN gbp_accounts TEXT`);
@@ -1271,6 +1356,7 @@ try {
 } catch(e) {}
 try {
   db.exec(`ALTER TABLE users ADD COLUMN gbp_cache_updated DATETIME`);
+  db.exec(`ALTER TABLE users ADD COLUMN social_tokens TEXT DEFAULT '{}'`);
 } catch(e) {}
 
 // ============================================================
@@ -2784,6 +2870,185 @@ app.post('/api/social/publish', async (req, res) => {
     res.json(data);
   } catch (e) {
     res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// REAL OAUTH FLOWS — Facebook/Instagram, LinkedIn, TikTok
+// ============================================================
+
+// --- Helper: get base URL for callbacks ---
+function getBaseUrl(req) {
+  const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
+  return `${proto}://${host}`;
+}
+
+// --- FACEBOOK / INSTAGRAM (Meta) OAuth 2.0 ---
+app.get('/auth/facebook', (req, res) => {
+  const appId = process.env.META_APP_ID || process.env.FACEBOOK_APP_ID;
+  if (!appId) return res.json({ success: false, error: 'META_APP_ID non configuré. Créez une app sur developers.facebook.com' });
+  const redirect = `${getBaseUrl(req)}/auth/facebook/callback`;
+  const scopes = 'pages_manage_posts,pages_read_engagement,pages_show_list,instagram_basic,instagram_content_publish,public_profile';
+  const url = `https://www.facebook.com/v19.0/dialog/oauth?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&scope=${scopes}&response_type=code`;
+  res.redirect(url);
+});
+
+app.get('/auth/facebook/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error || !code) return res.redirect('/?error=facebook_denied');
+  const appId = process.env.META_APP_ID || process.env.FACEBOOK_APP_ID;
+  const appSecret = process.env.META_APP_SECRET || process.env.FACEBOOK_APP_SECRET;
+  const redirect = `${getBaseUrl(req)}/auth/facebook/callback`;
+  try {
+    // Exchange code for short-lived token
+    const tokenResp = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?client_id=${appId}&redirect_uri=${encodeURIComponent(redirect)}&client_secret=${appSecret}&code=${code}`);
+    const tokenData = await tokenResp.json();
+    if (tokenData.error) throw new Error(tokenData.error.message);
+    // Exchange for long-lived token (60 days)
+    const longResp = await fetch(`https://graph.facebook.com/v19.0/oauth/access_token?grant_type=fb_exchange_token&client_id=${appId}&client_secret=${appSecret}&fb_exchange_token=${tokenData.access_token}`);
+    const longData = await longResp.json();
+    const userToken = longData.access_token || tokenData.access_token;
+    // Get user pages
+    const pagesResp = await fetch(`https://graph.facebook.com/v19.0/me/accounts?access_token=${userToken}`);
+    const pagesData = await pagesResp.json();
+    const pages = (pagesData.data || []).map(p => ({ id: p.id, name: p.name, token: p.access_token }));
+    // Get Instagram business account linked to first page
+    let igAccountId = null;
+    if (pages.length > 0) {
+      try {
+        const igResp = await fetch(`https://graph.facebook.com/v19.0/${pages[0].id}?fields=instagram_business_account&access_token=${pages[0].token}`);
+        const igData = await igResp.json();
+        igAccountId = igData.instagram_business_account?.id || null;
+      } catch (e) {}
+    }
+    // Store tokens in DB for the current user
+    const sessionToken = req.headers.cookie?.match(/session=([^;]+)/)?.[1] || req.query.state;
+    const user = sessionToken ? db.prepare?.('SELECT * FROM users WHERE session_token = ?')?.get(sessionToken) : null;
+    if (user) {
+      const socialTokens = JSON.parse(user.social_tokens || '{}');
+      socialTokens.meta_token = userToken;
+      socialTokens.fb_pages = pages;
+      socialTokens.fb_page_id = pages[0]?.id;
+      socialTokens.fb_page_token = pages[0]?.token;
+      socialTokens.ig_account_id = igAccountId;
+      socialTokens.meta_connected_at = new Date().toISOString();
+      try { db.prepare('UPDATE users SET social_tokens = ? WHERE id = ?').run(JSON.stringify(socialTokens), user.id); } catch (e) {}
+    }
+    res.redirect(`/?oauth=facebook&success=1&pages=${pages.length}&ig=${igAccountId ? 1 : 0}`);
+  } catch (e) {
+    console.error('Facebook OAuth error:', e.message);
+    res.redirect(`/?oauth=facebook&error=${encodeURIComponent(e.message)}`);
+  }
+});
+
+// --- LINKEDIN OAuth 2.0 ---
+app.get('/auth/linkedin', (req, res) => {
+  const clientId = process.env.LINKEDIN_CLIENT_ID;
+  if (!clientId) return res.json({ success: false, error: 'LINKEDIN_CLIENT_ID non configuré. Créez une app sur linkedin.com/developers' });
+  const redirect = `${getBaseUrl(req)}/auth/linkedin/callback`;
+  const scopes = 'openid profile w_member_social';
+  const state = Math.random().toString(36).substring(7);
+  const url = `https://www.linkedin.com/oauth/v2/authorization?response_type=code&client_id=${clientId}&redirect_uri=${encodeURIComponent(redirect)}&scope=${encodeURIComponent(scopes)}&state=${state}`;
+  res.redirect(url);
+});
+
+app.get('/auth/linkedin/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error || !code) return res.redirect('/?error=linkedin_denied');
+  const clientId = process.env.LINKEDIN_CLIENT_ID;
+  const clientSecret = process.env.LINKEDIN_CLIENT_SECRET;
+  const redirect = `${getBaseUrl(req)}/auth/linkedin/callback`;
+  try {
+    const tokenResp = await fetch('https://www.linkedin.com/oauth/v2/accessToken', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `grant_type=authorization_code&code=${code}&redirect_uri=${encodeURIComponent(redirect)}&client_id=${clientId}&client_secret=${clientSecret}`
+    });
+    const tokenData = await tokenResp.json();
+    if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
+    // Get profile
+    const profileResp = await fetch('https://api.linkedin.com/v2/userinfo', {
+      headers: { 'Authorization': `Bearer ${tokenData.access_token}` }
+    });
+    const profile = await profileResp.json();
+    // Store
+    const sessionToken = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
+    const user = sessionToken ? db.prepare?.('SELECT * FROM users WHERE session_token = ?')?.get(sessionToken) : null;
+    if (user) {
+      const socialTokens = JSON.parse(user.social_tokens || '{}');
+      socialTokens.linkedin_token = tokenData.access_token;
+      socialTokens.linkedin_name = profile.name || profile.given_name;
+      socialTokens.linkedin_sub = profile.sub;
+      socialTokens.linkedin_expires_in = tokenData.expires_in;
+      socialTokens.linkedin_connected_at = new Date().toISOString();
+      try { db.prepare('UPDATE users SET social_tokens = ? WHERE id = ?').run(JSON.stringify(socialTokens), user.id); } catch (e) {}
+    }
+    res.redirect(`/?oauth=linkedin&success=1`);
+  } catch (e) {
+    console.error('LinkedIn OAuth error:', e.message);
+    res.redirect(`/?oauth=linkedin&error=${encodeURIComponent(e.message)}`);
+  }
+});
+
+// --- TIKTOK OAuth 2.0 ---
+app.get('/auth/tiktok', (req, res) => {
+  const clientKey = process.env.TIKTOK_CLIENT_KEY;
+  if (!clientKey) return res.json({ success: false, error: 'TIKTOK_CLIENT_KEY non configuré. Créez une app sur developers.tiktok.com' });
+  const redirect = `${getBaseUrl(req)}/auth/tiktok/callback`;
+  const scopes = 'user.info.basic,video.publish,video.list';
+  const state = Math.random().toString(36).substring(7);
+  const url = `https://www.tiktok.com/v2/auth/authorize/?client_key=${clientKey}&response_type=code&scope=${scopes}&redirect_uri=${encodeURIComponent(redirect)}&state=${state}`;
+  res.redirect(url);
+});
+
+app.get('/auth/tiktok/callback', async (req, res) => {
+  const { code, error } = req.query;
+  if (error || !code) return res.redirect('/?error=tiktok_denied');
+  const clientKey = process.env.TIKTOK_CLIENT_KEY;
+  const clientSecret = process.env.TIKTOK_CLIENT_SECRET;
+  const redirect = `${getBaseUrl(req)}/auth/tiktok/callback`;
+  try {
+    const tokenResp = await fetch('https://open.tiktokapis.com/v2/oauth/token/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `client_key=${clientKey}&client_secret=${clientSecret}&code=${code}&grant_type=authorization_code&redirect_uri=${encodeURIComponent(redirect)}`
+    });
+    const tokenData = await tokenResp.json();
+    if (tokenData.error) throw new Error(tokenData.error_description || tokenData.error);
+    // Store
+    const sessionToken = req.headers.cookie?.match(/session=([^;]+)/)?.[1];
+    const user = sessionToken ? db.prepare?.('SELECT * FROM users WHERE session_token = ?')?.get(sessionToken) : null;
+    if (user) {
+      const socialTokens = JSON.parse(user.social_tokens || '{}');
+      socialTokens.tiktok_token = tokenData.access_token;
+      socialTokens.tiktok_refresh = tokenData.refresh_token;
+      socialTokens.tiktok_open_id = tokenData.open_id;
+      socialTokens.tiktok_expires_in = tokenData.expires_in;
+      socialTokens.tiktok_connected_at = new Date().toISOString();
+      try { db.prepare('UPDATE users SET social_tokens = ? WHERE id = ?').run(JSON.stringify(socialTokens), user.id); } catch (e) {}
+    }
+    res.redirect(`/?oauth=tiktok&success=1`);
+  } catch (e) {
+    console.error('TikTok OAuth error:', e.message);
+    res.redirect(`/?oauth=tiktok&error=${encodeURIComponent(e.message)}`);
+  }
+});
+
+// --- GET connected platforms (real tokens only) ---
+app.get('/api/social/connections', requireAuth, (req, res) => {
+  try {
+    const user = db.prepare?.('SELECT social_tokens FROM users WHERE id = ?')?.get(req.account.id);
+    const tokens = JSON.parse(user?.social_tokens || '{}');
+    const connections = {};
+    if (tokens.meta_token) connections.facebook = { connected: true, page: tokens.fb_pages?.[0]?.name, instagram: !!tokens.ig_account_id, connected_at: tokens.meta_connected_at };
+    if (tokens.linkedin_token) connections.linkedin = { connected: true, name: tokens.linkedin_name, connected_at: tokens.linkedin_connected_at };
+    if (tokens.tiktok_token) connections.tiktok = { connected: true, connected_at: tokens.tiktok_connected_at };
+    // Google is separate
+    if (tokens.google_tokens || req.account.google_tokens) connections.google = { connected: true };
+    res.json({ success: true, connections });
+  } catch (e) {
+    res.json({ success: true, connections: {} });
   }
 });
 
@@ -5641,6 +5906,17 @@ app.post('/api/scans/record', (req, res) => {
 app.post('/api/restaurants/full-save', (req, res) => {
   const { user_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, hub_data, selected_module } = req.body;
 
+  // Resolve owner_id from auth session
+  let ownerId = null;
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const token = authHeader.slice(7);
+      const session = db.prepare('SELECT account_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(token);
+      if (session) ownerId = session.account_id;
+    }
+  } catch (e) {}
+
   // Temporarily disable FK checks for user_id=0 (anonymous/local mode)
   if (!user_id || user_id === 0) {
     db.pragma('foreign_keys = OFF');
@@ -5649,21 +5925,24 @@ app.post('/api/restaurants/full-save', (req, res) => {
   try {
   // Check if restaurant already exists for this user
   let restaurant = db.prepare('SELECT id FROM restaurants WHERE user_id = ? AND name = ? AND city = ?').get(user_id || 0, name, city);
-  
+
   if (restaurant) {
-    // Update existing
-    db.prepare(`UPDATE restaurants SET 
-      audit_data = ?, scores = ?, completed_actions = ?, platform_status = ?, last_audit = datetime('now')
-      WHERE id = ?`).run(
+    // Update existing + set owner_id if we have it
+    const ownerUpdate = ownerId ? ', owner_id = ?' : '';
+    const params = [
       JSON.stringify(audit_data), JSON.stringify(scores),
-      JSON.stringify(completed_actions || {}), JSON.stringify(platform_status || {}),
-      restaurant.id
-    );
+      JSON.stringify(completed_actions || {}), JSON.stringify(platform_status || {})
+    ];
+    if (ownerId) params.push(ownerId);
+    params.push(restaurant.id);
+    db.prepare(`UPDATE restaurants SET
+      audit_data = ?, scores = ?, completed_actions = ?, platform_status = ?, last_audit = datetime('now')${ownerUpdate}
+      WHERE id = ?`).run(...params);
   } else {
-    // Insert new
-    const result = db.prepare(`INSERT INTO restaurants (user_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, last_audit)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`).run(
-      user_id || 0, name, city, google_place_id || null,
+    // Insert new with owner_id
+    const result = db.prepare(`INSERT INTO restaurants (user_id, owner_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, last_audit)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`).run(
+      user_id || 0, ownerId, name, city, google_place_id || null,
       JSON.stringify(audit_data), JSON.stringify(scores),
       JSON.stringify(completed_actions || {}), JSON.stringify(platform_status || {})
     );
@@ -7045,6 +7324,13 @@ app.options('/api/snippet/*', (req, res) => {
 
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'seo-geo-audit-tool.html'));
+});
+
+// ═══════════════════════════════════════════════════════
+// 👑 ADMIN PANEL — URL séparée, invisible des clients
+// ═══════════════════════════════════════════════════════
+app.get('/admin', (req, res) => {
+  res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 // ============================================================

@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RestauRank — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+:root{
+  --bg:#0d0f14;--s1:#141720;--s2:#1c2030;--bdr:#252a3a;
+  --txt:#e8eaf0;--mut:#6b7280;--ind:#6366f1;--grn:#10b981;
+  --org:#f59e0b;--red:#ef4444;--prp:#8b5cf6;
+  --ind-glow:rgba(99,102,241,.15);
+}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;}
+
+/* LOGIN */
+#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+#loginBox{background:var(--s1);border:1px solid var(--bdr);border-radius:20px;padding:40px;width:100%;max-width:400px;}
+.logo{font-size:1.6rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px;}
+.logo-sub{font-size:.8rem;color:var(--mut);margin-bottom:28px;}
+.field-label{font-size:.7rem;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.field-input{width:100%;padding:10px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-family:inherit;font-size:.9rem;outline:none;transition:border .2s;}
+.field-input:focus{border-color:var(--ind);}
+.btn-primary{width:100%;padding:12px;background:var(--ind);color:#fff;border:none;border-radius:10px;font-family:inherit;font-weight:700;font-size:.95rem;cursor:pointer;margin-top:16px;transition:opacity .2s;}
+.btn-primary:hover{opacity:.9;}
+#loginError{color:var(--red);font-size:.8rem;text-align:center;margin-top:10px;display:none;}
+
+/* LAYOUT */
+#appScreen{display:none;}
+.topbar{position:fixed;top:0;left:0;right:0;height:54px;background:var(--s1);border-bottom:1px solid var(--bdr);display:flex;align-items:center;padding:0 20px;gap:12px;z-index:1000;}
+.topbar-logo{font-size:1rem;font-weight:900;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.topbar-title{font-size:.75rem;color:var(--mut);border-left:1px solid var(--bdr);padding-left:12px;}
+.topbar-right{margin-left:auto;display:flex;gap:8px;align-items:center;}
+.btn-sm{padding:5px 12px;border-radius:7px;border:1px solid var(--bdr);background:none;color:var(--txt);font-family:inherit;font-size:.7rem;cursor:pointer;font-weight:600;}
+.btn-sm:hover{border-color:var(--ind);color:var(--ind);}
+.btn-sm.danger{color:var(--red);border-color:rgba(239,68,68,.3);}
+.btn-sm.danger:hover{background:rgba(239,68,68,.06);}
+
+.content{padding:74px 20px 40px;max-width:1400px;margin:0 auto;}
+
+/* TABS */
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--bdr);padding-bottom:0;}
+.tab{padding:8px 16px;border:none;background:none;color:var(--mut);font-family:inherit;font-size:.82rem;font-weight:600;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .2s;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:var(--ind);border-bottom-color:var(--ind);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+
+/* STATS */
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;margin-bottom:24px;}
+.stat-card{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:16px;text-align:center;}
+.stat-val{font-size:1.8rem;font-weight:900;color:var(--ind);}
+.stat-label{font-size:.65rem;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;margin-top:3px;}
+
+/* TABLE */
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--bdr);}
+table{width:100%;border-collapse:collapse;font-size:.78rem;background:var(--s1);}
+thead th{padding:10px 14px;text-align:left;font-size:.65rem;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;background:var(--s2);border-bottom:1px solid var(--bdr);white-space:nowrap;}
+tbody td{padding:10px 14px;border-bottom:1px solid var(--bdr);}
+tbody tr:last-child td{border-bottom:none;}
+tbody tr:hover{background:rgba(99,102,241,.04);cursor:pointer;}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.62rem;font-weight:700;}
+.badge.active{background:rgba(16,185,129,.12);color:var(--grn);}
+.badge.inactive{background:rgba(239,68,68,.12);color:var(--red);}
+.plan-badge{display:inline-block;padding:2px 8px;border-radius:5px;font-size:.6rem;font-weight:800;letter-spacing:.5px;}
+.plan-badge.free{background:rgba(107,114,128,.15);color:var(--mut);}
+.plan-badge.starter{background:rgba(245,158,11,.12);color:var(--org);}
+.plan-badge.pro{background:rgba(99,102,241,.15);color:var(--ind);}
+.plan-badge.premium{background:rgba(139,92,246,.15);color:var(--prp);}
+.plan-badge.enterprise{background:rgba(16,185,129,.12);color:var(--grn);}
+
+/* FILTERS */
+.filters{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center;}
+.filter-input{padding:8px 12px;border:1px solid var(--bdr);border-radius:8px;background:var(--s1);color:var(--txt);font-family:inherit;font-size:.78rem;outline:none;}
+.filter-input:focus{border-color:var(--ind);}
+.filter-input.big{flex:1;min-width:220px;}
+
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9999;overflow-y:auto;padding:20px;}
+.modal-overlay.open{display:flex;align-items:flex-start;justify-content:center;}
+.modal-box{background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:28px;width:100%;max-width:820px;position:relative;margin:auto;}
+.modal-close{position:absolute;top:14px;right:16px;background:none;border:none;color:var(--mut);font-size:1.3rem;cursor:pointer;}
+.modal-close:hover{color:var(--txt);}
+
+/* DETAIL */
+.detail-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:20px;}
+.detail-stat{background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:12px;text-align:center;}
+.detail-stat .dv{font-size:1.4rem;font-weight:800;}
+.detail-stat .dl{font-size:.65rem;color:var(--mut);margin-top:2px;}
+
+/* INVITE CODES */
+.inv-form{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px;}
+.inv-field{display:flex;flex-direction:column;gap:3px;}
+.inv-field label{font-size:.62rem;color:var(--mut);text-transform:uppercase;}
+.inv-field input,.inv-field select{padding:7px 10px;border:1px solid var(--bdr);border-radius:7px;background:var(--bg);color:var(--txt);font-family:inherit;font-size:.75rem;outline:none;}
+.inv-field input:focus,.inv-field select:focus{border-color:var(--ind);}
+.code-row{display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;margin-bottom:6px;}
+.code-text{font-family:monospace;font-size:.85rem;font-weight:700;color:var(--grn);flex:1;}
+
+/* TOAST */
+#toast{position:fixed;bottom:24px;right:24px;padding:10px 18px;border-radius:10px;font-size:.82rem;font-weight:600;z-index:99999;opacity:0;transition:opacity .3s;pointer-events:none;}
+#toast.show{opacity:1;}
+#toast.ok{background:#064e3b;color:#6ee7b7;border:1px solid #065f46;}
+#toast.err{background:#450a0a;color:#fca5a5;border:1px solid #7f1d1d;}
+
+/* ACTION BUTTONS */
+.action-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--bdr);background:none;color:var(--txt);font-size:.65rem;cursor:pointer;font-family:inherit;font-weight:600;white-space:nowrap;}
+.action-btn:hover{border-color:var(--ind);color:var(--ind);}
+.action-btn.red:hover{border-color:var(--red);color:var(--red);}
+.action-btn.grn:hover{border-color:var(--grn);color:var(--grn);}
+
+/* SECTION CARD */
+.card{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:18px;margin-bottom:18px;}
+.card-title{font-size:.85rem;font-weight:700;margin-bottom:14px;display:flex;align-items:center;gap:6px;}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px;color:var(--mut);font-size:.85rem;}
+
+/* SCORES */
+.score-red{color:var(--red);font-weight:700;}
+.score-org{color:var(--org);font-weight:700;}
+.score-grn{color:var(--grn);font-weight:700;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div id="loginBox">
+    <div class="logo">RestauRank</div>
+    <div class="logo-sub">👑 Accès administrateur</div>
+    <div class="field-label">Email</div>
+    <input class="field-input" type="email" id="loginEmail" placeholder="admin@restaurank.com" style="margin-bottom:12px;">
+    <div class="field-label">Mot de passe</div>
+    <input class="field-input" type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-primary" onclick="doLogin()">🔑 Connexion Admin</button>
+    <div id="loginError">Email ou mot de passe incorrect</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <div class="topbar">
+    <div class="topbar-logo">RestauRank</div>
+    <div class="topbar-title">👑 Dashboard Admin</div>
+    <div class="topbar-right">
+      <span id="adminName" style="font-size:.75rem;color:var(--mut);"></span>
+      <button class="btn-sm" onclick="refreshData()">🔄 Actualiser</button>
+      <a href="/" target="_blank"><button class="btn-sm">🌐 Voir le site</button></a>
+      <button class="btn-sm danger" onclick="doLogout()">Déconnexion</button>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- STATS -->
+    <div class="stats-grid" id="statsGrid">
+      <div class="stat-card"><div class="stat-val">…</div><div class="stat-label">Comptes</div></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('clients')">👥 Clients</button>
+      <button class="tab" onclick="switchTab('restaurants')">🍽️ Restaurants</button>
+      <button class="tab" onclick="switchTab('invites')">🎟️ Codes d'invitation</button>
+      <button class="tab" onclick="switchTab('settings')">⚙️ Paramètres</button>
+    </div>
+
+    <!-- CLIENTS TAB -->
+    <div class="tab-panel active" id="tab-clients">
+      <div class="filters">
+        <input class="filter-input big" type="text" id="searchInput" placeholder="🔍 Email, nom, restaurant…" oninput="filterClients()">
+        <select class="filter-input" id="filterPlan" onchange="filterClients()">
+          <option value="">Tous les plans</option>
+          <option value="free">Free</option>
+          <option value="starter">Starter</option>
+          <option value="pro">Pro</option>
+          <option value="premium">Premium</option>
+          <option value="enterprise">Enterprise</option>
+        </select>
+        <select class="filter-input" id="filterStatus" onchange="filterClients()">
+          <option value="">Tous les statuts</option>
+          <option value="active">Actifs</option>
+          <option value="inactive">Inactifs</option>
+        </select>
+        <button class="action-btn" onclick="exportCSV()">📥 Export CSV</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Email</th><th>Nom</th><th>Plan</th>
+            <th>Restaurants</th><th>Score SEO</th><th>Score GEO</th>
+            <th>Inscrit</th><th>Dernière co.</th><th>Statut</th><th>Actions</th>
+          </tr></thead>
+          <tbody id="clientsBody"></tbody>
+        </table>
+      </div>
+      <div id="clientsEmpty" class="empty" style="display:none;">Aucun client trouvé</div>
+    </div>
+
+    <!-- RESTAURANTS TAB -->
+    <div class="tab-panel" id="tab-restaurants">
+      <div class="filters">
+        <input class="filter-input big" type="text" id="searchRest" placeholder="🔍 Nom, ville, client…" oninput="filterRestaurants()">
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Restaurant</th><th>Ville</th><th>Client</th>
+            <th>Score SEO</th><th>Score GEO</th><th>CMS</th><th>Dernier audit</th>
+          </tr></thead>
+          <tbody id="restaurantsBody"></tbody>
+        </table>
+      </div>
+      <div id="restaurantsEmpty" class="empty" style="display:none;">Aucun restaurant</div>
+    </div>
+
+    <!-- INVITE CODES TAB -->
+    <div class="tab-panel" id="tab-invites">
+      <div class="card">
+        <div class="card-title">➕ Générer un code d'invitation</div>
+        <div class="inv-form">
+          <div class="inv-field" style="flex:1;min-width:180px;">
+            <label>Email (optionnel)</label>
+            <input type="email" id="invEmail" placeholder="client@email.com (ou vide = tout le monde)">
+          </div>
+          <div class="inv-field">
+            <label>Plan offert</label>
+            <select id="invPlan">
+              <option value="free">Free</option>
+              <option value="starter">Starter</option>
+              <option value="pro" selected>Pro</option>
+              <option value="premium">Premium</option>
+              <option value="enterprise">Enterprise</option>
+            </select>
+          </div>
+          <div class="inv-field" style="width:80px;">
+            <label>Utilisations</label>
+            <input type="number" id="invMaxUses" value="1" min="1" max="100">
+          </div>
+          <div class="inv-field" style="width:80px;">
+            <label>Expire (jours)</label>
+            <input type="number" id="invExpDays" value="7" min="1" max="365">
+          </div>
+          <button class="btn-primary" style="width:auto;margin-top:0;padding:8px 18px;" onclick="createInviteCode()">➕ Générer</button>
+        </div>
+      </div>
+      <div id="invitesList"></div>
+    </div>
+
+    <!-- SETTINGS TAB -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="card">
+        <div class="card-title">🔒 Mode d'inscription</div>
+        <div id="regModeInfo" style="font-size:.8rem;color:var(--mut);margin-bottom:12px;">Chargement…</div>
+        <div style="display:flex;gap:8px;">
+          <button class="action-btn grn" onclick="setRegMode('open')">🔓 Ouvert à tous</button>
+          <button class="action-btn" onclick="setRegMode('invite')">🎟️ Sur invitation uniquement</button>
+          <button class="action-btn red" onclick="setRegMode('closed')">🔒 Fermé</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📧 Envoyer un email à tous les clients</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <input class="filter-input" id="broadcastSubject" placeholder="Sujet de l'email" style="width:100%;">
+          <textarea class="filter-input" id="broadcastBody" placeholder="Corps du message…" rows="4" style="width:100%;resize:vertical;"></textarea>
+          <button class="action-btn grn" style="width:fit-content;" onclick="sendBroadcast()">📤 Envoyer à tous</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CLIENT DETAIL MODAL -->
+<div class="modal-overlay" id="clientModal">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('clientModal')">✕</button>
+    <div id="clientDetail">Chargement…</div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+const API = '';  // same origin
+let token = sessionStorage.getItem('admin_token') || '';
+let allClients = [];
+let allRestaurants = [];
+
+// ══ AUTH ══
+async function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pw = document.getElementById('loginPassword').value;
+  document.getElementById('loginError').style.display = 'none';
+  try {
+    const r = await fetch(API + '/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({email, password: pw})
+    });
+    const d = await r.json();
+    if (!r.ok || !d.session) throw new Error(d.error || 'Erreur');
+    if (d.account?.role !== 'admin') throw new Error('Accès réservé aux administrateurs');
+    token = d.session;
+    sessionStorage.setItem('admin_token', token);
+    document.getElementById('adminName').textContent = d.account?.email || '';
+    showApp();
+  } catch(e) {
+    document.getElementById('loginError').textContent = e.message;
+    document.getElementById('loginError').style.display = 'block';
+  }
+}
+
+function doLogout(){
+  sessionStorage.removeItem('admin_token');
+  token = '';
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+
+function hdrs(){ return {'Authorization':'Bearer '+token,'Content-Type':'application/json'}; }
+
+// ══ INIT ══
+async function showApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+  await refreshData();
+}
+
+async function refreshData(){
+  await Promise.all([loadStats(), loadClients(), loadAllRestaurants(), loadInviteCodes(), loadRegMode()]);
+}
+
+async function init(){
+  if (!token) return;
+  // Verify token is still valid and admin
+  try {
+    const r = await fetch(API + '/auth/me', {headers: hdrs()});
+    const d = await r.json();
+    if (!r.ok || d.role !== 'admin') { token=''; sessionStorage.removeItem('admin_token'); return; }
+    document.getElementById('adminName').textContent = d.email || '';
+    showApp();
+  } catch(e) { /* stay on login */ }
+}
+init();
+
+// ══ STATS ══
+async function loadStats(){
+  try {
+    const r = await fetch(API + '/api/admin/stats', {headers: hdrs()});
+    const s = await r.json();
+    document.getElementById('statsGrid').innerHTML = `
+      <div class="stat-card"><div class="stat-val">${s.totalAccounts||0}</div><div class="stat-label">Comptes</div></div>
+      <div class="stat-card"><div class="stat-val">${s.activeAccounts||0}</div><div class="stat-label">Actifs</div></div>
+      <div class="stat-card"><div class="stat-val">${s.totalRestaurants||0}</div><div class="stat-label">Restaurants</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--grn);">${s.recentSignups||0}</div><div class="stat-label">Inscriptions (7j)</div></div>
+      <div class="stat-card"><div class="stat-val" style="color:var(--org);">${s.recentLogins||0}</div><div class="stat-label">Connexions (24h)</div></div>
+      ${(s.planDistribution||[]).map(p=>`<div class="stat-card"><div class="stat-val">${p.c}</div><div class="stat-label">Plan ${p.plan}</div></div>`).join('')}
+    `;
+  } catch(e){}
+}
+
+// ══ CLIENTS ══
+async function loadClients(){
+  try {
+    const r = await fetch(API + '/api/admin/accounts', {headers: hdrs()});
+    allClients = await r.json();
+    if (!Array.isArray(allClients)) allClients = [];
+    renderClients(allClients);
+  } catch(e){ allClients=[]; }
+}
+
+function scoreClass(v){ return v>=60?'score-grn':v>=40?'score-org':'score-red'; }
+
+function renderClients(list){
+  const empty = document.getElementById('clientsEmpty');
+  const body = document.getElementById('clientsBody');
+  if (!list.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = list.map(a => {
+    const seo = Math.round(a.avg_seo||0);
+    const geo = Math.round(a.avg_geo||0);
+    const created = a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR') : '—';
+    const lastLogin = a.last_login ? new Date(a.last_login).toLocaleDateString('fr-FR') : 'Jamais';
+    return `<tr onclick="openClientDetail(${a.id})">
+      <td style="color:var(--mut);">#${a.id}</td>
+      <td><strong>${esc(a.email)}</strong></td>
+      <td>${esc(a.name||'—')}</td>
+      <td><span class="plan-badge ${a.plan||'free'}">${(a.plan||'FREE').toUpperCase()}</span></td>
+      <td style="text-align:center;">${a.restaurant_count||0}</td>
+      <td class="${scoreClass(seo)}">${seo||'—'}</td>
+      <td class="${scoreClass(geo)}">${geo||'—'}</td>
+      <td style="color:var(--mut);font-size:.7rem;">${created}</td>
+      <td style="color:var(--mut);font-size:.7rem;">${lastLogin}</td>
+      <td><span class="badge ${a.is_active?'active':'inactive'}">${a.is_active?'Actif':'Inactif'}</span></td>
+      <td onclick="event.stopPropagation();" style="white-space:nowrap;">
+        <select class="action-btn" onchange="quickPlan(${a.id},this.value)" style="padding:3px 6px;cursor:pointer;">
+          ${['free','starter','pro','premium','enterprise'].map(p=>`<option value="${p}" ${a.plan===p?'selected':''}>${p}</option>`).join('')}
+        </select>
+        ${a.role!=='admin'?`<button class="action-btn" onclick="toggleClient(${a.id})">${a.is_active?'⏸':'▶'}</button>`:''}
+        <button class="action-btn" onclick="openClientDetail(${a.id})">📋</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterClients(){
+  const q = (document.getElementById('searchInput').value||'').toLowerCase();
+  const plan = document.getElementById('filterPlan').value;
+  const status = document.getElementById('filterStatus').value;
+  let f = allClients.filter(a => {
+    if (q && !a.email?.toLowerCase().includes(q) && !(a.name||'').toLowerCase().includes(q)) return false;
+    if (plan && a.plan !== plan) return false;
+    if (status==='active' && !a.is_active) return false;
+    if (status==='inactive' && a.is_active) return false;
+    return true;
+  });
+  renderClients(f);
+}
+
+function exportCSV(){
+  const h='ID,Email,Nom,Plan,Restaurants,SEO,GEO,Inscrit,Dernière co.,Statut\n';
+  const rows=allClients.map(a=>`${a.id},"${a.email}","${a.name||''}",${a.plan},${a.restaurant_count||0},${Math.round(a.avg_seo||0)},${Math.round(a.avg_geo||0)},"${a.created_at||''}","${a.last_login||''}",${a.is_active?'Actif':'Inactif'}`).join('\n');
+  const blob=new Blob([h+rows],{type:'text/csv'});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement('a');link.href=url;link.download=`restaurank-clients-${new Date().toISOString().slice(0,10)}.csv`;link.click();
+  URL.revokeObjectURL(url);
+  toast('Export CSV téléchargé', 'ok');
+}
+
+async function quickPlan(id, plan){
+  try {
+    await fetch(`${API}/api/admin/account/${id}/plan`, {method:'POST',headers:hdrs(),body:JSON.stringify({plan})});
+    const a = allClients.find(x=>x.id===id);
+    if(a) a.plan=plan;
+    toast('Plan mis à jour → '+plan, 'ok');
+  } catch(e){ toast('Erreur', 'err'); }
+}
+
+async function toggleClient(id){
+  try {
+    const r = await fetch(`${API}/api/admin/account/${id}/toggle`, {method:'POST',headers:hdrs()});
+    const d = await r.json();
+    const a = allClients.find(x=>x.id===id);
+    if(a) a.is_active = d.is_active;
+    renderClients(allClients);
+    toast('Statut modifié', 'ok');
+  } catch(e){ toast('Erreur', 'err'); }
+}
+
+// ══ CLIENT DETAIL ══
+async function openClientDetail(id){
+  document.getElementById('clientDetail').innerHTML='<div class="empty">⏳ Chargement…</div>';
+  openModal('clientModal');
+  try {
+    const [restR, connR] = await Promise.all([
+      fetch(`${API}/api/admin/account/${id}/restaurants`, {headers:hdrs()}),
+      fetch(`${API}/api/admin/account/${id}/connections`, {headers:hdrs()}).catch(()=>({json:()=>({})}))
+    ]);
+    const a = allClients.find(x=>x.id===id) || {};
+    const rests = await restR.json();
+    const rList = Array.isArray(rests) ? rests : rests.restaurants || [];
+    const conn = await connR.json();
+
+    const avgSeo = Math.round(rList.reduce((s,r)=>{const sc=tryParse(r.scores);return s+(sc.seo||0);},0)/Math.max(1,rList.length));
+    const avgGeo = Math.round(rList.reduce((s,r)=>{const sc=tryParse(r.scores);return s+(sc.geo||0);},0)/Math.max(1,rList.length));
+    const created = a.created_at ? new Date(a.created_at).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'}) : '—';
+    const lastLogin = a.last_login ? new Date(a.last_login).toLocaleString('fr-FR') : 'Jamais';
+
+    const connHtml = conn.connections && Object.keys(conn.connections).length
+      ? Object.entries(conn.connections).map(([k])=>`<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:5px;font-size:.68rem;font-weight:700;">✅ ${k}</span>`).join(' ')
+      : '<span style="color:var(--mut);font-size:.75rem;">Aucune connexion OAuth</span>';
+
+    const restHtml = rList.length ? rList.map(r=>{
+      const sc = tryParse(r.scores);
+      const auditData = tryParse(r.audit_data);
+      const cms = auditData?.cms || r.cms || '—';
+      return `<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <div>
+            <strong>${esc(r.name||'—')}</strong>
+            <span style="color:var(--mut);font-size:.75rem;"> — ${esc(r.city||'—')}</span>
+            ${cms!=='—'?`<span style="background:var(--s2);color:var(--mut);padding:1px 6px;border-radius:4px;font-size:.65rem;margin-left:6px;">CMS: ${esc(cms)}</span>`:''}
+          </div>
+          <div style="display:flex;gap:10px;">
+            <span class="${scoreClass(sc.seo||0)}">SEO ${sc.seo||0}</span>
+            <span class="${scoreClass(sc.geo||0)}">GEO ${sc.geo||0}</span>
+          </div>
+        </div>
+        <div style="font-size:.68rem;color:var(--mut);margin-top:6px;">Dernier audit : ${r.last_audit?new Date(r.last_audit).toLocaleDateString('fr-FR'):'Aucun'}</div>
+      </div>`;
+    }).join('') : '<div class="empty" style="padding:16px;">Aucun restaurant audité</div>';
+
+    document.getElementById('clientDetail').innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:start;flex-wrap:wrap;gap:12px;margin-bottom:20px;">
+        <div>
+          <h2 style="font-size:1.1rem;margin-bottom:4px;">📋 ${esc(a.name||a.email||'Client #'+id)}</h2>
+          <div style="color:var(--mut);font-size:.8rem;">${esc(a.email||'')} · Inscrit ${created}</div>
+        </div>
+        <span class="plan-badge ${a.plan||'free'}" style="font-size:.75rem;padding:5px 12px;">${(a.plan||'FREE').toUpperCase()}</span>
+      </div>
+
+      <div class="detail-grid">
+        <div class="detail-stat"><div class="dv" style="color:var(--ind);">${rList.length}</div><div class="dl">Restaurants</div></div>
+        <div class="detail-stat"><div class="dv ${scoreClass(avgSeo)}">${avgSeo||'—'}</div><div class="dl">SEO moyen</div></div>
+        <div class="detail-stat"><div class="dv ${scoreClass(avgGeo)}">${avgGeo||'—'}</div><div class="dl">GEO moyen</div></div>
+        <div class="detail-stat"><div class="dv" style="font-size:.9rem;color:var(--txt);">${lastLogin.split(' ')[0]||'—'}</div><div class="dl">Dernière co.</div></div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:.78rem;font-weight:700;margin-bottom:8px;">🔗 Connexions plateformes</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">${connHtml}</div>
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <div style="font-size:.78rem;font-weight:700;margin-bottom:8px;">🍽️ Restaurants (${rList.length})</div>
+        ${restHtml}
+      </div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap;padding-top:16px;border-top:1px solid var(--bdr);">
+        <select id="detailPlan" style="padding:6px 10px;border:1px solid var(--bdr);border-radius:7px;background:var(--bg);color:var(--txt);font-family:inherit;font-size:.75rem;">
+          ${['free','starter','pro','premium','enterprise'].map(p=>`<option value="${p}" ${a.plan===p?'selected':''}>${p.toUpperCase()}</option>`).join('')}
+        </select>
+        <button class="action-btn grn" onclick="quickPlan(${id},document.getElementById('detailPlan').value);toast('Plan modifié ✓','ok');">💳 Changer plan</button>
+        ${a.role!=='admin'?`<button class="action-btn ${a.is_active?'red':'grn'}" onclick="toggleClient(${id});closeModal('clientModal');">${a.is_active?'⏸️ Désactiver':'▶️ Activer'}</button>`:''}
+        <button class="action-btn" onclick="sendEmailToClient(${id},'${esc(a.email||'')}')">📧 Envoyer email</button>
+      </div>
+    `;
+  } catch(e){
+    document.getElementById('clientDetail').innerHTML=`<div style="color:var(--red);padding:20px;">❌ Erreur : ${e.message}</div>`;
+  }
+}
+
+async function sendEmailToClient(id, email){
+  const subj = prompt('Sujet de l\'email :');
+  if (!subj) return;
+  const body = prompt('Message :');
+  if (!body) return;
+  try {
+    await fetch(`${API}/api/admin/send-email`, {
+      method:'POST', headers:hdrs(),
+      body:JSON.stringify({accountId:id, email, subject:subj, message:body})
+    });
+    toast('Email envoyé à '+email, 'ok');
+  } catch(e){ toast('Erreur envoi', 'err'); }
+}
+
+// ══ RESTAURANTS ══
+async function loadAllRestaurants(){
+  try {
+    const r = await fetch(API + '/api/admin/restaurants', {headers: hdrs()});
+    if (!r.ok) return;
+    allRestaurants = await r.json();
+    if (!Array.isArray(allRestaurants)) allRestaurants = [];
+    renderRestaurants(allRestaurants);
+  } catch(e){ allRestaurants=[]; }
+}
+
+function renderRestaurants(list){
+  const empty = document.getElementById('restaurantsEmpty');
+  const body = document.getElementById('restaurantsBody');
+  if (!list.length){ body.innerHTML=''; empty.style.display='block'; return; }
+  empty.style.display='none';
+  body.innerHTML = list.map(r => {
+    const sc = tryParse(r.scores);
+    const auditData = tryParse(r.audit_data);
+    const cms = auditData?.cms || '—';
+    const client = allClients.find(a=>a.id===r.owner_id);
+    return `<tr>
+      <td style="color:var(--mut);">#${r.id}</td>
+      <td><strong>${esc(r.name||'—')}</strong></td>
+      <td style="color:var(--mut);">${esc(r.city||'—')}</td>
+      <td style="font-size:.72rem;">${client?esc(client.email):'#'+r.owner_id}</td>
+      <td class="${scoreClass(sc.seo||0)}">${sc.seo||'—'}</td>
+      <td class="${scoreClass(sc.geo||0)}">${sc.geo||'—'}</td>
+      <td style="font-size:.72rem;color:var(--mut);">${esc(cms)}</td>
+      <td style="font-size:.7rem;color:var(--mut);">${r.last_audit?new Date(r.last_audit).toLocaleDateString('fr-FR'):'Jamais'}</td>
+    </tr>`;
+  }).join('');
+}
+
+function filterRestaurants(){
+  const q = (document.getElementById('searchRest').value||'').toLowerCase();
+  renderRestaurants(allRestaurants.filter(r => {
+    if (!q) return true;
+    const client = allClients.find(a=>a.id===r.owner_id);
+    return (r.name||'').toLowerCase().includes(q)
+      || (r.city||'').toLowerCase().includes(q)
+      || (client?.email||'').toLowerCase().includes(q);
+  }));
+}
+
+// ══ INVITE CODES ══
+async function loadInviteCodes(){
+  try {
+    const r = await fetch(API + '/api/admin/invite-codes', {headers: hdrs()});
+    const codes = await r.json();
+    if (!Array.isArray(codes)){ document.getElementById('invitesList').innerHTML=''; return; }
+    document.getElementById('invitesList').innerHTML = codes.length ? codes.map(c=>`
+      <div class="code-row">
+        <span class="code-text">🎟️ ${c.code}</span>
+        <span style="font-size:.7rem;color:var(--mut);">${c.email_for||'Tous'}</span>
+        <span class="plan-badge ${c.plan||'free'}">${(c.plan||'free').toUpperCase()}</span>
+        <span style="font-size:.7rem;color:var(--mut);">${c.used_count||0}/${c.max_uses||1} util.</span>
+        <span class="badge ${c.is_active?'active':'inactive'}">${c.is_active?'Actif':'Révoqué'}</span>
+        ${c.expires_at?`<span style="font-size:.7rem;color:var(--mut);">expire ${new Date(c.expires_at).toLocaleDateString('fr-FR')}</span>`:''}
+        <button class="action-btn" onclick="copyCode('${c.code}')">📋 Copier</button>
+        ${c.is_active?`<button class="action-btn red" onclick="revokeCode(${c.id})">Révoquer</button>`:''}
+      </div>`).join('')
+      : '<div class="empty">Aucun code actif</div>';
+  } catch(e){}
+}
+
+async function createInviteCode(){
+  const emailFor = document.getElementById('invEmail').value.trim()||null;
+  const plan = document.getElementById('invPlan').value;
+  const maxUses = parseInt(document.getElementById('invMaxUses').value)||1;
+  const expDays = parseInt(document.getElementById('invExpDays').value)||7;
+  try {
+    const r = await fetch(`${API}/api/admin/invite-codes`, {
+      method:'POST', headers:hdrs(),
+      body:JSON.stringify({emailFor, plan, maxUses, expiresInDays:expDays})
+    });
+    const d = await r.json();
+    if (d.code){ toast('Code créé : '+d.code, 'ok'); await loadInviteCodes(); }
+    else toast('Erreur création', 'err');
+  } catch(e){ toast('Erreur', 'err'); }
+}
+
+async function revokeCode(id){
+  if (!confirm('Révoquer ce code ?')) return;
+  try {
+    await fetch(`${API}/api/admin/invite-codes/${id}/revoke`, {method:'POST', headers:hdrs()});
+    toast('Code révoqué', 'ok');
+    await loadInviteCodes();
+  } catch(e){ toast('Erreur', 'err'); }
+}
+
+function copyCode(code){
+  navigator.clipboard.writeText(code).then(()=>toast('Code copié !','ok'));
+}
+
+// ══ REG MODE ══
+async function loadRegMode(){
+  try {
+    const r = await fetch(`${API}/api/admin/registration-mode`, {headers:hdrs()});
+    const d = await r.json();
+    const modeLabels = {open:'🔓 Ouvert à tous', invite:'🎟️ Sur invitation uniquement', closed:'🔒 Fermé'};
+    document.getElementById('regModeInfo').textContent = 'Mode actuel : '+(modeLabels[d.mode]||d.mode);
+  } catch(e){}
+}
+
+async function setRegMode(mode){
+  try {
+    await fetch(`${API}/api/admin/registration-mode`, {
+      method:'POST', headers:hdrs(), body:JSON.stringify({mode})
+    });
+    toast('Mode d\'inscription mis à jour', 'ok');
+    loadRegMode();
+  } catch(e){ toast('Erreur', 'err'); }
+}
+
+// ══ BROADCAST ══
+async function sendBroadcast(){
+  const subject = document.getElementById('broadcastSubject').value.trim();
+  const message = document.getElementById('broadcastBody').value.trim();
+  if (!subject || !message){ toast('Sujet et message requis', 'err'); return; }
+  if (!confirm(`Envoyer cet email à ${allClients.length} clients ?`)) return;
+  let sent=0, errors=0;
+  for (const a of allClients) {
+    if (!a.email || a.role==='admin') continue;
+    try {
+      await fetch(`${API}/api/admin/send-email`, {
+        method:'POST', headers:hdrs(),
+        body:JSON.stringify({accountId:a.id, email:a.email, subject, message})
+      });
+      sent++;
+    } catch(e){ errors++; }
+  }
+  toast(`${sent} emails envoyés${errors?' ('+errors+' erreurs)':''}`, errors?'err':'ok');
+}
+
+// ══ UTILS ══
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function tryParse(s){ try{return typeof s==='string'?JSON.parse(s||'{}'):s||{};}catch(e){return{};} }
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', ['clients','restaurants','invites','settings'][i]===name));
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+name));
+}
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+function toast(msg, type='ok'){
+  const el=document.getElementById('toast');
+  el.textContent=msg; el.className='show '+type;
+  clearTimeout(toast._t);
+  toast._t=setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+// Close modal on overlay click
+document.getElementById('clientModal').addEventListener('click', function(e){
+  if (e.target===this) closeModal('clientModal');
+});
+</script>
+</body>
+</html>
