@@ -530,7 +530,8 @@ db.exec(`
 `);
 
 // Insert default dev license if none exists
-const licenseCount = db.prepare('SELECT COUNT(*) as c FROM licenses').get().c;
+const _licRow = db.prepare('SELECT COUNT(*) as c FROM licenses').get();
+const licenseCount = _licRow ? _licRow.c : 0;
 if (licenseCount === 0) {
   const devKey = 'RK-DEV-' + crypto.randomBytes(16).toString('hex').toUpperCase();
   db.prepare('INSERT INTO licenses (license_key, owner_email, plan, allowed_domains, features) VALUES (?, ?, ?, ?, ?)')
@@ -597,6 +598,8 @@ db.exec(`
 
 // Migrate: add owner_id to restaurants
 try { db.exec(`ALTER TABLE restaurants ADD COLUMN owner_id INTEGER REFERENCES accounts(id)`); } catch(e) {}
+try { db.exec(`ALTER TABLE restaurants ADD COLUMN hub_data TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN social_tokens TEXT DEFAULT '{}'`); } catch(e) {}
 
 // Migrate: link existing restaurants to accounts via email matching
 try {
