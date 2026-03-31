@@ -77,16 +77,23 @@ function createDB() {
 
       exec(sql) {
         const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0);
+        let ok = 0, skip = 0, fail = 0;
         for (const stmt of statements) {
           try {
             const pgSQL = convertSQL(stmt);
             syncQuery(pgSQL);
+            ok++;
           } catch(e) {
-            if (!e.message.includes('already exists') && !e.message.includes('duplicate')) {
-              console.warn('PG exec:', e.message.substring(0, 120));
+            if (e.message.includes('already exists') || e.message.includes('duplicate')) {
+              skip++;
+            } else {
+              fail++;
+              console.warn('PG exec FAIL:', e.message.substring(0, 150));
+              console.warn('  SQL:', stmt.substring(0, 100));
             }
           }
         }
+        if (ok + skip + fail > 1) console.log(`PG exec: ${ok} ok, ${skip} skip, ${fail} fail`);
       },
 
       prepare(sql) {
