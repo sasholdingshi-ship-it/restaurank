@@ -1,178 +1,128 @@
-// ============================================================
-// DB ADAPTER — SQLite ↔ PostgreSQL transparent switch
-// Uses DATABASE_URL env var to decide. If set → PostgreSQL, else → SQLite.
-// PostgreSQL mode uses deasync to provide TRUE synchronous queries
-// that are 100% compatible with the existing better-sqlite3 API.
-// ============================================================
 const path = require('path');
 
 function createDB() {
-  const pgUrl = process.env.DATABASE_URL;
-
-  if (pgUrl) {
-    // ═══════════════════════════════════════
-    // POSTGRESQL MODE (Render, production)
-    // Uses deasync to block event loop until PG query completes
-    // This provides TRUE synchronous behavior matching better-sqlite3
-    // ═══════════════════════════════════════
-    const { Pool } = require('pg');
-    const loopWhile = require('deasync').loopWhile;
-
-    const pool = new Pool({
-      connectionString: pgUrl,
-      ssl: pgUrl.includes('render.com') || pgUrl.includes('neon.tech') || pgUrl.includes('supabase')
-        ? { rejectUnauthorized: false }
-        : false,
-      max: 10,
-      idleTimeoutMillis: 30000,
-    });
-
-    console.log('🐘 PostgreSQL mode (deasync)');
-
-    // Convert SQLite SQL to PostgreSQL SQL
-    function convertSQL(sql) {
-      let i = 0;
-      return sql
-        .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/gi, 'SERIAL PRIMARY KEY')
-        .replace(/DATETIME DEFAULT CURRENT_TIMESTAMP/gi, 'TIMESTAMP DEFAULT NOW()')
-        .replace(/DATETIME/gi, 'TIMESTAMP')
-        .replace(/datetime\('now'\)/gi, 'NOW()')
-        .replace(/datetime\('now',\s*'([^']+)'\)/gi, (m, interval) => {
-          // Convert SQLite date math to PostgreSQL: datetime('now', '-7 days') → NOW() + interval '-7 days'
-          return `NOW() + interval '${interval}'`;
-        })
-        .replace(/TEXT DEFAULT '{}'/gi, "TEXT DEFAULT '{}'")
-        .replace(/INTEGER DEFAULT (\d+)/gi, 'INTEGER DEFAULT $1')
-        .replace(/\bINTEGER\b(?!\s+DEFAULT|\s+NOT)/gi, 'INTEGER')
-        .replace(/,\s*UNIQUE\(([^)]+)\)/gi, ', UNIQUE($1)')
-        // INSERT OR REPLACE → INSERT ... ON CONFLICT
-        .replace(/INSERT OR REPLACE INTO (\w+) \(([^)]+)\) VALUES \(([^)]+)\)/gi,
-          (match, table, cols, vals) => {
-            return `INSERT INTO ${table} (${cols}) VALUES (${vals}) ON CONFLICT DO UPDATE SET ${cols.split(',').map(c => c.trim() + ' = EXCLUDED.' + c.trim()).join(', ')}`;
-          })
-        // ? placeholders → $1, $2, $3...
-        .replace(/\?/g, () => '$' + (++i));
-    }
-
-    // Synchronous PG query using deasync
-    function syncQuery(sql, params = []) {
-      let result = undefined;
-      let error = null;
-      let done = false;
-
-      pool.query(sql, params)
-        .then(r => { result = r; done = true; })
-        .catch(e => { error = e; done = true; });
-
-      loopWhile(() => !done);
-
-      if (error) throw error;
-      return result;
-    }
-
-    // Wrapper that emulates better-sqlite3 API with TRUE sync PG queries
-    const db = {
-      _pool: pool,
-      _isPostgres: true,
-
-      exec(sql) {
-        const statements = sql.split(';').map(s => s.trim()).filter(s => s.length > 0);
-        let ok = 0, skip = 0, fail = 0;
-        for (const stmt of statements) {
-          try {
-            const pgSQL = convertSQL(stmt);
-            syncQuery(pgSQL);
-            ok++;
-          } catch(e) {
-            if (e.message.includes('already exists') || e.message.includes('duplicate')) {
-              skip++;
-            } else {
-              fail++;
-              console.warn('PG exec FAIL:', e.message.substring(0, 150));
-              console.warn('  SQL:', stmt.substring(0, 100));
-            }
-          }
-        }
-        if (ok + skip + fail > 1) console.log(`PG exec: ${ok} ok, ${skip} skip, ${fail} fail`);
-      },
-
-      prepare(sql) {
-        const pgSQL = convertSQL(sql);
-        return {
-          run(...params) {
-            try {
-              const result = syncQuery(pgSQL, params);
-              return { lastInsertRowid: result.rows?.[0]?.id || 0, changes: result.rowCount || 0 };
-            } catch(e) {
-              if (!e.message.includes('duplicate') && !e.message.includes('unique') && !e.message.includes('already exists'))
-                console.warn('PG run:', e.message.substring(0, 100));
-              return { lastInsertRowid: 0, changes: 0 };
-            }
-          },
-          get(...params) {
-            try {
-              const result = syncQuery(pgSQL, params);
-              return result.rows[0] || null;
-            } catch(e) {
-              console.warn('PG get:', e.message.substring(0, 100));
-              return null;
-            }
-          },
-          all(...params) {
-            try {
-              const result = syncQuery(pgSQL, params);
-              return result.rows;
-            } catch(e) {
-              console.warn('PG all:', e.message.substring(0, 100));
-              return [];
-            }
-          }
-        };
-      },
-
-      pragma(val) {
-        // PostgreSQL doesn't use pragma — no-op
-        // But handle 'foreign_keys = OFF/ON' for compatibility
-      },
-
-      transaction(fn) {
-        return (...args) => {
-          try {
-            syncQuery('BEGIN');
-            const result = fn(...args);
-            syncQuery('COMMIT');
-            return result;
-          } catch(e) {
-            try { syncQuery('ROLLBACK'); } catch(re) {}
-            throw e;
-          }
-        };
-      },
-
-      async waitForInit() {
-        console.log('🐘 PostgreSQL ready (sync mode via deasync)');
-      },
-
-      close() {
-        pool.end();
-      }
-    };
-
-    return db;
-
-  } else {
-    // ═══════════════════════════════════════
-    // SQLITE MODE (local development)
-    // ═══════════════════════════════════════
-    const Database = require('better-sqlite3');
-    const dbPath = process.env.DB_PATH || path.join(__dirname, 'restaurank.db');
-    const db = new Database(dbPath);
-    try { db.pragma('journal_mode = WAL'); } catch(e) {}
-    db._isPostgres = false;
-    db.waitForInit = async () => {};
-    console.log('📦 SQLite: ' + dbPath);
-    return db;
-  }
+  const Database = require('better-sqlite3');
+  const dbPath = process.env.DB_PATH || path.join(__dirname, 'restaurank.db');
+  const db = new Database(dbPath);
+  try { db.pragma('journal_mode = WAL'); } catch (e) {}
+  db._isPostgres = false;
+  console.log('📦 SQLite: ' + dbPath);
+  return db;
 }
 
-module.exports = { createDB };
+const SYNC_TABLES = ['accounts', 'restaurants', 'restaurant_settings', 'sessions'];
+
+async function setupPGSync(db) {
+  const pgUrl = process.env.DATABASE_URL;
+  if (!pgUrl) return;
+
+  let Pool;
+  try { Pool = require('pg').Pool; } catch (e) {
+    console.warn('pg module not installed — PG sync disabled');
+    return;
+  }
+
+  const pool = new Pool({
+    connectionString: pgUrl,
+    ssl: (pgUrl.includes('neon.tech') || pgUrl.includes('render.com') || pgUrl.includes('supabase'))
+      ? { rejectUnauthorized: false } : false,
+    max: 3, idleTimeoutMillis: 30000,
+  });
+
+  try {
+    await pool.query('SELECT 1');
+    console.log('🐘 Neon PG connected (backup sync)');
+  } catch (e) {
+    console.warn('PG connection failed:', e.message);
+    return;
+  }
+
+  async function ensurePGTables() {
+    const creates = [
+      `CREATE TABLE IF NOT EXISTS accounts (id SERIAL PRIMARY KEY, email TEXT UNIQUE, password_hash TEXT, salt TEXT, name TEXT, role TEXT DEFAULT 'client', plan TEXT DEFAULT 'free', plan_expires TIMESTAMP, stripe_customer_id TEXT, stripe_subscription_id TEXT, max_restaurants INTEGER DEFAULT 1, is_active INTEGER DEFAULT 1, email_verified INTEGER DEFAULT 0, verification_token TEXT, reset_token TEXT, reset_expires TIMESTAMP, last_login TIMESTAMP, social_tokens TEXT DEFAULT '{}', created_at TIMESTAMP DEFAULT NOW())`,
+      `CREATE TABLE IF NOT EXISTS restaurants (id SERIAL PRIMARY KEY, user_id INTEGER, owner_id INTEGER, name TEXT NOT NULL, city TEXT NOT NULL, google_place_id TEXT, google_account_id TEXT, google_location_id TEXT, audit_data TEXT, scores TEXT, completed_actions TEXT DEFAULT '{}', platform_status TEXT DEFAULT '{}', hub_data TEXT, last_audit TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`,
+      `CREATE TABLE IF NOT EXISTS restaurant_settings (id SERIAL PRIMARY KEY, restaurant_id INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL, data TEXT DEFAULT '{}', updated_at TIMESTAMP DEFAULT NOW())`,
+      `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, account_id INTEGER NOT NULL, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT NOW())`,
+    ];
+    for (const sql of creates) {
+      try { await pool.query(sql); } catch (e) {}
+    }
+  }
+
+  async function restoreFromPG() {
+    let total = 0;
+    for (const table of SYNC_TABLES) {
+      try {
+        const { rows } = await pool.query(`SELECT * FROM ${table}`);
+        if (!rows.length) continue;
+        const info = db.pragma(`table_info(${table})`);
+        if (!info.length) continue;
+        const sqliteCols = new Set(info.map(c => c.name));
+
+        for (const row of rows) {
+          const cols = Object.keys(row).filter(c => sqliteCols.has(c));
+          if (!cols.length) continue;
+          const vals = cols.map(c => {
+            const v = row[c];
+            if (v instanceof Date) return v.toISOString();
+            if (typeof v === 'object' && v !== null) return JSON.stringify(v);
+            return v;
+          });
+          const ph = cols.map(() => '?').join(',');
+          const pk = table === 'sessions' ? 'id' : 'id';
+          const updateCols = cols.filter(c => c !== pk);
+          const updateSet = updateCols.map(c => `${c}=excluded.${c}`).join(',');
+          try {
+            db.prepare(`INSERT OR REPLACE INTO ${table} (${cols.join(',')}) VALUES (${ph})`).run(...vals);
+            total++;
+          } catch (e) {}
+        }
+      } catch (e) {
+        console.warn('PG restore:', table, e.message?.substring(0, 80));
+      }
+    }
+    if (total) console.log(`🔄 Restored ${total} rows PG → SQLite`);
+  }
+
+  async function backupToPG() {
+    let total = 0;
+    for (const table of SYNC_TABLES) {
+      try {
+        const info = db.pragma(`table_info(${table})`);
+        if (!info.length) continue;
+        const rows = db.prepare(`SELECT * FROM ${table}`).all();
+        if (!rows.length) continue;
+
+        for (const row of rows) {
+          const cols = Object.keys(row);
+          const vals = cols.map(c => row[c]);
+          const ph = cols.map((_, i) => `$${i + 1}`).join(',');
+          const pk = table === 'sessions' ? 'id' : 'id';
+          const updateCols = cols.filter(c => c !== pk);
+          const updateSet = updateCols.map(c => {
+            const idx = cols.indexOf(c) + 1;
+            return `${c}=$${idx}`;
+          }).join(',');
+          try {
+            await pool.query(
+              `INSERT INTO ${table} (${cols.join(',')}) VALUES (${ph}) ON CONFLICT (${pk}) DO UPDATE SET ${updateSet}`,
+              vals
+            );
+            total++;
+          } catch (e) {}
+        }
+      } catch (e) {
+        console.warn('PG backup:', table, e.message?.substring(0, 80));
+      }
+    }
+    if (total) console.log(`🔄 Backed up ${total} rows SQLite → PG`);
+  }
+
+  await ensurePGTables();
+  try { await restoreFromPG(); } catch (e) { console.warn('PG restore failed:', e.message); }
+  setInterval(() => { backupToPG().catch(() => {}); }, 5 * 60 * 1000);
+  setTimeout(() => { backupToPG().catch(() => {}); }, 30000);
+  console.log('🔄 PG sync: restore done, backup every 5min');
+}
+
+module.exports = { createDB, setupPGSync };

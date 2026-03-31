@@ -6,7 +6,7 @@ require('dotenv').config({ override: true });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { createDB } = require('./db-adapter');
+const { createDB, setupPGSync } = require('./db-adapter');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -421,34 +421,7 @@ const PORT = process.env.PORT || 8765;
 // ============================================================
 const db = createDB();
 
-// PostgreSQL: skip SQLite table creation below (handled by db.exec conversion)
-// But FIRST ensure all required columns exist via direct pool queries
-if (db._isPostgres && db._pool) {
-  const loopWhile = require('deasync').loopWhile;
-  const alters = [
-    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS salt TEXT',
-    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_customer_id TEXT',
-    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS stripe_subscription_id TEXT',
-    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS email_verified INTEGER DEFAULT 0',
-    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS verification_token TEXT',
-    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reset_token TEXT',
-    'ALTER TABLE accounts ADD COLUMN IF NOT EXISTS reset_expires TIMESTAMP',
-    'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS hub_data TEXT',
-    'ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS owner_id INTEGER',
-    'ALTER TABLE users ADD COLUMN IF NOT EXISTS social_tokens TEXT DEFAULT \'{}\'',
-    'CREATE TABLE IF NOT EXISTS data_quality_log (id SERIAL PRIMARY KEY, restaurant_id INTEGER NOT NULL, field TEXT NOT NULL, status TEXT DEFAULT \'error\', message TEXT, old_value TEXT, new_value TEXT, source TEXT, auto_fixed INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT NOW())',
-    'CREATE TABLE IF NOT EXISTS sync_history (id SERIAL PRIMARY KEY, restaurant_id INTEGER, sync_type TEXT NOT NULL, status TEXT DEFAULT \'pending\', details TEXT, started_at TIMESTAMP DEFAULT NOW(), finished_at TIMESTAMP)',
-  ];
-  let altersDone = false;
-  (async () => {
-    for (const sql of alters) {
-      try { await db._pool.query(sql); } catch(e) {}
-    }
-    altersDone = true;
-  })();
-  loopWhile(() => !altersDone);
-  console.log('🐘 PostgreSQL columns synced');
-}
+// PG sync is handled by setupPGSync() in app.listen callback
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
@@ -1336,25 +1309,6 @@ app.post('/auth/register', (req, res) => {
   const account = db.prepare('SELECT id, email, name, role, plan, max_restaurants FROM accounts WHERE id = ?').get(result.lastInsertRowid);
   console.log(`🆕 New account: ${emailClean} (plan: ${grantedPlan}, mode: ${REGISTRATION_MODE}${inviteCode ? ', code: ' + inviteCode.substring(0, 6) + '...' : ''})`);
   res.json({ success: true, session: sessionId, account, invitesAccepted: pendingInvites.length });
-});
-
-// TEMP DEBUG: check admin password state
-app.get('/api/debug-auth', (req, res) => {
-  try {
-    const email = process.env.ADMIN_EMAIL || 'admin@restaurank.com';
-    const allAccounts = db.prepare('SELECT id, email, role FROM accounts').all();
-    const admin = db.prepare('SELECT id, email, salt, role, is_active FROM accounts WHERE email = ?').get(email);
-    res.json({
-      lookingFor: email,
-      isPostgres: !!db._isPostgres,
-      hasDatabaseUrl: !!process.env.DATABASE_URL,
-      totalAccounts: allAccounts?.length || 0,
-      allEmails: allAccounts?.map(a => a.email) || [],
-      admin: admin ? { id: admin.id, email: admin.email, hasSalt: !!admin.salt, role: admin.role, isActive: admin.is_active } : null
-    });
-  } catch(e) {
-    res.json({ error: e.message, stack: e.stack?.substring(0, 300) });
-  }
 });
 
 app.post('/auth/login', (req, res) => {
@@ -11431,7 +11385,8 @@ app.post('/api/posts/google/duplicate', async (req, res) => {
 // ============================================================
 // START SERVER
 // ============================================================
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
+  setupPGSync(db).catch(e => console.warn('PG sync setup error:', e.message));
   console.log(`
 ╔══════════════════════════════════════════════════════╗
 ║     RestauRank Backend v6.0 — Full SaaS Mode         ║
