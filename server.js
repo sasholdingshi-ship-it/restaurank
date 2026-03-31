@@ -1125,6 +1125,177 @@ db.exec(`
 `);
 
 // ============================================================
+// ============================================================
+// SOCIAL LOGIN — Google Sign-In + Apple Sign-In for CLIENT accounts
+// (Separate from GBP OAuth which is for Google Business Profile API)
+// ============================================================
+
+// Google Sign-In for client login/register
+app.get('/auth/social/google', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = (() => {
+    if (req.headers.host?.includes('onrender.com')) return `https://${req.headers.host}/auth/social/google/callback`;
+    return `http://localhost:${PORT}/auth/social/google/callback`;
+  })();
+  const scopes = 'openid email profile';
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&prompt=select_account`;
+  res.redirect(url);
+});
+
+app.get('/auth/social/google/callback', async (req, res) => {
+  try {
+    const { code } = req.query;
+    if (!code) throw new Error('No code');
+    const redirectUri = (() => {
+      if (req.headers.host?.includes('onrender.com')) return `https://${req.headers.host}/auth/social/google/callback`;
+      return `http://localhost:${PORT}/auth/social/google/callback`;
+    })();
+
+    // Exchange code for tokens
+    const tokenResp = await fetch('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        code, client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        redirect_uri: redirectUri, grant_type: 'authorization_code'
+      })
+    });
+    const tokens = await tokenResp.json();
+    if (tokens.error) throw new Error(tokens.error_description || tokens.error);
+
+    // Get user info
+    const userResp = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
+      headers: { 'Authorization': `Bearer ${tokens.access_token}` }
+    });
+    const user = await userResp.json();
+    if (!user.email) throw new Error('No email from Google');
+
+    // Find or create account
+    let account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(user.email);
+    if (!account) {
+      // Auto-register via Google — no password needed
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = hashPassword(crypto.randomBytes(32).toString('hex'), salt); // random password
+      db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
+        .run(user.email, hash, salt, user.name || user.email.split('@')[0], 'client', 'free', 1);
+      account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(user.email);
+      console.log(`🔑 Google Sign-In: new account created for ${user.email}`);
+    } else {
+      // Update name/picture if needed
+      if (user.name && !account.name) db.prepare('UPDATE accounts SET name = ? WHERE id = ?').run(user.name, account.id);
+      db.prepare('UPDATE accounts SET last_login = datetime(\'now\') WHERE id = ?').run(account.id);
+    }
+
+    if (!account.is_active) throw new Error('Compte désactivé');
+
+    // Create session
+    const sessionToken = generateSessionToken();
+    db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, datetime(\'now\', \'+30 days\'))').run(sessionToken, account.id);
+
+    // Return HTML that stores auth in localStorage and closes popup
+    const authData = JSON.stringify({
+      session: sessionToken,
+      account: { id: account.id, email: account.email, name: account.name || user.name, role: account.role, plan: account.plan, maxRestaurants: account.max_restaurants }
+    });
+
+    res.send(`<!DOCTYPE html><html><head><title>RestauRank</title></head><body style="background:#FAF3EB;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+      <div style="text-align:center;color:#1B2A4A;">
+        <div style="font-size:2.5rem;margin-bottom:12px;">&#10003;</div>
+        <h2 style="font-weight:800;">Connect&eacute; !</h2>
+        <p style="color:#8B8177;">${user.name || user.email}</p>
+      </div>
+      <script>
+        try{localStorage.setItem('restaurank_social_auth',JSON.stringify(${authData}));}catch(e){}
+        if(window.opener){setTimeout(()=>window.close(),800);}
+        else{window.location.href='/';}
+      </script>
+    </body></html>`);
+  } catch(e) {
+    console.error('Google Sign-In error:', e.message);
+    res.send(`<!DOCTYPE html><html><body style="background:#FAF3EB;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+      <div style="text-align:center;color:#C0392B;"><h2>Erreur</h2><p>${e.message}</p></div>
+      <script>if(window.opener)setTimeout(()=>window.close(),3000);else setTimeout(()=>window.location.href='/',3000);</script>
+    </body></html>`);
+  }
+});
+
+// Apple Sign-In redirect (requires Apple Developer account + Service ID configured)
+app.get('/auth/social/apple', (req, res) => {
+  const clientId = process.env.APPLE_CLIENT_ID || 'com.restaurank.signin';
+  const redirectUri = (() => {
+    if (req.headers.host?.includes('onrender.com')) return `https://${req.headers.host}/auth/social/apple/callback`;
+    return `http://localhost:${PORT}/auth/social/apple/callback`;
+  })();
+  const url = `https://appleid.apple.com/auth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code id_token&scope=name email&response_mode=form_post`;
+  res.redirect(url);
+});
+
+app.post('/auth/social/apple/callback', async (req, res) => {
+  try {
+    const { id_token, code, user: userStr } = req.body;
+    if (!id_token && !code) throw new Error('No token from Apple');
+
+    // Decode JWT (id_token) to get email — Apple sends it as a JWT
+    let email, name;
+    if (id_token) {
+      const parts = id_token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+        email = payload.email;
+      }
+    }
+    // Apple sends user info only on FIRST sign-in
+    if (userStr) {
+      try {
+        const userData = typeof userStr === 'string' ? JSON.parse(userStr) : userStr;
+        name = [userData.name?.firstName, userData.name?.lastName].filter(Boolean).join(' ');
+        if (!email && userData.email) email = userData.email;
+      } catch(e) {}
+    }
+
+    if (!email) throw new Error('No email from Apple');
+
+    // Find or create account (same logic as Google)
+    let account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(email);
+    if (!account) {
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = hashPassword(crypto.randomBytes(32).toString('hex'), salt);
+      db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
+        .run(email, hash, salt, name || email.split('@')[0], 'client', 'free', 1);
+      account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(email);
+      console.log(`🍎 Apple Sign-In: new account created for ${email}`);
+    } else {
+      db.prepare('UPDATE accounts SET last_login = datetime(\'now\') WHERE id = ?').run(account.id);
+    }
+
+    if (!account.is_active) throw new Error('Compte désactivé');
+
+    const sessionToken = generateSessionToken();
+    db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, datetime(\'now\', \'+30 days\'))').run(sessionToken, account.id);
+
+    const authData = JSON.stringify({
+      session: sessionToken,
+      account: { id: account.id, email: account.email, name: account.name || name, role: account.role, plan: account.plan, maxRestaurants: account.max_restaurants }
+    });
+
+    res.send(`<!DOCTYPE html><html><head><title>RestauRank</title></head><body style="background:#FAF3EB;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+      <div style="text-align:center;color:#1B2A4A;"><h2>Connect&eacute; !</h2></div>
+      <script>
+        try{localStorage.setItem('restaurank_social_auth',JSON.stringify(${authData}));}catch(e){}
+        if(window.opener){setTimeout(()=>window.close(),800);}
+        else{window.location.href='/';}
+      </script>
+    </body></html>`);
+  } catch(e) {
+    console.error('Apple Sign-In error:', e.message);
+    res.send(`<!DOCTYPE html><html><body style="background:#FAF3EB;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+      <div style="text-align:center;color:#C0392B;"><h2>Erreur</h2><p>${e.message}</p></div>
+      <script>if(window.opener)setTimeout(()=>window.close(),3000);else setTimeout(()=>window.location.href='/',3000);</script>
+    </body></html>`);
+  }
+});
+
 // AUTH ROUTES — register, login, logout, me, password reset
 // ============================================================
 app.get('/api/ping', (req, res) => res.json({ pong: true, time: Date.now() }));

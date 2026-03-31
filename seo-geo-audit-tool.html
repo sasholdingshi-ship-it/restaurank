@@ -1204,6 +1204,9 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         <div class="auth-field"><label>Email</label><input type="email" id="loginEmail" placeholder="vous@email.com"></div>
         <div class="auth-field"><label>Mot de passe</label><input type="password" id="loginPassword" placeholder="••••••••" onkeydown="if(event.key==='Enter')authLogin()"></div>
         <button class="auth-btn" id="loginBtn" onclick="authLogin()">Se connecter</button>
+        <div style="display:flex;align-items:center;gap:10px;margin:14px 0 10px;"><div style="flex:1;height:1px;background:var(--bdr);"></div><span style="font-size:.68rem;color:var(--mut2);font-weight:500;">ou</span><div style="flex:1;height:1px;background:var(--bdr);"></div></div>
+        <button class="auth-btn" style="background:#fff;color:#333;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:500;" onclick="authSocial('google')"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continuer avec Google</button>
+        <button class="auth-btn" style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:500;margin-top:6px;" onclick="authSocial('apple')"><svg width="16" height="18" viewBox="0 0 17 20" fill="#fff"><path d="M13.54 10.73c-.01-1.82.98-3.17 2.99-4.19-.89-1.28-2.23-2.01-3.97-2.17-1.67-.16-3.5.98-4.16.98-.7 0-2.31-.93-3.56-.93C2.6 4.46 0 6.58 0 10.94c0 1.29.24 2.62.71 3.99.63 1.82 2.9 6.27 5.27 6.2 1.22-.03 2.08-.87 3.58-.87 1.45 0 2.24.87 3.56.84 2.4-.04 4.41-4.03 5.01-5.86-3.23-1.53-3.59-4.46-3.59-4.51zm-3.3-8.28C11.17 1.34 11.08 0 11.04 0c-1.08.06-2.34.72-3.06 1.56-.66.76-1.24 1.88-1.02 2.98 1.17.09 2.38-.63 3.28-1.09z"/></svg>Continuer avec Apple</button>
         <div class="auth-switch">Pas encore de compte ? <a onclick="showAuth('register')">Créer un compte</a></div>
         <div class="auth-switch" style="margin-top:8px;"><a onclick="showAuth('forgot')" style="font-weight:400;font-size:.72rem;">Mot de passe oublié ?</a></div>
     </div>
@@ -1224,6 +1227,9 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         <div class="pw-strength" id="pwStrength"><div class="pw-strength-fill" id="pwStrengthFill"></div></div>
         <div class="pw-strength-text" id="pwStrengthText"></div>
         <button class="auth-btn" onclick="authRegister()">Créer mon compte</button>
+        <div style="display:flex;align-items:center;gap:10px;margin:14px 0 10px;"><div style="flex:1;height:1px;background:var(--bdr);"></div><span style="font-size:.68rem;color:var(--mut2);font-weight:500;">ou</span><div style="flex:1;height:1px;background:var(--bdr);"></div></div>
+        <button class="auth-btn" style="background:#fff;color:#333;border:1px solid #ddd;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:500;" onclick="authSocial('google')"><svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18A10.96 10.96 0 0 0 1 12c0 1.77.42 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>Continuer avec Google</button>
+        <button class="auth-btn" style="background:#000;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-weight:500;margin-top:6px;" onclick="authSocial('apple')"><svg width="16" height="18" viewBox="0 0 17 20" fill="#fff"><path d="M13.54 10.73c-.01-1.82.98-3.17 2.99-4.19-.89-1.28-2.23-2.01-3.97-2.17-1.67-.16-3.5.98-4.16.98-.7 0-2.31-.93-3.56-.93C2.6 4.46 0 6.58 0 10.94c0 1.29.24 2.62.71 3.99.63 1.82 2.9 6.27 5.27 6.2 1.22-.03 2.08-.87 3.58-.87 1.45 0 2.24.87 3.56.84 2.4-.04 4.41-4.03 5.01-5.86-3.23-1.53-3.59-4.46-3.59-4.51zm-3.3-8.28C11.17 1.34 11.08 0 11.04 0c-1.08.06-2.34.72-3.06 1.56-.66.76-1.24 1.88-1.02 2.98 1.17.09 2.38-.63 3.28-1.09z"/></svg>Continuer avec Apple</button>
         <div class="auth-switch">Déjà un compte ? <a onclick="showAuth('login')">Se connecter</a></div>
     </div>
 </div>
@@ -3251,6 +3257,41 @@ function showToast(msg,type='success',duration=4000){
     requestAnimationFrame(()=>{toast.classList.add('show');});
     clearTimeout(toast._tid);
     toast._tid=setTimeout(()=>{toast.classList.remove('show');},duration);
+}
+
+// ══ SOCIAL LOGIN (Google / Apple) ══
+function authSocial(provider){
+    const w=600,h=700;
+    const left=(screen.width-w)/2,top=(screen.height-h)/2;
+    const popup=window.open(`${API_BASE}/auth/social/${provider}`,`${provider}_login`,`width=${w},height=${h},left=${left},top=${top},toolbar=no,menubar=no`);
+    if(!popup||popup.closed){
+        // Popup blocked → redirect
+        window.location.href=`${API_BASE}/auth/social/${provider}`;
+        return;
+    }
+    // Poll for result
+    const poll=setInterval(()=>{
+        try{
+            if(popup.closed){
+                clearInterval(poll);
+                // Check if login was stored
+                const authResult=localStorage.getItem('restaurank_social_auth');
+                if(authResult){
+                    localStorage.removeItem('restaurank_social_auth');
+                    const data=JSON.parse(authResult);
+                    if(data.session){
+                        sessionToken=data.session;
+                        localStorage.setItem('restaurank_session',sessionToken);
+                        currentAccount={id:data.account.id,email:data.account.email,name:data.account.name,role:data.account.role,plan:data.account.plan};
+                        localStorage.setItem('restaurank_local_account',JSON.stringify(currentAccount));
+                        authMode='server';
+                        showLoggedIn();
+                        showToast('Connexion '+provider+' réussie !','ok');
+                    }
+                }
+            }
+        }catch(e){}
+    },500);
 }
 
 async function authLogin(){
