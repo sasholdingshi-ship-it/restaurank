@@ -617,12 +617,18 @@ try {
 // Create default admin account if not exists
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@restaurank.com';
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'RestauRank2026!';
-const existingAdmin = db.prepare('SELECT id FROM accounts WHERE email = ?').get(ADMIN_EMAIL);
+const existingAdmin = db.prepare('SELECT id, salt, password_hash FROM accounts WHERE email = ?').get(ADMIN_EMAIL);
 if (!existingAdmin) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(ADMIN_PASS, salt, 64).toString('hex');
-  db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants) VALUES (?, ?, ?, ?, ?, ?, ?)').run(ADMIN_EMAIL, hash, salt, 'Admin RestauRank', 'admin', 'enterprise', 999);
+  db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)').run(ADMIN_EMAIL, hash, salt, 'Admin RestauRank', 'admin', 'enterprise', 999);
   console.log(`🔑 Admin account created: ${ADMIN_EMAIL}`);
+} else if (!existingAdmin.salt) {
+  // Fix: admin exists but was migrated without salt — regenerate password
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.scryptSync(ADMIN_PASS, salt, 64).toString('hex');
+  db.prepare('UPDATE accounts SET password_hash = ?, salt = ?, role = ? WHERE email = ?').run(hash, salt, 'admin', ADMIN_EMAIL);
+  console.log(`🔑 Admin password fixed (salt added): ${ADMIN_EMAIL}`);
 }
 
 // ============================================================
