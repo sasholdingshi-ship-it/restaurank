@@ -1309,6 +1309,12 @@ app.post('/auth/register', (req, res) => {
   res.json({ success: true, session: sessionId, account, invitesAccepted: pendingInvites.length });
 });
 
+// TEMP DEBUG: check admin password state
+app.get('/api/debug-auth', (req, res) => {
+  const admin = db.prepare('SELECT id, email, salt, role, is_active FROM accounts WHERE email = ?').get(process.env.ADMIN_EMAIL || 'admin@restaurank.com');
+  res.json({ admin: admin ? { id: admin.id, email: admin.email, hasSalt: !!admin.salt, saltLen: admin.salt?.length, role: admin.role, isActive: admin.is_active, isPostgres: !!db._isPostgres } : null });
+});
+
 app.post('/auth/login', (req, res) => {
   // Anti-bot: honeypot + time-trap
   if (req.body.website || req.body.company) return res.status(400).json({ error: 'Requête invalide' });
