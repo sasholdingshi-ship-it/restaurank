@@ -6001,7 +6001,23 @@ app.post('/api/restaurants/full-save', (req, res) => {
 
 // Get all restaurants for a user (full data)
 app.get('/api/restaurants/full/:user_id', (req, res) => {
-  const restaurants = db.prepare('SELECT * FROM restaurants WHERE user_id = ? ORDER BY last_audit DESC').all(req.params.user_id);
+  // Also resolve owner_id from auth session for complete results
+  let ownerId = null;
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const tok = authHeader.slice(7);
+      const sess = db.prepare('SELECT account_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(tok);
+      if (sess) ownerId = sess.account_id;
+    }
+  } catch(e){}
+  let restaurants = db.prepare('SELECT * FROM restaurants WHERE user_id = ? ORDER BY last_audit DESC').all(req.params.user_id);
+  // Also fetch by owner_id if authenticated
+  if (ownerId) {
+    const byOwner = db.prepare('SELECT * FROM restaurants WHERE owner_id = ? ORDER BY last_audit DESC').all(ownerId);
+    const existingIds = new Set(restaurants.map(r=>r.id));
+    byOwner.forEach(r => { if (!existingIds.has(r.id)) restaurants.push(r); });
+  }
   const result = restaurants.map(r => {
     const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(r.id, 'hub_data');
     return {
