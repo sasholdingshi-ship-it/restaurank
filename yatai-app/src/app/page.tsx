@@ -11,6 +11,12 @@ type OrderSummary = {
   extras: OrderExtra[];
   items: OrderItem[]
 }
+type CostsData = {
+  revenue: number; foodCost: number; foodCostPercent: number
+  staffCostTheo: number; staffCostTheoPercent: number; staffCostReel: number | null
+  loyer: number; electricite: number; logistiqueCamion: number; logistiqueEssence: number
+  matchedItems: number; unmatchedItems: number; hourlyRate: number
+}
 
 const MONTHS = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"]
 
@@ -21,6 +27,9 @@ export default function Dashboard() {
   const [month, setMonth] = useState(() => new Date().getMonth() + 1)
   const [allOrders, setAllOrders] = useState<OrderSummary[]>([])
   const [loading, setLoading] = useState(true)
+  const [costs, setCosts] = useState<CostsData | null>(null)
+  const [staffReel, setStaffReel] = useState<string>("")
+  const [savingExpense, setSavingExpense] = useState(false)
 
   useEffect(() => {
     fetch("/api/restaurants").then(r => r.json()).then(setRestaurants)
@@ -36,6 +45,21 @@ export default function Dashboard() {
       setAllOrders(orders)
       setLoading(false)
     })
+    // Fetch P&L costs
+    fetch(`/api/costs?year=${year}&month=${month}`).then(r => r.json()).then((data: CostsData) => {
+      setCosts(data)
+      setStaffReel(data.staffCostReel != null ? String(data.staffCostReel) : "")
+    })
+  }
+
+  const saveExpense = async (type: string, amount: number) => {
+    setSavingExpense(true)
+    await fetch("/api/expenses", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ year, month, type, amount }),
+    })
+    setSavingExpense(false)
+    reload()
   }
 
   useEffect(() => { reload() }, [selectedRestaurant, year, month])
@@ -237,8 +261,114 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      {/* P&L Section */}
+      {costs && !loading && (grandTotal + grandExtras) > 0 && (
+        <PLSection costs={costs} grandTotal={grandTotal + grandExtras} staffReel={staffReel} setStaffReel={setStaffReel}
+          savingExpense={savingExpense} saveExpense={saveExpense} />
+      )}
     </div>
   )
+}
+
+function PLSection({ costs, grandTotal, staffReel, setStaffReel, savingExpense, saveExpense }: {
+  costs: CostsData; grandTotal: number; staffReel: string; setStaffReel: (v: string) => void
+  savingExpense: boolean; saveExpense: (type: string, amount: number) => Promise<void>
+}) {
+  const fixedTotal = costs.loyer + costs.electricite + costs.logistiqueCamion + costs.logistiqueEssence
+  const staffReelNum = staffReel ? parseFloat(staffReel) : 0
+  const totalCharges = costs.foodCost + (staffReelNum || costs.staffCostTheo) + fixedTotal
+  const resultat = grandTotal - totalCharges
+  const resultatPercent = grandTotal > 0 ? (resultat / grandTotal * 100) : 0
+  const pct = (v: number) => grandTotal > 0 ? (v / grandTotal * 100).toFixed(1) : "0"
+
+  return (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
+      <div className="px-4 md:px-6 py-4 border-b border-gray-100">
+        <h2 className="font-semibold text-gray-900 text-sm md:text-base">Compte de résultat</h2>
+      </div>
+      <div className="divide-y divide-gray-100">
+        {/* Revenue */}
+        <PLRow label="Chiffre d'affaires HT" value={grandTotal} pct="100" bold accent="text-gray-900" />
+
+        {/* Food cost */}
+        <PLRow label="Food Cost" sublabel={`${costs.matchedItems} produits / ${costs.matchedItems + costs.unmatchedItems} total`}
+          value={costs.foodCost} pct={pct(costs.foodCost)} accent="text-red-600" />
+
+        {/* Staff cost theo */}
+        <PLRow label="Staff Cost (théorique)" sublabel={`SMIC chargé ${costs.hourlyRate} €/h`}
+          value={costs.staffCostTheo} pct={pct(costs.staffCostTheo)} accent="text-orange-600" />
+
+        {/* Staff cost reel — editable */}
+        <div className="px-4 md:px-6 py-3 flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium text-orange-700">Staff Cost (réel)</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="number" inputMode="decimal" step="0.01" placeholder="Montant réel"
+              value={staffReel} onChange={e => setStaffReel(e.target.value)}
+              className="w-28 border-2 border-orange-200 rounded-lg px-2 py-1.5 text-sm text-right font-mono focus:border-orange-400 focus:outline-none" />
+            <span className="text-xs text-gray-400">€</span>
+            <button onClick={() => saveExpense("staff_reel", parseFloat(staffReel) || 0)}
+              disabled={savingExpense || !staffReel}
+              className="bg-orange-600 text-white px-2 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50">
+              {savingExpense ? "..." : "OK"}
+            </button>
+            {staffReelNum > 0 && <span className="text-xs text-orange-500 font-medium">{pct(staffReelNum)}%</span>}
+          </div>
+        </div>
+
+        {/* Separator */}
+        <div className="px-4 md:px-6 py-2 bg-gray-50">
+          <p className="text-xs font-semibold text-gray-500 uppercase">Charges fixes mensuelles</p>
+        </div>
+
+        {/* Fixed costs */}
+        <PLRow label="Loyer" value={costs.loyer} pct={pct(costs.loyer)} accent="text-gray-600" />
+        <PLRow label="Électricité" value={costs.electricite} pct={pct(costs.electricite)} accent="text-gray-600" />
+        <PLRow label="Logistique — location camion" value={costs.logistiqueCamion} pct={pct(costs.logistiqueCamion)} accent="text-gray-600" />
+        <PLRow label="Logistique — essence" value={costs.logistiqueEssence} pct={pct(costs.logistiqueEssence)} accent="text-gray-600" />
+
+        {/* Total charges */}
+        <div className="px-4 md:px-6 py-3 flex items-center justify-between bg-red-50">
+          <p className="text-sm font-bold text-red-800">Total charges</p>
+          <div className="text-right">
+            <span className="font-mono font-bold text-sm text-red-800">{fmt(totalCharges)} €</span>
+            <span className="text-xs text-red-500 ml-2">{pct(totalCharges)}%</span>
+          </div>
+        </div>
+
+        {/* Résultat */}
+        <div className={`px-4 md:px-6 py-4 flex items-center justify-between ${resultat >= 0 ? 'bg-green-50' : 'bg-red-50'}`}>
+          <p className={`text-sm font-bold ${resultat >= 0 ? 'text-green-800' : 'text-red-800'}`}>Résultat net</p>
+          <div className="text-right">
+            <span className={`font-mono font-bold text-base ${resultat >= 0 ? 'text-green-800' : 'text-red-800'}`}>{fmt(resultat)} €</span>
+            <span className={`text-xs ml-2 ${resultat >= 0 ? 'text-green-600' : 'text-red-600'}`}>{resultatPercent.toFixed(1)}%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function PLRow({ label, sublabel, value, pct, bold, accent }: {
+  label: string; sublabel?: string; value: number; pct: string; bold?: boolean; accent?: string
+}) {
+  return (
+    <div className="px-4 md:px-6 py-3 flex items-center justify-between">
+      <div>
+        <p className={`text-sm ${bold ? 'font-bold' : 'font-medium'} ${accent || 'text-gray-700'}`}>{label}</p>
+        {sublabel && <p className="text-[11px] text-gray-400">{sublabel}</p>}
+      </div>
+      <div className="text-right">
+        <span className={`font-mono text-sm ${bold ? 'font-bold' : ''} ${accent || ''}`}>{fmt(value)} €</span>
+        <span className="text-xs text-gray-400 ml-2">{pct}%</span>
+      </div>
+    </div>
+  )
+}
+
+function fmt(n: number) {
+  return n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')
 }
 
 function KPICard({ title, value, color }: { title: string; value: string; color: string }) {

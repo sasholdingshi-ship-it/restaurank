@@ -69,6 +69,11 @@ export async function ensureDb(prisma: PrismaClient) {
       "id" INTEGER PRIMARY KEY AUTOINCREMENT, "hourlyRate" REAL NOT NULL,
       "monthlyRate" REAL, "effectiveDate" DATETIME)`)
 
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "MonthlyExpense" (
+      "id" INTEGER PRIMARY KEY AUTOINCREMENT, "year" INTEGER NOT NULL,
+      "month" INTEGER NOT NULL, "type" TEXT NOT NULL, "amount" REAL NOT NULL DEFAULT 0)`)
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "MonthlyExpense_year_month_type_key" ON "MonthlyExpense"("year","month","type")`)
+
     // Migrate: add unitPrice to OrderItem if missing
     try { await prisma.$executeRawUnsafe(`ALTER TABLE "OrderItem" ADD COLUMN "unitPrice" REAL`) } catch { /* already exists */ }
 
