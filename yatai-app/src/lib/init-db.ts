@@ -69,6 +69,9 @@ export async function ensureDb(prisma: PrismaClient) {
       "id" INTEGER PRIMARY KEY AUTOINCREMENT, "hourlyRate" REAL NOT NULL,
       "monthlyRate" REAL, "effectiveDate" DATETIME)`)
 
+    // Migrate: add unitPrice to OrderItem if missing
+    try { await prisma.$executeRawUnsafe(`ALTER TABLE "OrderItem" ADD COLUMN "unitPrice" REAL`) } catch { /* already exists */ }
+
     // Migrate: add stuart/livraison columns if missing
     try {
       await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "stuartPrice" REAL NOT NULL DEFAULT 0`)
