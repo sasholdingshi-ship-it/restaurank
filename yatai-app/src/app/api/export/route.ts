@@ -14,11 +14,11 @@ export async function GET(req: NextRequest) {
 
   const order = await prisma.order.findUnique({
     where: { restaurantId_year_month: { restaurantId, year, month } },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: true } }, extras: true },
   })
   if (!order) return NextResponse.json({ error: 'No order found' }, { status: 404 })
 
-  // Aggregate quantities per product (Excel: AJ = SUM of daily quantities)
+  // Aggregate quantities per product
   const productTotals = new Map<number, { product: typeof order.items[0]['product']; total: number }>()
   for (const item of order.items) {
     const existing = productTotals.get(item.productId)
@@ -26,55 +26,69 @@ export async function GET(req: NextRequest) {
     else productTotals.set(item.productId, { product: item.product, total: item.quantity })
   }
 
-  // Number of delivery days (unique days with orders — Excel: nbPassages)
-  const uniqueDays = new Set(order.items.map(i => i.day))
-  const nbPassages = uniqueDays.size
-
-  // Date formatting matching Excel: "mars 2026"
   const monthNames = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
   const dateStr = `${monthNames[month]} ${year}`
 
-  // Build Pennylane export rows matching Excel facturation sheets exactly
-  // Excel columns: Raison sociale, SIREN, Identifiant produit, Nom du produit,
-  //   Description, Quantité, Unité, Prix unitaire HT, Taux TVA, Type de produit, Date d'émission
   const rows: Record<string, unknown>[] = []
 
-  // Stuart row (if configured)
-  if (order.stuartQty > 0 && order.stuartPrice > 0) {
-    rows.push({
-      'Raison sociale (optionnel)': restaurant.name,
-      'SIREN': restaurant.siren || '',
-      'Identifiant produit (recommandé)': 'STUART',
-      'Nom du produit': 'Stuart',
-      'Description (optionnel)': `Courses Stuart ${dateStr}`,
-      'Quantité': order.stuartQty,
-      'Unité (liste déroulante)': 'Courses',
-      'Prix unitaire HT en euros': order.stuartPrice,
-      'Taux TVA  (liste déroulante)': 0.2,
-      'Type de produit': 'Prestations de services',
-      "Date d'émission": dateStr,
-    })
+  // OrderExtra rows (new system — multiple entries)
+  const extras = order.extras || []
+  for (const extra of extras) {
+    if (extra.quantity > 0 && extra.price > 0) {
+      const isStuart = extra.type === 'stuart'
+      rows.push({
+        'Raison sociale (optionnel)': restaurant.name,
+        'SIREN': restaurant.siren || '',
+        'Identifiant produit (recommandé)': isStuart ? 'STUART' : 'LIVR',
+        'Nom du produit': isStuart ? 'Stuart' : 'Livraison',
+        'Description (optionnel)': isStuart
+          ? `Courses Stuart ${dateStr}${extra.label ? ' — ' + extra.label : ''}`
+          : `${extra.quantity} livraisons ${dateStr}${extra.label ? ' — ' + extra.label : ''}`,
+        'Quantité': extra.quantity,
+        'Unité (liste déroulante)': isStuart ? 'Courses' : 'Livraisons',
+        'Prix unitaire HT en euros': extra.price,
+        'Taux TVA  (liste déroulante)': 0.2,
+        'Type de produit': 'Prestations de services',
+        "Date d'émission": dateStr,
+      })
+    }
   }
 
-  // Livraison row (if configured)
-  if (order.livraisonQty > 0 && order.livraisonPrice > 0) {
-    rows.push({
-      'Raison sociale (optionnel)': restaurant.name,
-      'SIREN': restaurant.siren || '',
-      'Identifiant produit (recommandé)': 'LIVR',
-      'Nom du produit': 'Livraison',
-      'Description (optionnel)': `${order.livraisonQty} livraisons ${dateStr}`,
-      'Quantité': order.livraisonQty,
-      'Unité (liste déroulante)': 'Livraisons',
-      'Prix unitaire HT en euros': order.livraisonPrice,
-      'Taux TVA  (liste déroulante)': 0.2,
-      'Type de produit': 'Prestations de services',
-      "Date d'émission": dateStr,
-    })
+  // Legacy fallback: if no extras rows, use old fields on Order
+  if (extras.length === 0) {
+    if (order.stuartQty > 0 && order.stuartPrice > 0) {
+      rows.push({
+        'Raison sociale (optionnel)': restaurant.name,
+        'SIREN': restaurant.siren || '',
+        'Identifiant produit (recommandé)': 'STUART',
+        'Nom du produit': 'Stuart',
+        'Description (optionnel)': `Courses Stuart ${dateStr}`,
+        'Quantité': order.stuartQty,
+        'Unité (liste déroulante)': 'Courses',
+        'Prix unitaire HT en euros': order.stuartPrice,
+        'Taux TVA  (liste déroulante)': 0.2,
+        'Type de produit': 'Prestations de services',
+        "Date d'émission": dateStr,
+      })
+    }
+    if (order.livraisonQty > 0 && order.livraisonPrice > 0) {
+      rows.push({
+        'Raison sociale (optionnel)': restaurant.name,
+        'SIREN': restaurant.siren || '',
+        'Identifiant produit (recommandé)': 'LIVR',
+        'Nom du produit': 'Livraison',
+        'Description (optionnel)': `${order.livraisonQty} livraisons ${dateStr}`,
+        'Quantité': order.livraisonQty,
+        'Unité (liste déroulante)': 'Livraisons',
+        'Prix unitaire HT en euros': order.livraisonPrice,
+        'Taux TVA  (liste déroulante)': 0.2,
+        'Type de produit': 'Prestations de services',
+        "Date d'émission": dateStr,
+      })
+    }
   }
 
-  // Product rows — Excel: XLOOKUP(ref, Recap!E:E, Recap!G:G) for price, etc.
-  // Product.priceHt is already cascaded from Recipe.sellingPrice (D52)
+  // Product rows
   for (const [, { product, total }] of productTotals) {
     if (total <= 0) continue
     rows.push({
@@ -93,8 +107,6 @@ export async function GET(req: NextRequest) {
   }
 
   const ws = XLSX.utils.json_to_sheet(rows)
-
-  // Set column widths for readability
   ws['!cols'] = [
     { wch: 20 }, { wch: 12 }, { wch: 10 }, { wch: 30 }, { wch: 30 },
     { wch: 10 }, { wch: 12 }, { wch: 15 }, { wch: 12 }, { wch: 22 }, { wch: 15 },

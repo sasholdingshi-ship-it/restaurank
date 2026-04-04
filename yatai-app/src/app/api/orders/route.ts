@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (year) where.year = parseInt(year)
   if (month) where.month = parseInt(month)
   const orders = await prisma.order.findMany({
-    where, include: { restaurant: true, items: { include: { product: true }, orderBy: { day: 'asc' } } },
+    where, include: { restaurant: true, extras: true, items: { include: { product: true }, orderBy: { day: 'asc' } } },
     orderBy: [{ year: 'desc' }, { month: 'desc' }],
   })
   return NextResponse.json(orders)
