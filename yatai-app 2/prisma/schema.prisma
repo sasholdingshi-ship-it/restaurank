@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Mercurial (ingrédients bruts) ───
+model Ingredient {
+  id          Int     @id @default(autoincrement())
+  ref         Int     @unique // Réf ingrédient
+  name        String
+  supplier    String?
+  priceTtc    Float?  // Prix TTC brut
+  priceHt     Float?  // Prix HT brut
+  weight      Float?  // Poids (kg)
+  pricePerKg  Float?  // Prix HT au kg (calculé)
+  lossPercent Float   @default(0) // Perte %
+  netPriceKg  Float?  // Prix net HT au kg (après perte)
+
+  recipeIngredients RecipeIngredient[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Fiches techniques (recettes) ───
+model Recipe {
+  id           Int     @id @default(autoincrement())
+  ref          String  @unique // P001, P002, etc.
+  name         String
+  category     String? // BOUILLONS, SAUCES, etc.
+  unit         String? // kg, L, pièce, sachet, etc.
+  portions     Float?  // Nombre de portions
+  portionLabel String? // "sachet 20p", "kg", "L"
+  laborTime    Float?  // Temps passé (heures)
+  aleaPercent  Float   @default(0.02) // Aléa 2%
+  margin       Float?  // Marge %
+  costPerUnit  Float?  // Coût produit par unité
+  sellingPrice Float?  // Prix de vente HT (D52)
+
+  ingredients RecipeIngredient[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RecipeIngredient {
+  id           Int  @id @default(autoincrement())
+  recipeId     Int
+  ingredientId Int?  // Ref vers Mercurial (peut être null si non trouvé)
+  ingredientRef Int? // Réf ingrédient dans le Mercurial
+  quantity     Float @default(0)
+  unitPrice    Float @default(0)
+  amount       Float @default(0) // Montant HT
+  unit         String?
+  notes        String?
+
+  recipe     Recipe      @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient? @relation(fields: [ingredientId], references: [id])
+
+  @@index([recipeId])
+}
+
+// ─── Produits (Recap prix) ───
+model Product {
+  id           Int     @id @default(autoincrement())
+  ref          String  @unique // P001, P002, etc.
+  name         String
+  priceHt      Float?  // Prix HT au kg (venant de la fiche technique)
+  unit         String? // Unité de vente
+
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Restaurants ───
+model Restaurant {
+  id            Int     @id @default(autoincrement())
+  code          String  @unique // "2eme", "8eme", "9eme", "11eme", "14eme"
+  name          String  // "Yatai Choiseul", etc.
+  arrondissement String // "2ème", "8ème", etc.
+  siren         String?
+  deliveryPrice Float   @default(25)
+  tvaRate       Float   @default(0.055)
+
+  orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Commandes (une par restaurant/mois) ───
+model Order {
+  id           Int    @id @default(autoincrement())
+  restaurantId Int
+  year         Int
+  month        Int    // 1-12
+  nbPassages   Int    @default(0)
+
+  restaurant Restaurant @relation(fields: [restaurantId], references: [id])
+  items      OrderItem[]
+
+  @@unique([restaurantId, year, month])
+  @@index([restaurantId])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// ─── Détail commande par jour ───
+model OrderItem {
+  id        Int   @id @default(autoincrement())
+  orderId   Int
+  productId Int
+  day       Int   // 1-31
+  quantity  Float @default(0)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  @@unique([orderId, productId, day])
+  @@index([orderId])
+  @@index([productId])
+}
+
+// ─── Config SMIC ───
+model SmicConfig {
+  id          Int   @id @default(autoincrement())
+  hourlyRate  Float // SMIC horaire CP compris
+  monthlyRate Float? // SMIC mensuel 35H brut
+  effectiveDate DateTime?
+}
