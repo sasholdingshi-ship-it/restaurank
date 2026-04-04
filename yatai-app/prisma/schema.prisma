@@ -111,11 +111,12 @@ model OrderExtra {
 }
 
 model OrderItem {
-  id        Int   @id @default(autoincrement())
+  id        Int    @id @default(autoincrement())
   orderId   Int
   productId Int
   day       Int
-  quantity  Float @default(0)
+  quantity  Float  @default(0)
+  unitPrice Float?
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
   @@unique([orderId, productId, day])

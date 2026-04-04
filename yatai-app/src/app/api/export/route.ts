@@ -18,12 +18,14 @@ export async function GET(req: NextRequest) {
   })
   if (!order) return NextResponse.json({ error: 'No order found' }, { status: 404 })
 
-  // Aggregate quantities per product
-  const productTotals = new Map<number, { product: typeof order.items[0]['product']; total: number }>()
+  // Aggregate quantities per product+price (unitPrice override creates separate rows)
+  const productTotals = new Map<string, { product: typeof order.items[0]['product']; total: number; price: number | null }>()
   for (const item of order.items) {
-    const existing = productTotals.get(item.productId)
+    const priceKey = item.unitPrice != null ? item.unitPrice.toFixed(4) : 'default'
+    const key = `${item.productId}-${priceKey}`
+    const existing = productTotals.get(key)
     if (existing) existing.total += item.quantity
-    else productTotals.set(item.productId, { product: item.product, total: item.quantity })
+    else productTotals.set(key, { product: item.product, total: item.quantity, price: item.unitPrice ?? null })
   }
 
   const monthNames = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
@@ -89,17 +91,18 @@ export async function GET(req: NextRequest) {
   }
 
   // Product rows
-  for (const [, { product, total }] of productTotals) {
+  for (const [, { product, total, price }] of productTotals) {
     if (total <= 0) continue
+    const unitPrice = price ?? product.priceHt ?? 0
     rows.push({
       'Raison sociale (optionnel)': restaurant.name,
       'SIREN': restaurant.siren || '',
       'Identifiant produit (recommandé)': product.ref,
       'Nom du produit': product.name,
-      'Description (optionnel)': '',
+      'Description (optionnel)': price != null ? `Prix manuel: ${price.toFixed(2)} €` : '',
       'Quantité': total,
       'Unité (liste déroulante)': product.unit || '',
-      'Prix unitaire HT en euros': product.priceHt || 0,
+      'Prix unitaire HT en euros': unitPrice,
       'Taux TVA  (liste déroulante)': restaurant.tvaRate,
       'Type de produit': 'Ventes de marchandises',
       "Date d'émission": dateStr,

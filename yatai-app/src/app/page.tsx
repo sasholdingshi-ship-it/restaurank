@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 
 type Restaurant = { id: number; code: string; name: string; arrondissement: string }
-type OrderItem = { quantity: number; productId: number; product: { priceHt: number | null; ref: string; name: string } }
+type OrderItem = { quantity: number; productId: number; unitPrice: number | null; product: { priceHt: number | null; ref: string; name: string } }
 type OrderExtra = { id: number; type: string; label: string; price: number; quantity: number }
 type OrderSummary = {
   id: number; year: number; month: number; restaurant: Restaurant;
@@ -71,7 +71,7 @@ export default function Dashboard() {
 
     return {
       restaurant: o.restaurant,
-      total: o.items.reduce((s, i) => s + i.quantity * (i.product.priceHt || 0), 0),
+      total: o.items.reduce((s, i) => s + i.quantity * (i.unitPrice ?? i.product.priceHt ?? 0), 0),
       extrasTotal: extrasTotal + legacyTotal,
       extras,
       items: o.items.reduce((s, i) => s + i.quantity, 0),

@@ -19,6 +19,8 @@ export default function CommandesPage() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState<Set<string>>(new Set())
+  const [priceGrid, setPriceGrid] = useState<Map<string, number | null>>(new Map())
+  const [editingPrice, setEditingPrice] = useState<number | null>(null)
   const [ocrLoading, setOcrLoading] = useState(false)
   const [ocrResults, setOcrResults] = useState<OcrEntry[] | null>(null)
   const [ocrPhotos, setOcrPhotos] = useState<File[]>([])
@@ -36,8 +38,13 @@ export default function CommandesPage() {
     setLoading(true)
     fetch(`/api/orders?restaurantId=${restaurantId}&year=${year}&month=${month}`).then(r => r.json()).then(orders => {
       const newGrid = new Map<string, number>()
-      if (orders.length > 0) for (const item of orders[0].items) newGrid.set(`${item.productId}-${item.day}`, item.quantity)
+      const newPrices = new Map<string, number | null>()
+      if (orders.length > 0) for (const item of orders[0].items) {
+        newGrid.set(`${item.productId}-${item.day}`, item.quantity)
+        if (item.unitPrice != null) newPrices.set(`${item.productId}-${item.day}`, item.unitPrice)
+      }
       setGrid(newGrid)
+      setPriceGrid(newPrices)
       setDirty(new Set())
       setLoading(false)
     })
@@ -55,10 +62,21 @@ export default function CommandesPage() {
     setDirty(prev => new Set(prev).add(key))
   }
 
+  const setPrice = (productId: number, value: number | null) => {
+    const key = `${productId}-${day}`
+    const newPrices = new Map(priceGrid)
+    if (value != null) newPrices.set(key, value); else newPrices.delete(key)
+    setPriceGrid(newPrices)
+    setDirty(prev => new Set(prev).add(key))
+  }
+
   const save = async () => {
     setSaving(true)
-    const entries: { productId: number; day: number; quantity: number }[] = []
-    for (const key of dirty) { const [pid, d] = key.split("-").map(Number); entries.push({ productId: pid, day: d, quantity: grid.get(key) || 0 }) }
+    const entries: { productId: number; day: number; quantity: number; unitPrice?: number | null }[] = []
+    for (const key of dirty) {
+      const [pid, d] = key.split("-").map(Number)
+      entries.push({ productId: pid, day: d, quantity: grid.get(key) || 0, unitPrice: priceGrid.get(key) ?? null })
+    }
     await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ restaurantId, year, month, entries }) })
     setDirty(new Set())
     setSaving(false)
@@ -107,8 +125,10 @@ export default function CommandesPage() {
   }
 
   const dayTotal = products.reduce((sum, p) => {
-    const qty = grid.get(`${p.id}-${day}`) || 0
-    return sum + qty * (p.priceHt || 0)
+    const key = `${p.id}-${day}`
+    const qty = grid.get(key) || 0
+    const price = priceGrid.get(key) ?? p.priceHt ?? 0
+    return sum + qty * price
   }, 0)
 
   const dayProducts = products.filter(p => {
@@ -234,8 +254,12 @@ export default function CommandesPage() {
       ) : (
         <div className="space-y-1.5">
           {displayProducts.map(product => {
-            const qty = grid.get(`${product.id}-${day}`) || 0
-            const amount = qty * (product.priceHt || 0)
+            const key = `${product.id}-${day}`
+            const qty = grid.get(key) || 0
+            const overridePrice = priceGrid.get(key)
+            const effectivePrice = overridePrice ?? product.priceHt ?? 0
+            const amount = qty * effectivePrice
+            const isEditing = editingPrice === product.id
             return (
               <div key={product.id} className="bg-white rounded-xl border border-gray-200 px-4 py-2.5 flex items-center gap-3">
                 <div className="flex-1 min-w-0">
@@ -243,9 +267,23 @@ export default function CommandesPage() {
                     <span className="text-[10px] font-mono text-gray-400">{product.ref}</span>
                     <span className="text-sm font-medium truncate">{product.name}</span>
                   </div>
-                  <div className="text-xs text-gray-500">
-                    {product.priceHt?.toFixed(2) ?? "—"} €/{product.unit || "u"}
-                    {qty > 0 && amount > 0 && <span className="ml-2 text-orange-600 font-medium">= {amount.toFixed(2)} €</span>}
+                  <div className="text-xs text-gray-500 flex items-center gap-1 flex-wrap">
+                    {isEditing ? (
+                      <span className="inline-flex items-center gap-1">
+                        <input type="number" step="0.01" autoFocus
+                          defaultValue={effectivePrice || ""}
+                          onBlur={e => { const v = parseFloat(e.target.value); setPrice(product.id, isNaN(v) ? null : v); setEditingPrice(null) }}
+                          onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
+                          className="w-16 border border-blue-400 rounded px-1 py-0.5 text-xs text-right" />
+                        <span>€/{product.unit || "u"}</span>
+                      </span>
+                    ) : (
+                      <button onClick={() => qty > 0 && setEditingPrice(product.id)} className={`${overridePrice != null ? "text-blue-600 font-medium" : ""}`}>
+                        {effectivePrice.toFixed(2)} €/{product.unit || "u"}
+                        {overridePrice != null && <span className="ml-0.5 text-[9px]">✎</span>}
+                      </button>
+                    )}
+                    {qty > 0 && amount > 0 && <span className="text-orange-600 font-medium">= {amount.toFixed(2)} €</span>}
                   </div>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">

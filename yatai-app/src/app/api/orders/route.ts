@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const prisma = await db()
   const { restaurantId, year, month, entries } = await req.json() as {
     restaurantId: number; year: number; month: number
-    entries: { productId: number; day: number; quantity: number }[]
+    entries: { productId: number; day: number; quantity: number; unitPrice?: number | null }[]
   }
   const order = await prisma.order.upsert({
     where: { restaurantId_year_month: { restaurantId, year, month } },
@@ -31,9 +31,11 @@ export async function POST(req: NextRequest) {
     if (entry.quantity <= 0) {
       await prisma.orderItem.deleteMany({ where: { orderId: order.id, productId: entry.productId, day: entry.day } })
     } else {
+      const data = { quantity: entry.quantity, unitPrice: entry.unitPrice ?? null }
       await prisma.orderItem.upsert({
         where: { orderId_productId_day: { orderId: order.id, productId: entry.productId, day: entry.day } },
-        create: { orderId: order.id, ...entry }, update: { quantity: entry.quantity },
+        create: { orderId: order.id, productId: entry.productId, day: entry.day, ...data },
+        update: data,
       })
     }
   }
