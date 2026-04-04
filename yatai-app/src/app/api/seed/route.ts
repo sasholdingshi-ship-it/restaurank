@@ -35,6 +35,7 @@ export async function GET() {
  * step=all: run all steps (only for long-timeout environments)
  */
 export async function POST(req: NextRequest) {
+  try {
   const { secret, step } = await req.json()
   if (secret !== 'yatai-reseed-2026') return NextResponse.json({ error: 'unauthorized' }, { status: 401 })
 
@@ -71,39 +72,26 @@ export async function POST(req: NextRequest) {
     results.smic = 1
   }
 
-  // Step 2: Ingredients (batched)
+  // Step 2: Ingredients
   if (currentStep === 2 || currentStep === 'all') {
     const ingredients = data.ingredients as any[]
-    const BATCH = 25
-    for (let i = 0; i < ingredients.length; i += BATCH) {
-      const chunk = ingredients.slice(i, i + BATCH)
-      const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?)').join(',')
-      const values = chunk.flatMap((ing: any) => [
-        ing.id, ing.ref, ing.name, ing.supplier || null, ing.priceTtc || null, ing.priceHt || null,
-        ing.weight || null, ing.pricePerKg || null, ing.lossPercent || 0, ing.netPriceKg || null, now, now
-      ])
+    for (const i of ingredients) {
       await prisma.$executeRawUnsafe(
-        `INSERT OR REPLACE INTO "Ingredient" ("id","ref","name","supplier","priceTtc","priceHt","weight","pricePerKg","lossPercent","netPriceKg","createdAt","updatedAt") VALUES ${placeholders}`,
-        ...values
+        `INSERT OR REPLACE INTO "Ingredient" ("id","ref","name","supplier","priceTtc","priceHt","weight","pricePerKg","lossPercent","netPriceKg","createdAt","updatedAt") VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        i.id, i.ref, i.name, i.supplier || null, i.priceTtc || null, i.priceHt || null, i.weight || null, i.pricePerKg || null, i.lossPercent || 0, i.netPriceKg || null, now, now
       )
     }
     results.ingredients = ingredients.length
   }
 
-  // Step 3: Recipes + RecipeIngredients (batched)
+  // Step 3: Recipes + RecipeIngredients
   if (currentStep === 3 || currentStep === 'all') {
     const recipes = data.recipes as any[]
-    const BATCH = 20
-    for (let i = 0; i < recipes.length; i += BATCH) {
-      const chunk = recipes.slice(i, i + BATCH)
-      const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?,?,?,?,?,?,?)').join(',')
-      const values = chunk.flatMap((r: any) => [
+    for (const r of recipes) {
+      await prisma.$executeRawUnsafe(
+        `INSERT OR REPLACE INTO "Recipe" ("id","ref","name","category","unit","portions","portionLabel","laborTime","aleaPercent","margin","costPerUnit","sellingPrice","createdAt","updatedAt") VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         r.id, r.ref, r.name, r.category || null, r.unit || null, r.portions || null, r.portionLabel || null,
         r.laborTime || null, r.aleaPercent || 0.02, r.margin || null, r.costPerUnit || null, r.sellingPrice || null, now, now
-      ])
-      await prisma.$executeRawUnsafe(
-        `INSERT OR REPLACE INTO "Recipe" ("id","ref","name","category","unit","portions","portionLabel","laborTime","aleaPercent","margin","costPerUnit","sellingPrice","createdAt","updatedAt") VALUES ${placeholders}`,
-        ...values
       )
     }
     results.recipes = recipes.length
@@ -118,17 +106,13 @@ export async function POST(req: NextRequest) {
     results.recipeIngredients = ri.length
   }
 
-  // Step 4: Products (batched)
+  // Step 4: Products
   if (currentStep === 4 || currentStep === 'all') {
     const products = data.products as any[]
-    const BATCH = 30
-    for (let i = 0; i < products.length; i += BATCH) {
-      const chunk = products.slice(i, i + BATCH)
-      const placeholders = chunk.map(() => '(?,?,?,?,?,?,?)').join(',')
-      const values = chunk.flatMap((p: any) => [p.id, p.ref, p.name, p.priceHt || null, p.unit || null, now, now])
+    for (const p of products) {
       await prisma.$executeRawUnsafe(
-        `INSERT OR REPLACE INTO "Product" ("id","ref","name","priceHt","unit","createdAt","updatedAt") VALUES ${placeholders}`,
-        ...values
+        `INSERT OR REPLACE INTO "Product" ("id","ref","name","priceHt","unit","createdAt","updatedAt") VALUES (?,?,?,?,?,?,?)`,
+        p.id, p.ref, p.name, p.priceHt || null, p.unit || null, now, now
       )
     }
     results.products = products.length
@@ -137,14 +121,10 @@ export async function POST(req: NextRequest) {
   // Step 5: Orders
   if (currentStep === 5 || currentStep === 'all') {
     const orders = data.orders as any[]
-    const BATCH = 20
-    for (let i = 0; i < orders.length; i += BATCH) {
-      const chunk = orders.slice(i, i + BATCH)
-      const placeholders = chunk.map(() => '(?,?,?,?,?,?,?)').join(',')
-      const values = chunk.flatMap((o: any) => [o.id, o.restaurantId, o.year, o.month, o.nbPassages || 0, now, now])
+    for (const o of orders) {
       await prisma.$executeRawUnsafe(
-        `INSERT OR REPLACE INTO "Order" ("id","restaurantId","year","month","nbPassages","createdAt","updatedAt") VALUES ${placeholders}`,
-        ...values
+        `INSERT OR REPLACE INTO "Order" ("id","restaurantId","year","month","nbPassages","createdAt","updatedAt") VALUES (?,?,?,?,?,?,?)`,
+        o.id, o.restaurantId, o.year, o.month, o.nbPassages || 0, now, now
       )
     }
     results.orders = orders.length
@@ -172,4 +152,7 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({ success: true, step: currentStep, ...results })
+  } catch (e) {
+    return NextResponse.json({ error: String(e), stack: (e as Error).stack?.split('\n').slice(0, 5) }, { status: 500 })
+  }
 }
