@@ -10,13 +10,15 @@ function createPrismaClient() {
   const tursoToken = process.env.TURSO_AUTH_TOKEN
 
   if (tursoUrl && tursoToken) {
-    // Production: use Turso (persistent hosted SQLite)
+    // Production: Turso (persistent hosted SQLite)
     const libsql = createClient({ url: tursoUrl, authToken: tursoToken })
     const adapter = new PrismaLibSQL(libsql)
+    // Prisma needs DATABASE_URL even with adapter — set dummy if missing
+    if (!process.env.DATABASE_URL) process.env.DATABASE_URL = 'file:/tmp/prisma-dummy.db'
     return new PrismaClient({ adapter } as any)
   }
 
-  // Local dev: use file-based SQLite
+  // Local dev: file-based SQLite
   return new PrismaClient()
 }
 

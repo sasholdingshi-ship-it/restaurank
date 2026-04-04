@@ -62,7 +62,13 @@ export async function ensureDb(prisma: PrismaClient) {
 
     // Check if data exists (BigInt fix)
     const count: Array<{ c: bigint | number }> = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as c FROM "Restaurant"`)
-    if (Number(count[0].c) === 0) await seedData(prisma, seedJson as SeedData)
+    if (Number(count[0].c) === 0) {
+      await seedData(prisma, seedJson as SeedData)
+    } else {
+      // Check if orderItems were seeded (might have timed out on previous attempt)
+      const oiCount: Array<{ c: bigint | number }> = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as c FROM "OrderItem"`)
+      if (Number(oiCount[0].c) === 0) await seedOrderItems(prisma, seedJson as SeedData)
+    }
   } catch (e) {
     console.error('DB init error:', e)
     globalInit.dbReady = false
@@ -96,11 +102,14 @@ async function seedData(prisma: PrismaClient, data: SeedData) {
     )
   }
 
-  // RecipeIngredients
-  for (const ri of data.recipeIngredients) {
+  // RecipeIngredients (batch 50 at a time)
+  for (let i = 0; i < data.recipeIngredients.length; i += 50) {
+    const chunk = data.recipeIngredients.slice(i, i + 50)
+    const placeholders = chunk.map(() => '(?,?,?,?,?,?,?,?)').join(',')
+    const values = chunk.flatMap(ri => [ri.recipeId, ri.ingredientId || null, ri.ingredientRef || null, ri.quantity || 0, ri.unitPrice || 0, ri.amount || 0, ri.unit || null, ri.notes || null])
     await prisma.$executeRawUnsafe(
-      `INSERT INTO "RecipeIngredient" ("recipeId","ingredientId","ingredientRef","quantity","unitPrice","amount","unit","notes") VALUES (?,?,?,?,?,?,?,?)`,
-      ri.recipeId, ri.ingredientId || null, ri.ingredientRef || null, ri.quantity || 0, ri.unitPrice || 0, ri.amount || 0, ri.unit || null, ri.notes || null
+      `INSERT INTO "RecipeIngredient" ("recipeId","ingredientId","ingredientRef","quantity","unitPrice","amount","unit","notes") VALUES ${placeholders}`,
+      ...values
     )
   }
 
@@ -121,16 +130,25 @@ async function seedData(prisma: PrismaClient, data: SeedData) {
   }
 
   // OrderItems (compact format: {orderId: {productId: {day: qty}}})
+  // Batch insert 200 rows at a time to avoid Vercel/Turso timeout
   const orderItems = data.orderItems as Record<string, Record<string, Record<string, number>>>
+  const allItems: [number, number, number, number][] = []
   for (const [orderId, products] of Object.entries(orderItems)) {
     for (const [productId, days] of Object.entries(products)) {
       for (const [day, qty] of Object.entries(days)) {
-        await prisma.$executeRawUnsafe(
-          `INSERT OR IGNORE INTO "OrderItem" ("orderId","productId","day","quantity") VALUES (?,?,?,?)`,
-          parseInt(orderId), parseInt(productId), parseInt(day), qty
-        )
+        allItems.push([parseInt(orderId), parseInt(productId), parseInt(day), qty])
       }
     }
+  }
+  const BATCH = 500
+  for (let i = 0; i < allItems.length; i += BATCH) {
+    const chunk = allItems.slice(i, i + BATCH)
+    const placeholders = chunk.map(() => '(?,?,?,?)').join(',')
+    const values = chunk.flat()
+    await prisma.$executeRawUnsafe(
+      `INSERT OR IGNORE INTO "OrderItem" ("orderId","productId","day","quantity") VALUES ${placeholders}`,
+      ...values
+    )
   }
 
   // SmicConfig
@@ -140,5 +158,37 @@ async function seedData(prisma: PrismaClient, data: SeedData) {
     smic.hourlyRate, smic.monthlyRate || null
   )
 
-  console.log(`✅ Seeded: ${data.restaurants.length} restaurants, ${data.ingredients.length} ingredients, ${data.recipes.length} recipes, ${data.products.length} products`)
+  console.log(`✅ Seeded: ${data.restaurants.length} restaurants, ${data.ingredients.length} ingredients, ${data.recipes.length} recipes, ${data.products.length} products, ${allItems.length} orderItems`)
+}
+
+async function seedOrderItems(prisma: PrismaClient, data: SeedData) {
+  const now = new Date().toISOString()
+  // Re-seed orders
+  for (const o of data.orders) {
+    await prisma.$executeRawUnsafe(
+      `INSERT OR IGNORE INTO "Order" ("id","restaurantId","year","month","nbPassages","createdAt","updatedAt") VALUES (?,?,?,?,?,?,?)`,
+      o.id, o.restaurantId, o.year, o.month, o.nbPassages || 0, now, now
+    )
+  }
+  // Batch insert order items
+  const orderItems = data.orderItems as Record<string, Record<string, Record<string, number>>>
+  const allItems: [number, number, number, number][] = []
+  for (const [orderId, products] of Object.entries(orderItems)) {
+    for (const [productId, days] of Object.entries(products)) {
+      for (const [day, qty] of Object.entries(days)) {
+        allItems.push([parseInt(orderId), parseInt(productId), parseInt(day), qty])
+      }
+    }
+  }
+  const BATCH = 500
+  for (let i = 0; i < allItems.length; i += BATCH) {
+    const chunk = allItems.slice(i, i + BATCH)
+    const placeholders = chunk.map(() => '(?,?,?,?)').join(',')
+    const values = chunk.flat()
+    await prisma.$executeRawUnsafe(
+      `INSERT OR IGNORE INTO "OrderItem" ("orderId","productId","day","quantity") VALUES ${placeholders}`,
+      ...values
+    )
+  }
+  console.log(`✅ Seeded ${allItems.length} orderItems`)
 }
