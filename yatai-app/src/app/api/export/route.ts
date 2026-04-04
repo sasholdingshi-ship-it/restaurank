@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 import * as XLSX from 'xlsx'
 
@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const month = parseInt(req.nextUrl.searchParams.get('month') || '0')
 
   if (!restaurantId || !year || !month) return NextResponse.json({ error: 'restaurantId, year, month required' }, { status: 400 })
-
+  const prisma = await db()
   const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId } })
   if (!restaurant) return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
 
