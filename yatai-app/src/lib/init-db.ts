@@ -58,6 +58,13 @@ export async function ensureDb(prisma: PrismaClient) {
       FOREIGN KEY ("productId") REFERENCES "Product"("id"))`)
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "OrderItem_orderId_productId_day_key" ON "OrderItem"("orderId","productId","day")`)
 
+    await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "OrderExtra" (
+      "id" INTEGER PRIMARY KEY AUTOINCREMENT, "orderId" INTEGER NOT NULL,
+      "type" TEXT NOT NULL, "label" TEXT NOT NULL DEFAULT '',
+      "price" REAL NOT NULL DEFAULT 0, "quantity" INTEGER NOT NULL DEFAULT 0,
+      FOREIGN KEY ("orderId") REFERENCES "Order"("id") ON DELETE CASCADE)`)
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "OrderExtra_orderId_idx" ON "OrderExtra"("orderId")`)
+
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SmicConfig" (
       "id" INTEGER PRIMARY KEY AUTOINCREMENT, "hourlyRate" REAL NOT NULL,
       "monthlyRate" REAL, "effectiveDate" DATETIME)`)

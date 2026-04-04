@@ -92,10 +92,22 @@ model Order {
   livraisonQty   Int    @default(0)
   restaurant Restaurant @relation(fields: [restaurantId], references: [id])
   items      OrderItem[]
+  extras     OrderExtra[]
   @@unique([restaurantId, year, month])
   @@index([restaurantId])
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model OrderExtra {
+  id       Int    @id @default(autoincrement())
+  orderId  Int
+  type     String
+  label    String @default("")
+  price    Float  @default(0)
+  quantity Int    @default(0)
+  order    Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  @@index([orderId])
 }
 
 model OrderItem {

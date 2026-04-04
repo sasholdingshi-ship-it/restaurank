@@ -4,9 +4,11 @@ import { useEffect, useState } from "react"
 
 type Restaurant = { id: number; code: string; name: string; arrondissement: string }
 type OrderItem = { quantity: number; productId: number; product: { priceHt: number | null; ref: string; name: string } }
+type OrderExtra = { id: number; type: string; label: string; price: number; quantity: number }
 type OrderSummary = {
   id: number; year: number; month: number; restaurant: Restaurant;
   stuartPrice: number; stuartQty: number; livraisonPrice: number; livraisonQty: number;
+  extras: OrderExtra[];
   items: OrderItem[]
 }
 
@@ -24,7 +26,7 @@ export default function Dashboard() {
     fetch("/api/restaurants").then(r => r.json()).then(setRestaurants)
   }, [])
 
-  useEffect(() => {
+  const reload = () => {
     setLoading(true)
     const params = new URLSearchParams()
     if (selectedRestaurant) params.set("restaurantId", String(selectedRestaurant))
@@ -34,38 +36,51 @@ export default function Dashboard() {
       setAllOrders(orders)
       setLoading(false)
     })
-  }, [selectedRestaurant, year, month])
-
-  const [extrasEditing, setExtrasEditing] = useState<number | null>(null)
-  const [extrasForm, setExtrasForm] = useState({ stuartPrice: 0, stuartQty: 0, livraisonPrice: 0, livraisonQty: 0 })
-  const [extrasSaving, setExtrasSaving] = useState(false)
-
-  const saveExtras = async (restaurantId: number) => {
-    setExtrasSaving(true)
-    await fetch("/api/orders/extras", {
-      method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ restaurantId, year, month, ...extrasForm }),
-    })
-    setExtrasSaving(false); setExtrasEditing(null)
-    // Reload
-    const params = new URLSearchParams()
-    if (selectedRestaurant) params.set("restaurantId", String(selectedRestaurant))
-    params.set("year", String(year)); params.set("month", String(month))
-    fetch(`/api/orders?${params}`).then(r => r.json()).then(setAllOrders)
   }
 
-  const restaurantSummary = allOrders.map(o => ({
-    restaurant: o.restaurant,
-    total: o.items.reduce((s, i) => s + i.quantity * (i.product.priceHt || 0), 0),
-    stuartTotal: (o.stuartPrice || 0) * (o.stuartQty || 0),
-    livraisonTotal: (o.livraisonPrice || 0) * (o.livraisonQty || 0),
-    stuartPrice: o.stuartPrice || 0, stuartQty: o.stuartQty || 0,
-    livraisonPrice: o.livraisonPrice || 0, livraisonQty: o.livraisonQty || 0,
-    items: o.items.reduce((s, i) => s + i.quantity, 0),
-    uniqueProducts: new Set(o.items.map(i => i.productId)).size,
-  }))
+  useEffect(() => { reload() }, [selectedRestaurant, year, month])
+
+  // Extras panel state
+  const [extrasOpen, setExtrasOpen] = useState<number | null>(null)
+  const [newExtra, setNewExtra] = useState({ type: "stuart", price: 0, quantity: 0 })
+  const [saving, setSaving] = useState(false)
+
+  const addExtra = async (restaurantId: number) => {
+    setSaving(true)
+    await fetch("/api/orders/extras", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restaurantId, year, month, ...newExtra }),
+    })
+    setNewExtra({ type: "stuart", price: 0, quantity: 0 })
+    setSaving(false)
+    reload()
+  }
+
+  const deleteExtra = async (id: number) => {
+    await fetch(`/api/orders/extras?id=${id}`, { method: "DELETE" })
+    reload()
+  }
+
+  const restaurantSummary = allOrders.map(o => {
+    const extras = o.extras || []
+    const extrasTotal = extras.reduce((s, e) => s + e.price * e.quantity, 0)
+    // Legacy fields fallback (for old orders without extras rows)
+    const legacyStuart = (o.stuartPrice || 0) * (o.stuartQty || 0)
+    const legacyLivr = (o.livraisonPrice || 0) * (o.livraisonQty || 0)
+    const legacyTotal = extras.length > 0 ? 0 : legacyStuart + legacyLivr
+
+    return {
+      restaurant: o.restaurant,
+      total: o.items.reduce((s, i) => s + i.quantity * (i.product.priceHt || 0), 0),
+      extrasTotal: extrasTotal + legacyTotal,
+      extras,
+      items: o.items.reduce((s, i) => s + i.quantity, 0),
+      uniqueProducts: new Set(o.items.map(i => i.productId)).size,
+    }
+  })
 
   const grandTotal = restaurantSummary.reduce((s, r) => s + r.total, 0)
+  const grandExtras = restaurantSummary.reduce((s, r) => s + r.extrasTotal, 0)
   const grandItems = restaurantSummary.reduce((s, r) => s + r.items, 0)
 
   return (
@@ -87,7 +102,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-        <KPICard title="Montant total HT" value={`${grandTotal.toFixed(2)} €`} color="blue" />
+        <KPICard title="Montant total HT" value={`${(grandTotal + grandExtras).toFixed(2)} €`} color="blue" />
         <KPICard title="Quantités totales" value={String(Math.round(grandItems * 100) / 100)} color="green" />
         <KPICard title="Mois actifs" value={String(allOrders.length)} color="purple" />
         <KPICard title="Restaurants actifs" value={String(restaurantSummary.length)} color="orange" />
@@ -110,7 +125,8 @@ export default function Dashboard() {
         ) : (
           <div>
             {restaurantSummary.map(s => {
-              const totalWithExtras = s.total + s.stuartTotal + s.livraisonTotal
+              const totalWithExtras = s.total + s.extrasTotal
+              const isOpen = extrasOpen === s.restaurant.id
               return (
                 <div key={s.restaurant.id} className="border-t border-gray-100">
                   <div className="px-4 md:px-6 py-3 flex items-center justify-between">
@@ -125,51 +141,43 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  {/* Stuart & Livraison */}
+                  {/* Extras list */}
                   <div className="px-4 md:px-6 pb-3 flex flex-wrap gap-2 items-center">
-                    {s.stuartQty > 0 && (
-                      <span className="text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
-                        Stuart: {s.stuartQty} x {s.stuartPrice.toFixed(2)} € = {s.stuartTotal.toFixed(2)} €
+                    {s.extras.map(e => (
+                      <span key={e.id} className={`text-[11px] px-2 py-0.5 rounded-full inline-flex items-center gap-1 ${e.type === 'stuart' ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700'}`}>
+                        {e.type === 'stuart' ? 'Stuart' : 'Livraison'}: {e.quantity} x {e.price.toFixed(2)} € = {(e.price * e.quantity).toFixed(2)} €
+                        <button onClick={() => deleteExtra(e.id)} className="ml-1 text-red-400 hover:text-red-600 font-bold">×</button>
                       </span>
-                    )}
-                    {s.livraisonQty > 0 && (
-                      <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
-                        Livraison: {s.livraisonQty} x {s.livraisonPrice.toFixed(2)} € = {s.livraisonTotal.toFixed(2)} €
-                      </span>
-                    )}
-                    <button onClick={() => {
-                      setExtrasEditing(extrasEditing === s.restaurant.id ? null : s.restaurant.id)
-                      setExtrasForm({ stuartPrice: s.stuartPrice, stuartQty: s.stuartQty, livraisonPrice: s.livraisonPrice, livraisonQty: s.livraisonQty })
-                    }} className="text-[11px] text-gray-400 hover:text-gray-600">
-                      {extrasEditing === s.restaurant.id ? "Fermer" : "Stuart / Livraison"}
+                    ))}
+                    <button onClick={() => setExtrasOpen(isOpen ? null : s.restaurant.id)}
+                      className="text-[11px] text-gray-400 hover:text-gray-600">
+                      {isOpen ? "Fermer" : "+ Stuart / Livraison"}
                     </button>
                   </div>
 
-                  {extrasEditing === s.restaurant.id && (
+                  {isOpen && (
                     <div className="px-4 md:px-6 pb-3">
                       <div className="bg-gray-50 rounded-xl p-3 space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-indigo-700 w-16">Stuart</span>
-                          <input type="number" step="0.01" placeholder="Tarif €" value={extrasForm.stuartPrice || ""} onChange={e => { const v = parseFloat(e.target.value); setExtrasForm({ ...extrasForm, stuartPrice: isNaN(v) ? 0 : v }) }}
+                          <select value={newExtra.type} onChange={e => setNewExtra({ ...newExtra, type: e.target.value })}
+                            className="border rounded-lg px-2 py-1.5 text-sm">
+                            <option value="stuart">Stuart</option>
+                            <option value="livraison">Livraison</option>
+                          </select>
+                          <input type="number" step="0.01" placeholder="Tarif €"
+                            value={newExtra.price || ""} onChange={e => { const v = parseFloat(e.target.value); setNewExtra({ ...newExtra, price: isNaN(v) ? 0 : v }) }}
                             className="flex-1 border rounded-lg px-2 py-1.5 text-sm" />
                           <span className="text-xs text-gray-400">x</span>
-                          <input type="number" min="0" placeholder="Qté" value={extrasForm.stuartQty || ""} onChange={e => { const v = parseInt(e.target.value); setExtrasForm({ ...extrasForm, stuartQty: isNaN(v) ? 0 : v }) }}
-                            className="w-16 border rounded-lg px-2 py-1.5 text-sm text-center" />
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium text-amber-700 w-16">Livraison</span>
-                          <input type="number" step="0.01" placeholder="Tarif €" value={extrasForm.livraisonPrice || ""} onChange={e => { const v = parseFloat(e.target.value); setExtrasForm({ ...extrasForm, livraisonPrice: isNaN(v) ? 0 : v }) }}
-                            className="flex-1 border rounded-lg px-2 py-1.5 text-sm" />
-                          <span className="text-xs text-gray-400">x</span>
-                          <input type="number" min="0" placeholder="Qté" value={extrasForm.livraisonQty || ""} onChange={e => { const v = parseInt(e.target.value); setExtrasForm({ ...extrasForm, livraisonQty: isNaN(v) ? 0 : v }) }}
+                          <input type="number" min="0" placeholder="Qté"
+                            value={newExtra.quantity || ""} onChange={e => { const v = parseInt(e.target.value); setNewExtra({ ...newExtra, quantity: isNaN(v) ? 0 : v }) }}
                             className="w-16 border rounded-lg px-2 py-1.5 text-sm text-center" />
                         </div>
                         <div className="flex gap-2">
-                          <button onClick={() => saveExtras(s.restaurant.id)} disabled={extrasSaving}
+                          <button onClick={() => addExtra(s.restaurant.id)} disabled={saving || !newExtra.price || !newExtra.quantity}
                             className="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-medium disabled:opacity-50">
-                            {extrasSaving ? "..." : "Sauvegarder"}
+                            {saving ? "..." : "Ajouter"}
                           </button>
-                          <button onClick={() => setExtrasEditing(null)} className="flex-1 bg-gray-200 text-gray-700 py-1.5 rounded-lg text-xs">Annuler</button>
+                          <button onClick={() => setExtrasOpen(null)} className="flex-1 bg-gray-200 text-gray-700 py-1.5 rounded-lg text-xs">Fermer</button>
                         </div>
                         <p className="text-[10px] text-gray-400">TVA 20% appliquée automatiquement dans l'export Pennylane</p>
                       </div>
@@ -180,7 +188,7 @@ export default function Dashboard() {
             })}
             <div className="border-t-2 border-gray-300 bg-gray-50 px-4 md:px-6 py-3 flex items-center justify-between font-bold">
               <span className="text-sm">Total</span>
-              <span className="font-mono text-sm">{(grandTotal + restaurantSummary.reduce((s, r) => s + r.stuartTotal + r.livraisonTotal, 0)).toFixed(0)} €</span>
+              <span className="font-mono text-sm">{(grandTotal + grandExtras).toFixed(0)} €</span>
             </div>
           </div>
         )}
