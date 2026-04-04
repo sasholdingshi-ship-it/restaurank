@@ -96,11 +96,11 @@ export default function AdminPage() {
                   </label>
                   <label className="block">
                     <span className="text-[10px] text-gray-500 uppercase">Livraison €</span>
-                    <input type="number" step="0.5" className="w-full border rounded-lg px-2 py-1.5 text-sm" value={form.deliveryPrice ?? 25} onChange={e => setForm({ ...form, deliveryPrice: parseFloat(e.target.value) || 25 })} />
+                    <input type="number" step="0.5" className="w-full border rounded-lg px-2 py-1.5 text-sm" value={form.deliveryPrice ?? ""} onChange={e => { const v = parseFloat(e.target.value); setForm({ ...form, deliveryPrice: isNaN(v) ? 0 : v }) }} />
                   </label>
                   <label className="block">
                     <span className="text-[10px] text-gray-500 uppercase">TVA</span>
-                    <input type="number" step="0.005" className="w-full border rounded-lg px-2 py-1.5 text-sm" value={form.tvaRate ?? 0.055} onChange={e => setForm({ ...form, tvaRate: parseFloat(e.target.value) || 0.055 })} />
+                    <input type="number" step="0.005" className="w-full border rounded-lg px-2 py-1.5 text-sm" value={form.tvaRate ?? ""} onChange={e => { const v = parseFloat(e.target.value); setForm({ ...form, tvaRate: isNaN(v) ? 0 : v }) }} />
                   </label>
                 </div>
                 <div className="flex gap-2 pt-1">
