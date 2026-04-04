@@ -84,7 +84,7 @@ export default function Dashboard() {
   const grandItems = restaurantSummary.reduce((s, r) => s + r.items, 0)
 
   return (
-    <div>
+    <div className="overflow-hidden">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900 mb-3">Dashboard</h1>
         <div className="flex flex-wrap gap-2">
@@ -157,29 +157,29 @@ export default function Dashboard() {
 
                   {isOpen && (
                     <div className="px-4 md:px-6 pb-3">
-                      <div className="bg-gray-50 rounded-xl p-3 space-y-2">
-                        <div className="flex items-center gap-2">
+                      <div className="bg-gray-50 rounded-xl p-3 space-y-3">
+                        <div className="grid grid-cols-[1fr_auto_4rem] gap-2 items-center">
                           <select value={newExtra.type} onChange={e => setNewExtra({ ...newExtra, type: e.target.value })}
-                            className="border rounded-lg px-2 py-1.5 text-sm">
+                            className="col-span-3 border rounded-lg px-2 py-1.5 text-sm">
                             <option value="stuart">Stuart</option>
                             <option value="livraison">Livraison</option>
                           </select>
                           <input type="number" step="0.01" placeholder="Tarif €"
                             value={newExtra.price || ""} onChange={e => { const v = parseFloat(e.target.value); setNewExtra({ ...newExtra, price: isNaN(v) ? 0 : v }) }}
-                            className="flex-1 border rounded-lg px-2 py-1.5 text-sm" />
-                          <span className="text-xs text-gray-400">x</span>
+                            className="border rounded-lg px-2 py-1.5 text-sm min-w-0" />
+                          <span className="text-xs text-gray-400 text-center">×</span>
                           <input type="number" min="0" placeholder="Qté"
                             value={newExtra.quantity || ""} onChange={e => { const v = parseInt(e.target.value); setNewExtra({ ...newExtra, quantity: isNaN(v) ? 0 : v }) }}
-                            className="w-16 border rounded-lg px-2 py-1.5 text-sm text-center" />
+                            className="border rounded-lg px-2 py-1.5 text-sm text-center" />
                         </div>
                         <div className="flex gap-2">
                           <button onClick={() => addExtra(s.restaurant.id)} disabled={saving || !newExtra.price || !newExtra.quantity}
-                            className="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-medium disabled:opacity-50">
+                            className="flex-1 bg-green-600 text-white py-2 rounded-lg text-xs font-medium disabled:opacity-50">
                             {saving ? "..." : "Ajouter"}
                           </button>
-                          <button onClick={() => setExtrasOpen(null)} className="flex-1 bg-gray-200 text-gray-700 py-1.5 rounded-lg text-xs">Fermer</button>
+                          <button onClick={() => setExtrasOpen(null)} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-xs">Fermer</button>
                         </div>
-                        <p className="text-[10px] text-gray-400">TVA 20% appliquée automatiquement dans l'export Pennylane</p>
+                        <p className="text-[10px] text-gray-400">TVA 20% appliquée dans l'export Pennylane</p>
                       </div>
                     </div>
                   )}
@@ -205,9 +205,9 @@ function KPICard({ title, value, color }: { title: string; value: string; color:
     orange: "bg-orange-50 border-orange-200 text-orange-700",
   }
   return (
-    <div className={`rounded-xl border p-3 md:p-5 ${colors[color]}`}>
-      <p className="text-[10px] md:text-xs font-medium opacity-70 uppercase">{title}</p>
-      <p className="text-lg md:text-2xl font-bold mt-0.5">{value}</p>
+    <div className={`rounded-xl border p-3 md:p-5 overflow-hidden ${colors[color]}`}>
+      <p className="text-[10px] md:text-xs font-medium opacity-70 uppercase truncate">{title}</p>
+      <p className="text-base md:text-2xl font-bold mt-0.5 truncate">{value}</p>
     </div>
   )
 }
