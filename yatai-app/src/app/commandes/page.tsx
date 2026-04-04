@@ -21,6 +21,8 @@ export default function CommandesPage() {
   const [dirty, setDirty] = useState<Set<string>>(new Set())
   const [ocrLoading, setOcrLoading] = useState(false)
   const [ocrResults, setOcrResults] = useState<OcrEntry[] | null>(null)
+  const [ocrPhotos, setOcrPhotos] = useState<File[]>([])
+  const [ocrProgress, setOcrProgress] = useState("")
   const [showOcr, setShowOcr] = useState(false)
   const [search, setSearch] = useState("")
 
@@ -62,16 +64,36 @@ export default function CommandesPage() {
     setSaving(false)
   }
 
-  const handleOcrUpload = async (file: File) => {
+  // Multi-photo OCR
+  const addOcrPhotos = (files: FileList) => {
+    setOcrPhotos(prev => [...prev, ...Array.from(files)])
+  }
+
+  const processOcr = async () => {
+    if (ocrPhotos.length === 0) return
     setOcrLoading(true); setOcrResults(null)
-    const formData = new FormData()
-    formData.append("image", file); formData.append("restaurantId", String(restaurantId))
-    formData.append("year", String(year)); formData.append("month", String(month)); formData.append("day", String(day))
-    try {
-      const res = await fetch("/api/ocr", { method: "POST", body: formData })
-      const data = await res.json()
-      if (data.entries) setOcrResults(data.entries)
-    } catch { /* ignore */ }
+    const allEntries: OcrEntry[] = []
+
+    for (let i = 0; i < ocrPhotos.length; i++) {
+      setOcrProgress(`Analyse photo ${i + 1}/${ocrPhotos.length}...`)
+      const formData = new FormData()
+      formData.append("image", ocrPhotos[i]); formData.append("restaurantId", String(restaurantId))
+      formData.append("year", String(year)); formData.append("month", String(month)); formData.append("day", String(day))
+      try {
+        const res = await fetch("/api/ocr", { method: "POST", body: formData })
+        const data = await res.json()
+        if (data.entries) {
+          for (const entry of data.entries) {
+            const existing = allEntries.find(e => e.ref === entry.ref)
+            if (existing) existing.quantity += entry.quantity
+            else allEntries.push(entry)
+          }
+        }
+      } catch { /* continue with next photo */ }
+    }
+
+    setOcrResults(allEntries)
+    setOcrProgress("")
     setOcrLoading(false)
   }
 
@@ -81,16 +103,14 @@ export default function CommandesPage() {
     for (const entry of ocrResults) {
       if (entry.productId && entry.quantity > 0) { const key = `${entry.productId}-${day}`; newGrid.set(key, entry.quantity); newDirty.add(key) }
     }
-    setGrid(newGrid); setDirty(newDirty); setOcrResults(null); setShowOcr(false)
+    setGrid(newGrid); setDirty(newDirty); setOcrResults(null); setShowOcr(false); setOcrPhotos([])
   }
 
-  // Day total
   const dayTotal = products.reduce((sum, p) => {
     const qty = grid.get(`${p.id}-${day}`) || 0
     return sum + qty * (p.priceHt || 0)
   }, 0)
 
-  // Products for current day that have quantities or match search
   const dayProducts = products.filter(p => {
     const hasQty = (grid.get(`${p.id}-${day}`) || 0) > 0
     if (search) return p.name.toLowerCase().includes(search.toLowerCase()) || p.ref.toLowerCase().includes(search.toLowerCase())
@@ -105,7 +125,6 @@ export default function CommandesPage() {
         <h1 className="text-xl md:text-2xl font-bold text-gray-900">Commandes</h1>
       </div>
 
-      {/* Filters */}
       <div className="flex flex-wrap gap-2 mb-3">
         <select value={restaurantId} onChange={e => setRestaurantId(Number(e.target.value))} className="rounded-lg border border-gray-300 px-2 py-1.5 text-sm flex-1 min-w-0">
           {restaurants.map(r => <option key={r.id} value={r.id}>{r.name}</option>)}
@@ -118,7 +137,6 @@ export default function CommandesPage() {
         </select>
       </div>
 
-      {/* Day selector — mobile: horizontal scroll strip */}
       <div className="mb-3">
         <div className="flex gap-1 overflow-x-auto pb-2 scrollbar-hide">
           {Array.from({ length: daysInMonth }, (_, i) => {
@@ -135,27 +153,62 @@ export default function CommandesPage() {
         </div>
       </div>
 
-      {/* Action bar */}
       <div className="flex gap-2 mb-3">
-        <button onClick={() => setShowOcr(!showOcr)} className="bg-purple-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium">OCR</button>
+        <button onClick={() => setShowOcr(!showOcr)} className={`px-3 py-1.5 rounded-lg text-xs font-medium ${showOcr ? "bg-purple-700 text-white" : "bg-purple-600 text-white"}`}>
+          OCR {ocrPhotos.length > 0 && `(${ocrPhotos.length})`}
+        </button>
         {dirty.size > 0 && <button onClick={save} disabled={saving} className="bg-orange-500 text-white px-3 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50">{saving ? "..." : `Sauvegarder (${dirty.size})`}</button>}
         <div className="flex-1">
           <input type="text" placeholder="Ajouter un produit..." value={search} onChange={e => setSearch(e.target.value)} className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm" />
         </div>
       </div>
 
-      {/* OCR panel */}
+      {/* OCR panel — multi-photo */}
       {showOcr && (
         <div className="bg-white rounded-xl shadow-sm border border-purple-200 p-4 mb-3">
-          <h3 className="font-semibold text-sm text-gray-900 mb-2">Scanner un bon — Jour {day}</h3>
-          <input type="file" accept="image/*" capture="environment" onChange={e => { if (e.target.files?.[0]) handleOcrUpload(e.target.files[0]) }} className="text-sm mb-2" />
-          {ocrLoading && <p className="text-sm text-purple-600 animate-pulse">Analyse en cours...</p>}
+          <h3 className="font-semibold text-sm text-gray-900 mb-2">Scanner des bons — Jour {day}</h3>
+
+          {/* Photo upload area */}
+          <div className="mb-3">
+            <label className="block w-full border-2 border-dashed border-purple-300 rounded-xl p-4 text-center cursor-pointer hover:bg-purple-50 transition-colors">
+              <span className="text-purple-600 text-sm font-medium">Ajouter des photos</span>
+              <span className="block text-xs text-gray-500 mt-1">Appareil photo ou galerie</span>
+              <input type="file" accept="image/*" multiple capture="environment" className="hidden"
+                onChange={e => { if (e.target.files) addOcrPhotos(e.target.files) }} />
+            </label>
+          </div>
+
+          {/* Photo thumbnails */}
+          {ocrPhotos.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto mb-3 pb-1">
+              {ocrPhotos.map((file, i) => (
+                <div key={i} className="relative shrink-0">
+                  <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden">
+                    <img src={URL.createObjectURL(file)} alt={`Photo ${i + 1}`} className="w-full h-full object-cover" />
+                  </div>
+                  <button onClick={() => setOcrPhotos(prev => prev.filter((_, j) => j !== i))}
+                    className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full text-xs flex items-center justify-center">x</button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Process button */}
+          {ocrPhotos.length > 0 && !ocrResults && (
+            <button onClick={processOcr} disabled={ocrLoading}
+              className="w-full py-2.5 bg-purple-600 text-white rounded-xl text-sm font-medium disabled:opacity-50 mb-2">
+              {ocrLoading ? ocrProgress || "Analyse..." : `Analyser ${ocrPhotos.length} photo${ocrPhotos.length > 1 ? "s" : ""}`}
+            </button>
+          )}
+
+          {/* Results */}
           {ocrResults && (
             <div>
+              <p className="text-xs text-gray-500 mb-2">{ocrResults.length} produits detectes</p>
               {ocrResults.map((entry, i) => (
-                <div key={i} className={`flex items-center justify-between py-1.5 border-b border-gray-100 ${entry.confidence === 'low' ? 'bg-red-50' : ''}`}>
-                  <span className="text-sm">{entry.ref} {entry.name}</span>
-                  <div className="flex items-center gap-2">
+                <div key={i} className={`flex items-center justify-between py-1.5 border-b border-gray-100 ${entry.confidence === 'low' ? 'bg-red-50 px-2 rounded' : ''}`}>
+                  <span className="text-sm truncate flex-1">{entry.ref} {entry.name}</span>
+                  <div className="flex items-center gap-2 shrink-0">
                     <input type="number" value={entry.quantity} onChange={e => { const nr = [...ocrResults]; nr[i] = { ...entry, quantity: parseFloat(e.target.value) || 0 }; setOcrResults(nr) }}
                       className="w-16 text-right border rounded px-2 py-1 text-sm" />
                     <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${entry.confidence === 'high' ? 'bg-green-100 text-green-700' : entry.confidence === 'medium' ? 'bg-yellow-100 text-yellow-700' : 'bg-red-100 text-red-700'}`}>{entry.confidence}</span>
@@ -164,20 +217,18 @@ export default function CommandesPage() {
               ))}
               <div className="flex gap-2 mt-3">
                 <button onClick={applyOcr} className="flex-1 bg-green-600 text-white py-2 rounded-lg text-sm font-medium">Appliquer</button>
-                <button onClick={() => { setOcrResults(null); setShowOcr(false) }} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-sm">Annuler</button>
+                <button onClick={() => { setOcrResults(null); setOcrPhotos([]) }} className="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg text-sm">Annuler</button>
               </div>
             </div>
           )}
         </div>
       )}
 
-      {/* Day total */}
       <div className="bg-orange-50 border border-orange-200 rounded-xl px-4 py-2 mb-3 flex items-center justify-between">
         <span className="text-sm font-medium text-orange-800">Jour {day} — {MONTHS[month]}</span>
         <span className="text-lg font-bold text-orange-700">{dayTotal.toFixed(2)} € HT</span>
       </div>
 
-      {/* Product list for selected day */}
       {loading ? (
         <div className="text-center text-gray-400 py-8">Chargement...</div>
       ) : (
