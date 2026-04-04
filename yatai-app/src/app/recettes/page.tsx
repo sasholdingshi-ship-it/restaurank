@@ -34,6 +34,7 @@ export default function RecettesPage() {
   const [newRecipe, setNewRecipe] = useState({ ref: "", name: "", category: "", unit: "portion", portions: "1", laborTime: "0", aleaPercent: "0.02", margin: "0" })
   const [newIngredients, setNewIngredients] = useState<NewRecipeIngredient[]>([])
   const [ingSearch, setIngSearch] = useState("")
+  const [recipeSearch, setRecipeSearch] = useState("")
 
   const [smicHourly, setSmicHourly] = useState(16.33)
 
@@ -95,7 +96,11 @@ export default function RecettesPage() {
     setEditing(null); load()
   }
 
-  const grouped = recipes.reduce((acc, r) => {
+  const filteredRecipes = recipeSearch.length > 0
+    ? recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase()) || r.ref.toLowerCase().includes(recipeSearch.toLowerCase()))
+    : recipes
+
+  const grouped = filteredRecipes.reduce((acc, r) => {
     const cat = r.category || "AUTRES"
     if (!acc[cat]) acc[cat] = []
     acc[cat].push(r)
@@ -107,8 +112,12 @@ export default function RecettesPage() {
       <div className="flex items-center justify-between mb-4">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-gray-900">Fiches Techniques</h1>
-          <p className="text-xs text-gray-500">{recipes.length} recettes</p>
+          <p className="text-xs text-gray-500">{filteredRecipes.length}{recipeSearch ? `/${recipes.length}` : ""} recettes</p>
         </div>
+      </div>
+      <div className="mb-3">
+        <input type="text" placeholder="Rechercher une fiche technique..." value={recipeSearch} onChange={e => setRecipeSearch(e.target.value)}
+          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm" />
       </div>
       <div className="flex gap-2 mb-4">
         <select value={category} onChange={e => setCategory(e.target.value)} className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm">
