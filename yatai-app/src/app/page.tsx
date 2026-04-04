@@ -15,6 +15,7 @@ type CostsData = {
   revenue: number; foodCost: number; foodCostPercent: number
   staffCostTheo: number; staffCostTheoPercent: number; staffCostReel: number | null
   loyer: number; electricite: number; logistiqueCamion: number; logistiqueEssence: number
+  charges: number; internet: number
   matchedItems: number; unmatchedItems: number; hourlyRate: number
 }
 
@@ -274,7 +275,7 @@ function PLSection({ costs, grandTotal, staffReel, setStaffReel, savingExpense, 
   costs: CostsData; grandTotal: number; staffReel: string; setStaffReel: (v: string) => void
   savingExpense: boolean; saveExpense: (type: string, amount: number) => Promise<void>
 }) {
-  const fixedTotal = costs.loyer + costs.electricite + costs.logistiqueCamion + costs.logistiqueEssence
+  const fixedTotal = costs.loyer + costs.electricite + costs.logistiqueCamion + costs.logistiqueEssence + costs.charges + costs.internet
   const staffReelNum = staffReel ? parseFloat(staffReel) : 0
   const totalCharges = costs.foodCost + (staffReelNum || costs.staffCostTheo) + fixedTotal
   const resultat = grandTotal - totalCharges
@@ -327,6 +328,8 @@ function PLSection({ costs, grandTotal, staffReel, setStaffReel, savingExpense, 
         <PLRow label="Électricité" value={costs.electricite} pct={pct(costs.electricite)} accent="text-gray-600" />
         <PLRow label="Logistique — location camion" value={costs.logistiqueCamion} pct={pct(costs.logistiqueCamion)} accent="text-gray-600" />
         <PLRow label="Logistique — essence" value={costs.logistiqueEssence} pct={pct(costs.logistiqueEssence)} accent="text-gray-600" />
+        <PLRow label="Charges diverses" value={costs.charges} pct={pct(costs.charges)} accent="text-gray-600" />
+        <PLRow label="Box internet" value={costs.internet} pct={pct(costs.internet)} accent="text-gray-600" />
 
         {/* Total charges */}
         <div className="px-4 md:px-6 py-3 flex items-center justify-between bg-red-50">
