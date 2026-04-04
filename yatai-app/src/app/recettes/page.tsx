@@ -89,12 +89,24 @@ export default function RecettesPage() {
 
   const saveEdit = async () => {
     if (!editing) return
+    const payload: Record<string, unknown> = { id: editing, margin: editData.margin, aleaPercent: editData.aleaPercent, laborTime: editData.laborTime, portions: editData.portions }
+    if (editData.name) payload.name = editData.name
+    if (editData.sellingPrice != null && editData.sellingPrice !== computedPrice) payload.sellingPrice = editData.sellingPrice
     await fetch("/api/recipes", {
       method: "PUT", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: editing, margin: editData.margin, aleaPercent: editData.aleaPercent, laborTime: editData.laborTime, portions: editData.portions }),
+      body: JSON.stringify(payload),
     })
     setEditing(null); load()
   }
+
+  // Compute what the formula would give for current edit values
+  const computedPrice = editing && editData ? (() => {
+    const r = recipes.find(r => r.id === editing)
+    if (!r) return 0
+    const subtotal = r.ingredients.reduce((s, ri) => s + ri.amount, 0)
+    const cost = ((editData.laborTime ?? r.laborTime ?? 0) * smicHourly + subtotal * (1 + (editData.aleaPercent ?? r.aleaPercent ?? 0.02))) / ((editData.portions ?? r.portions ?? 1) || 1)
+    return cost * (1 + (editData.margin ?? r.margin ?? 0))
+  })() : 0
 
   const filteredRecipes = recipeSearch.length > 0
     ? recipes.filter(r => r.name.toLowerCase().includes(recipeSearch.toLowerCase()) || r.ref.toLowerCase().includes(recipeSearch.toLowerCase()))
@@ -239,11 +251,22 @@ export default function RecettesPage() {
                     <div className="px-4 py-2 bg-gray-50">
                       {editing === recipe.id ? (
                         <div className="space-y-2">
+                          <div className="text-xs">
+                            <label>Nom: <input type="text" className="border rounded px-2 py-1 w-full mt-0.5" value={editData.name ?? ""} onChange={e => setEditData({ ...editData, name: e.target.value })} /></label>
+                          </div>
                           <div className="grid grid-cols-2 gap-2 text-xs">
                             <label>Portions: <input type="number" step="0.1" className="border rounded px-2 py-1 w-full mt-0.5" value={editData.portions ?? ""} onChange={e => setEditData({ ...editData, portions: parseFloat(e.target.value) || null })} /></label>
                             <label>MO (h): <input type="number" step="0.1" className="border rounded px-2 py-1 w-full mt-0.5" value={editData.laborTime ?? ""} onChange={e => setEditData({ ...editData, laborTime: parseFloat(e.target.value) || null })} /></label>
                             <label>Alea %: <input type="number" step="0.01" className="border rounded px-2 py-1 w-full mt-0.5" value={editData.aleaPercent ?? 0.02} onChange={e => setEditData({ ...editData, aleaPercent: parseFloat(e.target.value) || 0 })} /></label>
                             <label>Marge %: <input type="number" step="0.01" className="border rounded px-2 py-1 w-full mt-0.5" value={editData.margin ?? 0} onChange={e => setEditData({ ...editData, margin: parseFloat(e.target.value) || 0 })} /></label>
+                          </div>
+                          <div className="text-xs">
+                            <label>Prix de vente:
+                              <div className="flex items-center gap-2 mt-0.5">
+                                <input type="number" step="0.01" className="border rounded px-2 py-1 flex-1" value={editData.sellingPrice ?? ""} onChange={e => { const v = parseFloat(e.target.value); setEditData({ ...editData, sellingPrice: isNaN(v) ? null : v }) }} />
+                                <span className="text-gray-400 text-[10px]">formule: {computedPrice.toFixed(2)} €</span>
+                              </div>
+                            </label>
                           </div>
                           <div className="flex gap-2">
                             <button onClick={saveEdit} className="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-medium">OK</button>

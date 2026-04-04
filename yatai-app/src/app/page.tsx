@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-type Restaurant = { id: number; code: string; name: string; arrondissement: string }
+type Restaurant = { id: number; code: string; name: string; arrondissement: string; siren?: string }
 type OrderItem = { quantity: number; productId: number; unitPrice: number | null; product: { priceHt: number | null; ref: string; name: string } }
 type OrderExtra = { id: number; type: string; label: string; price: number; quantity: number }
 type OrderSummary = {
@@ -17,8 +17,8 @@ const MONTHS = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 export default function Dashboard() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [selectedRestaurant, setSelectedRestaurant] = useState<number>(0)
-  const [year, setYear] = useState(2026)
-  const [month, setMonth] = useState(3)
+  const [year, setYear] = useState(() => new Date().getFullYear())
+  const [month, setMonth] = useState(() => new Date().getMonth() + 1)
   const [allOrders, setAllOrders] = useState<OrderSummary[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -44,6 +44,27 @@ export default function Dashboard() {
   const [extrasOpen, setExtrasOpen] = useState<number | null>(null)
   const [newExtra, setNewExtra] = useState({ type: "stuart", price: 0, quantity: 0 })
   const [saving, setSaving] = useState(false)
+  const [plUploading, setPlUploading] = useState<number | null>(null)
+  const [plResult, setPlResult] = useState<Record<number, { success?: boolean; error?: string; invoiceId?: number; amount?: string }>>({})
+  // Y Chateaudun (labo SIREN 913995627) is the issuer — cannot self-invoice
+  const LABO_SIREN = '913995627'
+
+  const uploadToPennylane = async (restaurantId: number) => {
+    setPlUploading(restaurantId)
+    setPlResult(prev => { const next = { ...prev }; delete next[restaurantId]; return next })
+    try {
+      const res = await fetch("/api/pennylane", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ restaurantId, year, month }),
+      })
+      const data = await res.json()
+      if (res.ok) setPlResult(prev => ({ ...prev, [restaurantId]: { success: true, invoiceId: data.invoiceId, amount: data.amount } }))
+      else setPlResult(prev => ({ ...prev, [restaurantId]: { error: data.error || "Erreur Pennylane" } }))
+    } catch (e) {
+      setPlResult(prev => ({ ...prev, [restaurantId]: { error: String(e) } }))
+    }
+    setPlUploading(null)
+  }
 
   const addExtra = async (restaurantId: number) => {
     setSaving(true)
@@ -112,10 +133,18 @@ export default function Dashboard() {
         <div className="px-4 md:px-6 py-4 border-b border-gray-100 flex items-center justify-between">
           <h2 className="font-semibold text-gray-900 text-sm md:text-base">Résumé — {MONTHS[month]} {year}</h2>
           {selectedRestaurant > 0 && (
-            <a href={`/api/export?restaurantId=${selectedRestaurant}&year=${year}&month=${month}`}
-              className="inline-flex items-center gap-2 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-700">
-              Pennylane
-            </a>
+            <div className="flex gap-2">
+              <a href={`/api/export?restaurantId=${selectedRestaurant}&year=${year}&month=${month}`}
+                className="inline-flex items-center gap-2 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-700">
+                Excel
+              </a>
+              {restaurants.find(r => r.id === selectedRestaurant)?.siren !== LABO_SIREN && (
+                <button onClick={() => uploadToPennylane(selectedRestaurant)} disabled={plUploading !== null}
+                  className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">
+                  {plUploading === selectedRestaurant ? "..." : "Pennylane"}
+                </button>
+              )}
+            </div>
           )}
         </div>
         {loading ? (
@@ -134,12 +163,27 @@ export default function Dashboard() {
                       <p className="font-medium text-sm">{s.restaurant.name}</p>
                       <p className="text-xs text-gray-400">{s.restaurant.arrondissement} — {s.uniqueProducts} produits, {Math.round(s.items)} qté</p>
                     </div>
-                    <div className="text-right flex items-center gap-3">
+                    <div className="text-right flex items-center gap-2">
                       <span className="font-mono font-bold text-sm">{totalWithExtras.toFixed(0)} €</span>
                       <a href={`/api/export?restaurantId=${s.restaurant.id}&year=${year}&month=${month}`}
-                         className="text-green-600 hover:text-green-800 text-xs font-medium">Export</a>
+                         className="text-green-600 hover:text-green-800 text-xs font-medium">Excel</a>
+                      {s.restaurant.siren !== LABO_SIREN && (
+                        <button onClick={() => uploadToPennylane(s.restaurant.id)} disabled={plUploading === s.restaurant.id}
+                          className="text-indigo-600 hover:text-indigo-800 text-xs font-medium disabled:opacity-50">
+                          {plUploading === s.restaurant.id ? "..." : "PL"}
+                        </button>
+                      )}
                     </div>
                   </div>
+
+                  {/* Pennylane result */}
+                  {plResult[s.restaurant.id] && (
+                    <div className={`px-4 md:px-6 py-1.5 text-[11px] ${plResult[s.restaurant.id].success ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                      {plResult[s.restaurant.id].success
+                        ? `Brouillon cree — ${plResult[s.restaurant.id].amount} €`
+                        : plResult[s.restaurant.id].error}
+                    </div>
+                  )}
 
                   {/* Extras list */}
                   <div className="px-4 md:px-6 pb-3 flex flex-wrap gap-2 items-center">
