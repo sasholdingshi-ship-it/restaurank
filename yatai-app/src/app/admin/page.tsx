@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 
 type Restaurant = { id: number; code: string; name: string; arrondissement: string; siren: string | null; deliveryPrice: number; tvaRate: number }
-type Tab = "restaurants" | "ingredients" | "products"
+type Tab = "restaurants" | "ingredients" | "products" | "config"
 
 export default function AdminPage() {
   const [tab, setTab] = useState<Tab>("restaurants")
@@ -42,6 +42,7 @@ export default function AdminPage() {
     { key: "restaurants", label: "Restaurants" },
     { key: "ingredients", label: "Ingredients" },
     { key: "products", label: "Produits" },
+    { key: "config", label: "Config" },
   ]
 
   return (
@@ -142,6 +143,9 @@ export default function AdminPage() {
 
       {/* Products tab */}
       {tab === "products" && <AdminProducts />}
+
+      {/* Config tab */}
+      {tab === "config" && <AdminConfig onFlash={flash} />}
     </div>
   )
 }
@@ -172,6 +176,69 @@ function AdminIngredients() {
         {recalculating ? "Recalcul en cours..." : "Recalculer toute la cascade"}
       </button>
       {result && <div className="mt-3 px-3 py-2 bg-blue-50 border border-blue-200 text-blue-700 rounded-lg text-xs">{result}</div>}
+    </div>
+  )
+}
+
+function AdminConfig({ onFlash }: { onFlash: (m: string) => void }) {
+  const [hourlyRate, setHourlyRate] = useState("")
+  const [monthlyRate, setMonthlyRate] = useState("")
+  const [saving, setSaving] = useState(false)
+  const [computedHourly, setComputedHourly] = useState<number | null>(null)
+
+  useEffect(() => {
+    fetch("/api/admin/smic").then(r => r.json()).then(data => {
+      setHourlyRate(String(data.hourlyRate ?? ""))
+      setMonthlyRate(String(data.monthlyRate ?? ""))
+      if (data.monthlyRate) setComputedHourly((data.monthlyRate * 12) / 11 / 151.67)
+    })
+  }, [])
+
+  useEffect(() => {
+    const m = parseFloat(monthlyRate)
+    if (m > 0) setComputedHourly((m * 12) / 11 / 151.67)
+    else setComputedHourly(null)
+  }, [monthlyRate])
+
+  const save = async () => {
+    setSaving(true)
+    const res = await fetch("/api/admin/smic", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ hourlyRate: parseFloat(hourlyRate) || 16.33, monthlyRate: parseFloat(monthlyRate) || null }),
+    })
+    if (res.ok) onFlash("SMIC mis a jour")
+    setSaving(false)
+  }
+
+  return (
+    <div>
+      <div className="bg-white rounded-xl border border-gray-200 p-4 mb-3">
+        <h3 className="font-semibold text-sm mb-3">SMIC — Cout main d'oeuvre</h3>
+        <p className="text-xs text-gray-500 mb-3">Le taux horaire est utilise pour calculer le cout de la main d'oeuvre dans les fiches techniques.</p>
+        <div className="space-y-3">
+          <label className="block">
+            <span className="text-[10px] text-gray-500 uppercase">SMIC mensuel brut (€)</span>
+            <input type="number" step="0.01" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="1801.80" value={monthlyRate} onChange={e => setMonthlyRate(e.target.value)} />
+            <span className="text-[10px] text-gray-400 mt-0.5 block">Formule: mensuel x 12 / 11 / 151.67h</span>
+          </label>
+          {computedHourly && (
+            <div className="px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+              Taux horaire calcule: <strong>{computedHourly.toFixed(2)} €/h</strong>
+            </div>
+          )}
+          <label className="block">
+            <span className="text-[10px] text-gray-500 uppercase">Taux horaire direct (€/h)</span>
+            <input type="number" step="0.01" className="w-full border rounded-lg px-3 py-2 text-sm" placeholder="16.33" value={hourlyRate} onChange={e => setHourlyRate(e.target.value)} />
+            <span className="text-[10px] text-gray-400 mt-0.5 block">Utilise si le mensuel n'est pas renseigne</span>
+          </label>
+          <button onClick={save} disabled={saving} className="w-full py-2.5 bg-orange-500 text-white rounded-xl text-sm font-medium disabled:opacity-50">
+            {saving ? "..." : "Sauvegarder"}
+          </button>
+        </div>
+      </div>
+      <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800">
+        Apres modification, pensez a <strong>recalculer la cascade</strong> (onglet Ingredients) pour mettre a jour toutes les fiches techniques.
+      </div>
     </div>
   )
 }
