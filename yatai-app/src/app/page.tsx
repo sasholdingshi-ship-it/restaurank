@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 
-type Restaurant = { id: number; code: string; name: string; arrondissement: string }
+type Restaurant = { id: number; code: string; name: string; arrondissement: string; siren?: string }
 type OrderItem = { quantity: number; productId: number; unitPrice: number | null; product: { priceHt: number | null; ref: string; name: string } }
 type OrderExtra = { id: number; type: string; label: string; price: number; quantity: number }
 type OrderSummary = {
@@ -46,6 +46,8 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false)
   const [plUploading, setPlUploading] = useState<number | null>(null)
   const [plResult, setPlResult] = useState<Record<number, { success?: boolean; error?: string; invoiceId?: number; amount?: string }>>({})
+  // Y Chateaudun (labo SIREN 913995627) is the issuer — cannot self-invoice
+  const LABO_SIREN = '913995627'
 
   const uploadToPennylane = async (restaurantId: number) => {
     setPlUploading(restaurantId)
@@ -136,10 +138,12 @@ export default function Dashboard() {
                 className="inline-flex items-center gap-2 bg-green-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-green-700">
                 Excel
               </a>
-              <button onClick={() => uploadToPennylane(selectedRestaurant)} disabled={plUploading !== null}
-                className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">
-                {plUploading === selectedRestaurant ? "..." : "Pennylane"}
-              </button>
+              {restaurants.find(r => r.id === selectedRestaurant)?.siren !== LABO_SIREN && (
+                <button onClick={() => uploadToPennylane(selectedRestaurant)} disabled={plUploading !== null}
+                  className="inline-flex items-center gap-2 bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-xs font-medium hover:bg-indigo-700 disabled:opacity-50">
+                  {plUploading === selectedRestaurant ? "..." : "Pennylane"}
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -163,10 +167,12 @@ export default function Dashboard() {
                       <span className="font-mono font-bold text-sm">{totalWithExtras.toFixed(0)} €</span>
                       <a href={`/api/export?restaurantId=${s.restaurant.id}&year=${year}&month=${month}`}
                          className="text-green-600 hover:text-green-800 text-xs font-medium">Excel</a>
-                      <button onClick={() => uploadToPennylane(s.restaurant.id)} disabled={plUploading === s.restaurant.id}
-                        className="text-indigo-600 hover:text-indigo-800 text-xs font-medium disabled:opacity-50">
-                        {plUploading === s.restaurant.id ? "..." : "PL"}
-                      </button>
+                      {s.restaurant.siren !== LABO_SIREN && (
+                        <button onClick={() => uploadToPennylane(s.restaurant.id)} disabled={plUploading === s.restaurant.id}
+                          className="text-indigo-600 hover:text-indigo-800 text-xs font-medium disabled:opacity-50">
+                          {plUploading === s.restaurant.id ? "..." : "PL"}
+                        </button>
+                      )}
                     </div>
                   </div>
 
