@@ -173,7 +173,7 @@ export default function CommandesPage() {
             <label className="block w-full border-2 border-dashed border-purple-300 rounded-xl p-4 text-center cursor-pointer hover:bg-purple-50 transition-colors">
               <span className="text-purple-600 text-sm font-medium">Ajouter des photos</span>
               <span className="block text-xs text-gray-500 mt-1">Appareil photo ou galerie</span>
-              <input type="file" accept="image/*" multiple capture="environment" className="hidden"
+              <input type="file" accept="image/*" multiple className="hidden"
                 onChange={e => { if (e.target.files) addOcrPhotos(e.target.files) }} />
             </label>
           </div>
