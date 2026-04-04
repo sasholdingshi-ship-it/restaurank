@@ -17,8 +17,8 @@ const MONTHS = ["", "Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juil
 export default function Dashboard() {
   const [restaurants, setRestaurants] = useState<Restaurant[]>([])
   const [selectedRestaurant, setSelectedRestaurant] = useState<number>(0)
-  const [year, setYear] = useState(2026)
-  const [month, setMonth] = useState(3)
+  const [year, setYear] = useState(() => new Date().getFullYear())
+  const [month, setMonth] = useState(() => new Date().getMonth() + 1)
   const [allOrders, setAllOrders] = useState<OrderSummary[]>([])
   const [loading, setLoading] = useState(true)
 
