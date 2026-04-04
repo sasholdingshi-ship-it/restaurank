@@ -89,14 +89,10 @@ export default function AdminPage() {
                   <span className="text-[10px] text-gray-500 uppercase">Nom</span>
                   <input className="w-full border rounded-lg px-2 py-1.5 text-sm" placeholder="Yatai Montorgueil" value={form.name || ""} onChange={e => setForm({ ...form, name: e.target.value })} />
                 </label>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <label className="block">
                     <span className="text-[10px] text-gray-500 uppercase">SIREN</span>
                     <input className="w-full border rounded-lg px-2 py-1.5 text-sm" value={form.siren || ""} onChange={e => setForm({ ...form, siren: e.target.value })} />
-                  </label>
-                  <label className="block">
-                    <span className="text-[10px] text-gray-500 uppercase">Livraison €</span>
-                    <input type="number" step="0.5" className="w-full border rounded-lg px-2 py-1.5 text-sm" value={form.deliveryPrice ?? ""} onChange={e => { const v = parseFloat(e.target.value); setForm({ ...form, deliveryPrice: isNaN(v) ? 0 : v }) }} />
                   </label>
                   <label className="block">
                     <span className="text-[10px] text-gray-500 uppercase">TVA</span>
@@ -123,7 +119,6 @@ export default function AdminPage() {
                     <div className="flex gap-3 mt-1 text-xs text-gray-500">
                       <span>{r.arrondissement}</span>
                       {r.siren && <span>SIREN: {r.siren}</span>}
-                      <span>Livr: {r.deliveryPrice}€</span>
                       <span>TVA: {(r.tvaRate * 100).toFixed(1)}%</span>
                     </div>
                   </div>
