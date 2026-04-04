@@ -107,7 +107,7 @@ export default function Dashboard() {
     reload()
   }
 
-  const restaurantSummary = allOrders.map(o => {
+  const restaurantSummary = allOrders.filter(o => o.restaurant.siren !== LABO_SIREN).map(o => {
     const extras = o.extras || []
     const extrasTotal = extras.reduce((s, e) => s + e.price * e.quantity, 0)
     // Legacy fields fallback (for old orders without extras rows)
@@ -136,7 +136,7 @@ export default function Dashboard() {
         <div className="flex flex-wrap gap-2">
           <select value={selectedRestaurant} onChange={e => setSelectedRestaurant(Number(e.target.value))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm flex-1 min-w-0">
             <option value={0}>Tous les restaurants</option>
-            {restaurants.map(r => <option key={r.id} value={r.id}>{r.name} ({r.arrondissement})</option>)}
+            {restaurants.filter(r => r.siren !== LABO_SIREN).map(r => <option key={r.id} value={r.id}>{r.name} ({r.arrondissement})</option>)}
           </select>
           <select value={month} onChange={e => setMonth(Number(e.target.value))} className="rounded-lg border border-gray-300 px-3 py-2 text-sm">
             {MONTHS.slice(1).map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
