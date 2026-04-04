@@ -1,7 +1,8 @@
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
+  const prisma = await db()
   const search = req.nextUrl.searchParams.get('search') || ''
   const products = await prisma.product.findMany({
     where: search ? { name: { contains: search } } : undefined,
@@ -11,6 +12,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  const prisma = await db()
   const body = await req.json()
   const { id, ...data } = body
   const product = await prisma.product.update({ where: { id }, data })

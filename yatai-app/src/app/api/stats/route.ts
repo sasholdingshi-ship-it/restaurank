@@ -1,11 +1,10 @@
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(req: NextRequest) {
   const restaurantId = req.nextUrl.searchParams.get('restaurantId')
   if (!restaurantId) return NextResponse.json({ error: 'restaurantId required' }, { status: 400 })
-
-  // Get all orders for this restaurant (all months) — matches Excel's cross-sheet references
+  const prisma = await db()
   const orders = await prisma.order.findMany({
     where: { restaurantId: parseInt(restaurantId) },
     include: { items: true },

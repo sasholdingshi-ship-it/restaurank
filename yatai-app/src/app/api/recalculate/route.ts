@@ -1,9 +1,10 @@
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
 
 // Full cascade recalculation: Mercurial → Fiches techniques → Recap prix
 // Reproduces all Excel formulas in the correct order
 export async function POST() {
+  const prisma = await db()
   const smic = await prisma.smicConfig.findFirst()
   const hourlyRate = smic?.monthlyRate
     ? (smic.monthlyRate * 12) / 11 / 151.67

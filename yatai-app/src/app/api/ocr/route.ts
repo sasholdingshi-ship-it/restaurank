@@ -1,4 +1,4 @@
-import { prisma } from '@/lib/prisma'
+import { db } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
@@ -13,6 +13,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
   }
 
+  const prisma = await db()
   const products = await prisma.product.findMany({ orderBy: { ref: 'asc' } })
   const productList = products.map(p => `${p.ref}: ${p.name} (${p.unit || 'unité'})`).join('\n')
 
