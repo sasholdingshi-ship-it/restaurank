@@ -81,11 +81,15 @@ model Restaurant {
 }
 
 model Order {
-  id           Int    @id @default(autoincrement())
-  restaurantId Int
-  year         Int
-  month        Int
-  nbPassages   Int    @default(0)
+  id             Int    @id @default(autoincrement())
+  restaurantId   Int
+  year           Int
+  month          Int
+  nbPassages     Int    @default(0)
+  stuartPrice    Float  @default(0)
+  stuartQty      Int    @default(0)
+  livraisonPrice Float  @default(0)
+  livraisonQty   Int    @default(0)
   restaurant Restaurant @relation(fields: [restaurantId], references: [id])
   items      OrderItem[]
   @@unique([restaurantId, year, month])

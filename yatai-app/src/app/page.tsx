@@ -6,6 +6,7 @@ type Restaurant = { id: number; code: string; name: string; arrondissement: stri
 type OrderItem = { quantity: number; productId: number; product: { priceHt: number | null; ref: string; name: string } }
 type OrderSummary = {
   id: number; year: number; month: number; restaurant: Restaurant;
+  stuartPrice: number; stuartQty: number; livraisonPrice: number; livraisonQty: number;
   items: OrderItem[]
 }
 
@@ -35,9 +36,31 @@ export default function Dashboard() {
     })
   }, [selectedRestaurant, year, month])
 
+  const [extrasEditing, setExtrasEditing] = useState<number | null>(null)
+  const [extrasForm, setExtrasForm] = useState({ stuartPrice: 0, stuartQty: 0, livraisonPrice: 0, livraisonQty: 0 })
+  const [extrasSaving, setExtrasSaving] = useState(false)
+
+  const saveExtras = async (restaurantId: number) => {
+    setExtrasSaving(true)
+    await fetch("/api/orders/extras", {
+      method: "PUT", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ restaurantId, year, month, ...extrasForm }),
+    })
+    setExtrasSaving(false); setExtrasEditing(null)
+    // Reload
+    const params = new URLSearchParams()
+    if (selectedRestaurant) params.set("restaurantId", String(selectedRestaurant))
+    params.set("year", String(year)); params.set("month", String(month))
+    fetch(`/api/orders?${params}`).then(r => r.json()).then(setAllOrders)
+  }
+
   const restaurantSummary = allOrders.map(o => ({
     restaurant: o.restaurant,
     total: o.items.reduce((s, i) => s + i.quantity * (i.product.priceHt || 0), 0),
+    stuartTotal: (o.stuartPrice || 0) * (o.stuartQty || 0),
+    livraisonTotal: (o.livraisonPrice || 0) * (o.livraisonQty || 0),
+    stuartPrice: o.stuartPrice || 0, stuartQty: o.stuartQty || 0,
+    livraisonPrice: o.livraisonPrice || 0, livraisonQty: o.livraisonQty || 0,
     items: o.items.reduce((s, i) => s + i.quantity, 0),
     uniqueProducts: new Set(o.items.map(i => i.productId)).size,
   }))
@@ -86,22 +109,78 @@ export default function Dashboard() {
           <div className="p-8 text-center text-gray-400">Aucune commande pour cette période</div>
         ) : (
           <div>
-            {restaurantSummary.map(s => (
-              <div key={s.restaurant.id} className="border-t border-gray-100 px-4 md:px-6 py-3 flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-sm">{s.restaurant.name}</p>
-                  <p className="text-xs text-gray-400">{s.restaurant.arrondissement} — {s.uniqueProducts} produits, {Math.round(s.items)} qté</p>
+            {restaurantSummary.map(s => {
+              const totalWithExtras = s.total + s.stuartTotal + s.livraisonTotal
+              return (
+                <div key={s.restaurant.id} className="border-t border-gray-100">
+                  <div className="px-4 md:px-6 py-3 flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-sm">{s.restaurant.name}</p>
+                      <p className="text-xs text-gray-400">{s.restaurant.arrondissement} — {s.uniqueProducts} produits, {Math.round(s.items)} qté</p>
+                    </div>
+                    <div className="text-right flex items-center gap-3">
+                      <span className="font-mono font-bold text-sm">{totalWithExtras.toFixed(0)} €</span>
+                      <a href={`/api/export?restaurantId=${s.restaurant.id}&year=${year}&month=${month}`}
+                         className="text-green-600 hover:text-green-800 text-xs font-medium">Export</a>
+                    </div>
+                  </div>
+
+                  {/* Stuart & Livraison */}
+                  <div className="px-4 md:px-6 pb-3 flex flex-wrap gap-2 items-center">
+                    {s.stuartQty > 0 && (
+                      <span className="text-[11px] bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full">
+                        Stuart: {s.stuartQty} x {s.stuartPrice.toFixed(2)} € = {s.stuartTotal.toFixed(2)} €
+                      </span>
+                    )}
+                    {s.livraisonQty > 0 && (
+                      <span className="text-[11px] bg-amber-50 text-amber-700 px-2 py-0.5 rounded-full">
+                        Livraison: {s.livraisonQty} x {s.livraisonPrice.toFixed(2)} € = {s.livraisonTotal.toFixed(2)} €
+                      </span>
+                    )}
+                    <button onClick={() => {
+                      setExtrasEditing(extrasEditing === s.restaurant.id ? null : s.restaurant.id)
+                      setExtrasForm({ stuartPrice: s.stuartPrice, stuartQty: s.stuartQty, livraisonPrice: s.livraisonPrice, livraisonQty: s.livraisonQty })
+                    }} className="text-[11px] text-gray-400 hover:text-gray-600">
+                      {extrasEditing === s.restaurant.id ? "Fermer" : "Stuart / Livraison"}
+                    </button>
+                  </div>
+
+                  {extrasEditing === s.restaurant.id && (
+                    <div className="px-4 md:px-6 pb-3">
+                      <div className="bg-gray-50 rounded-xl p-3 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-indigo-700 w-16">Stuart</span>
+                          <input type="number" step="0.01" placeholder="Tarif €" value={extrasForm.stuartPrice || ""} onChange={e => { const v = parseFloat(e.target.value); setExtrasForm({ ...extrasForm, stuartPrice: isNaN(v) ? 0 : v }) }}
+                            className="flex-1 border rounded-lg px-2 py-1.5 text-sm" />
+                          <span className="text-xs text-gray-400">x</span>
+                          <input type="number" min="0" placeholder="Qté" value={extrasForm.stuartQty || ""} onChange={e => { const v = parseInt(e.target.value); setExtrasForm({ ...extrasForm, stuartQty: isNaN(v) ? 0 : v }) }}
+                            className="w-16 border rounded-lg px-2 py-1.5 text-sm text-center" />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-amber-700 w-16">Livraison</span>
+                          <input type="number" step="0.01" placeholder="Tarif €" value={extrasForm.livraisonPrice || ""} onChange={e => { const v = parseFloat(e.target.value); setExtrasForm({ ...extrasForm, livraisonPrice: isNaN(v) ? 0 : v }) }}
+                            className="flex-1 border rounded-lg px-2 py-1.5 text-sm" />
+                          <span className="text-xs text-gray-400">x</span>
+                          <input type="number" min="0" placeholder="Qté" value={extrasForm.livraisonQty || ""} onChange={e => { const v = parseInt(e.target.value); setExtrasForm({ ...extrasForm, livraisonQty: isNaN(v) ? 0 : v }) }}
+                            className="w-16 border rounded-lg px-2 py-1.5 text-sm text-center" />
+                        </div>
+                        <div className="flex gap-2">
+                          <button onClick={() => saveExtras(s.restaurant.id)} disabled={extrasSaving}
+                            className="flex-1 bg-green-600 text-white py-1.5 rounded-lg text-xs font-medium disabled:opacity-50">
+                            {extrasSaving ? "..." : "Sauvegarder"}
+                          </button>
+                          <button onClick={() => setExtrasEditing(null)} className="flex-1 bg-gray-200 text-gray-700 py-1.5 rounded-lg text-xs">Annuler</button>
+                        </div>
+                        <p className="text-[10px] text-gray-400">TVA 20% appliquée automatiquement dans l'export Pennylane</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="text-right flex items-center gap-3">
-                  <span className="font-mono font-bold text-sm">{s.total.toFixed(0)} €</span>
-                  <a href={`/api/export?restaurantId=${s.restaurant.id}&year=${year}&month=${month}`}
-                     className="text-green-600 hover:text-green-800 text-xs font-medium">Export</a>
-                </div>
-              </div>
-            ))}
+              )
+            })}
             <div className="border-t-2 border-gray-300 bg-gray-50 px-4 md:px-6 py-3 flex items-center justify-between font-bold">
               <span className="text-sm">Total</span>
-              <span className="font-mono text-sm">{grandTotal.toFixed(0)} €</span>
+              <span className="font-mono text-sm">{(grandTotal + restaurantSummary.reduce((s, r) => s + r.stuartTotal + r.livraisonTotal, 0)).toFixed(0)} €</span>
             </div>
           </div>
         )}

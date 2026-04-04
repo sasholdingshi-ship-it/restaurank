@@ -39,20 +39,39 @@ export async function GET(req: NextRequest) {
   //   Description, Quantité, Unité, Prix unitaire HT, Taux TVA, Type de produit, Date d'émission
   const rows: Record<string, unknown>[] = []
 
-  // Row 1: Delivery fee (livraison) — Excel: fixed per restaurant
-  rows.push({
-    'Raison sociale (optionnel)': restaurant.name,
-    'SIREN': restaurant.siren || '',
-    'Identifiant produit (recommandé)': 'LIVR',
-    'Nom du produit': 'Livraison',
-    'Description (optionnel)': `${nbPassages} passages en ${dateStr}`,
-    'Quantité': nbPassages,
-    'Unité (liste déroulante)': 'Passages',
-    'Prix unitaire HT en euros': restaurant.deliveryPrice,
-    'Taux TVA  (liste déroulante)': 0.2,
-    'Type de produit': 'Prestations de services',
-    "Date d'émission": dateStr,
-  })
+  // Stuart row (if configured)
+  if (order.stuartQty > 0 && order.stuartPrice > 0) {
+    rows.push({
+      'Raison sociale (optionnel)': restaurant.name,
+      'SIREN': restaurant.siren || '',
+      'Identifiant produit (recommandé)': 'STUART',
+      'Nom du produit': 'Stuart',
+      'Description (optionnel)': `Courses Stuart ${dateStr}`,
+      'Quantité': order.stuartQty,
+      'Unité (liste déroulante)': 'Courses',
+      'Prix unitaire HT en euros': order.stuartPrice,
+      'Taux TVA  (liste déroulante)': 0.2,
+      'Type de produit': 'Prestations de services',
+      "Date d'émission": dateStr,
+    })
+  }
+
+  // Livraison row (if configured)
+  if (order.livraisonQty > 0 && order.livraisonPrice > 0) {
+    rows.push({
+      'Raison sociale (optionnel)': restaurant.name,
+      'SIREN': restaurant.siren || '',
+      'Identifiant produit (recommandé)': 'LIVR',
+      'Nom du produit': 'Livraison',
+      'Description (optionnel)': `${order.livraisonQty} livraisons ${dateStr}`,
+      'Quantité': order.livraisonQty,
+      'Unité (liste déroulante)': 'Livraisons',
+      'Prix unitaire HT en euros': order.livraisonPrice,
+      'Taux TVA  (liste déroulante)': 0.2,
+      'Type de produit': 'Prestations de services',
+      "Date d'émission": dateStr,
+    })
+  }
 
   // Product rows — Excel: XLOOKUP(ref, Recap!E:E, Recap!G:G) for price, etc.
   // Product.priceHt is already cascaded from Recipe.sellingPrice (D52)
