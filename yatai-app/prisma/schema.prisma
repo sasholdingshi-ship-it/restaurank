@@ -130,3 +130,12 @@ model SmicConfig {
   monthlyRate Float?
   effectiveDate DateTime?
 }
+
+model MonthlyExpense {
+  id     Int    @id @default(autoincrement())
+  year   Int
+  month  Int
+  type   String
+  amount Float  @default(0)
+  @@unique([year, month, type])
+}
