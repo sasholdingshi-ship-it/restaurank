@@ -15,10 +15,12 @@ export default function MercurialPage() {
   const [expanded, setExpanded] = useState<number | null>(null)
   const [editData, setEditData] = useState<Partial<Ingredient>>({})
   const [cascadeMsg, setCascadeMsg] = useState<string | null>(null)
+  const [showAdd, setShowAdd] = useState(false)
+  const [newIng, setNewIng] = useState({ ref: 0, name: "", supplier: "", priceTtc: "", priceHt: "", weight: "", lossPercent: "0" })
+  const [addSaving, setAddSaving] = useState(false)
 
-  useEffect(() => {
-    fetch(`/api/ingredients?search=${search}`).then(r => r.json()).then(setIngredients)
-  }, [search])
+  const reload = () => fetch(`/api/ingredients?search=${search}`).then(r => r.json()).then(setIngredients)
+  useEffect(() => { reload() }, [search])
 
   const startEdit = (ing: Ingredient) => { setEditing(ing.id); setEditData(ing) }
 
@@ -43,7 +45,26 @@ export default function MercurialPage() {
       setTimeout(() => setCascadeMsg(null), 3000)
     }
     setEditing(null); setExpanded(null)
-    fetch(`/api/ingredients?search=${search}`).then(r => r.json()).then(setIngredients)
+    reload()
+  }
+
+  const addIngredient = async () => {
+    if (!newIng.name || !newIng.ref) return
+    setAddSaving(true)
+    const priceHt = parseFloat(newIng.priceHt) || null
+    const priceTtc = parseFloat(newIng.priceTtc) || null
+    const weight = parseFloat(newIng.weight) || null
+    const lossPercent = parseFloat(newIng.lossPercent) || 0
+    let pricePerKg: number | null = null
+    if (priceHt && weight && weight > 0) pricePerKg = priceHt / weight
+    const netPriceKg = pricePerKg !== null ? pricePerKg - Math.abs(lossPercent) : null
+    await fetch("/api/ingredients", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ref: newIng.ref, name: newIng.name, supplier: newIng.supplier || null, priceTtc, priceHt, weight, lossPercent, pricePerKg, netPriceKg }),
+    })
+    setNewIng({ ref: 0, name: "", supplier: "", priceTtc: "", priceHt: "", weight: "", lossPercent: "0" })
+    setShowAdd(false); setAddSaving(false)
+    reload()
   }
 
   const filtered = ingredients.filter(i =>
@@ -57,8 +78,54 @@ export default function MercurialPage() {
         <h1 className="text-xl md:text-2xl font-bold text-gray-900">Mercurial</h1>
         <p className="text-xs text-gray-500">{ingredients.length} ingredients</p>
       </div>
-      <input type="text" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)}
-        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm mb-3" />
+      <div className="flex gap-2 mb-3">
+        <input type="text" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)}
+          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm" />
+        <button onClick={() => setShowAdd(!showAdd)} className={`px-3 py-2 rounded-lg text-xs font-medium shrink-0 ${showAdd ? "bg-red-100 text-red-700" : "bg-green-600 text-white"}`}>
+          {showAdd ? "Annuler" : "+ Nouveau"}
+        </button>
+      </div>
+
+      {showAdd && (
+        <div className="bg-white rounded-xl border border-green-200 shadow-sm p-4 mb-3">
+          <h3 className="font-semibold text-sm text-gray-900 mb-3">Nouvel ingredient</h3>
+          <div className="grid grid-cols-2 gap-2 mb-3">
+            <label className="block">
+              <span className="text-[10px] text-gray-500 uppercase">Ref *</span>
+              <input type="number" className="w-full border rounded-lg px-2 py-1.5 text-sm" value={newIng.ref || ""} onChange={e => setNewIng({ ...newIng, ref: parseInt(e.target.value) || 0 })} />
+            </label>
+            <label className="block">
+              <span className="text-[10px] text-gray-500 uppercase">Nom *</span>
+              <input className="w-full border rounded-lg px-2 py-1.5 text-sm" value={newIng.name} onChange={e => setNewIng({ ...newIng, name: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="text-[10px] text-gray-500 uppercase">Fournisseur</span>
+              <input className="w-full border rounded-lg px-2 py-1.5 text-sm" value={newIng.supplier} onChange={e => setNewIng({ ...newIng, supplier: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="text-[10px] text-gray-500 uppercase">Prix TTC</span>
+              <input type="number" step="0.01" className="w-full border rounded-lg px-2 py-1.5 text-sm text-right" value={newIng.priceTtc} onChange={e => setNewIng({ ...newIng, priceTtc: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="text-[10px] text-gray-500 uppercase">Prix HT</span>
+              <input type="number" step="0.01" className="w-full border rounded-lg px-2 py-1.5 text-sm text-right" value={newIng.priceHt} onChange={e => setNewIng({ ...newIng, priceHt: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="text-[10px] text-gray-500 uppercase">Poids (kg)</span>
+              <input type="number" step="0.001" className="w-full border rounded-lg px-2 py-1.5 text-sm text-right" value={newIng.weight} onChange={e => setNewIng({ ...newIng, weight: e.target.value })} />
+            </label>
+            <label className="block">
+              <span className="text-[10px] text-gray-500 uppercase">Perte</span>
+              <input type="number" step="0.01" className="w-full border rounded-lg px-2 py-1.5 text-sm text-right" value={newIng.lossPercent} onChange={e => setNewIng({ ...newIng, lossPercent: e.target.value })} />
+            </label>
+          </div>
+          <button onClick={addIngredient} disabled={addSaving || !newIng.name || !newIng.ref}
+            className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium disabled:opacity-50">
+            {addSaving ? "Enregistrement..." : "Ajouter"}
+          </button>
+        </div>
+      )}
+
       {cascadeMsg && <div className="mb-3 px-3 py-2 bg-green-50 border border-green-200 text-green-700 rounded-lg text-xs">{cascadeMsg}</div>}
 
       {/* Mobile: cards */}
