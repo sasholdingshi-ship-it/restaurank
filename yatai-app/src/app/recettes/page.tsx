@@ -35,12 +35,19 @@ export default function RecettesPage() {
   const [newIngredients, setNewIngredients] = useState<NewRecipeIngredient[]>([])
   const [ingSearch, setIngSearch] = useState("")
 
+  const [smicHourly, setSmicHourly] = useState(16.33)
+
   const load = () => {
     const params = category ? `?category=${encodeURIComponent(category)}` : ""
     fetch(`/api/recipes${params}`).then(r => r.json()).then(setRecipes)
   }
   useEffect(load, [category])
-  useEffect(() => { fetch("/api/ingredients").then(r => r.json()).then(setAllIngredients) }, [])
+  useEffect(() => {
+    fetch("/api/ingredients").then(r => r.json()).then(setAllIngredients)
+    fetch("/api/admin/smic").then(r => r.json()).then(data => {
+      setSmicHourly(data.monthlyRate ? (data.monthlyRate * 12) / 11 / 151.67 : data.hourlyRate ?? 16.33)
+    })
+  }, [])
 
   const addIngToRecipe = (ing: IngredientOption) => {
     if (newIngredients.find(ni => ni.ingredientId === ing.id)) return
@@ -252,7 +259,7 @@ export default function RecettesPage() {
                       <div className="px-4 py-2 bg-orange-50 text-[11px] flex flex-wrap gap-x-3 gap-y-0.5">
                         <span>Ingredients: <strong>{recipe.ingredients.reduce((s, ri) => s + ri.amount, 0).toFixed(2)} €</strong></span>
                         <span>+ Alea {((recipe.aleaPercent ?? 0.02) * 100).toFixed(0)}%</span>
-                        <span>+ MO: <strong>{((recipe.laborTime ?? 0) * 16.33).toFixed(2)} €</strong></span>
+                        <span>+ MO: <strong>{((recipe.laborTime ?? 0) * smicHourly).toFixed(2)} €</strong></span>
                         <span>÷ {recipe.portions ?? 1} port.</span>
                         <span>= <strong className="text-orange-700">{recipe.costPerUnit.toFixed(2)} €/u</strong></span>
                         {recipe.sellingPrice != null && <span className="text-green-700 font-bold">PV: {recipe.sellingPrice.toFixed(2)} €</span>}
