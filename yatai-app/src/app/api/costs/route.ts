@@ -74,6 +74,7 @@ export async function GET(req: NextRequest) {
     logistiqueEssence: expenseMap['logistique_essence'] ?? 130,
     charges: expenseMap['charges'] ?? 400,
     internet: expenseMap['internet'] ?? 30,
+    nettoyage: expenseMap['nettoyage'] ?? 550,
     matchedItems,
     unmatchedItems,
     hourlyRate: Math.round(hourlyRate * 100) / 100,
