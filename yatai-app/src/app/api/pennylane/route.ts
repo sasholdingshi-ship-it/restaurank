@@ -4,12 +4,42 @@ import { NextRequest, NextResponse } from 'next/server'
 const PL_BASE = 'https://app.pennylane.com/api/external/v2'
 const PL_TOKEN = process.env.PENNYLANE_API_TOKEN || ''
 
-// Pennylane customer IDs by restaurant SIREN
+// Hardcoded fallback — used if API search fails
 const CUSTOMER_MAP: Record<string, number> = {
   '901471367': 102381901,  // YATAI CHOISEUL
   '887615516': 102378499,  // FSH PARIS
   '930307012': 137794252,  // YATAI BASTILLE
   '984606426': 151267557,  // CDR
+}
+
+/** Search Pennylane customer by SIREN (reg_no field), fallback to hardcoded map */
+async function findCustomerId(siren: string): Promise<number | null> {
+  // Try hardcoded first (fast path)
+  if (CUSTOMER_MAP[siren]) return CUSTOMER_MAP[siren]
+  // Search via Pennylane API — paginate through all customers
+  try {
+    let cursor: string | null = null
+    for (let page = 0; page < 10; page++) {
+      const searchUrl: string = cursor
+        ? `${PL_BASE}/customers?per_page=50&cursor=${cursor}`
+        : `${PL_BASE}/customers?per_page=50`
+      const res = await fetch(searchUrl, { headers: { 'Authorization': `Bearer ${PL_TOKEN}` } })
+      if (!res.ok) break
+      const data = await res.json()
+      const items = data.items || []
+      for (const c of items) {
+        if (c.reg_no === siren) {
+          CUSTOMER_MAP[siren] = c.id // cache
+          return c.id
+        }
+      }
+      if (!data.has_more) break
+      cursor = data.next_cursor
+    }
+  } catch {
+    // API error — fall through to null
+  }
+  return null
 }
 
 const MONTHS = ['', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre']
@@ -20,6 +50,18 @@ function tvaToCode(rate: number): string {
   if (rate === 0.055) return 'FR_55'
   if (rate === 0.021) return 'FR_21'
   return 'FR_55' // default for food
+}
+
+/** GET — List Pennylane customers or search by SIREN */
+export async function GET(req: NextRequest) {
+  if (!PL_TOKEN) return NextResponse.json({ error: 'PENNYLANE_API_TOKEN not configured' }, { status: 500 })
+  const siren = req.nextUrl.searchParams.get('siren')
+  const url = siren
+    ? `${PL_BASE}/customers?filter=[{"field":"registration_number","operator":"eq","value":"${siren}"}]`
+    : `${PL_BASE}/customers?page=1&per_page=50`
+  const res = await fetch(url, { headers: { 'Authorization': `Bearer ${PL_TOKEN}` } })
+  const data = await res.json()
+  return NextResponse.json(data)
 }
 
 /** POST — Create a draft invoice on Pennylane */
@@ -33,8 +75,9 @@ export async function POST(req: NextRequest) {
   const restaurant = await prisma.restaurant.findUnique({ where: { id: restaurantId } })
   if (!restaurant) return NextResponse.json({ error: 'Restaurant not found' }, { status: 404 })
 
-  const customerId = CUSTOMER_MAP[restaurant.siren || '']
-  if (!customerId) return NextResponse.json({ error: `No Pennylane customer for SIREN ${restaurant.siren}` }, { status: 400 })
+  if (!restaurant.siren) return NextResponse.json({ error: 'Restaurant has no SIREN' }, { status: 400 })
+  const customerId = await findCustomerId(restaurant.siren)
+  if (!customerId) return NextResponse.json({ error: `No Pennylane customer found for SIREN ${restaurant.siren}. Vérifiez que le client existe dans Pennylane avec ce SIREN.` }, { status: 400 })
 
   const order = await prisma.order.findUnique({
     where: { restaurantId_year_month: { restaurantId, year, month } },
