@@ -45,6 +45,8 @@ export async function ensureDb(prisma: PrismaClient) {
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "Order" (
       "id" INTEGER PRIMARY KEY AUTOINCREMENT, "restaurantId" INTEGER NOT NULL, "year" INTEGER NOT NULL,
       "month" INTEGER NOT NULL, "nbPassages" INTEGER NOT NULL DEFAULT 0,
+      "stuartPrice" REAL NOT NULL DEFAULT 0, "stuartQty" INTEGER NOT NULL DEFAULT 0,
+      "livraisonPrice" REAL NOT NULL DEFAULT 0, "livraisonQty" INTEGER NOT NULL DEFAULT 0,
       "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP, "updatedAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY ("restaurantId") REFERENCES "Restaurant"("id"))`)
     await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "Order_restaurantId_year_month_key" ON "Order"("restaurantId","year","month")`)
@@ -59,6 +61,14 @@ export async function ensureDb(prisma: PrismaClient) {
     await prisma.$executeRawUnsafe(`CREATE TABLE IF NOT EXISTS "SmicConfig" (
       "id" INTEGER PRIMARY KEY AUTOINCREMENT, "hourlyRate" REAL NOT NULL,
       "monthlyRate" REAL, "effectiveDate" DATETIME)`)
+
+    // Migrate: add stuart/livraison columns if missing
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "stuartPrice" REAL NOT NULL DEFAULT 0`)
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "stuartQty" INTEGER NOT NULL DEFAULT 0`)
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "livraisonPrice" REAL NOT NULL DEFAULT 0`)
+      await prisma.$executeRawUnsafe(`ALTER TABLE "Order" ADD COLUMN "livraisonQty" INTEGER NOT NULL DEFAULT 0`)
+    } catch { /* columns already exist */ }
 
     // Check if data exists (BigInt fix)
     const count: Array<{ c: bigint | number }> = await prisma.$queryRawUnsafe(`SELECT COUNT(*) as c FROM "Restaurant"`)
