@@ -328,7 +328,7 @@ function PLSection({ costs, grandTotal, staffReel, setStaffReel, savingExpense, 
         <PLRow label="Électricité" value={costs.electricite} pct={pct(costs.electricite)} accent="text-gray-600" />
         <PLRow label="Logistique — location camion" value={costs.logistiqueCamion} pct={pct(costs.logistiqueCamion)} accent="text-gray-600" />
         <PLRow label="Logistique — essence" value={costs.logistiqueEssence} pct={pct(costs.logistiqueEssence)} accent="text-gray-600" />
-        <PLRow label="Charges diverses" value={costs.charges} pct={pct(costs.charges)} accent="text-gray-600" />
+        <PLRow label="Charges bailleur" value={costs.charges} pct={pct(costs.charges)} accent="text-gray-600" />
         <PLRow label="Box internet" value={costs.internet} pct={pct(costs.internet)} accent="text-gray-600" />
         <PLRow label="Nettoyage" value={costs.nettoyage} pct={pct(costs.nettoyage)} accent="text-gray-600" />
 
