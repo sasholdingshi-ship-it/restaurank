@@ -9,8 +9,8 @@ const NAV = [
   { href: "/", label: "Dashboard", icon: "📊" },
   { href: "/commandes", label: "Commandes", icon: "📝" },
   { href: "/mercurial", label: "Mercurial", icon: "📦" },
-  { href: "/produits", label: "Produits", icon: "💰" },
   { href: "/recettes", label: "Recettes", icon: "📋" },
+  { href: "/admin", label: "Admin", icon: "⚙️" },
 ]
 
 export function MobileShell({ children }: { children: ReactNode }) {
