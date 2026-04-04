@@ -270,17 +270,16 @@ export default function CommandesPage() {
                   <div className="text-xs text-gray-500 flex items-center gap-1 flex-wrap">
                     {isEditing ? (
                       <span className="inline-flex items-center gap-1">
-                        <input type="number" step="0.01" autoFocus
+                        <input type="number" step="0.01" inputMode="decimal" autoFocus
                           defaultValue={effectivePrice || ""}
                           onBlur={e => { const v = parseFloat(e.target.value); setPrice(product.id, isNaN(v) ? null : v); setEditingPrice(null) }}
                           onKeyDown={e => { if (e.key === "Enter") (e.target as HTMLInputElement).blur() }}
-                          className="w-16 border border-blue-400 rounded px-1 py-0.5 text-xs text-right" />
+                          className="w-20 border-2 border-blue-400 rounded px-2 py-1 text-sm text-right" />
                         <span>€/{product.unit || "u"}</span>
                       </span>
                     ) : (
-                      <button onClick={() => qty > 0 && setEditingPrice(product.id)} className={`${overridePrice != null ? "text-blue-600 font-medium" : ""}`}>
-                        {effectivePrice.toFixed(2)} €/{product.unit || "u"}
-                        {overridePrice != null && <span className="ml-0.5 text-[9px]">✎</span>}
+                      <button onClick={() => setEditingPrice(product.id)} className={`py-1 px-1.5 -mx-1.5 rounded ${overridePrice != null ? "text-blue-600 font-medium bg-blue-50" : "active:bg-gray-100"}`}>
+                        {effectivePrice.toFixed(2)} €/{product.unit || "u"} ✎
                       </button>
                     )}
                     {qty > 0 && amount > 0 && <span className="text-orange-600 font-medium">= {amount.toFixed(2)} €</span>}
