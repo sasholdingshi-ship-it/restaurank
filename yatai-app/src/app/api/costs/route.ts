@@ -29,7 +29,9 @@ export async function GET(req: NextRequest) {
   let matchedItems = 0
   let unmatchedItems = 0
 
+  const LABO_SIREN = '913995627'
   for (const order of orders) {
+    if (order.restaurant.siren === LABO_SIREN) continue // skip labo (no self-invoicing)
     for (const item of order.items) {
       const qty = item.quantity
       const unitPrice = item.unitPrice ?? item.product.priceHt ?? 0
