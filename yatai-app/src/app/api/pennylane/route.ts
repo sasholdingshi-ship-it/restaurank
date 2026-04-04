@@ -10,6 +10,7 @@ const CUSTOMER_MAP: Record<string, number> = {
   '887615516': 102378499,  // FSH PARIS
   '930307012': 137794252,  // YATAI BASTILLE
   '984606426': 151267557,  // CDR
+  '949234272': 273622715,  // KEOPI (23 VERDEAU)
 }
 
 /** Search Pennylane customer by SIREN (reg_no field), fallback to hardcoded map */
