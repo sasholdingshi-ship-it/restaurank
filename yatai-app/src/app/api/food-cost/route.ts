@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
 
   const mm = String(month).padStart(2, '0')
   const dateFrom = `${year}-${mm}-01`
-  const dateTo = `${year}-${mm}-31`
+  const lastDay = new Date(year, month, 0).getDate()
+  const dateTo = `${year}-${mm}-${String(lastDay).padStart(2, '0')}`
 
   const results: { supplier: string; total: number; invoiceCount: number; invoices: { date: string; amount: number; label: string }[] }[] = []
   let grandTotal = 0
