@@ -88,10 +88,12 @@ export async function GET(req: NextRequest) {
       const pdfRes = await fetch(pdfUrl)
       const buffer = Buffer.from(await pdfRes.arrayBuffer())
 
-      // Dynamic import for pdf-parse (ESM compat)
-      const pdfParse = (await import('pdf-parse')).default
-      const parsed = await pdfParse(buffer)
-      const totalVerse = extractTotalVerse(parsed.text)
+      // Parse PDF text
+      const { PDFParse } = await import('pdf-parse')
+      const parser = new PDFParse({ data: new Uint8Array(buffer) })
+      const textResult = await parser.getText()
+      const fullText = textResult.pages.map(p => p.text).join('\n')
+      const totalVerse = extractTotalVerse(fullText)
 
       if (totalVerse) {
         grandTotal += totalVerse
