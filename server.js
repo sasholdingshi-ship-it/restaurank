@@ -9717,6 +9717,47 @@ app.post('/api/real-audit', async (req, res) => {
           } catch(e) {}
         }
 
+        // If HTML too small (SPA/Webflow), try Puppeteer
+        let brandingHtml = html;
+        if (html.length < 1000) {
+          try {
+            const browser = await launchBrowser();
+            const page = await browser.newPage();
+            await page.setUserAgent(USER_AGENTS[0]);
+            await page.goto(normalized, { waitUntil: 'networkidle2', timeout: 15000 });
+            brandingHtml = await page.content();
+            await page.close();
+            console.log(`Puppeteer fallback for ${normalized}: ${brandingHtml.length} chars (was ${html.length})`);
+          } catch(e) { console.warn('Puppeteer fallback failed:', e.message); }
+        }
+
+        // Extract branding from full HTML
+        wa.branding = {};
+        // Logo
+        const faviconM = brandingHtml.match(/<link[^>]*rel=["'](?:icon|shortcut icon|apple-touch-icon)["'][^>]*href=["']([^"']+)["']/i);
+        if (faviconM) { let u = faviconM[1]; if (u.startsWith('/')) u = new URL(u, normalized).href; wa.branding.favicon = u; }
+        const logoM = brandingHtml.match(/<img[^>]*(?:class=["'][^"']*logo|alt=["'][^"']*logo|src=["'][^"']*logo)[^>]*src=["']([^"']+)["']/i) || brandingHtml.match(/<img[^>]*src=["']([^"']*logo[^"']+)["']/i);
+        if (logoM) { let u = logoM[1]; if (u.startsWith('/')) u = new URL(u, normalized).href; wa.branding.logo = u; }
+        if (!wa.branding.logo && wa.ogImage) wa.branding.ogImage = wa.ogImage;
+        // Colors
+        const colors = new Set();
+        const themeM = brandingHtml.match(/<meta[^>]*name=["']theme-color["'][^>]*content=["']([^"']+)["']/i);
+        if (themeM) colors.add(themeM[1]);
+        const cssVars = brandingHtml.matchAll(/--(?:primary|brand|accent|main|theme|color-primary)[^:]*:\s*([#][0-9a-fA-F]{3,8}|rgb[a]?\([^)]+\))/gi);
+        for (const m of cssVars) colors.add(m[1]);
+        const hexes = brandingHtml.matchAll(/(?:background(?:-color)?|color)\s*:\s*(#[0-9a-fA-F]{3,8})/gi);
+        const hexCount = {};
+        for (const m of hexes) { const c = m[1].toLowerCase(); if (!['#fff','#ffffff','#000','#000000','#333','#666','#999','#ccc','#eee','#f5f5f5'].includes(c)) hexCount[c] = (hexCount[c]||0)+1; }
+        Object.entries(hexCount).sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(e=>colors.add(e[0]));
+        wa.branding.colors = [...colors].slice(0,8);
+        // Fonts
+        const fonts = new Set();
+        const gf = brandingHtml.matchAll(/fonts\.googleapis\.com\/css2?\?family=([^"'&]+)/gi);
+        for (const m of gf) decodeURIComponent(m[1]).split('|').forEach(f=>fonts.add(f.split(':')[0].replace(/\+/g,' ')));
+        const ff = brandingHtml.matchAll(/font-family\s*:\s*["']?([^;"'}]+)/gi);
+        for (const m of ff) { const f=m[1].split(',')[0].trim().replace(/["']/g,''); if(!['inherit','sans-serif','serif','monospace','system-ui','Arial','Helvetica'].includes(f)&&f.length>1&&f.length<40) fonts.add(f); }
+        wa.branding.fonts = [...fonts].slice(0,6);
+
         audit.website = wa;
         audit.cms = wa.cms || { available: false };
         audit.cms.available = !!(wa.cms?.detected?.cms);
