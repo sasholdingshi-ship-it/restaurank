@@ -53,10 +53,17 @@ export default function Dashboard() {
     // Fetch P&L costs
     fetch(`/api/costs?year=${year}&month=${month}`).then(r => r.json()).then((data: CostsData) => {
       setCosts(data)
-      setStaffReel(data.staffCostReel != null ? String(data.staffCostReel) : "")
       setFoodCostReel(data.foodCostReel != null ? String(data.foodCostReel) : "")
       setDarkKitchen(data.venteDarkKitchen != null ? String(data.venteDarkKitchen) : "")
       setVenteAnnexe(data.venteAnnexe != null ? String(data.venteAnnexe) : "")
+      // Auto-fetch staff cost from Pennylane payslips (save=1 persists it)
+      if (data.staffCostReel != null && data.staffCostReel > 0) {
+        setStaffReel(String(data.staffCostReel))
+      } else {
+        fetch(`/api/staff-cost?year=${year}&month=${month}&save=1`).then(r => r.json()).then(sc => {
+          if (sc.totalVerse > 0) setStaffReel(String(sc.totalVerse))
+        }).catch(() => {})
+      }
     })
   }
 
