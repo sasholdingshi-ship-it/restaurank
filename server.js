@@ -6204,7 +6204,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
       if (authHeader?.startsWith('Bearer ')) {
         const tok = authHeader.slice(7);
         try {
-          const sess = db.prepare('SELECT account_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(tok);
+          const sess = db.prepare('SELECT account_id FROM sessions WHERE id = ? AND expires_at > datetime(\'now\')').get(tok);
           if (sess) userId = sess.account_id;
         } catch(e) {}
       }
@@ -6818,25 +6818,35 @@ app.post('/api/scans/record', (req, res) => {
 app.post('/api/restaurants/full-save', (req, res) => {
   const { user_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, hub_data, selected_module } = req.body;
 
-  // Resolve owner_id from auth session
+  // Resolve owner_id from auth session (token is stored as sessions.id, NOT sessions.token)
   let ownerId = null;
   try {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
-      const session = db.prepare('SELECT account_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(token);
+      const session = db.prepare('SELECT account_id FROM sessions WHERE id = ? AND expires_at > datetime(\'now\')').get(token);
       if (session) ownerId = session.account_id;
     }
-  } catch (e) {}
+  } catch (e) { console.warn('full-save auth resolve error:', e.message); }
 
   // Temporarily disable FK checks for user_id=0 (anonymous/local mode)
   if (!user_id || user_id === 0) {
-    db.pragma('foreign_keys = OFF');
+    try { db.pragma('foreign_keys = OFF'); } catch(e) {}
   }
 
   try {
-  // Check if restaurant already exists for this user
-  let restaurant = db.prepare('SELECT id FROM restaurants WHERE user_id = ? AND name = ? AND city = ?').get(user_id || 0, name, city);
+  // Check if restaurant already exists — search by owner_id first, then user_id
+  let restaurant = null;
+  if (ownerId) {
+    restaurant = db.prepare('SELECT id FROM restaurants WHERE owner_id = ? AND name = ? AND city = ?').get(ownerId, name, city);
+  }
+  if (!restaurant) {
+    restaurant = db.prepare('SELECT id FROM restaurants WHERE user_id = ? AND name = ? AND city = ?').get(user_id || 0, name, city);
+  }
+  if (!restaurant && ownerId) {
+    // Also check without city match (user may have typed differently)
+    restaurant = db.prepare('SELECT id FROM restaurants WHERE owner_id = ? AND name = ?').get(ownerId, name);
+  }
 
   if (restaurant) {
     // Update existing + set owner_id if we have it
@@ -6888,7 +6898,7 @@ app.get('/api/restaurants/full/:user_id', (req, res) => {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const tok = authHeader.slice(7);
-      const sess = db.prepare('SELECT account_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(tok);
+      const sess = db.prepare('SELECT account_id FROM sessions WHERE id = ? AND expires_at > datetime(\'now\')').get(tok);
       if (sess) ownerId = sess.account_id;
     }
   } catch(e){}
