@@ -35,7 +35,7 @@ async function fetchEmployee(name: string, supplierId: number, year: number, mm:
     const dateFilter = JSON.stringify([
       { field: 'supplier_id', operator: 'eq', value: String(supplierId) },
       { field: 'date', operator: 'gteq', value: `${year}-${mm}-01` },
-      { field: 'date', operator: 'lteq', value: `${year}-${mm}-31` },
+      { field: 'date', operator: 'lteq', value: `${year}-${mm}-${String(new Date(year, parseInt(mm), 0).getDate()).padStart(2, '0')}` },
     ])
     let res = await fetch(`${PL_BASE}/supplier_invoices?filter=${encodeURIComponent(dateFilter)}&per_page=10`, {
       headers: { Authorization: `Bearer ${PL_TOKEN}` },
