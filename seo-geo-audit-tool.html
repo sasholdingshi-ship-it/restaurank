@@ -7852,7 +7852,7 @@ const CMS_INFO={
         {id:'wp_user',label:'Identifiant WordPress',placeholder:'admin',type:'text'},
         {id:'wp_pass',label:'Mot de passe d\'application',placeholder:'xxxx xxxx xxxx xxxx',type:'password'}
     ],connectHelp:'Allez dans WordPress Admin → Utilisateurs → Profil → Mots de passe d\'application → Créer'},
-    webflow:{name:'Webflow',icon:'🌊',color:'#4353ff',connectFields:[],connectHelp:'Connecté via Webflow MCP — application automatique disponible',autoConnect:true,siteId:'66a36b35a69a054ec392dc36'},
+    webflow:{name:'Webflow',icon:'🌊',color:'#4353ff',connectFields:[{id:'wf_token',label:'Token API Webflow',placeholder:'Bearer ...',type:'password'},{id:'wf_site',label:'Site ID Webflow',placeholder:'66a36b35...',type:'text'}],connectHelp:'Allez dans Webflow → Site Settings → Apps & Integrations → API Access → Generate Token'},
     wix:{name:'Wix',icon:'🟡',color:'#0C6EFC',connectFields:[
         {id:'wix_token',label:'Token API Wix',placeholder:'IST...',type:'password'}
     ],connectHelp:'Allez dans Wix Dashboard → Paramètres → Clés API → Créer une clé'},
@@ -7905,13 +7905,7 @@ function renderCMSPanel(){
 
     const cms=currentData.detectedCMS;
     const info=CMS_INFO[cms.cms]||CMS_INFO.custom;
-    // Auto-connect Webflow via MCP
-    if(info.autoConnect&&!cmsConnection.connected){
-        cmsConnection={type:cms.cms,connected:true,credentials:{site_id:info.siteId},method:'mcp'};
-        try{localStorage.setItem('restaurank_cms',JSON.stringify(cmsConnection));}catch(e){}
-        const rid=currentData?.restaurant_id||0;
-        fetchTimeout(`${API_BASE}/api/cms/connection/${rid}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:cmsConnection})},5000).catch(()=>{});
-    }
+    // No auto-connect — CMS connection requires real API credentials
     const isConnected=cmsConnection.type===cms.cms&&cmsConnection.connected;
     const seo=currentData.seoAnalysis||{};
 
@@ -7927,9 +7921,7 @@ function renderCMSPanel(){
                 ?`<span class="cms-connect-btn connected">✓ Connecté</span>`
                 :info.connectFields.length>0
                     ?`<button class="cms-connect-btn" onclick="toggleCMSForm()">Connecter ${info.name} →</button>`
-                    :cms.cms==='webflow'
-                        ?`<span class="cms-connect-btn connected">✓ MCP Webflow</span>`
-                        :`<span style="font-size:.72rem;color:var(--mut);">Mode manuel</span>`
+                    :`<span style="font-size:.72rem;color:var(--mut);">Mode manuel</span>`
             }
         </div>
         <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
