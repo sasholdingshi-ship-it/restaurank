@@ -330,23 +330,39 @@ function PLSection({ costs, grandTotal, staffReel, setStaffReel, foodCostReel, s
           </div>
         )}
 
-        {/* Food cost */}
-        <PLRow label="Food Cost (théorique)" sublabel={`${costs.matchedItems} produits / ${costs.matchedItems + costs.unmatchedItems} total`}
-          value={costs.foodCost} pct={pct(costs.foodCost)} accent="text-red-600" />
+        {/* Food cost — réel remplace théo si renseigné */}
+        {foodCostReelNum > 0 ? (<>
+          <PLRow label="Food Cost (réel)" value={foodCostReelNum} pct={pct(foodCostReelNum)} accent="text-red-600" bold />
+          <div className="px-4 md:px-6 py-2 flex items-center justify-between opacity-40">
+            <p className="text-xs text-gray-400 line-through">Food Cost théorique : {fmt(costs.foodCost)} € ({pct(costs.foodCost)}%) — {costs.matchedItems}/{costs.matchedItems + costs.unmatchedItems} produits</p>
+          </div>
+          <EditableRow label="Modifier Food Cost réel" value={foodCostReel} onChange={setFoodCostReel}
+            onSave={() => saveExpense("food_cost_reel", parseFloat(foodCostReel) || 0)}
+            saving={savingExpense} color="red" />
+        </>) : (<>
+          <PLRow label="Food Cost (théorique)" sublabel={`${costs.matchedItems} produits / ${costs.matchedItems + costs.unmatchedItems} total`}
+            value={costs.foodCost} pct={pct(costs.foodCost)} accent="text-red-600" />
+          <EditableRow label="Food Cost (réel)" value={foodCostReel} onChange={setFoodCostReel}
+            onSave={() => saveExpense("food_cost_reel", parseFloat(foodCostReel) || 0)}
+            saving={savingExpense} color="red" />
+        </>)}
 
-        {/* Food cost reel — editable */}
-        <EditableRow label="Food Cost (réel)" value={foodCostReel} onChange={setFoodCostReel}
-          onSave={() => saveExpense("food_cost_reel", parseFloat(foodCostReel) || 0)}
-          saving={savingExpense} pct={foodCostReelNum > 0 ? pct(foodCostReelNum) : undefined} color="red" />
-
-        {/* Staff cost theo */}
-        <PLRow label="Staff Cost (théorique)" sublabel={`SMIC chargé ${costs.hourlyRate} €/h`}
-          value={costs.staffCostTheo} pct={pct(costs.staffCostTheo)} accent="text-orange-600" />
-
-        {/* Staff cost reel — editable */}
-        <EditableRow label="Staff Cost (réel)" value={staffReel} onChange={setStaffReel}
-          onSave={() => saveExpense("staff_reel", parseFloat(staffReel) || 0)}
-          saving={savingExpense} pct={staffReelNum > 0 ? pct(staffReelNum) : undefined} color="orange" />
+        {/* Staff cost — réel remplace théo si renseigné */}
+        {staffReelNum > 0 ? (<>
+          <PLRow label="Staff Cost (réel)" value={staffReelNum} pct={pct(staffReelNum)} accent="text-orange-600" bold />
+          <div className="px-4 md:px-6 py-2 flex items-center justify-between opacity-40">
+            <p className="text-xs text-gray-400 line-through">Staff Cost théorique : {fmt(costs.staffCostTheo)} € ({pct(costs.staffCostTheo)}%) — SMIC {costs.hourlyRate} €/h</p>
+          </div>
+          <EditableRow label="Modifier Staff Cost réel" value={staffReel} onChange={setStaffReel}
+            onSave={() => saveExpense("staff_reel", parseFloat(staffReel) || 0)}
+            saving={savingExpense} color="orange" />
+        </>) : (<>
+          <PLRow label="Staff Cost (théorique)" sublabel={`SMIC chargé ${costs.hourlyRate} €/h`}
+            value={costs.staffCostTheo} pct={pct(costs.staffCostTheo)} accent="text-orange-600" />
+          <EditableRow label="Staff Cost (réel)" value={staffReel} onChange={setStaffReel}
+            onSave={() => saveExpense("staff_reel", parseFloat(staffReel) || 0)}
+            saving={savingExpense} color="orange" />
+        </>)}
 
         {/* Separator */}
         <div className="px-4 md:px-6 py-2 bg-gray-50">
