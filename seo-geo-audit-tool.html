@@ -4200,24 +4200,18 @@ function _prepareRealData(raw, name, city) {
 }
 
 function generateAuditData(name,city){
-    // Returns pessimistic defaults — real data comes from API crawl/GBP
+    // Returns NULL values — indicates "not yet audited", never fake scores
+    // The scoring engine treats null as 0 but UI shows "Non audité" instead of a fake score
     return{name,city,
-    // --- GBP (en attente API — valeurs par défaut basses) ---
-    hasPrimaryCategory:false,primaryCategorySpecific:false,secondaryCategories:0,descriptionLength:0,photoCount:0,hoursComplete:false,specialHours:false,attributeCount:0,postsPerMonth:0,menuUploaded:false,menuStructured:false,bookingLink:false,
-    // --- Avis (en attente API — estimation conservatrice) ---
-    rating:0,reviewCount:0,recentReviewsPerMonth:0,responseRate:0,platformsWithReviews:0,
-    // --- Citations (seront remplacées par scan annuaires) ---
-    napConsistency:0,directoryPresence:0,listingCompleteness:0,
-    // --- SEO site web (seront remplacées par crawl réel) ---
-    hasSchemaRestaurant:false,schemaComplete:false,hasFAQ:false,faqCount:0,titleOptimized:false,hasTitle:false,mobileSpeed:50,contentRichness:0,napOnSite:false,
-    // --- SEO on-page (seront remplacées par crawl réel) ---
-    hasMetaDesc:false,metaDescLength:0,hasOpenGraph:false,hasPhoneLink:false,hasMapEmbed:false,hasSocialLinks:false,hasSitemap:false,hasRobotsTxt:false,hasBookingLink:false,hasCanonical:false,hasAltTags:false,headingCount:0,hasHreflang:false,httpsRedirect:true,
-    // --- IA (en attente d'intégration API IA) ---
-    citedByChatGPT:'not',citedByPerplexity:'not',citedByGemini:'not',citedByClaude:'not',bestOfListings:0,yelpOptimized:0,foursquarePresent:false,foursquareOptimized:false,ugcPresence:0,inAIOverviews:'no',socialScore:0,brandMentions:0,
-    // --- GEO avancé ---
-    hasWikipedia:false,localBacklinks:0,gbpQACount:0,contentFreshness:false,hasBlog:false,
-    // --- Source tracking ---
-    _auditSource:'default',_pendingGBP:true,_pendingAI:true};
+    _auditSource:'not_audited',_pendingGBP:true,_pendingAI:true,_notAudited:true,
+    // All fields null = "unknown/not checked" (NOT "bad score")
+    hasPrimaryCategory:null,primaryCategorySpecific:null,secondaryCategories:null,descriptionLength:null,photoCount:null,hoursComplete:null,specialHours:null,attributeCount:null,postsPerMonth:null,menuUploaded:null,menuStructured:null,bookingLink:null,
+    rating:null,reviewCount:null,recentReviewsPerMonth:null,responseRate:null,platformsWithReviews:null,
+    napConsistency:null,directoryPresence:null,listingCompleteness:null,
+    hasSchemaRestaurant:null,schemaComplete:null,hasFAQ:null,faqCount:null,titleOptimized:null,hasTitle:null,mobileSpeed:null,contentRichness:null,napOnSite:null,
+    hasMetaDesc:null,metaDescLength:null,hasOpenGraph:null,hasPhoneLink:null,hasMapEmbed:null,hasSocialLinks:null,hasSitemap:null,hasRobotsTxt:null,hasBookingLink:null,hasCanonical:null,hasAltTags:null,headingCount:null,hasHreflang:null,httpsRedirect:null,
+    citedByChatGPT:null,citedByPerplexity:null,citedByGemini:null,citedByClaude:null,bestOfListings:null,yelpOptimized:null,foursquarePresent:null,foursquareOptimized:null,ugcPresence:null,inAIOverviews:null,socialScore:null,brandMentions:null,
+    hasWikipedia:null,localBacklinks:null,gbpQACount:null,contentFreshness:null,hasBlog:null};
 }
 
 // ============================================================
@@ -6075,7 +6069,7 @@ function deleteFromGroup(key,evt){
 
 // NAP Consistency Checker
 function renderNapConsistency(entries){
-    // Check if NAP data patterns vary across locations (simulated — in production you'd compare real NAP)
+    // Compare real NAP data from Hub Central across locations
     let html=`<div class="nap-consistency"><h3>🔗 Cohérence NAP multi-sites</h3>
     <p style="font-size:.8rem;color:var(--mut);margin-bottom:12px;">Vérifiez que le nom de marque est écrit de façon identique sur tous les annuaires de chaque point de vente.</p>
     <table class="nap-table"><thead><tr><th>Point de vente</th><th>Score NAP</th><th>Annuaires</th><th>Statut</th></tr></thead><tbody>`;
@@ -6526,12 +6520,10 @@ async function autoApplyGBP(itemId){
             endpoint='/api/gbp/create-post';
             body.post={text:content||'Découvrez notre nouvelle carte de saison ! Des plats frais et locaux vous attendent. 🍽️',type:'STANDARD'};
         }else{
-            // Fallback: simulate for items without direct API mapping
-            await new Promise(r=>setTimeout(r,1200+Math.random()*800));
-            if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='✅ Appliqué avec succès sur '+mapping.platform+' !';}
-            btnEl.innerHTML='✅ Appliqué';
-            btnEl.className='auto-apply-btn google';
-            markDone(itemId);
+            // No direct API endpoint for this item — tell user honestly
+            if(statusEl){statusEl.className='auto-apply-status error';statusEl.textContent='⚠️ Pas d\'API disponible pour '+mapping.platform+'. Utilisez le contenu généré ci-dessous pour appliquer manuellement.';}
+            btnEl.innerHTML='📋 Manuel requis';
+            btnEl.disabled=false;
             return;
         }
 

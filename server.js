@@ -2815,11 +2815,10 @@ app.post('/api/backlinks', async (req, res) => {
       } catch (e) { console.warn('Moz API failed:', e.message); }
     }
 
-    // 5. Estimate Domain Authority if not from Moz (heuristic based on data we have)
-    if (!backlinks.domainAuthority && backlinks.totalLinks > 0) {
-      // Simple heuristic: DA ≈ log2(backlinks) * 5, capped at 100
-      backlinks.domainAuthority = Math.min(100, Math.round(Math.log2(Math.max(1, backlinks.totalLinks)) * 5));
-      backlinks.domainAuthorityEstimated = true;
+    // 5. Domain Authority — only from Moz, never estimated
+    if (!backlinks.domainAuthority) {
+      backlinks.domainAuthority = null;
+      backlinks.daSource = 'unavailable';
     }
 
     backlinks.source = sources.join('+') || 'none';
@@ -5678,7 +5677,7 @@ app.post('/api/directories/auto-do-all', async (req, res) => {
 
   for (const platform of platList) {
     try {
-      // Simulate internal call to auto-do logic (guided mode)
+      // Real platform check via checkPlatformListing()
       const q = encodeURIComponent(`${name} ${city || 'Paris'}`);
       let checkResult = null;
       try { checkResult = await checkPlatformListing(platform, name, city || 'Paris'); } catch (e) {}
@@ -6176,17 +6175,10 @@ app.post('/api/scrape-gmb', async (req, res) => {
               result.branding.backlinks = mozData.results[0].external_pages_to_root_domain || null;
             }
           } else {
-            // Heuristic DA estimate based on available signals
-            let daEstimate = 10;
-            if (result.reviewCount > 200) daEstimate += 10;
-            else if (result.reviewCount > 50) daEstimate += 5;
-            if (result.rating >= 4.5) daEstimate += 5;
-            if (siteHtml.length > 30000) daEstimate += 5; // rich content
-            if (/schema\.org/i.test(siteHtml)) daEstimate += 5;
-            if (/<meta[^>]*property=["']og:/i.test(siteHtml)) daEstimate += 3;
-            if (/sitemap/i.test(siteHtml)) daEstimate += 2;
-            result.branding.domainAuthority = Math.min(daEstimate, 50);
-            result.branding.daSource = 'estimate';
+            // No Moz API — DA unknown. Don't estimate.
+            result.branding.domainAuthority = null;
+            result.branding.daSource = 'unavailable';
+            result.branding.daMessage = 'Configurez MOZ_ACCESS_ID + MOZ_SECRET_KEY pour obtenir le DA réel';
           }
         } catch (e) { console.warn('DA estimation error:', e.message); }
 
