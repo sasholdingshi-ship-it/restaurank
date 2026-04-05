@@ -54,7 +54,14 @@ export default function Dashboard() {
     fetch(`/api/costs?year=${year}&month=${month}`).then(r => r.json()).then((data: CostsData) => {
       setCosts(data)
       setDarkKitchen(data.venteDarkKitchen != null ? String(data.venteDarkKitchen) : "")
-      setVenteAnnexe(data.venteAnnexe != null ? String(data.venteAnnexe) : "")
+      // Auto-fetch vente annexe from Pennylane customer invoices
+      if (data.venteAnnexe != null && data.venteAnnexe > 0) {
+        setVenteAnnexe(String(data.venteAnnexe))
+      } else {
+        fetch(`/api/vente-annexe?year=${year}&month=${month}&save=1`).then(r => r.json()).then(va => {
+          if (va.totalHT > 0) setVenteAnnexe(String(va.totalHT))
+        }).catch(() => {})
+      }
       // Auto-fetch food cost from Pennylane supplier invoices
       if (data.foodCostReel != null && data.foodCostReel > 0) {
         setFoodCostReel(String(data.foodCostReel))
