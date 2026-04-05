@@ -322,13 +322,16 @@ function PLSection({ costs, grandTotal, staffReel, setStaffReel, foodCostReel, s
           onSave={() => saveExpense("vente_annexe", parseFloat(venteAnnexe) || 0)}
           saving={savingExpense} pct={venteAnnexeNum > 0 ? pct(venteAnnexeNum) : undefined} color="blue" />
 
-        {/* CA Total */}
-        {(darkKitchenNum > 0 || venteAnnexeNum > 0) && (
-          <div className="px-4 md:px-6 py-3 flex items-center justify-between bg-blue-50">
-            <p className="text-sm font-bold text-blue-900">CA Total</p>
-            <span className="font-mono font-bold text-sm text-blue-900">{fmt(caTotal)} €</span>
-          </div>
-        )}
+        {/* CA Total — toujours affiché */}
+        <div className="px-4 md:px-6 py-3 flex items-center justify-between bg-blue-50">
+          <p className="text-sm font-bold text-blue-900">CA Total</p>
+          <span className="font-mono font-bold text-sm text-blue-900">{fmt(caTotal)} €</span>
+        </div>
+
+        {/* Separator — Charges */}
+        <div className="px-4 md:px-6 py-2 bg-gray-50">
+          <p className="text-xs font-semibold text-gray-500 uppercase">Charges variables</p>
+        </div>
 
         {/* Food cost — réel remplace théo si renseigné */}
         {foodCostReelNum > 0 ? (<>
