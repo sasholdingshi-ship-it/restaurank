@@ -12,8 +12,9 @@ type OrderSummary = {
   items: OrderItem[]
 }
 type CostsData = {
-  revenue: number; foodCost: number; foodCostPercent: number
+  revenue: number; foodCost: number; foodCostPercent: number; foodCostReel: number | null
   staffCostTheo: number; staffCostTheoPercent: number; staffCostReel: number | null
+  venteDarkKitchen: number | null; venteAnnexe: number | null
   loyer: number; electricite: number; logistiqueCamion: number; logistiqueEssence: number
   charges: number; internet: number; nettoyage: number
   matchedItems: number; unmatchedItems: number; hourlyRate: number
@@ -30,6 +31,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
   const [costs, setCosts] = useState<CostsData | null>(null)
   const [staffReel, setStaffReel] = useState<string>("")
+  const [foodCostReel, setFoodCostReel] = useState<string>("")
+  const [darkKitchen, setDarkKitchen] = useState<string>("")
+  const [venteAnnexe, setVenteAnnexe] = useState<string>("")
   const [savingExpense, setSavingExpense] = useState(false)
 
   useEffect(() => {
@@ -50,6 +54,9 @@ export default function Dashboard() {
     fetch(`/api/costs?year=${year}&month=${month}`).then(r => r.json()).then((data: CostsData) => {
       setCosts(data)
       setStaffReel(data.staffCostReel != null ? String(data.staffCostReel) : "")
+      setFoodCostReel(data.foodCostReel != null ? String(data.foodCostReel) : "")
+      setDarkKitchen(data.venteDarkKitchen != null ? String(data.venteDarkKitchen) : "")
+      setVenteAnnexe(data.venteAnnexe != null ? String(data.venteAnnexe) : "")
     })
   }
 
@@ -264,23 +271,37 @@ export default function Dashboard() {
       </div>
       {/* P&L Section */}
       {costs && !loading && (grandTotal + grandExtras) > 0 && (
-        <PLSection costs={costs} grandTotal={grandTotal + grandExtras} staffReel={staffReel} setStaffReel={setStaffReel}
+        <PLSection costs={costs} grandTotal={grandTotal + grandExtras}
+          staffReel={staffReel} setStaffReel={setStaffReel}
+          foodCostReel={foodCostReel} setFoodCostReel={setFoodCostReel}
+          darkKitchen={darkKitchen} setDarkKitchen={setDarkKitchen}
+          venteAnnexe={venteAnnexe} setVenteAnnexe={setVenteAnnexe}
           savingExpense={savingExpense} saveExpense={saveExpense} />
       )}
     </div>
   )
 }
 
-function PLSection({ costs, grandTotal, staffReel, setStaffReel, savingExpense, saveExpense }: {
-  costs: CostsData; grandTotal: number; staffReel: string; setStaffReel: (v: string) => void
+function PLSection({ costs, grandTotal, staffReel, setStaffReel, foodCostReel, setFoodCostReel,
+  darkKitchen, setDarkKitchen, venteAnnexe, setVenteAnnexe, savingExpense, saveExpense }: {
+  costs: CostsData; grandTotal: number
+  staffReel: string; setStaffReel: (v: string) => void
+  foodCostReel: string; setFoodCostReel: (v: string) => void
+  darkKitchen: string; setDarkKitchen: (v: string) => void
+  venteAnnexe: string; setVenteAnnexe: (v: string) => void
   savingExpense: boolean; saveExpense: (type: string, amount: number) => Promise<void>
 }) {
   const fixedTotal = costs.loyer + costs.electricite + costs.logistiqueCamion + costs.logistiqueEssence + costs.charges + costs.internet + costs.nettoyage
   const staffReelNum = staffReel ? parseFloat(staffReel) : 0
-  const totalCharges = costs.foodCost + (staffReelNum || costs.staffCostTheo) + fixedTotal
-  const resultat = grandTotal - totalCharges
-  const resultatPercent = grandTotal > 0 ? (resultat / grandTotal * 100) : 0
-  const pct = (v: number) => grandTotal > 0 ? (v / grandTotal * 100).toFixed(1) : "0"
+  const foodCostReelNum = foodCostReel ? parseFloat(foodCostReel) : 0
+  const darkKitchenNum = darkKitchen ? parseFloat(darkKitchen) : 0
+  const venteAnnexeNum = venteAnnexe ? parseFloat(venteAnnexe) : 0
+  const caTotal = grandTotal + darkKitchenNum + venteAnnexeNum
+  const foodCostUsed = foodCostReelNum || costs.foodCost
+  const totalCharges = foodCostUsed + (staffReelNum || costs.staffCostTheo) + fixedTotal
+  const resultat = caTotal - totalCharges
+  const resultatPercent = caTotal > 0 ? (resultat / caTotal * 100) : 0
+  const pct = (v: number) => caTotal > 0 ? (v / caTotal * 100).toFixed(1) : "0"
 
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-8">
@@ -288,35 +309,44 @@ function PLSection({ costs, grandTotal, staffReel, setStaffReel, savingExpense, 
         <h2 className="font-semibold text-gray-900 text-sm md:text-base">Compte de résultat</h2>
       </div>
       <div className="divide-y divide-gray-100">
-        {/* Revenue */}
-        <PLRow label="Chiffre d'affaires HT" value={grandTotal} pct="100" bold accent="text-gray-900" />
+        {/* Revenue section */}
+        <PLRow label="Chiffre d'affaires HT (commandes)" value={grandTotal} pct={pct(grandTotal)} bold accent="text-gray-900" />
+
+        {/* Vente Dark Kitchen — editable */}
+        <EditableRow label="Vente Dark Kitchen" value={darkKitchen} onChange={setDarkKitchen}
+          onSave={() => saveExpense("vente_dark_kitchen", parseFloat(darkKitchen) || 0)}
+          saving={savingExpense} pct={darkKitchenNum > 0 ? pct(darkKitchenNum) : undefined} color="blue" />
+
+        {/* Vente Annexe — editable */}
+        <EditableRow label="Vente annexe" value={venteAnnexe} onChange={setVenteAnnexe}
+          onSave={() => saveExpense("vente_annexe", parseFloat(venteAnnexe) || 0)}
+          saving={savingExpense} pct={venteAnnexeNum > 0 ? pct(venteAnnexeNum) : undefined} color="blue" />
+
+        {/* CA Total */}
+        {(darkKitchenNum > 0 || venteAnnexeNum > 0) && (
+          <div className="px-4 md:px-6 py-3 flex items-center justify-between bg-blue-50">
+            <p className="text-sm font-bold text-blue-900">CA Total</p>
+            <span className="font-mono font-bold text-sm text-blue-900">{fmt(caTotal)} €</span>
+          </div>
+        )}
 
         {/* Food cost */}
-        <PLRow label="Food Cost" sublabel={`${costs.matchedItems} produits / ${costs.matchedItems + costs.unmatchedItems} total`}
+        <PLRow label="Food Cost (théorique)" sublabel={`${costs.matchedItems} produits / ${costs.matchedItems + costs.unmatchedItems} total`}
           value={costs.foodCost} pct={pct(costs.foodCost)} accent="text-red-600" />
+
+        {/* Food cost reel — editable */}
+        <EditableRow label="Food Cost (réel)" value={foodCostReel} onChange={setFoodCostReel}
+          onSave={() => saveExpense("food_cost_reel", parseFloat(foodCostReel) || 0)}
+          saving={savingExpense} pct={foodCostReelNum > 0 ? pct(foodCostReelNum) : undefined} color="red" />
 
         {/* Staff cost theo */}
         <PLRow label="Staff Cost (théorique)" sublabel={`SMIC chargé ${costs.hourlyRate} €/h`}
           value={costs.staffCostTheo} pct={pct(costs.staffCostTheo)} accent="text-orange-600" />
 
         {/* Staff cost reel — editable */}
-        <div className="px-4 md:px-6 py-3 flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium text-orange-700">Staff Cost (réel)</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <input type="number" inputMode="decimal" step="0.01" placeholder="Montant réel"
-              value={staffReel} onChange={e => setStaffReel(e.target.value)}
-              className="w-28 border-2 border-orange-200 rounded-lg px-2 py-1.5 text-sm text-right font-mono focus:border-orange-400 focus:outline-none" />
-            <span className="text-xs text-gray-400">€</span>
-            <button onClick={() => saveExpense("staff_reel", parseFloat(staffReel) || 0)}
-              disabled={savingExpense || !staffReel}
-              className="bg-orange-600 text-white px-2 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50">
-              {savingExpense ? "..." : "OK"}
-            </button>
-            {staffReelNum > 0 && <span className="text-xs text-orange-500 font-medium">{pct(staffReelNum)}%</span>}
-          </div>
-        </div>
+        <EditableRow label="Staff Cost (réel)" value={staffReel} onChange={setStaffReel}
+          onSave={() => saveExpense("staff_reel", parseFloat(staffReel) || 0)}
+          saving={savingExpense} pct={staffReelNum > 0 ? pct(staffReelNum) : undefined} color="orange" />
 
         {/* Separator */}
         <div className="px-4 md:px-6 py-2 bg-gray-50">
@@ -366,6 +396,34 @@ function PLRow({ label, sublabel, value, pct, bold, accent }: {
       <div className="text-right">
         <span className={`font-mono text-sm ${bold ? 'font-bold' : ''} ${accent || ''}`}>{fmt(value)} €</span>
         <span className="text-xs text-gray-400 ml-2">{pct}%</span>
+      </div>
+    </div>
+  )
+}
+
+function EditableRow({ label, value, onChange, onSave, saving, pct, color }: {
+  label: string; value: string; onChange: (v: string) => void; onSave: () => void
+  saving: boolean; pct?: string; color: string
+}) {
+  const colors: Record<string, { border: string; focus: string; btn: string; text: string }> = {
+    orange: { border: "border-orange-200", focus: "focus:border-orange-400", btn: "bg-orange-600", text: "text-orange-500" },
+    red: { border: "border-red-200", focus: "focus:border-red-400", btn: "bg-red-600", text: "text-red-500" },
+    blue: { border: "border-blue-200", focus: "focus:border-blue-400", btn: "bg-blue-600", text: "text-blue-500" },
+  }
+  const c = colors[color] || colors.orange
+  return (
+    <div className="px-4 md:px-6 py-3 flex items-center justify-between">
+      <p className={`text-sm font-medium ${c.text}`}>{label}</p>
+      <div className="flex items-center gap-2">
+        <input type="number" inputMode="decimal" step="0.01" placeholder="Montant"
+          value={value} onChange={e => onChange(e.target.value)}
+          className={`w-28 border-2 ${c.border} rounded-lg px-2 py-1.5 text-sm text-right font-mono ${c.focus} focus:outline-none`} />
+        <span className="text-xs text-gray-400">€</span>
+        <button onClick={onSave} disabled={saving || !value}
+          className={`${c.btn} text-white px-2 py-1.5 rounded-lg text-xs font-medium disabled:opacity-50`}>
+          {saving ? "..." : "OK"}
+        </button>
+        {pct && <span className={`text-xs ${c.text} font-medium`}>{pct}%</span>}
       </div>
     </div>
   )
