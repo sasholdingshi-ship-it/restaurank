@@ -8020,13 +8020,13 @@ let dirCheckResults={};
 
 const DIR_LIST=[
     // ── Référencement local (SEO + GEO) ──
-    {id:'google',icon:'📊',name:'Google',cat:'local',desc:'Mettez à jour vos informations et répondez aux avis.',connectable:true,priority:true},
-    {id:'yelp',icon:'⭐',name:'Yelp',cat:'local',desc:'Mettez à jour vos informations et répondez aux avis.',connectable:true,priority:true},
-    {id:'tripadvisor',icon:'🦉',name:'TripAdvisor',cat:'local',desc:'Mettez à jour vos informations et répondez aux avis.',connectable:true,priority:true},
-    {id:'foursquare',icon:'📍',name:'Foursquare',cat:'local',desc:'Mettez à jour vos informations et répondez aux avis.',connectable:true,priority:true},
-    {id:'bing',icon:'🔍',name:'Bing Places',cat:'local',desc:'Synchronisez depuis Google automatiquement.',connectable:true,priority:true},
-    {id:'apple',icon:'🍎',name:'Apple Plans',cat:'local',desc:'Mettez à jour vos informations Apple Maps.',connectable:true,priority:false},
-    {id:'pagesjaunes',icon:'📒',name:'Pages Jaunes',cat:'local',desc:'Mettez à jour vos informations et répondez aux avis.',connectable:true,priority:false},
+    {id:'google',icon:'📊',name:'Google',cat:'local',desc:'Gérez votre fiche via Google Business Profile.',connectable:true,priority:true,claimUrl:'https://business.google.com'},
+    {id:'yelp',icon:'⭐',name:'Yelp',cat:'local',desc:'Source #1 de ChatGPT (48.7%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://biz.yelp.fr'},
+    {id:'tripadvisor',icon:'🦉',name:'TripAdvisor',cat:'local',desc:'Source #1 de Perplexity (32.8%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.tripadvisor.fr/Owners'},
+    {id:'foursquare',icon:'📍',name:'Foursquare',cat:'local',desc:'Alimente Apple Maps, Uber, Samsung. Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://business.foursquare.com'},
+    {id:'bing',icon:'🔍',name:'Bing Places',cat:'local',desc:'Importez depuis Google ou créez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.bingplaces.com'},
+    {id:'apple',icon:'🍎',name:'Apple Plans',cat:'local',desc:'Réclamez votre lieu sur Apple Business Connect.',connectable:true,priority:false,claimUrl:'https://businessconnect.apple.com'},
+    {id:'pagesjaunes',icon:'📒',name:'Pages Jaunes',cat:'local',desc:'Réclamez votre fiche sur PagesJaunes.',connectable:true,priority:false,claimUrl:'https://www.pagesjaunes.fr/inscription'},
     // ── Plateformes auto-sync (connectées via Google/data push) ──
     {id:'openai',icon:'🤖',name:'ChatGPT / OpenAI',cat:'auto',desc:'Visibilité IA — données poussées automatiquement.',auto:true},
     {id:'perplexity',icon:'🔮',name:'Perplexity',cat:'auto',desc:'Visibilité IA — optimisation GEO automatique.',auto:true},
@@ -8192,9 +8192,11 @@ function renderDirAutoGrid(){
                     // No public API — guide user to their dashboard
                     const urls={thefork:'https://manager.thefork.com',zenchef:'https://app.zenchef.com',opentable:'https://restaurant.opentable.com',ubereats:'https://merchants.ubereats.com',deliveroo:'https://restaurant-hub.deliveroo.net',doordash:'https://merchant-portal.doordash.com',justeat:'https://partner.just-eat.fr',sevenrooms:'https://app.sevenrooms.com',resy:'https://os.resy.com'};
                     btn=`<button class="dir-auto-btn" onclick="window.open('${urls[d.id]||'#'}','_blank')" style="background:linear-gradient(135deg,#f59e0b,#d97706);">📋 Gérer manuellement</button>`;
+                } else if(d.claimUrl) {
+                    // Direct link to claim/manage page on the platform
+                    btn=`<button class="dir-auto-btn" onclick="window.open('${d.claimUrl}','_blank')">🔗 Réclamer la fiche</button>`;
                 } else {
-                    // Platforms with API check but guided claim (Yelp, Bing, Apple, Pages Jaunes)
-                    btn=`<button class="dir-auto-btn" onclick="aiAgentAutoOne('${d.id}')">Vérifier & réclamer</button>`;
+                    btn=`<button class="dir-auto-btn" onclick="aiAgentAutoOne('${d.id}')">Vérifier</button>`;
                 }
             }
 
