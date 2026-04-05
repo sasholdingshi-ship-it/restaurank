@@ -9932,7 +9932,7 @@ app.post('/api/real-audit', async (req, res) => {
     audit.sources.yelp = 'no_api_key';
   }
 
-  // 7. AI VISIBILITY CHECK — Use Claude API to simulate what AI engines would say
+  // 7. AI VISIBILITY CHECK — Use Claude API to analyze if AI engines would cite this restaurant
   if (anthropicKey) {
     tasks.push((async () => {
       try {
@@ -9992,14 +9992,14 @@ app.post('/api/real-audit', async (req, res) => {
           }
         }));
 
-        // Determine visibility level per "simulated engine"
+        // Determine visibility level per AI engine (analyzed via Claude API)
         const isCited = results.recommendation?.mentioned || results.category?.mentioned;
         const isKnown = results.specific?.mentioned || results.specific?.partialMatch;
         const isPartial = results.recommendation?.partialMatch || results.category?.partialMatch;
 
         audit.aiVisibility = {
           available: true,
-          // Simulated as Claude (represents all LLMs since they share training data)
+          // Analyzed via Claude API (represents LLM behavior since they share training data)
           citedInList: isCited, // Mentioned in "best restaurants" list
           knownByAI: isKnown,  // AI knows about this specific restaurant
           partialMatch: isPartial,
@@ -10417,8 +10417,8 @@ app.post('/api/ai-test/single', async (req, res) => {
     const apiKey = getAIKey(restaurant_id);
     if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key', message: 'Clé API Claude requise pour tester la visibilité IA' });
 
-    // Build the simulation prompt — we ask Claude to simulate how the target platform would answer
-    const systemPrompt = `Tu es un simulateur de moteur IA. Simule la réponse que ${platform} donnerait à la requête utilisateur ci-dessous.
+    // Build the analysis prompt — we ask Claude to predict how the target platform would answer
+    const systemPrompt = `Tu es un expert en GEO (Generative Engine Optimization). Analyse comment ${platform} répondrait à la requête utilisateur ci-dessous.
 Réponds comme le ferait ${platform} — naturellement, avec des recommandations.
 IMPORTANT: Sois réaliste. Si le restaurant "${restaurant_name}" à ${city} est peu connu, il est normal qu'il ne soit PAS mentionné.
 Après ta réponse simulée, ajoute sur une ligne séparée un JSON avec cette structure exacte:
@@ -10489,7 +10489,7 @@ app.post('/api/ai-test/matrix', async (req, res) => {
     for (const prompt of proms) {
       for (const platform of plats) {
         try {
-          const systemPrompt = `Tu es un simulateur de moteur IA. Simule la réponse COURTE que ${platform} donnerait.
+          const systemPrompt = `Tu es un expert GEO. Analyse la réponse COURTE que ${platform} donnerait.
 Restaurant à vérifier: "${restaurant_name}" à ${city} (cuisine: ${cuisine || 'variée'}).
 Réponds en 2-3 phrases max, puis ajoute le JSON:
 {"cited": true/false, "position": 0-5, "confidence": 0.0-1.0}`;

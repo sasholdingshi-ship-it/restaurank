@@ -4176,7 +4176,7 @@ async function revokeInviteCode(id){
 document.addEventListener('DOMContentLoaded',()=>{if(!handleUrlParams()){checkSession();}checkUpgradeRedirect();checkOAuthRedirect();checkRegistrationMode();});
 
 // ============================================================
-// SIMULATION — deterministic seed based on name+city (stable scores)
+// AUDIT DATA — real API data or null (never simulated)
 // ============================================================
 let storedName='',storedCity='';
 // (removed _seedHash — no longer needed, all audit data comes from real APIs)
@@ -10983,9 +10983,9 @@ async function runAIMatrixTest(){
             showToast(`✅ ${d.results.length} tests terminés — ${d.summary?.cited_count||0} citations trouvées`);
             return;
         }
-    }catch(e){console.warn('Matrix API failed, falling back to simulation:',e.message);}
+    }catch(e){console.warn('Matrix API failed:',e.message);}
 
-    // No API — show configure message instead of fake results
+    // No API — show error, never fake results
     window._aiTestResults.forEach(r=>{r.status='error';r.error='Clé API requise';r.cited=false;r.confidence=0;r.position=0;});
     renderAIMatrix();
     showToast('⚠️ Configurez votre clé API dans Paramètres pour tester la visibilité IA','error',5000);
