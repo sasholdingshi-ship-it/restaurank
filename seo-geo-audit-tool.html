@@ -6707,7 +6707,134 @@ function switchDashTab(tab){
     if(tab==='hub'){try{populateHub();renderHubSources();renderHubPhotos();}catch(e){}}
     if(tab==='team'){try{renderTeam();}catch(e){}}
     if(tab==='agent'){try{loadAgentHistory();}catch(e){}}
-    if(tab==='content'){try{loadBlogHistory();loadCMSSnapshots();}catch(e){}}
+    if(tab==='content'){try{loadBlogHistory();loadCMSSnapshots();renderContentCMSStatus();}catch(e){}}
+}
+
+// Show CMS connection status at the top of the Content tab
+function renderContentCMSStatus(){
+    let el=document.getElementById('contentCMSStatus');
+    if(!el){
+        // Insert at the top of tabContent
+        const tc=document.getElementById('tabContent');
+        if(!tc)return;
+        el=document.createElement('div');
+        el.id='contentCMSStatus';
+        el.style.cssText='padding:0 20px;max-width:960px;margin:16px auto 0;width:100%;';
+        tc.querySelector('div').prepend(el);
+    }
+    const cms=cmsConnection||JSON.parse(localStorage.getItem('restaurank_cms')||'null');
+    const detected=detectedCMS?.detected?.cms||currentData?.detectedCMS?.cms;
+    const cmsType=cms?.type||detected;
+
+    if(cms&&cms.connected){
+        // Connected — show green banner
+        const cmsName=({wordpress:'WordPress',webflow:'Webflow',shopify:'Shopify',wix:'Wix',squarespace:'Squarespace',ghost:'Ghost'})[cms.type]||cms.type;
+        el.innerHTML=`
+            <div style="background:rgba(45,122,79,.08);border:1px solid rgba(45,122,79,.3);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                <div style="font-size:1.4rem;">✅</div>
+                <div style="flex:1;">
+                    <div style="font-weight:700;font-size:.88rem;color:var(--grn);">${cmsName} connecté</div>
+                    <div style="font-size:.7rem;color:var(--mut);">Les articles seront publiés automatiquement en zone cachée sur votre site</div>
+                </div>
+                <button class="btn-gen" style="font-size:.7rem;padding:6px 12px;background:var(--s2);" onclick="switchDashTab('dispatch')">🔧 Gérer</button>
+            </div>`;
+    } else if(detected){
+        // Detected but not connected — show connection CTA with instructions
+        const instructions=({
+            wordpress:{
+                name:'WordPress',
+                icon:'📝',
+                steps:[
+                    '1. Connectez-vous à <strong>votre WordPress</strong>',
+                    '2. Allez dans <strong>Utilisateurs → Profil</strong>',
+                    '3. Descendez à <strong>"Application Passwords"</strong>',
+                    '4. Créez un mot de passe nommé "RestauRank"',
+                    '5. Copiez le mot de passe généré et collez-le dans l\'onglet IA Dispatch'
+                ]
+            },
+            webflow:{
+                name:'Webflow',
+                icon:'🌊',
+                steps:[
+                    '1. Allez sur <a href="https://webflow.com/dashboard/account/integrations" target="_blank" style="color:var(--org);">webflow.com/dashboard/account/integrations</a>',
+                    '2. Cliquez <strong>"Generate new API token"</strong>',
+                    '3. Permissions : <strong>CMS (Read+Write)</strong>',
+                    '4. Copiez le token et votre site_id',
+                    '5. Collez dans l\'onglet IA Dispatch'
+                ]
+            },
+            shopify:{
+                name:'Shopify',
+                icon:'🛍️',
+                steps:[
+                    '1. Shopify Admin → <strong>Apps → Develop apps</strong>',
+                    '2. <strong>Create app</strong> → nommez "RestauRank"',
+                    '3. Configure scopes : <code>write_content, read_themes</code>',
+                    '4. Install app → copiez l\'<strong>Admin API access token</strong>',
+                    '5. Collez dans l\'onglet IA Dispatch'
+                ]
+            },
+            wix:{
+                name:'Wix',
+                icon:'🔷',
+                steps:[
+                    '1. Wix Dashboard → <strong>Settings → API Keys</strong>',
+                    '2. <strong>Generate API Key</strong>',
+                    '3. Permissions : <strong>Site Manager, Blog</strong>',
+                    '4. Copiez la clé et votre site_id',
+                    '5. Collez dans l\'onglet IA Dispatch'
+                ]
+            },
+            squarespace:{
+                name:'Squarespace',
+                icon:'⬛',
+                steps:[
+                    '1. Squarespace → <strong>Settings → Advanced → API Keys</strong>',
+                    '2. <strong>Generate API Key</strong>',
+                    '3. Copiez la clé',
+                    '4. Collez dans l\'onglet IA Dispatch'
+                ]
+            },
+            ghost:{
+                name:'Ghost',
+                icon:'👻',
+                steps:[
+                    '1. Ghost Admin → <strong>Integrations</strong>',
+                    '2. <strong>Add custom integration</strong> → nommez "RestauRank"',
+                    '3. Copiez <strong>Admin API Key</strong> + <strong>API URL</strong>',
+                    '4. Collez dans l\'onglet IA Dispatch'
+                ]
+            }
+        })[detected]||{name:detected,icon:'🌐',steps:['CMS détecté mais non supporté par API — mode manuel']};
+
+        el.innerHTML=`
+            <div style="background:rgba(217,91,43,.08);border:1px solid rgba(217,91,43,.3);border-radius:12px;padding:16px 20px;margin-bottom:12px;">
+                <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
+                    <div style="font-size:1.6rem;">${instructions.icon}</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:800;font-size:.95rem;color:var(--org);">${instructions.name} détecté — connexion requise</div>
+                        <div style="font-size:.72rem;color:var(--mut);margin-top:2px;">Pour publier automatiquement, connectez votre ${instructions.name} en donnant un accès API dédié</div>
+                    </div>
+                    <button class="btn-gen" style="background:#D95B2B;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="switchDashTab('dispatch');setTimeout(()=>{const b=document.querySelector('.cms-connect-btn:not(.connected)');if(b)b.click();},500);">🔗 Se connecter maintenant</button>
+                </div>
+                <details style="margin-top:8px;">
+                    <summary style="cursor:pointer;font-size:.72rem;color:var(--org);font-weight:600;">📘 Voir les étapes de connexion</summary>
+                    <div style="margin-top:10px;padding:12px 14px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
+                        ${instructions.steps.map(s=>`<div style="padding:4px 0;font-size:.75rem;color:var(--txt);">${s}</div>`).join('')}
+                    </div>
+                </details>
+            </div>`;
+    } else {
+        // No CMS detected
+        el.innerHTML=`
+            <div style="background:rgba(107,114,128,.1);border:1px solid var(--bdr);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:12px;">
+                <div style="font-size:1.4rem;">ℹ️</div>
+                <div style="flex:1;">
+                    <div style="font-weight:700;font-size:.85rem;">Aucun site web détecté</div>
+                    <div style="font-size:.7rem;color:var(--mut);">Lancez un audit avec l'URL de votre site pour activer la publication automatique de contenu</div>
+                </div>
+            </div>`;
+    }
 }
 
 async function loadCMSSnapshots(){
