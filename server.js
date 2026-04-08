@@ -524,6 +524,47 @@ db.exec(`
     revert_error TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS reddit_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER NOT NULL,
+    username TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    client_secret TEXT NOT NULL,
+    password TEXT NOT NULL,
+    account_age_days INTEGER DEFAULT 0,
+    karma INTEGER DEFAULT 0,
+    last_verified DATETIME,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS reddit_post_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER NOT NULL,
+    account_id INTEGER NOT NULL,
+    subreddit TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    scheduled_for DATETIME NOT NULL,
+    status TEXT DEFAULT 'pending',
+    attempt_count INTEGER DEFAULT 0,
+    last_error TEXT,
+    post_id TEXT,
+    post_url TEXT,
+    published_at DATETIME,
+    content_hash TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS reddit_post_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL,
+    subreddit TEXT NOT NULL,
+    post_id TEXT,
+    post_url TEXT,
+    content_hash TEXT,
+    posted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status TEXT DEFAULT 'ok',
+    error TEXT
+  );
 `);
 
 // ============================================================
@@ -3281,54 +3322,555 @@ Comment ${name} a su se démarquer dans la restauration ${cuisine} à ${city} : 
 // REDDIT — OAuth + Post Submission
 // ============================================================
 // Reddit OAuth app: https://www.reddit.com/prefs/apps
-app.post('/api/reddit/post', async (req, res) => {
-  const { subreddit, title, text } = req.body;
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  const username = process.env.REDDIT_USERNAME;
-  const password = process.env.REDDIT_PASSWORD;
+// ============================================================
+// UNIVERSAL ANTI-DETECTION ENGINE — applies to ALL platforms
+// ============================================================
 
-  if (!clientId || !clientSecret || !username || !password) {
-    return res.json({ success: false, error: 'Reddit API non configurée. Ajoutez REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USERNAME, REDDIT_PASSWORD dans les variables d\'environnement.', needsConfig: true });
+// Realistic User-Agents (updated regularly)
+const ANTI_DETECT_USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+];
+function pickUA() { return ANTI_DETECT_USER_AGENTS[Math.floor(Math.random() * ANTI_DETECT_USER_AGENTS.length)]; }
+
+// Per-platform rate limits (posts per account)
+const PLATFORM_LIMITS = {
+  reddit:      { perDay: 3, perWeek: 15, minMinBetween: 60, perSubPerWeek: 1 },
+  medium:      { perDay: 2, perWeek: 10, minMinBetween: 180 },
+  linkedin:    { perDay: 3, perWeek: 15, minMinBetween: 120 },
+  quora:       { perDay: 5, perWeek: 25, minMinBetween: 45 },
+  gbp_qa:      { perDay: 5, perWeek: 30, minMinBetween: 30 },
+  tripadvisor: { perDay: 10, perWeek: 50, minMinBetween: 15 },
+  instagram:   { perDay: 3, perWeek: 20, minMinBetween: 60 },
+  facebook:    { perDay: 5, perWeek: 30, minMinBetween: 30 },
+  google_post: { perDay: 2, perWeek: 10, minMinBetween: 240 },
+};
+
+// Human-like jitter (min-max ms)
+function humanJitter(minSec = 5, maxSec = 30) {
+  return (minSec + Math.random() * (maxSec - minSec)) * 1000;
+}
+
+// Peak hour scheduling (France business hours, no 3am posts)
+function nextPeakSlot(now = new Date()) {
+  const peaks = [8, 10, 12, 14, 17, 19, 21]; // 7 peak hours spread across the day
+  const next = new Date(now);
+  const h = next.getHours();
+  let target = peaks.find(p => p > h);
+  if (!target) {
+    next.setDate(next.getDate() + 1);
+    target = peaks[0];
   }
+  next.setHours(target, Math.floor(Math.random() * 60), Math.floor(Math.random() * 60), 0);
+  return next;
+}
 
+// Ensure content has never been posted before on this platform (hash-based)
+function isContentUnique(platform, restaurantId, contentText) {
+  const hash = crypto.createHash('md5').update(contentText).digest('hex').substring(0, 16);
   try {
-    // Step 1: Get access token via password grant
-    const authResp = await fetch('https://www.reddit.com/api/v1/access_token', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'RestauRank/1.0'
-      },
-      body: `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-    });
-    const authData = await authResp.json();
-    if (!authData.access_token) throw new Error('Reddit auth failed: ' + JSON.stringify(authData));
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    const dup = db.prepare(`SELECT id FROM anti_detection_log WHERE platform = ? AND content_hash = ? AND posted_at > datetime('now', '-90 days')`).get(platform, hash);
+    return { unique: !dup, hash };
+  } catch(e) { return { unique: true, hash }; }
+}
 
-    // Step 2: Submit post
-    const postResp = await fetch('https://oauth.reddit.com/api/submit', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authData.access_token}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'RestauRank/1.0'
-      },
-      body: `sr=${encodeURIComponent(subreddit)}&kind=self&title=${encodeURIComponent(title)}&text=${encodeURIComponent(text)}&api_type=json`
-    });
-    const postData = await postResp.json();
+// Check rate limits for any platform+account
+function checkRateLimit(platform, accountRef) {
+  const rules = PLATFORM_LIMITS[platform];
+  if (!rules) return { allowed: true };
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
 
-    if (postData.json?.errors?.length > 0) {
-      throw new Error(postData.json.errors.map(e => e[1]).join(', '));
+    const today = db.prepare(`SELECT COUNT(*) as c FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-24 hours')`).get(platform, accountRef || '')?.c || 0;
+    if (today >= rules.perDay) return { allowed: false, reason: `Limite quotidienne ${platform} atteinte (${today}/${rules.perDay}). Reddit/Meta détectent le spam au-delà.`, retryAfter: 24*60*60*1000 };
+
+    const week = db.prepare(`SELECT COUNT(*) as c FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-7 days')`).get(platform, accountRef || '')?.c || 0;
+    if (week >= rules.perWeek) return { allowed: false, reason: `Limite hebdomadaire ${platform} atteinte (${week}/${rules.perWeek})`, retryAfter: 7*24*60*60*1000 };
+
+    const lastPost = db.prepare(`SELECT posted_at FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' ORDER BY posted_at DESC LIMIT 1`).get(platform, accountRef || '');
+    if (lastPost) {
+      const diff = Date.now() - new Date(lastPost.posted_at + 'Z').getTime();
+      const minDiff = rules.minMinBetween * 60 * 1000;
+      if (diff < minDiff) {
+        const wait = Math.ceil((minDiff - diff) / 60000);
+        return { allowed: false, reason: `Attendez ${wait}min avant le prochain post (${platform})`, retryAfter: minDiff - diff };
+      }
     }
 
-    const postUrl = postData.json?.data?.url || '';
-    res.json({ success: true, url: postUrl, id: postData.json?.data?.id });
+    return { allowed: true };
+  } catch(e) { return { allowed: true }; }
+}
+
+// Log a successful action (used for rate limit tracking)
+function logAntiDetection(platform, restaurantId, accountRef, target, contentHash, status = 'ok', error = null) {
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    db.prepare(`INSERT INTO anti_detection_log (restaurant_id, platform, account_ref, target, content_hash, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(restaurantId || 0, platform, accountRef || '', target || '', contentHash || '', status, error);
+  } catch(e) {}
+}
+
+// ============================================================
+// REDDIT — PER-RESTAURANT ACCOUNT POOL + MAX ANTI-BAN
+// ============================================================
+
+// Get access token for a Reddit account
+async function getRedditToken(acc) {
+  const r = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + Buffer.from(`${acc.client_id}:${acc.client_secret}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': `RestauRank/1.0 by /u/${acc.username}`
+    },
+    body: `grant_type=password&username=${encodeURIComponent(acc.username)}&password=${encodeURIComponent(acc.password)}`
+  });
+  const d = await r.json();
+  if (!d.access_token) throw new Error('Reddit auth failed: ' + (d.error || JSON.stringify(d)));
+  return d.access_token;
+}
+
+// Verify Reddit account (age, karma, not shadowbanned)
+async function verifyRedditAccount(acc) {
+  const token = await getRedditToken(acc);
+  const r = await fetch(`https://oauth.reddit.com/user/${acc.username}/about`, {
+    headers: { 'Authorization': `Bearer ${token}`, 'User-Agent': `RestauRank/1.0 by /u/${acc.username}` }
+  });
+  const d = await r.json();
+  if (!d.data) throw new Error('Compte Reddit inaccessible');
+  const created = d.data.created_utc * 1000;
+  const ageDays = Math.floor((Date.now() - created) / (1000 * 60 * 60 * 24));
+  return {
+    age_days: ageDays,
+    karma: (d.data.link_karma || 0) + (d.data.comment_karma || 0),
+    link_karma: d.data.link_karma || 0,
+    comment_karma: d.data.comment_karma || 0,
+    is_employee: d.data.is_employee || false,
+    verified: d.data.verified || false
+  };
+}
+
+// ANTI-BAN CHECKS — returns { allowed: bool, reason: string, retryAfter: ms }
+function checkRedditAntiBan(accountId, subreddit, contentHash) {
+  const rules = {
+    minAgeDays: 7,                // account must be 7+ days old
+    minKarma: 5,                  // at least 5 karma
+    maxPostsPerDay: 3,            // max 3 posts per day per account
+    maxPostsPerSubPerWeek: 1,     // max 1 post per subreddit per week (most important rule)
+    minMinutesBetweenPosts: 60,   // wait 60min between posts (same account)
+    duplicateContentWindowDays: 30 // don't post same content hash within 30d
+  };
+
+  // Get account
+  const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ?').get(accountId);
+  if (!acc) return { allowed: false, reason: 'Compte Reddit introuvable' };
+  if (!acc.is_active) return { allowed: false, reason: 'Compte désactivé' };
+  if (acc.account_age_days < rules.minAgeDays) return { allowed: false, reason: `Compte trop récent (${acc.account_age_days}j < ${rules.minAgeDays}j). Laissez le compte mûrir avant de poster.` };
+  if (acc.karma < rules.minKarma) return { allowed: false, reason: `Karma insuffisant (${acc.karma} < ${rules.minKarma}). Commentez des posts pour gagner du karma.` };
+
+  // Posts today (UTC)
+  const postsToday = db.prepare(`SELECT COUNT(*) as c FROM reddit_post_log WHERE account_id = ? AND posted_at > datetime('now', '-24 hours') AND status = 'ok'`).get(accountId)?.c || 0;
+  if (postsToday >= rules.maxPostsPerDay) return { allowed: false, reason: `Limite quotidienne atteinte (${postsToday}/${rules.maxPostsPerDay} posts/24h). Reddit détecte le spam au-delà.`, retryAfter: 24 * 60 * 60 * 1000 };
+
+  // Posts in this subreddit this week
+  const postsInSub = db.prepare(`SELECT COUNT(*) as c FROM reddit_post_log WHERE account_id = ? AND subreddit = ? AND posted_at > datetime('now', '-7 days') AND status = 'ok'`).get(accountId, subreddit)?.c || 0;
+  if (postsInSub >= rules.maxPostsPerSubPerWeek) return { allowed: false, reason: `Déjà posté dans r/${subreddit} cette semaine. Reddit ban pour spam si on poste plusieurs fois/sem dans le même sub.`, retryAfter: 7 * 24 * 60 * 60 * 1000 };
+
+  // Time since last post (any subreddit)
+  const lastPost = db.prepare(`SELECT posted_at FROM reddit_post_log WHERE account_id = ? AND status = 'ok' ORDER BY posted_at DESC LIMIT 1`).get(accountId);
+  if (lastPost) {
+    const diff = Date.now() - new Date(lastPost.posted_at + 'Z').getTime();
+    const minDiff = rules.minMinutesBetweenPosts * 60 * 1000;
+    if (diff < minDiff) {
+      const wait = Math.ceil((minDiff - diff) / 60000);
+      return { allowed: false, reason: `Trop récent depuis le dernier post (attente ${wait}min)`, retryAfter: minDiff - diff };
+    }
+  }
+
+  // Duplicate content check
+  if (contentHash) {
+    const dup = db.prepare(`SELECT id FROM reddit_post_log WHERE content_hash = ? AND posted_at > datetime('now', '-30 days')`).get(contentHash);
+    if (dup) return { allowed: false, reason: 'Contenu identique déjà publié dans les 30 derniers jours. Variez le texte.' };
+  }
+
+  return { allowed: true };
+}
+
+// Register a Reddit account for a restaurant
+app.post('/api/reddit/accounts', async (req, res) => {
+  const { restaurant_id, username, client_id, client_secret, password } = req.body;
+  if (!restaurant_id || !username || !client_id || !client_secret || !password) {
+    return res.json({ success: false, error: 'Champs requis: restaurant_id, username, client_id, client_secret, password' });
+  }
+  try {
+    // Verify the account first
+    const stats = await verifyRedditAccount({ username, client_id, client_secret, password });
+    const existing = db.prepare('SELECT id FROM reddit_accounts WHERE restaurant_id = ? AND username = ?').get(restaurant_id, username);
+    if (existing) {
+      db.prepare('UPDATE reddit_accounts SET client_id=?, client_secret=?, password=?, account_age_days=?, karma=?, last_verified=datetime(\'now\'), is_active=1 WHERE id=?').run(client_id, client_secret, password, stats.age_days, stats.karma, existing.id);
+    } else {
+      db.prepare('INSERT INTO reddit_accounts (restaurant_id, username, client_id, client_secret, password, account_age_days, karma, last_verified) VALUES (?, ?, ?, ?, ?, ?, ?, datetime(\'now\'))').run(restaurant_id, username, client_id, client_secret, password, stats.age_days, stats.karma);
+    }
+    res.json({ success: true, stats, warnings: [
+      stats.age_days < 30 ? `⚠️ Compte jeune (${stats.age_days}j) — postez peu pour ne pas alerter Reddit` : null,
+      stats.karma < 50 ? `⚠️ Karma bas (${stats.karma}) — commentez des posts populaires pour en gagner` : null
+    ].filter(Boolean) });
   } catch (e) {
-    console.error('Reddit post error:', e.message);
     res.json({ success: false, error: e.message });
   }
 });
+
+// List accounts for a restaurant
+app.get('/api/reddit/accounts', (req, res) => {
+  const { restaurant_id } = req.query;
+  const rows = db.prepare('SELECT id, username, account_age_days, karma, last_verified, is_active, created_at FROM reddit_accounts WHERE restaurant_id = ?').all(parseInt(restaurant_id) || 0);
+  res.json({ success: true, accounts: rows || [] });
+});
+
+// Schedule posts to be published with spacing (anti-ban)
+app.post('/api/reddit/schedule', async (req, res) => {
+  const { restaurant_id, account_id, posts } = req.body;
+  if (!restaurant_id || !account_id || !Array.isArray(posts) || !posts.length) {
+    return res.json({ success: false, error: 'restaurant_id, account_id, posts[] requis' });
+  }
+  const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ? AND restaurant_id = ?').get(account_id, restaurant_id);
+  if (!acc) return res.json({ success: false, error: 'Compte introuvable' });
+
+  // Schedule each post with random delays (2-6h between posts) to look natural
+  const scheduled = [];
+  let nextTime = Date.now() + (30 + Math.random() * 60) * 60 * 1000; // First post in 30-90min
+  for (const p of posts) {
+    // Anti-ban check
+    const contentHash = crypto.createHash('md5').update(p.title + p.body).digest('hex').substring(0, 16);
+    const check = checkRedditAntiBan(account_id, p.subreddit, contentHash);
+    if (!check.allowed) {
+      scheduled.push({ subreddit: p.subreddit, status: 'blocked', reason: check.reason });
+      continue;
+    }
+    const when = new Date(nextTime).toISOString();
+    db.prepare(`INSERT INTO reddit_post_queue (restaurant_id, account_id, subreddit, title, body, scheduled_for, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(restaurant_id, account_id, p.subreddit, p.title, p.body, when, contentHash);
+    scheduled.push({ subreddit: p.subreddit, status: 'scheduled', scheduled_for: when });
+    // Space next post 2-6h later
+    nextTime += (120 + Math.random() * 240) * 60 * 1000;
+  }
+  res.json({ success: true, scheduled });
+});
+
+// List queue for a restaurant
+app.get('/api/reddit/queue', (req, res) => {
+  const { restaurant_id } = req.query;
+  const rows = db.prepare(`SELECT q.*, a.username FROM reddit_post_queue q LEFT JOIN reddit_accounts a ON q.account_id = a.id WHERE q.restaurant_id = ? ORDER BY q.scheduled_for DESC LIMIT 50`).all(parseInt(restaurant_id) || 0);
+  res.json({ success: true, queue: rows || [] });
+});
+
+// Cancel a scheduled post
+app.post('/api/reddit/queue/:id/cancel', (req, res) => {
+  const r = db.prepare(`UPDATE reddit_post_queue SET status='cancelled' WHERE id = ? AND status='pending'`).run(req.params.id);
+  res.json({ success: r.changes > 0 });
+});
+
+// ── MAX ANTI-BAN: realistic User-Agents, proxies, jitter ──
+const REDDIT_USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+];
+function randomUA() { return REDDIT_USER_AGENTS[Math.floor(Math.random() * REDDIT_USER_AGENTS.length)]; }
+
+// ── Check subreddit rules before posting (avoid anti-promo bans) ──
+async function checkSubredditRules(token, subreddit) {
+  try {
+    const r = await fetch(`https://oauth.reddit.com/r/${subreddit}/about/rules`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'User-Agent': randomUA() }
+    });
+    const d = await r.json();
+    const rules = (d.rules || []).map(r => (r.short_name + ' ' + r.description).toLowerCase());
+    const hasAntiPromo = rules.some(r => r.includes('self-promo') || r.includes('self promo') || r.includes('no promotion') || r.includes('no advertising'));
+    const hasMinKarma = rules.some(r => /karma.{0,30}\d+/i.test(r));
+    const hasMinAge = rules.some(r => /age.{0,30}\d+.{0,10}day/i.test(r));
+    return { rules, hasAntiPromo, hasMinKarma, hasMinAge };
+  } catch(e) {
+    return { rules: [], hasAntiPromo: false };
+  }
+}
+
+// ── Check if a post is shadow-banned (visible to author but not others) ──
+async function checkShadowBan(postId, username) {
+  try {
+    // Fetch without auth — if shadowbanned, the post won't appear
+    const r = await fetch(`https://www.reddit.com/user/${username}/submitted.json?limit=10`, {
+      headers: { 'User-Agent': randomUA() }
+    });
+    const d = await r.json();
+    const found = (d.data?.children || []).some(c => c.data?.id === postId);
+    return !found; // if not found publicly → shadow banned
+  } catch(e) { return false; }
+}
+
+app.post('/api/reddit/post', async (req, res) => {
+  const { subreddit, title, text, restaurant_id, account_id } = req.body;
+
+  // Per-restaurant account required (no global account to avoid cross-contamination)
+  if (!account_id || !restaurant_id) {
+    return res.json({ success: false, error: 'restaurant_id + account_id requis. Utilisez /api/reddit/accounts pour ajouter un compte.' });
+  }
+
+  const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ? AND restaurant_id = ?').get(account_id, restaurant_id);
+  if (!acc) return res.json({ success: false, error: 'Compte introuvable' });
+
+  const contentHash = crypto.createHash('md5').update(title + text).digest('hex').substring(0, 16);
+  const check = checkRedditAntiBan(account_id, subreddit, contentHash);
+  if (!check.allowed) {
+    return res.json({ success: false, error: check.reason, blocked_by: 'antiban', retryAfter: check.retryAfter });
+  }
+
+  try {
+    const token = await getRedditToken(acc);
+
+    // Check subreddit rules before posting
+    const subRules = await checkSubredditRules(token, subreddit);
+    if (subRules.hasAntiPromo) {
+      return res.json({ success: false, error: `r/${subreddit} interdit explicitement l'auto-promo. Choisissez un autre subreddit.`, blocked_by: 'subreddit_rules', rules: subRules.rules.slice(0, 3) });
+    }
+
+    // Human-like delay before posting (5-30s)
+    await new Promise(r => setTimeout(r, 5000 + Math.random() * 25000));
+
+    const r = await fetch('https://oauth.reddit.com/api/submit', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': randomUA() },
+      body: `sr=${encodeURIComponent(subreddit)}&kind=self&title=${encodeURIComponent(title)}&text=${encodeURIComponent(text)}&api_type=json&sendreplies=true`
+    });
+    const d = await r.json();
+    if (d.json?.errors?.length > 0) {
+      const errMsg = d.json.errors.map(e => e[1]).join(', ');
+      db.prepare(`INSERT INTO reddit_post_log (account_id, subreddit, content_hash, status, error) VALUES (?, ?, ?, 'error', ?)`).run(account_id, subreddit, contentHash, errMsg);
+      throw new Error(errMsg);
+    }
+    const url = d.json?.data?.url || '';
+    const postId = d.json?.data?.id || '';
+    db.prepare(`INSERT INTO reddit_post_log (account_id, subreddit, post_id, post_url, content_hash, status) VALUES (?, ?, ?, ?, ?, 'ok')`).run(account_id, subreddit, postId, url, contentHash);
+
+    // Schedule shadow-ban check 24h later
+    setTimeout(async () => {
+      const isShadow = await checkShadowBan(postId, acc.username);
+      if (isShadow) {
+        db.prepare(`UPDATE reddit_post_log SET status='shadow_banned' WHERE post_id=?`).run(postId);
+        console.warn(`⚠️ Possible shadow ban: u/${acc.username} post ${postId} not publicly visible`);
+      }
+    }, 24 * 60 * 60 * 1000);
+
+    return res.json({ success: true, url, id: postId, used_account: acc.username });
+  } catch (e) {
+    return res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// GEO CONTENT DISTRIBUTION — 100% legitimate automated platforms
+// Platforms where businesses are officially welcome, cited by AI engines
+// ============================================================
+
+// Anti-bot helpers reused across all platforms
+function humanLikeDelay() {
+  // Random delay 30-90s to mimic human pasting+clicking
+  return 30000 + Math.random() * 60000;
+}
+
+function randomBusinessHour() {
+  // Next peak hour: 8h, 12h, 19h (France time)
+  const now = new Date();
+  const peaks = [8, 12, 19];
+  const h = now.getHours();
+  let target = peaks.find(p => p > h) || (24 + peaks[0]);
+  const next = new Date(now);
+  next.setHours(target % 24, Math.floor(Math.random() * 30), 0, 0);
+  if (target >= 24) next.setDate(next.getDate() + 1);
+  return next;
+}
+
+function checkContentUniqueness(platform, restaurantId, contentHash) {
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS content_distribution_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, target TEXT, title TEXT, body TEXT, content_hash TEXT, status TEXT DEFAULT 'queued', post_id TEXT, post_url TEXT, scheduled_for DATETIME, published_at DATETIME, error TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    const dup = db.prepare(`SELECT id FROM content_distribution_log WHERE platform = ? AND restaurant_id = ? AND content_hash = ? AND published_at > datetime('now', '-90 days')`).get(platform, restaurantId, contentHash);
+    return !dup;
+  } catch(e) { return true; }
+}
+
+// ── PLATFORM 1: GOOGLE BUSINESS PROFILE Q&A ──
+// Post Q&A directly on the restaurant's own GBP fiche — 100% legit
+app.post('/api/distribution/gbp-qa/schedule', requireAuth, async (req, res) => {
+  const { restaurant_id, questions } = req.body;
+  if (!Array.isArray(questions) || !questions.length) return res.json({ success: false, error: 'questions[] requis' });
+
+  // Get user's Google token
+  const user = db.prepare('SELECT google_tokens FROM users WHERE id = ?').get(req.account.id);
+  if (!user?.google_tokens) return res.json({ success: false, error: 'Connectez Google Business Profile d\'abord' });
+
+  const scheduled = [];
+  let nextTime = randomBusinessHour().getTime();
+  for (const q of questions) {
+    const contentHash = crypto.createHash('md5').update(q.question + q.answer).digest('hex').substring(0, 16);
+    if (!checkContentUniqueness('gbp_qa', restaurant_id, contentHash)) {
+      scheduled.push({ question: q.question, status: 'duplicate', reason: 'Q&A identique déjà publiée dans les 90 derniers jours' });
+      continue;
+    }
+    db.prepare(`INSERT INTO content_distribution_log (restaurant_id, platform, target, title, body, content_hash, status, scheduled_for) VALUES (?, 'gbp_qa', ?, ?, ?, ?, 'scheduled', ?)`)
+      .run(restaurant_id, 'own_profile', q.question, q.answer, contentHash, new Date(nextTime).toISOString());
+    scheduled.push({ question: q.question.substring(0, 60), status: 'scheduled', at: new Date(nextTime).toISOString() });
+    // Space next Q&A 4-8h later
+    nextTime += (240 + Math.random() * 240) * 60 * 1000;
+  }
+  res.json({ success: true, platform: 'gbp_qa', scheduled });
+});
+
+// ── PLATFORM 2: QUORA (writes answers to questions about the city/cuisine) ──
+// Quora allows businesses to answer questions — 100% legit if disclosed
+app.post('/api/distribution/quora/schedule', requireAuth, async (req, res) => {
+  const { restaurant_id, question_url, answer, disclosure } = req.body;
+  if (!question_url || !answer) return res.json({ success: false, error: 'question_url + answer requis' });
+  if (!process.env.QUORA_API_KEY) return res.json({ success: false, error: 'QUORA_API_KEY non configuré. Quora n\'a pas d\'API publique — utilisez l\'export manuel.', copy_mode: true, content: { question_url, answer: (disclosure || '[Disclosure: Je suis le propriétaire de ce restaurant] ') + answer } });
+  res.json({ success: false, error: 'Quora: utilisez le mode copier-coller pour l\'instant' });
+});
+
+// ── PLATFORM 3: MEDIUM (articles via official API) ──
+// Medium has an official API for publishing posts
+app.post('/api/distribution/medium/publish', requireAuth, async (req, res) => {
+  const { restaurant_id, title, content, tags, publish_status } = req.body;
+  const token = req.body.access_token || process.env.MEDIUM_TOKEN;
+  if (!token) return res.json({ success: false, error: 'Medium access_token requis. Créez-le sur medium.com/me/settings → Integration tokens' });
+  if (!title || !content) return res.json({ success: false, error: 'title + content requis' });
+
+  const contentHash = crypto.createHash('md5').update(title + content).digest('hex').substring(0, 16);
+  if (!checkContentUniqueness('medium', restaurant_id, contentHash)) {
+    return res.json({ success: false, error: 'Article identique déjà publié dans les 90 derniers jours' });
+  }
+
+  try {
+    // Get user ID
+    const uResp = await fetch('https://api.medium.com/v1/me', { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json' } });
+    const u = await uResp.json();
+    if (!u.data?.id) throw new Error('Medium auth failed: ' + JSON.stringify(u));
+
+    // Publish
+    const pResp = await fetch(`https://api.medium.com/v1/users/${u.data.id}/posts`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify({
+        title: title.substring(0, 100),
+        contentFormat: content.trim().startsWith('<') ? 'html' : 'markdown',
+        content,
+        tags: (tags || []).slice(0, 5),
+        publishStatus: publish_status || 'public',
+        license: 'all-rights-reserved',
+        notifyFollowers: false
+      })
+    });
+    const p = await pResp.json();
+    if (p.errors) throw new Error(p.errors[0]?.message || 'Medium publish error');
+
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS content_distribution_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, target TEXT, title TEXT, body TEXT, content_hash TEXT, status TEXT DEFAULT 'queued', post_id TEXT, post_url TEXT, scheduled_for DATETIME, published_at DATETIME, error TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+      db.prepare(`INSERT INTO content_distribution_log (restaurant_id, platform, target, title, body, content_hash, status, post_id, post_url, published_at) VALUES (?, 'medium', 'own_profile', ?, ?, ?, 'published', ?, ?, datetime('now'))`)
+        .run(restaurant_id, title, content.substring(0, 2000), contentHash, p.data?.id || '', p.data?.url || '');
+    } catch(e) {}
+
+    res.json({ success: true, platform: 'medium', post_id: p.data?.id, url: p.data?.url, status: p.data?.publishStatus });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ── PLATFORM 4: LINKEDIN COMPANY PAGE (post via LinkedIn Marketing API) ──
+app.post('/api/distribution/linkedin/post', requireAuth, async (req, res) => {
+  const { restaurant_id, page_id, text } = req.body;
+  if (!text) return res.json({ success: false, error: 'text requis' });
+
+  // Get user's LinkedIn token from social_tokens
+  let linkedinToken;
+  try {
+    const u = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(req.account.id);
+    const st = JSON.parse(u?.social_tokens || '{}');
+    linkedinToken = st.linkedin_token;
+  } catch(e) {}
+  if (!linkedinToken) return res.json({ success: false, error: 'Connectez LinkedIn d\'abord via /auth/linkedin' });
+
+  const contentHash = crypto.createHash('md5').update(text).digest('hex').substring(0, 16);
+  if (!checkContentUniqueness('linkedin', restaurant_id, contentHash)) {
+    return res.json({ success: false, error: 'Post identique déjà publié récemment' });
+  }
+
+  try {
+    const author = page_id ? `urn:li:organization:${page_id}` : null;
+    if (!author) return res.json({ success: false, error: 'page_id (organization ID) requis pour poster sur la page entreprise' });
+
+    const r = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${linkedinToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0' },
+      body: JSON.stringify({
+        author,
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: { text },
+            shareMediaCategory: 'NONE'
+          }
+        },
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' }
+      })
+    });
+    const d = await r.json();
+    if (!r.ok || d.serviceErrorCode) throw new Error(d.message || JSON.stringify(d));
+
+    try {
+      db.prepare(`INSERT INTO content_distribution_log (restaurant_id, platform, target, body, content_hash, status, post_id, published_at) VALUES (?, 'linkedin', 'company_page', ?, ?, 'published', ?, datetime('now'))`)
+        .run(restaurant_id, text.substring(0, 2000), contentHash, d.id || '');
+    } catch(e) {}
+
+    res.json({ success: true, platform: 'linkedin', post_id: d.id });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ── LIST: all distribution history for a restaurant ──
+app.get('/api/distribution/history', (req, res) => {
+  const { restaurant_id, platform } = req.query;
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS content_distribution_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, target TEXT, title TEXT, body TEXT, content_hash TEXT, status TEXT DEFAULT 'queued', post_id TEXT, post_url TEXT, scheduled_for DATETIME, published_at DATETIME, error TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    let rows;
+    if (platform) {
+      rows = db.prepare(`SELECT id, platform, target, title, status, post_url, scheduled_for, published_at, created_at FROM content_distribution_log WHERE restaurant_id = ? AND platform = ? ORDER BY created_at DESC LIMIT 50`).all(parseInt(restaurant_id) || 0, platform);
+    } else {
+      rows = db.prepare(`SELECT id, platform, target, title, status, post_url, scheduled_for, published_at, created_at FROM content_distribution_log WHERE restaurant_id = ? ORDER BY created_at DESC LIMIT 50`).all(parseInt(restaurant_id) || 0);
+    }
+    res.json({ success: true, items: rows || [] });
+  } catch(e) { res.json({ success: true, items: [] }); }
+});
+
+// ── QUEUE WORKER: publish scheduled GBP Q&A at the right time ──
+async function processDistributionQueue() {
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS content_distribution_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, target TEXT, title TEXT, body TEXT, content_hash TEXT, status TEXT DEFAULT 'queued', post_id TEXT, post_url TEXT, scheduled_for DATETIME, published_at DATETIME, error TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    const pending = db.prepare(`SELECT * FROM content_distribution_log WHERE status = 'scheduled' AND scheduled_for <= datetime('now') LIMIT 5`).all();
+    for (const item of pending) {
+      if (item.platform === 'gbp_qa') {
+        // Skip for now — requires GBP API which needs OAuth per restaurant
+        // Mark as pending_oauth
+        db.prepare(`UPDATE content_distribution_log SET status='pending_oauth', error='GBP OAuth requis pour cette action' WHERE id=?`).run(item.id);
+      }
+      // Add human-like delay before each action (5-30s jitter)
+      await new Promise(r => setTimeout(r, 5000 + Math.random() * 25000));
+    }
+  } catch(e) { console.warn('Distribution queue:', e.message); }
+}
+setInterval(processDistributionQueue, 5 * 60 * 1000); // every 5 min
 
 // ============================================================
 // META GRAPH API — Instagram + Facebook auto-publish
@@ -7619,11 +8161,38 @@ R: [Oui/Non avec détails]</p>
 </article>
 
 ══════════════════════════════════════════
-RÈGLES ABSOLUES
+RÈGLES ABSOLUES — ANTI-DÉTECTION IA (CRUCIAL)
 ══════════════════════════════════════════
+Les détecteurs d'IA (GPTZero, Originality.ai, ZeroGPT, Sapling) identifient les textes générés par patterns stylistiques.
+Pour contourner 100% des détections:
+
+INTERDITS ABSOLUS:
+❌ "En conclusion", "Pour conclure", "En résumé" (95% des textes IA)
+❌ "Il est important de noter que", "Il convient de mentionner"
+❌ "Dans ce monde en constante évolution"
+❌ "À l'ère du numérique", "À l'heure actuelle"
+❌ Em-dashes (—) sauf rare
+❌ Transitions parfaites ("De plus", "Par ailleurs", "Également" en début de phrase)
+❌ Structures symétriques (3 points, 3 arguments, 3 paragraphes parfaits)
+❌ Paragraphes de longueur uniforme
+❌ Ton neutre-professionnel-objectif permanent
+
+OBLIGATOIRES pour voix humaine:
+✅ Phrases de longueur variée (4 mots puis 28 mots puis 12 mots)
+✅ Contractions françaises naturelles ("c'est", "t'as", "y'a", "j'ai pas")
+✅ 1-2 tournures orales ("bon", "franchement", "du coup", "en vrai")
+✅ Opinion subjective ("à mon goût", "je trouve", "personnellement")
+✅ Une phrase qui commence par "Et" ou "Mais" (impossible pour IA stricte)
+✅ Une parenthèse informelle (comme ça, au passage)
+✅ Détails sensoriels précis (odeur, texture, bruit, lumière)
+✅ Imperfections volontaires: 1 répétition, 1 phrase un peu longue
+✅ Ton émotionnel: surprise, enthousiasme modéré, curiosité
+✅ Rupture de rythme: "Pause. Goûtez. Recommencez."
+
+RÈGLES FACTUELLES:
 1. RIEN N'EST INVENTÉ: si tu ne connais pas un détail, écris [à compléter] plutôt qu'inventer
 2. Ton: informatif, passionné, crédible. PAS de superlatifs vides ("incroyable", "magique", "must-see")
-3. Utilise le tutoiement OU le vouvoiement, JAMAIS mélangé
+3. Vouvoiement dans les sections formelles, tutoiement OK en FAQ si naturel
 4. Mentionne ${ctx.name} 6-10 fois naturellement
 5. Mentionne ${ctx.city} 8-12 fois naturellement
 6. Mentionne "2026" au moins 2 fois pour signal de fraîcheur
@@ -7651,16 +8220,32 @@ Tu dois écrire des posts qui:
 5. Respectent les règles des subreddits (anti-promo strict)
 
 ══════════════════════════════════════════
-RÈGLES CRUCIALES (pour ne pas se faire ban)
+RÈGLES CRUCIALES — ANTI-BAN + ANTI-DÉTECTION IA
 ══════════════════════════════════════════
+REDDIT BAN TRIGGERS (à éviter absolument):
 ❌ JAMAIS "je travaille pour ce resto" ou "ils sont super"
 ❌ JAMAIS de liens, jamais de numéros de tél
 ❌ JAMAIS de superlatifs creux ("incroyable", "magique", "must-try")
 ❌ JAMAIS la même structure dans les 3 posts
-✅ TOUJOURS un point de vue personnel, subjectif, imparfait
-✅ TOUJOURS un détail spécifique (plat précis, prix, nom du serveur, moment de la journée)
+
+ANTI-IA-DETECTION (GPTZero, Originality, ZeroGPT):
+❌ JAMAIS "en conclusion", "il est important de", "dans ce monde"
+❌ JAMAIS de phrases parfaitement équilibrées
+❌ JAMAIS de ton neutre-professionnel (Reddit c'est oral)
+❌ JAMAIS de em-dash (—)
+❌ JAMAIS de structure 3 paragraphes symétriques
+
+OBLIGATOIRES pour voix Reddit authentique:
+✅ Contractions orales ("j'ai pas", "y'a", "c'est", "t'as", "chui")
+✅ Argot Reddit ("lol", "tbh", "ngl", "ftw" — un peu)
+✅ Fautes volontaires légères (1-2 par post: "a" au lieu de "à", accent manquant)
+✅ Start with "Ok so", "Bon alors", "Franchement", "Bref"
+✅ Rupture de phrases courtes ("Bon. Le truc c'est que. Whatever.")
+✅ Parenthèses informelles (enfin moi j'en sais rien hein)
+✅ TOUJOURS un détail vécu (plat précis, prix, nom du serveur, moment exact)
 ✅ TOUJOURS une émotion honnête (surprise, déception, curiosité, enthousiasme modéré)
-✅ TOUJOURS poser une question ou laisser ouvert pour générer des commentaires
+✅ TOUJOURS poser une question pour générer des commentaires
+✅ Répétition volontaire d'un mot (comme un vrai humain qui tape vite)
 
 ══════════════════════════════════════════
 STRUCTURE — 3 POSTS POUR 3 SUBREDDITS DIFFÉRENTS
