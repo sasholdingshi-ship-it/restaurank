@@ -3675,12 +3675,16 @@ async function obStartScan(){
     ];
     stepsDiv.innerHTML=scanSteps.map(s=>`<div class="ob-scan-step pending" id="obs_${s.id}"><div class="ob-icon">⏳</div><div>${s.label}</div></div>`).join('');
 
-    // Animate steps progressively
-    async function animateStep(id,delay){
-        await new Promise(r=>setTimeout(r,delay));
+    // Progress indicator gated on real API response
+    async function animateStep(id,startDelay){
+        await new Promise(r=>setTimeout(r,startDelay));
         const el=document.getElementById('obs_'+id);
         if(el){el.className='ob-scan-step running';el.querySelector('.ob-icon').textContent='⚡';}
-        await new Promise(r=>setTimeout(r,800+Math.random()*600));
+        // Wait for real audit data OR max 10s timeout
+        const start=Date.now();
+        while(!window._realAuditData && Date.now()-start<10000){
+            await new Promise(r=>setTimeout(r,200));
+        }
         if(el){el.className='ob-scan-step done';el.querySelector('.ob-icon').textContent='✅';}
     }
 
@@ -5720,7 +5724,14 @@ function startScan(name,city){
             setTimeout(()=>runPostScanAutomation(),500);
         },400);return;}
         const el=document.getElementById(`step${cur}`);el.classList.add('active');el.querySelector('.step-icon').classList.add('spinning');
-        bar.style.width=`${(cur+1)/filteredSteps.length*100}%`;cur++;setTimeout(next,450+Math.random()*400);
+        bar.style.width=`${(cur+1)/filteredSteps.length*100}%`;cur++;
+        // Wait for real audit data to progress (max 2s per step)
+        const tStart=Date.now();
+        const tick=()=>{
+            if(window._realAuditData||Date.now()-tStart>2000){next();}
+            else setTimeout(tick,150);
+        };
+        tick();
     }
     setTimeout(next,300);
 }
@@ -6597,13 +6608,13 @@ async function autoApplyFromModal(itemId){
                 markDone(itemId);
             }
         } else {
-            // Generic auto-apply via AI content generation + mark done
+            // Generate AI content (not auto-applied — requires manual step)
             const resp=await fetchTimeout(`${API_BASE}/api/ai/generate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:itemId,restaurant_name:name,city,restaurant_id:currentData?.restaurant_id||0})},30000);
             const data=await resp.json();
             if(data.success){
-                if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='✅ Optimisation appliquée automatiquement.';}
-                btn.innerHTML='✅ Appliqué';
-                markDone(itemId);
+                if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='📝 Contenu généré par IA — copiez-le et appliquez-le manuellement sur la plateforme.';}
+                btn.innerHTML='📝 Contenu prêt';
+                // Don't markDone — user must manually apply
             } else throw new Error(data.error||'Erreur');
         }
     }catch(err){
