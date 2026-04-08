@@ -3647,7 +3647,43 @@ app.post('/api/wordpress/publish', async (req, res) => {
     const wpUrl = site_url.replace(/\/$/, '');
     const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
 
-    const resp = await fetch(`${wpUrl}/wp-json/wp/v2/posts`, {
+    // Step 1: Find or create the hidden parent page "ressources-seo"
+    // Pages under this parent are:
+    // - NOT shown on homepage loop (WordPress pages never are)
+    // - NOT in RSS feed
+    // - NOT in "latest posts" widgets
+    // - BUT indexed by Google (included in sitemap.xml, robots meta = index,follow)
+    // - Accessible only via direct URL → no UX pollution for regular visitors
+    let parentId = 0;
+    try {
+      const findResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo&status=publish,private`, {
+        headers: { 'Authorization': `Basic ${auth}` }
+      });
+      const found = await findResp.json();
+      if (Array.isArray(found) && found.length > 0) {
+        parentId = found[0].id;
+      } else {
+        // Create the hidden parent page
+        const parentResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+          body: JSON.stringify({
+            title: 'Ressources SEO',
+            slug: 'ressources-seo',
+            content: '<!-- wp:paragraph --><p>Ressources et guides (indexés par les moteurs de recherche).</p><!-- /wp:paragraph -->',
+            status: 'publish',
+            menu_order: 999,
+            meta: { _wp_page_template: 'default' }
+          })
+        });
+        const pdata = await parentResp.json();
+        if (pdata.id) parentId = pdata.id;
+      }
+    } catch (e) { console.warn('Parent page setup:', e.message); }
+
+    // Step 2: Publish as a PAGE (not post) under the hidden parent
+    // Pages are indexed by Google but not displayed in the blog loop / homepage / RSS
+    const pageResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -3656,13 +3692,15 @@ app.post('/api/wordpress/publish', async (req, res) => {
       body: JSON.stringify({
         title: title || 'Article SEO RestauRank',
         content: content || '',
-        status: status || 'draft',
-        categories: categories || [],
-        tags: tags || []
+        status: status || 'publish',
+        parent: parentId || 0,
+        menu_order: 999,
+        comment_status: 'closed',
+        ping_status: 'closed'
       })
     });
 
-    const data = await resp.json();
+    const data = await pageResp.json();
     if (data.code) throw new Error(data.message || data.code);
 
     // Save to history
@@ -3677,6 +3715,10 @@ app.post('/api/wordpress/publish', async (req, res) => {
       post_id: data.id,
       url: data.link,
       status: data.status,
+      type: 'page',
+      parent_id: parentId,
+      hidden_from_nav: true,
+      note: 'Page publiée sous /ressources-seo/ — indexée par Google mais invisible dans la navigation du site',
       edit_url: `${wpUrl}/wp-admin/post.php?post=${data.id}&action=edit`
     });
   } catch (e) {
