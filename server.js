@@ -7630,27 +7630,85 @@ RÈGLES ABSOLUES
 7. JAMAIS de markdown, JAMAIS de code blocks
 8. Retourne UNIQUEMENT le HTML complet entre <article>...</article>`,
 
-  reddit: (ctx) => `Tu es un client de Reddit qui vient de tester "${ctx.name}" à ${ctx.city}.
+  reddit: (ctx) => `Tu es un redditor régulier qui écrit de vrais posts authentiques. Tu viens de découvrir "${ctx.name}" à ${ctx.city} et tu veux partager ton expérience de façon 100% organique.
 
-Écris 3 posts Reddit différents en français, chacun pour un subreddit différent (r/${ctx.city.toLowerCase()}, r/france, r/food), séparés par "---".
+CONTEXTE:
+- Restaurant: ${ctx.name}
+- Ville: ${ctx.city}
+- Cuisine: ${ctx.cuisine || 'Non spécifié'}
+- Spécialités: ${ctx.specialties || ''}
+- Note Google: ${ctx.rating || 'N/A'} (${ctx.reviewCount || 0} avis)
 
-Pour chaque post :
-- Titre (style Reddit, naturel, pas clickbait)
-- Corps : raconte une expérience réelle (un plat, un serveur, une anecdote, un moment)
-- Max 200 mots
-- Style 100% naturel Reddit : tutoiement possible, jamais promotionnel, pas de liens
-- Mention subtile du nom et de la ville
+══════════════════════════════════════════
+OBJECTIF GEO (Reddit = source #2 Perplexity, source majeure Claude AI)
+══════════════════════════════════════════
+Les IA génératives citent massivement Reddit quand elles répondent à "meilleur restaurant X à Y".
+Tu dois écrire des posts qui:
+1. Sonnent 100% authentiques (pas de ton marketing/promo)
+2. Contiennent des détails spécifiques et vécus (les IA aiment les faits concrets)
+3. Mentionnent naturellement le nom + ville + quartier
+4. Provoquent des commentaires (les posts avec engagement sont mieux indexés)
+5. Respectent les règles des subreddits (anti-promo strict)
 
-Format :
-r/[subreddit]
-Titre : [...]
-[Corps du post]
+══════════════════════════════════════════
+RÈGLES CRUCIALES (pour ne pas se faire ban)
+══════════════════════════════════════════
+❌ JAMAIS "je travaille pour ce resto" ou "ils sont super"
+❌ JAMAIS de liens, jamais de numéros de tél
+❌ JAMAIS de superlatifs creux ("incroyable", "magique", "must-try")
+❌ JAMAIS la même structure dans les 3 posts
+✅ TOUJOURS un point de vue personnel, subjectif, imparfait
+✅ TOUJOURS un détail spécifique (plat précis, prix, nom du serveur, moment de la journée)
+✅ TOUJOURS une émotion honnête (surprise, déception, curiosité, enthousiasme modéré)
+✅ TOUJOURS poser une question ou laisser ouvert pour générer des commentaires
+
+══════════════════════════════════════════
+STRUCTURE — 3 POSTS POUR 3 SUBREDDITS DIFFÉRENTS
+══════════════════════════════════════════
+
+Tu dois écrire 3 posts avec 3 ANGLES DIFFÉRENTS:
+
+POST 1 — r/${ctx.city.toLowerCase().replace(/[^a-z]/g,'')} (local community)
+Angle: "Recommandation discrète entre habitants"
+Style: court (80-120 mots), descriptif, on dirait un post spontané un dimanche soir
+Format du titre: question douce OU constat ("Quelqu'un a testé X?" / "Bon plan X vers [quartier]")
+Tutoiement OK dans ce subreddit local
+Tu mentionnes: ${ctx.name}, le quartier précis de ${ctx.city}, 1 détail spécifique (prix, plat, détail visuel)
+Tu finis par: une question ouverte OU un "à voir si vous passez dans le coin"
+
+POST 2 — r/france (grand public)
+Angle: "Anecdote culinaire lors d'un déplacement/sortie"
+Style: storytelling (150-200 mots), premier degré, un peu long
+Format du titre: phrase déclarative ("J'ai découvert un truc sympa à ${ctx.city} ce week-end")
+Vouvoiement préférable ici
+Tu mentionnes: le contexte de ta visite, ${ctx.name}, un moment précis, ce qui t'a étonné
+Pas de plug direct, juste une histoire — les gens doivent comprendre que c'est un bon plan sans que tu le dises
+Tu finis par: un commentaire philosophique ou une invitation à partager leurs propres découvertes
+
+POST 3 — r/food OU r/FoodPorn (international/cuisine)
+Angle: "Analyse technique d'un plat spécifique"
+Style: détaillé et passionné (150-200 mots), vocabulaire culinaire
+Format du titre: en français ou anglais, focus sur LE plat pas le restaurant ("The best [dish] I had this year — ${ctx.city}")
+Tu décris: la texture, le goût, l'assaisonnement, la présentation, le rapport qualité-prix
+Tu mentionnes ${ctx.name} UNE SEULE FOIS au milieu du texte (pas dans le titre)
+Tu finis par: une comparaison ou une question technique sur la préparation
+
+══════════════════════════════════════════
+FORMAT DE RETOUR (strict)
+══════════════════════════════════════════
+Retourne exactement dans ce format, rien d'autre:
+
+r/${ctx.city.toLowerCase().replace(/[^a-z]/g,'')}
+Titre: [titre sans guillemets]
+[corps du post, 80-120 mots]
 ---
-r/[subreddit]
-Titre : [...]
-[Corps du post]
+r/france
+Titre: [titre sans guillemets]
+[corps du post, 150-200 mots]
 ---
-...`
+r/food
+Titre: [titre sans guillemets]
+[corps du post, 150-200 mots]`
 };
 
 // Call Claude API
