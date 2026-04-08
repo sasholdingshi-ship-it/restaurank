@@ -2109,6 +2109,19 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                 </div>
                 <div id="redditHistory" style="margin-top:14px;"></div>
             </div>
+
+            <!-- SNAPSHOTS / HISTORIQUE DE RESTAURATION -->
+            <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-top:16px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <div style="width:38px;height:38px;border-radius:10px;background:#1B2A4A;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🛡️</div>
+                    <div style="flex:1;">
+                        <div style="font-weight:800;font-size:1rem;">Historique & Restauration</div>
+                        <div style="font-size:.72rem;color:var(--mut);">Toutes les modifications du site sont sauvegardées. Vous pouvez annuler chaque action d'un clic.</div>
+                    </div>
+                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:var(--s2);" onclick="loadCMSSnapshots()">🔄 Actualiser</button>
+                </div>
+                <div id="cmsSnapshotsList" style="margin-top:10px;"></div>
+            </div>
         </div>
     </div>
 
@@ -6694,7 +6707,55 @@ function switchDashTab(tab){
     if(tab==='hub'){try{populateHub();renderHubSources();renderHubPhotos();}catch(e){}}
     if(tab==='team'){try{renderTeam();}catch(e){}}
     if(tab==='agent'){try{loadAgentHistory();}catch(e){}}
-    if(tab==='content'){try{loadBlogHistory();}catch(e){}}
+    if(tab==='content'){try{loadBlogHistory();loadCMSSnapshots();}catch(e){}}
+}
+
+async function loadCMSSnapshots(){
+    const el=document.getElementById('cmsSnapshotsList');
+    if(!el)return;
+    try{
+        const rid=currentData?.restaurant_id||0;
+        const resp=await fetch(API_BASE+'/api/cms/snapshots?restaurant_id='+rid+'&limit=30',{headers:{'Authorization':'Bearer '+(sessionToken||'')}});
+        const data=await resp.json();
+        if(!data.success||!data.snapshots?.length){
+            el.innerHTML='<div style="padding:16px;text-align:center;color:var(--mut);font-size:.75rem;">Aucune modification effectuée. Les actions futures apparaîtront ici avec un bouton d\'annulation.</div>';
+            return;
+        }
+        el.innerHTML=data.snapshots.map(s=>{
+            const date=new Date(s.created_at).toLocaleString('fr-FR');
+            const typeLabel={blog_publish:'📝 Article',schema_injection:'🔧 Schema.org',meta_update:'🏷️ Meta tags',nap_update:'📍 NAP footer',faq_publish:'❓ FAQ'}[s.action_type]||s.action_type;
+            const statusTag=s.reverted
+                ?'<span style="background:rgba(107,114,128,.15);color:var(--mut);padding:2px 8px;border-radius:99px;font-size:.62rem;font-weight:700;">Annulé '+new Date(s.reverted_at).toLocaleDateString('fr-FR')+'</span>'
+                :'<span style="background:rgba(45,122,79,.15);color:var(--grn);padding:2px 8px;border-radius:99px;font-size:.62rem;font-weight:700;">✅ Appliqué</span>';
+            const revertBtn=s.reverted
+                ?''
+                :`<button class="btn-gen" style="font-size:.68rem;padding:6px 12px;background:rgba(192,57,43,.15);color:var(--red);border:1px solid var(--red);" onclick="revertCMSSnapshot(${s.id})">↩️ Annuler</button>`;
+            const urlLink=s.target_url?`<a href="${s.target_url}" target="_blank" style="color:var(--org);font-size:.68rem;text-decoration:none;">→ Voir</a>`:'';
+            return `<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <div style="font-size:.85rem;">${typeLabel}</div>
+                <div style="flex:1;min-width:200px;font-size:.7rem;color:var(--txt);">${s.description||''}</div>
+                <div style="font-size:.62rem;color:var(--mut);">${s.cms_type} · ${date}</div>
+                ${statusTag}
+                ${urlLink}
+                ${revertBtn}
+            </div>`;
+        }).join('');
+    }catch(e){console.warn('loadCMSSnapshots:',e);}
+}
+
+async function revertCMSSnapshot(id){
+    if(!confirm('Annuler cette modification sur le site ?\n\nCela supprimera définitivement le contenu publié.'))return;
+    try{
+        const resp=await fetch(API_BASE+'/api/cms/snapshots/'+id+'/revert',{method:'POST',headers:{'Authorization':'Bearer '+(sessionToken||'')}});
+        const data=await resp.json();
+        if(data.success){
+            showToast('✅ Modification annulée','ok');
+            loadCMSSnapshots();
+            loadBlogHistory();
+        }else{
+            showToast('❌ '+(data.error||'Erreur'),'err');
+        }
+    }catch(e){showToast('❌ '+e.message,'err');}
 }
 
 // ══ CONTENT EDITOR — Blog + Reddit ══

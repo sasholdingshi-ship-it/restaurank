@@ -508,6 +508,22 @@ db.exec(`
     discovery_searches INTEGER DEFAULT 0,
     recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS cms_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER NOT NULL DEFAULT 0,
+    cms_type TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    description TEXT,
+    target_id TEXT,
+    target_url TEXT,
+    before_data TEXT,
+    after_data TEXT,
+    credentials_snapshot TEXT,
+    reverted INTEGER DEFAULT 0,
+    reverted_at DATETIME,
+    revert_error TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `);
 
 // ============================================================
@@ -3912,7 +3928,7 @@ app.post('/api/blog/publish', async (req, res) => {
       result.note = `CMS "${cms_type}" non supporté par API — contenu prêt à coller manuellement`;
     }
 
-    // Save to DB
+    // Save to DB — content history
     try {
       db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, cms_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
       try { db.exec('ALTER TABLE generated_content ADD COLUMN cms_type TEXT'); } catch(e) {}
@@ -3921,10 +3937,160 @@ app.post('/api/blog/publish', async (req, res) => {
         .run(restaurant_id || 0, 'blog', title, content, result.success && result.url ? 1 : 0, result.url || '', cms_type);
     } catch (e) {}
 
+    // Save SNAPSHOT for potential revert (only if something was actually published remotely)
+    if (result.success && result.post_id && cms_type !== 'generic' && cms_type !== 'squarespace') {
+      try {
+        const credsSnap = credentials ? JSON.stringify(credentials) : null;
+        db.prepare(`INSERT INTO cms_snapshots (restaurant_id, cms_type, action_type, description, target_id, target_url, before_data, after_data, credentials_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(
+            restaurant_id || 0,
+            cms_type,
+            'blog_publish',
+            `Article publié: "${title.substring(0, 100)}"`,
+            String(result.post_id || ''),
+            result.url || '',
+            JSON.stringify({ state: 'not_exists' }),
+            JSON.stringify({ title, content_length: content.length, post_id: result.post_id, url: result.url, method: result.method }),
+            credsSnap
+          );
+      } catch (e) { console.warn('Snapshot save failed:', e.message); }
+    }
+
     res.json(result);
   } catch (e) {
     console.error('Blog publish error:', e.message);
     res.json({ success: false, cms: cms_type, error: e.message });
+  }
+});
+
+// ============================================================
+// CMS SNAPSHOTS — list + revert
+// ============================================================
+app.get('/api/cms/snapshots', (req, res) => {
+  const { restaurant_id, limit } = req.query;
+  try {
+    let rows;
+    if (restaurant_id) {
+      rows = db.prepare(`SELECT id, cms_type, action_type, description, target_url, reverted, reverted_at, created_at FROM cms_snapshots WHERE restaurant_id = ? ORDER BY created_at DESC LIMIT ?`).all(parseInt(restaurant_id), parseInt(limit) || 50);
+    } else {
+      rows = db.prepare(`SELECT id, cms_type, action_type, description, target_url, reverted, reverted_at, created_at FROM cms_snapshots ORDER BY created_at DESC LIMIT ?`).all(parseInt(limit) || 50);
+    }
+    res.json({ success: true, snapshots: rows || [] });
+  } catch (e) {
+    res.json({ success: true, snapshots: [] });
+  }
+});
+
+// POST /api/cms/snapshots/:id/revert — revert a specific change
+app.post('/api/cms/snapshots/:id/revert', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const snap = db.prepare('SELECT * FROM cms_snapshots WHERE id = ?').get(id);
+  if (!snap) return res.json({ success: false, error: 'Snapshot introuvable' });
+  if (snap.reverted) return res.json({ success: false, error: 'Déjà annulé le ' + snap.reverted_at });
+
+  const creds = snap.credentials_snapshot ? JSON.parse(snap.credentials_snapshot) : {};
+  const after = snap.after_data ? JSON.parse(snap.after_data) : {};
+  const cmsType = snap.cms_type;
+  const targetId = snap.target_id;
+
+  try {
+    // ─── WORDPRESS ─── delete the page/post
+    if (cmsType === 'wordpress' && snap.action_type === 'blog_publish') {
+      const { site_url, username, app_password } = creds;
+      if (!site_url || !username || !app_password) throw new Error('Credentials WordPress manquants');
+      const wpUrl = site_url.replace(/\/$/, '');
+      const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+      // Try pages first (blog publish uses pages), then posts as fallback
+      let ok = false;
+      for (const endpoint of ['pages', 'posts']) {
+        try {
+          const r = await fetch(`${wpUrl}/wp-json/wp/v2/${endpoint}/${targetId}?force=true`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Basic ${auth}` }
+          });
+          if (r.ok) { ok = true; break; }
+        } catch(e) {}
+      }
+      if (!ok) throw new Error('WordPress: suppression échouée — la page a peut-être déjà été supprimée');
+    }
+    // ─── WEBFLOW ─── delete collection item
+    else if (cmsType === 'webflow' && snap.action_type === 'blog_publish') {
+      const { api_token, site_id, collection_id } = creds;
+      const token = api_token || process.env.WEBFLOW_API_TOKEN;
+      if (!token) throw new Error('Webflow: api_token manquant');
+      // We may not have stored collection_id — try to find via listing
+      let colId = collection_id;
+      if (!colId && site_id) {
+        try {
+          const cr = await fetch(`https://api.webflow.com/v2/sites/${site_id}/collections`, { headers: { 'Authorization': `Bearer ${token}`, 'accept-version': '2.0.0' } });
+          const cd = await cr.json();
+          const found = (cd.collections || []).find(c => ['seo-resources','ressources-seo','blog'].includes(c.slug));
+          if (found) colId = found.id;
+        } catch(e) {}
+      }
+      if (!colId) throw new Error('Webflow: collection introuvable');
+      const dr = await fetch(`https://api.webflow.com/v2/collections/${colId}/items/${targetId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'accept-version': '2.0.0' }
+      });
+      if (!dr.ok) {
+        const em = await dr.text();
+        throw new Error('Webflow: ' + em.substring(0, 200));
+      }
+    }
+    // ─── SHOPIFY ─── delete article
+    else if (cmsType === 'shopify' && snap.action_type === 'blog_publish') {
+      const { shop_domain, access_token } = creds;
+      if (!shop_domain || !access_token) throw new Error('Shopify: credentials manquants');
+      // Find the blog first
+      const br = await fetch(`https://${shop_domain}/admin/api/2024-01/blogs.json`, {
+        headers: { 'X-Shopify-Access-Token': access_token }
+      });
+      const bd = await br.json();
+      const blog = (bd.blogs || []).find(b => ['seo-resources','ressources-seo'].includes(b.handle));
+      if (!blog) throw new Error('Shopify: blog seo-resources introuvable');
+      const dr = await fetch(`https://${shop_domain}/admin/api/2024-01/blogs/${blog.id}/articles/${targetId}.json`, {
+        method: 'DELETE',
+        headers: { 'X-Shopify-Access-Token': access_token }
+      });
+      if (!dr.ok) throw new Error('Shopify: suppression échouée');
+    }
+    // ─── GHOST ─── delete post
+    else if (cmsType === 'ghost' && snap.action_type === 'blog_publish') {
+      const { admin_api_url, admin_api_key } = creds;
+      if (!admin_api_url || !admin_api_key) throw new Error('Ghost: credentials manquants');
+      const [kid, secret] = admin_api_key.split(':');
+      const jwt = require('jsonwebtoken');
+      const token = jwt.sign({}, Buffer.from(secret, 'hex'), { keyid: kid, algorithm: 'HS256', expiresIn: '5m', audience: '/admin/' });
+      const dr = await fetch(`${admin_api_url.replace(/\/$/, '')}/ghost/api/admin/posts/${targetId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Ghost ${token}` }
+      });
+      if (!dr.ok) throw new Error('Ghost: suppression échouée');
+    }
+    // ─── WIX ─── delete draft post
+    else if (cmsType === 'wix' && snap.action_type === 'blog_publish') {
+      const { api_key, site_id } = creds;
+      if (!api_key || !site_id) throw new Error('Wix: credentials manquants');
+      const dr = await fetch(`https://www.wixapis.com/blog/v3/draft-posts/${targetId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': api_key, 'wix-site-id': site_id }
+      });
+      if (!dr.ok) {
+        const em = await dr.text();
+        throw new Error('Wix: ' + em.substring(0, 200));
+      }
+    }
+    else {
+      throw new Error(`Revert non supporté pour ${cmsType}/${snap.action_type}`);
+    }
+
+    // Mark snapshot as reverted
+    db.prepare('UPDATE cms_snapshots SET reverted = 1, reverted_at = datetime(\'now\') WHERE id = ?').run(id);
+    res.json({ success: true, message: 'Modification annulée avec succès sur ' + cmsType });
+  } catch (e) {
+    db.prepare('UPDATE cms_snapshots SET revert_error = ? WHERE id = ?').run(e.message, id);
+    res.json({ success: false, error: e.message });
   }
 });
 
