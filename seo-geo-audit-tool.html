@@ -2066,8 +2066,8 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
                     <div style="width:38px;height:38px;border-radius:10px;background:#D95B2B;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📝</div>
                     <div>
-                        <div style="font-weight:800;font-size:1rem;">Article de blog</div>
-                        <div style="font-size:.72rem;color:var(--mut);">Compatible <strong>WordPress, Webflow, Shopify, Wix, Squarespace, Ghost</strong> — publié en zone cachée (ex: <code>/ressources-seo/</code>). <strong>Indexé par Google</strong>, <strong>invisible</strong> dans la navigation.</div>
+                        <div style="font-weight:800;font-size:1rem;">Article de blog SEO + GEO</div>
+                        <div style="font-size:.72rem;color:var(--mut);">1500-2200 mots optimisés pour <strong>Google</strong> (H1/H2/H3, keywords LSI, mots-clés locaux) <strong>ET</strong> pour les IA génératives <strong>(ChatGPT, Perplexity, Gemini, Claude)</strong> via TL;DR + FAQ + format citation-ready. Compatible WordPress, Webflow, Shopify, Wix, Squarespace, Ghost. Publié en zone cachée.</div>
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;">
@@ -6898,13 +6898,25 @@ function showContentStatus(id,msg,type){
 async function generateBlogContent(){
     const name=currentData?.name||storedName||'Restaurant';
     const city=currentData?.city||storedCity||'Paris';
-    const cuisine=window._hubData?.cuisine||window._hubData?.category||'';
-    showContentStatus('blogStatus','⏳ Génération IA en cours...','info');
+    const hub=window._hubData||{};
+    const context={
+        name,city,
+        cuisine:hub.cuisine||hub.category||currentData?.category||'',
+        specialties:hub.specialties||'',
+        rating:hub.rating||currentData?.rating||'',
+        reviewCount:hub.reviewCount||currentData?.reviewCount||0,
+        website:hub.website||currentData?.websiteUrl||storedWebsite||'',
+        address:hub.address||'',
+        phone:hub.phone||'',
+        hours:typeof hub.hours==='string'?hub.hours:'',
+        priceRange:hub.priceRange||''
+    };
+    showContentStatus('blogStatus','⏳ Génération article SEO+GEO (1500-2200 mots, ~30s)...','info');
     try{
         const resp=await fetch(API_BASE+'/api/ai/generate',{
             method:'POST',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
-            body:JSON.stringify({type:'blog',context:{name,city,cuisine},restaurant_id:currentData?.restaurant_id||0})
+            body:JSON.stringify({type:'blog',context,restaurant_id:currentData?.restaurant_id||0})
         });
         const data=await resp.json();
         if(!data.success)throw new Error(data.message||data.error||'Erreur IA');

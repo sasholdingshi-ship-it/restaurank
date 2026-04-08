@@ -7522,23 +7522,113 @@ Retourne en JSON :
 }
 Inclus les corrections exactes, le code à ajouter, les textes à copier.`,
 
-  blog: (ctx) => `Tu es un rédacteur SEO expert pour restaurants. Écris un article de blog optimisé SEO pour "${ctx.name}" à ${ctx.city}.
+  blog: (ctx) => `Tu es un expert en SEO local + GEO (Generative Engine Optimization) pour restaurants. Tu écris un article de blog qui doit être cité par Google, ChatGPT, Perplexity, Gemini et Claude.
 
-Cuisine : ${ctx.cuisine || 'Non spécifié'}
-Spécialités : ${ctx.specialties || ''}
+CONTEXTE RESTAURANT:
+- Nom: ${ctx.name}
+- Ville: ${ctx.city}
+- Cuisine: ${ctx.cuisine || 'Non spécifié'}
+- Spécialités: ${ctx.specialties || ''}
+- Note Google: ${ctx.rating || 'N/A'} (${ctx.reviewCount || 0} avis)
+- Site: ${ctx.website || ''}
+- Année courante: 2026
 
-Format HTML :
-- <h1>Titre accrocheur avec mot-clé local (ex: "Les X meilleurs Y à ${ctx.city}")</h1>
-- <p>Introduction (100 mots) avec mention du restaurant et de la ville</p>
-- 3-4 sections <h2> avec sous-titres pertinents
-- <p>Contenu riche (total 800-1200 mots) avec mentions naturelles de "${ctx.name}" et "${ctx.city}"
-- <ul> ou <ol> pour listes (plats, conseils, raisons)
-- Inclus 2-3 anecdotes ou détails spécifiques qui donnent du vécu
-- Conclusion avec CTA discret (réserver, venir goûter)
-- Mots-clés locaux naturellement placés
+══════════════════════════════════════════
+OBJECTIF DOUBLE: SEO + GEO
+══════════════════════════════════════════
 
-Ton : informatif, passionné, pas marketing. Pas de superlatifs creux.
-Retourne uniquement le HTML, sans markdown ni code blocks.`,
+🔍 SEO (Google classique):
+1. Mot-clé principal: "[type cuisine] ${ctx.city}" ou "meilleur restaurant [type] ${ctx.city}"
+2. Densité 1-2% du mot-clé principal, jamais de keyword stuffing
+3. Structure H1 > H2 > H3 hiérarchique
+4. Mots-clés LSI (Latent Semantic Indexing) naturellement placés
+5. Métriques E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness)
+6. Mentions locales (quartier, arrondissement, métro, rue)
+7. Longueur 1500-2200 mots (articles longs = meilleur ranking)
+8. Paragraphes courts (2-4 phrases max)
+
+🤖 GEO (ChatGPT, Perplexity, Gemini, Claude):
+1. Format Q&A (les IA citent les réponses directes aux questions)
+2. Faits vérifiables avec chiffres précis (prix, distance, horaires, dates)
+3. Listes structurées (les IA extraient mieux les <ul>/<ol>)
+4. Tables comparatives quand pertinent
+5. Entités nommées précises (rues, monuments, stations de métro, quartiers)
+6. Phrases déclaratives courtes et citables
+7. Section TL;DR au début ET FAQ à la fin
+8. Ton conversationnel (matche comment les gens interrogent les IA)
+9. Signaux de fraîcheur: mentionner "en 2026" au moins 2 fois
+10. Structure "source à citer" (comme un article Wikipedia)
+
+══════════════════════════════════════════
+STRUCTURE HTML OBLIGATOIRE
+══════════════════════════════════════════
+
+<article>
+
+<h1>[Titre accrocheur avec mot-clé principal + ${ctx.city} — max 65 caractères]</h1>
+
+<p><strong>TL;DR:</strong> [3-4 phrases qui résument l'article — format citation-ready pour les IA. Inclus le nom du restaurant, la ville, la cuisine, et le point fort principal]</p>
+
+<p>[Introduction 120-150 mots. Hook éditorial + contexte local + promesse de l'article. Mentionne ${ctx.name} et ${ctx.city} dans les 2 premières phrases]</p>
+
+<h2>[Section 1: Pourquoi X à ${ctx.city} en 2026]</h2>
+<p>[Contexte local riche: histoire du quartier, tendances culinaires actuelles, positionnement dans la scène gastronomique de ${ctx.city}]</p>
+
+<h2>[Section 2: L'expérience ${ctx.name} en détail]</h2>
+<p>[Storytelling avec détails vécus: ambiance, décoration, accueil, service. Utilise des descriptions sensorielles]</p>
+<ul>
+  <li><strong>Adresse:</strong> [dans ${ctx.city}, mentionner le quartier/arrondissement]</li>
+  <li><strong>Type de cuisine:</strong> ${ctx.cuisine || '[détailler]'}</li>
+  <li><strong>Note Google:</strong> ${ctx.rating || '[à compléter]'}/5 (${ctx.reviewCount || 0} avis)</li>
+  <li><strong>Ambiance:</strong> [détailler]</li>
+</ul>
+
+<h2>[Section 3: Les plats signature]</h2>
+<p>[Description gourmande de 3-5 plats phares avec détails: ingrédients, origine, préparation, prix indicatif]</p>
+<ol>
+  <li><strong>[Plat 1]:</strong> [description + prix]</li>
+  <li><strong>[Plat 2]:</strong> [description + prix]</li>
+  <li><strong>[Plat 3]:</strong> [description + prix]</li>
+</ol>
+
+<h2>[Section 4: Quand et comment venir]</h2>
+<p>[Infos pratiques: horaires idéaux, réservation, accès métro/parking, budget moyen, dress code]</p>
+
+<h2>[Section 5: Comparaison avec les autres adresses]</h2>
+<p>[Positionnement de ${ctx.name} dans la scène culinaire locale — ce qui le différencie des autres ${ctx.cuisine || 'restaurants'} à ${ctx.city}]</p>
+
+<h2>FAQ — Questions fréquentes</h2>
+<p><strong>Q: Faut-il réserver à ${ctx.name}?</strong><br>
+R: [Réponse directe et citable en 2-3 phrases]</p>
+
+<p><strong>Q: Quel est le prix moyen d'un repas à ${ctx.name}?</strong><br>
+R: [Réponse chiffrée précise]</p>
+
+<p><strong>Q: Quelle est la spécialité de ${ctx.name} à ${ctx.city}?</strong><br>
+R: [Réponse factuelle]</p>
+
+<p><strong>Q: Comment se rendre à ${ctx.name}?</strong><br>
+R: [Transport en commun + voiture]</p>
+
+<p><strong>Q: ${ctx.name} propose-t-il des options végétariennes?</strong><br>
+R: [Oui/Non avec détails]</p>
+
+<h2>Conclusion</h2>
+<p>[80-120 mots. Récap des points forts + CTA subtil "réserver" ou "venir découvrir". Dernière mention du nom + ville]</p>
+
+</article>
+
+══════════════════════════════════════════
+RÈGLES ABSOLUES
+══════════════════════════════════════════
+1. RIEN N'EST INVENTÉ: si tu ne connais pas un détail, écris [à compléter] plutôt qu'inventer
+2. Ton: informatif, passionné, crédible. PAS de superlatifs vides ("incroyable", "magique", "must-see")
+3. Utilise le tutoiement OU le vouvoiement, JAMAIS mélangé
+4. Mentionne ${ctx.name} 6-10 fois naturellement
+5. Mentionne ${ctx.city} 8-12 fois naturellement
+6. Mentionne "2026" au moins 2 fois pour signal de fraîcheur
+7. JAMAIS de markdown, JAMAIS de code blocks
+8. Retourne UNIQUEMENT le HTML complet entre <article>...</article>`,
 
   reddit: (ctx) => `Tu es un client de Reddit qui vient de tester "${ctx.name}" à ${ctx.city}.
 
@@ -7636,7 +7726,8 @@ app.post('/api/ai/generate', async (req, res) => {
     if (!promptFn) return res.status(400).json({ success: false, error: 'unknown_type', message: `Type "${type}" non supporté` });
 
     const prompt = promptFn(context);
-    const result = await callClaudeAPI(apiKey, prompt, type === 'full_audit_content' ? 4000 : 2000);
+    const maxTokens = type === 'full_audit_content' ? 4000 : type === 'blog' ? 5000 : type === 'faq_content' ? 3000 : 2000;
+    const result = await callClaudeAPI(apiKey, prompt, maxTokens);
 
     // Try to parse JSON if the prompt expects it
     let parsed = result;
