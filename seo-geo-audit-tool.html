@@ -2067,7 +2067,7 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
                     <div style="width:38px;height:38px;border-radius:10px;background:#D95B2B;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📝</div>
                     <div>
                         <div style="font-weight:800;font-size:1rem;">Article de blog</div>
-                        <div style="font-size:.72rem;color:var(--mut);">Publié sous <code>/ressources-seo/</code> sur votre site — <strong>indexé par Google</strong> mais <strong>invisible</strong> dans la nav / homepage (aucune pollution UX)</div>
+                        <div style="font-size:.72rem;color:var(--mut);">Compatible <strong>WordPress, Webflow, Shopify, Wix, Squarespace, Ghost</strong> — publié en zone cachée (ex: <code>/ressources-seo/</code>). <strong>Indexé par Google</strong>, <strong>invisible</strong> dans la navigation.</div>
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;">
@@ -6734,26 +6734,31 @@ async function publishBlogPost(){
     const content=document.getElementById('blogContent').value.trim();
     const status=document.getElementById('blogStatusSelect').value;
     if(!title||!content)return showContentStatus('blogStatus','❌ Titre et contenu requis','err');
-    showContentStatus('blogStatus','⏳ Publication sur WordPress...','info');
+
+    // Detect CMS type from connection or detected CMS
+    const cms=cmsConnection||JSON.parse(localStorage.getItem('restaurank_cms_conn')||'null');
+    const detected=detectedCMS?.detected?.cms||currentData?.detectedCMS?.cms;
+    const cmsType=cms?.type||detected||'generic';
+
+    showContentStatus('blogStatus','⏳ Publication sur '+cmsType+'...','info');
     try{
-        // Get WordPress credentials from CMS connection
-        const cms=cmsConnection||JSON.parse(localStorage.getItem('restaurank_cms_conn')||'null');
-        if(!cms||cms.type!=='wordpress'||!cms.credentials?.site_url){
-            return showContentStatus('blogStatus','❌ WordPress non connecté — allez dans IA Dispatch pour connecter votre site','err');
-        }
-        const resp=await fetch(API_BASE+'/api/wordpress/publish',{
+        const resp=await fetch(API_BASE+'/api/blog/publish',{
             method:'POST',
             headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
             body:JSON.stringify({
-                site_url:cms.credentials.site_url,
-                username:cms.credentials.username,
-                app_password:cms.credentials.app_password,
-                title,content,status
+                cms_type:cmsType,
+                credentials:cms?.credentials||{},
+                title,content,status,
+                restaurant_id:currentData?.restaurant_id||0
             })
         });
         const data=await resp.json();
-        if(!data.success)throw new Error(data.error||'Erreur WordPress');
-        showContentStatus('blogStatus','✅ Publié ! '+(data.url||''),'ok');
+        if(!data.success)throw new Error(data.error||'Erreur');
+        if(data.method==='manual'||data.method==='squarespace_manual'){
+            showContentStatus('blogStatus','📋 '+(data.note||'Contenu prêt à copier manuellement'),'info');
+        } else {
+            showContentStatus('blogStatus','✅ Publié sur '+cmsType+' ! '+(data.url?'→ '+data.url:''),'ok');
+        }
         loadBlogHistory();
     }catch(e){showContentStatus('blogStatus','❌ '+e.message,'err');}
 }

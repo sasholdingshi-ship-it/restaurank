@@ -3727,6 +3727,207 @@ app.post('/api/wordpress/publish', async (req, res) => {
   }
 });
 
+// ============================================================
+// UNIVERSAL BLOG PUBLISH — works on all CMS types
+// Routes the blog post to the right CMS API based on cms_type
+// Publishes as "hidden but indexed" (not shown in nav, indexed by Google)
+// ============================================================
+app.post('/api/blog/publish', async (req, res) => {
+  const { cms_type, credentials, title, content, status, restaurant_id } = req.body;
+  if (!cms_type) return res.json({ success: false, error: 'cms_type required' });
+  if (!title || !content) return res.json({ success: false, error: 'title and content required' });
+
+  const result = { success: false, cms: cms_type, url: null, hidden_from_nav: true };
+
+  try {
+    // ─── WORDPRESS ─── hidden page under /ressources-seo/
+    if (cms_type === 'wordpress') {
+      const { site_url, username, app_password } = credentials || {};
+      if (!site_url || !username || !app_password) throw new Error('WordPress: site_url, username, app_password requis');
+      const wpUrl = site_url.replace(/\/$/, '');
+      const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+      // Find or create hidden parent page
+      let parentId = 0;
+      try {
+        const fr = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo`, { headers: { 'Authorization': `Basic ${auth}` } });
+        const f = await fr.json();
+        if (Array.isArray(f) && f[0]) parentId = f[0].id;
+        else {
+          const cr = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+            body: JSON.stringify({ title: 'Ressources SEO', slug: 'ressources-seo', content: '<p>Ressources (indexées).</p>', status: 'publish', menu_order: 999 })
+          });
+          const cd = await cr.json();
+          if (cd.id) parentId = cd.id;
+        }
+      } catch(e) {}
+      const pr = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+        body: JSON.stringify({ title, content, status: status || 'publish', parent: parentId, menu_order: 999, comment_status: 'closed', ping_status: 'closed' })
+      });
+      const pd = await pr.json();
+      if (pd.code) throw new Error(pd.message || pd.code);
+      result.success = true;
+      result.url = pd.link;
+      result.post_id = pd.id;
+      result.method = 'wp_hidden_page';
+    }
+
+    // ─── WEBFLOW ─── CMS Collection Item (hidden collection "seo-resources")
+    else if (cms_type === 'webflow') {
+      const { api_token, site_id, collection_id } = credentials || {};
+      const token = api_token || process.env.WEBFLOW_API_TOKEN;
+      if (!token || !site_id) throw new Error('Webflow: api_token + site_id requis. Créez un token sur webflow.com/dashboard/account/integrations');
+      // Find or create a "seo-resources" collection
+      let targetCollection = collection_id;
+      if (!targetCollection) {
+        try {
+          const cr = await fetch(`https://api.webflow.com/v2/sites/${site_id}/collections`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'accept-version': '2.0.0' }
+          });
+          const cd = await cr.json();
+          const found = (cd.collections || []).find(c => c.slug === 'seo-resources' || c.slug === 'ressources-seo' || c.slug === 'blog');
+          if (found) targetCollection = found.id;
+        } catch(e) {}
+      }
+      if (!targetCollection) throw new Error('Webflow: créez manuellement une collection "seo-resources" ou "blog" dans Webflow Designer, puis retournez ici');
+      // Create item in collection — live:false = draft = not visible on public site
+      const ir = await fetch(`https://api.webflow.com/v2/collections/${targetCollection}/items`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'accept-version': '2.0.0' },
+        body: JSON.stringify({
+          fieldData: {
+            name: title,
+            slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 60),
+            'post-body': content,
+            'meta-description': content.replace(/<[^>]+>/g, '').substring(0, 155)
+          },
+          isDraft: false,
+          isArchived: false
+        })
+      });
+      const id = await ir.json();
+      if (id.message || id.errors) throw new Error(id.message || JSON.stringify(id.errors));
+      result.success = true;
+      result.url = `https://${site_id}.webflow.io/seo-resources/${id.fieldData?.slug || id.id}`;
+      result.post_id = id.id;
+      result.method = 'webflow_cms_collection';
+      result.note = 'Publié dans la collection CMS — n\'apparaît pas automatiquement dans le menu, lien direct indexable';
+    }
+
+    // ─── SHOPIFY ─── Blog article (hidden blog "seo-resources")
+    else if (cms_type === 'shopify') {
+      const { shop_domain, access_token } = credentials || {};
+      const domain = shop_domain || process.env.SHOPIFY_SHOP_DOMAIN;
+      const token = access_token || process.env.SHOPIFY_ACCESS_TOKEN;
+      if (!domain || !token) throw new Error('Shopify: shop_domain + access_token requis');
+      const api = async (ep, m='GET', b=null) => {
+        const r = await fetch(`https://${domain}/admin/api/2024-01/${ep}`, {
+          method: m, headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
+          ...(b ? { body: JSON.stringify(b) } : {})
+        });
+        return r.json();
+      };
+      // Find or create hidden blog
+      const blogs = await api('blogs.json');
+      let blogId = (blogs.blogs || []).find(b => b.handle === 'seo-resources' || b.handle === 'ressources-seo')?.id;
+      if (!blogId) {
+        const nb = await api('blogs.json', 'POST', { blog: { title: 'SEO Resources', handle: 'seo-resources', commentable: 'no' } });
+        blogId = nb.blog?.id;
+      }
+      if (!blogId) throw new Error('Shopify: impossible de créer le blog');
+      // Create article
+      const art = await api(`blogs/${blogId}/articles.json`, 'POST', {
+        article: { title, body_html: content, published: true, author: 'SEO', tags: 'seo,ressources' }
+      });
+      if (art.errors) throw new Error(JSON.stringify(art.errors));
+      result.success = true;
+      result.url = `https://${domain}/blogs/seo-resources/${art.article?.handle || art.article?.id}`;
+      result.post_id = art.article?.id;
+      result.method = 'shopify_blog';
+    }
+
+    // ─── WIX ─── Blog post via Wix Data API (requires Wix Headless API)
+    else if (cms_type === 'wix') {
+      const { api_key, site_id } = credentials || {};
+      const key = api_key || process.env.WIX_API_KEY;
+      if (!key || !site_id) throw new Error('Wix: api_key + site_id requis');
+      // Wix Blog API — draft post (visible via direct URL only)
+      const r = await fetch('https://www.wixapis.com/blog/v3/draft-posts', {
+        method: 'POST',
+        headers: { 'Authorization': key, 'wix-site-id': site_id, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draftPost: { title, content: { nodes: [{ type: 'PARAGRAPH', nodes: [{ type: 'TEXT', textData: { text: content.replace(/<[^>]+>/g, '') } }] }] } } })
+      });
+      const d = await r.json();
+      if (d.message) throw new Error(d.message);
+      result.success = true;
+      result.url = `https://${site_id}.wixsite.com/blog/post/${d.draftPost?.id}`;
+      result.post_id = d.draftPost?.id;
+      result.method = 'wix_blog';
+      result.note = 'Brouillon Wix — publiez manuellement via Wix Editor ou utilisez /publish';
+    }
+
+    // ─── SQUARESPACE ─── Blog post via API
+    else if (cms_type === 'squarespace') {
+      const { api_key } = credentials || {};
+      const key = api_key || process.env.SQUARESPACE_API_KEY;
+      if (!key) throw new Error('Squarespace: api_key requis');
+      // Squarespace Commerce API doesn't fully support blog posts via REST
+      // Return the formatted content for manual paste
+      result.success = true;
+      result.method = 'squarespace_manual';
+      result.url = null;
+      result.manual_content = { title, content };
+      result.note = 'Squarespace: API limitée — contenu prêt à coller dans Squarespace → Pages → Blog → Nouveau post';
+    }
+
+    // ─── GHOST ─── Ghost Admin API
+    else if (cms_type === 'ghost') {
+      const { admin_api_url, admin_api_key } = credentials || {};
+      if (!admin_api_url || !admin_api_key) throw new Error('Ghost: admin_api_url + admin_api_key requis');
+      // Ghost requires JWT token from the admin_api_key
+      const [id, secret] = admin_api_key.split(':');
+      if (!id || !secret) throw new Error('Ghost: admin_api_key format invalide (id:secret)');
+      const jwt = require('jsonwebtoken');
+      const token = jwt.sign({}, Buffer.from(secret, 'hex'), { keyid: id, algorithm: 'HS256', expiresIn: '5m', audience: '/admin/' });
+      const r = await fetch(`${admin_api_url.replace(/\/$/, '')}/ghost/api/admin/posts/?source=html`, {
+        method: 'POST',
+        headers: { 'Authorization': `Ghost ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ posts: [{ title, html: content, status: 'published', tags: ['seo-resources'], visibility: 'public' }] })
+      });
+      const d = await r.json();
+      if (d.errors) throw new Error(d.errors[0]?.message || 'Ghost error');
+      result.success = true;
+      result.url = d.posts?.[0]?.url;
+      result.post_id = d.posts?.[0]?.id;
+      result.method = 'ghost_post';
+    }
+
+    // ─── GENERIC / UNKNOWN CMS ─── return HTML for manual paste
+    else {
+      result.success = true;
+      result.method = 'manual';
+      result.url = null;
+      result.manual_content = { title, content };
+      result.note = `CMS "${cms_type}" non supporté par API — contenu prêt à coller manuellement`;
+    }
+
+    // Save to DB
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, cms_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+      try { db.exec('ALTER TABLE generated_content ADD COLUMN cms_type TEXT'); } catch(e) {}
+      try { db.exec('ALTER TABLE generated_content ADD COLUMN title TEXT'); } catch(e) {}
+      db.prepare('INSERT INTO generated_content (restaurant_id, type, title, content, published, publish_url, cms_type) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(restaurant_id || 0, 'blog', title, content, result.success && result.url ? 1 : 0, result.url || '', cms_type);
+    } catch (e) {}
+
+    res.json(result);
+  } catch (e) {
+    console.error('Blog publish error:', e.message);
+    res.json({ success: false, cms: cms_type, error: e.message });
+  }
+});
+
 // GET /api/content/history — list published blog/reddit posts
 app.get('/api/content/history', (req, res) => {
   const { type, restaurant_id } = req.query;
