@@ -1700,6 +1700,7 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         <div class="dash-tab" onclick="switchDashTab('hub')">🏠 Hub Central</div>
         <div class="dash-tab" onclick="switchDashTab('reviews')">⭐ Avis</div>
         <div class="dash-tab" onclick="switchDashTab('social')">📱 Social</div>
+        <div class="dash-tab" onclick="switchDashTab('content')">📝 Contenu</div>
         <div class="dash-tab" onclick="switchDashTab('dispatch')">🤖 IA Dispatch</div>
         <div class="dash-tab" onclick="switchDashTab('agent')" style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.15));font-weight:600;">🧠 Agent Auto</div>
         <div class="dash-tab" onclick="switchDashTab('team')">👥 Équipe</div>
@@ -2058,6 +2059,59 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
         </div>
     </div>
     
+    <!-- CONTENU TAB — Blog + Reddit editor -->
+    <div class="dash-tab-content" id="tabContent">
+        <div style="padding:20px;max-width:960px;margin:0 auto;width:100%;">
+            <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <div style="width:38px;height:38px;border-radius:10px;background:#D95B2B;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📝</div>
+                    <div>
+                        <div style="font-weight:800;font-size:1rem;">Article de blog</div>
+                        <div style="font-size:.72rem;color:var(--mut);">Publié sur votre site WordPress — impact SEO direct (contenu frais + backlinks internes)</div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;">
+                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="generateBlogContent()">🤖 Générer avec Claude AI</button>
+                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:var(--s2);" onclick="loadBlogHistory()">📜 Historique</button>
+                </div>
+                <input type="text" id="blogTitle" placeholder="Titre de l'article (ex: Les 5 meilleurs ramens de Paris)" style="width:100%;padding:10px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:.85rem;margin-bottom:8px;">
+                <textarea id="blogContent" placeholder="Contenu de l'article (HTML accepté)..." style="width:100%;min-height:260px;padding:12px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-family:inherit;font-size:.82rem;resize:vertical;"></textarea>
+                <div id="blogStatus" style="display:none;margin:8px 0;padding:8px 12px;border-radius:8px;font-size:.75rem;"></div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                    <select id="blogStatusSelect" style="padding:8px 12px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:.75rem;">
+                        <option value="draft">Brouillon</option>
+                        <option value="publish" selected>Publier</option>
+                    </select>
+                    <button class="btn-gen" style="background:#D95B2B;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="publishBlogPost()">🚀 Publier sur WordPress</button>
+                </div>
+                <div id="blogHistory" style="margin-top:14px;"></div>
+            </div>
+
+            <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                    <div style="width:38px;height:38px;border-radius:10px;background:#FF4500;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🤖</div>
+                    <div>
+                        <div style="font-weight:800;font-size:1rem;">Posts Reddit</div>
+                        <div style="font-size:.72rem;color:var(--mut);">Impact GEO fort — Reddit = source n°2 de Perplexity, source majeure de Claude AI</div>
+                    </div>
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;">
+                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="generateRedditPosts()">🤖 Générer 3 posts avec Claude</button>
+                </div>
+                <div style="display:grid;grid-template-columns:200px 1fr;gap:8px;margin-bottom:8px;">
+                    <input type="text" id="redditSubreddit" placeholder="Subreddit (ex: paris)" style="padding:10px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:.85rem;">
+                    <input type="text" id="redditTitle" placeholder="Titre du post" style="padding:10px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:.85rem;">
+                </div>
+                <textarea id="redditText" placeholder="Corps du post (style naturel Reddit — détails vécus, pas marketing)..." style="width:100%;min-height:180px;padding:12px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-family:inherit;font-size:.82rem;resize:vertical;"></textarea>
+                <div id="redditStatus" style="display:none;margin:8px 0;padding:8px 12px;border-radius:8px;font-size:.75rem;"></div>
+                <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
+                    <button class="btn-gen" style="background:#FF4500;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="publishRedditPost()">🚀 Publier sur Reddit</button>
+                </div>
+                <div id="redditHistory" style="margin-top:14px;"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- AI DISPATCH / AUTONOMOUS TAB -->
     <div class="dash-tab-content" id="tabDispatch">
         <div class="dispatch-container">
@@ -3298,7 +3352,7 @@ function authSocial(provider){
                         currentAccount={id:data.account.id,email:data.account.email,name:data.account.name,role:data.account.role,plan:data.account.plan};
                         localStorage.setItem('restaurank_local_account',JSON.stringify(currentAccount));
                         authMode='server';
-                        showLoggedIn();
+                        onAuthSuccess();
                         showToast('Connexion '+provider+' réussie !','ok');
                     }
                 }
@@ -6631,7 +6685,7 @@ function switchDashTab(tab){
     document.querySelectorAll('.dash-tab').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.dash-tab-content').forEach(c=>c.classList.remove('active'));
 
-    const tabMap={audit:'Audit',stats:'SEO Stats',hub:'Hub Central',reviews:'Avis',social:'Social',dispatch:'IA Dispatch',agent:'Agent Auto',team:'Équipe',settings:'Paramètres'};
+    const tabMap={audit:'Audit',stats:'SEO Stats',hub:'Hub Central',reviews:'Avis',social:'Social',content:'Contenu',dispatch:'IA Dispatch',agent:'Agent Auto',team:'Équipe',settings:'Paramètres'};
     document.querySelectorAll('.dash-tab').forEach(t=>{if(t.textContent.includes(tabMap[tab]||tab))t.classList.add('active');});
     const el=document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
     if(el)el.classList.add('active');
@@ -6640,6 +6694,128 @@ function switchDashTab(tab){
     if(tab==='hub'){try{populateHub();renderHubSources();renderHubPhotos();}catch(e){}}
     if(tab==='team'){try{renderTeam();}catch(e){}}
     if(tab==='agent'){try{loadAgentHistory();}catch(e){}}
+    if(tab==='content'){try{loadBlogHistory();}catch(e){}}
+}
+
+// ══ CONTENT EDITOR — Blog + Reddit ══
+function showContentStatus(id,msg,type){
+    const el=document.getElementById(id);
+    if(!el)return;
+    el.style.display='block';
+    el.textContent=msg;
+    el.style.background=type==='ok'?'rgba(45,122,79,.15)':type==='err'?'rgba(192,57,43,.15)':'rgba(217,91,43,.15)';
+    el.style.color=type==='ok'?'var(--grn)':type==='err'?'var(--red)':'var(--org)';
+}
+
+async function generateBlogContent(){
+    const name=currentData?.name||storedName||'Restaurant';
+    const city=currentData?.city||storedCity||'Paris';
+    const cuisine=window._hubData?.cuisine||window._hubData?.category||'';
+    showContentStatus('blogStatus','⏳ Génération IA en cours...','info');
+    try{
+        const resp=await fetch(API_BASE+'/api/ai/generate',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
+            body:JSON.stringify({type:'blog',context:{name,city,cuisine},restaurant_id:currentData?.restaurant_id||0})
+        });
+        const data=await resp.json();
+        if(!data.success)throw new Error(data.message||data.error||'Erreur IA');
+        const content=typeof data.result==='string'?data.result:JSON.stringify(data.result,null,2);
+        // Extract title from first h1 if present
+        const titleMatch=content.match(/<h1[^>]*>(.*?)<\/h1>/i);
+        if(titleMatch)document.getElementById('blogTitle').value=titleMatch[1].replace(/<[^>]+>/g,'');
+        document.getElementById('blogContent').value=content;
+        showContentStatus('blogStatus','✅ Contenu généré — relisez et cliquez Publier','ok');
+    }catch(e){showContentStatus('blogStatus','❌ '+e.message,'err');}
+}
+
+async function publishBlogPost(){
+    const title=document.getElementById('blogTitle').value.trim();
+    const content=document.getElementById('blogContent').value.trim();
+    const status=document.getElementById('blogStatusSelect').value;
+    if(!title||!content)return showContentStatus('blogStatus','❌ Titre et contenu requis','err');
+    showContentStatus('blogStatus','⏳ Publication sur WordPress...','info');
+    try{
+        // Get WordPress credentials from CMS connection
+        const cms=cmsConnection||JSON.parse(localStorage.getItem('restaurank_cms_conn')||'null');
+        if(!cms||cms.type!=='wordpress'||!cms.credentials?.site_url){
+            return showContentStatus('blogStatus','❌ WordPress non connecté — allez dans IA Dispatch pour connecter votre site','err');
+        }
+        const resp=await fetch(API_BASE+'/api/wordpress/publish',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
+            body:JSON.stringify({
+                site_url:cms.credentials.site_url,
+                username:cms.credentials.username,
+                app_password:cms.credentials.app_password,
+                title,content,status
+            })
+        });
+        const data=await resp.json();
+        if(!data.success)throw new Error(data.error||'Erreur WordPress');
+        showContentStatus('blogStatus','✅ Publié ! '+(data.url||''),'ok');
+        loadBlogHistory();
+    }catch(e){showContentStatus('blogStatus','❌ '+e.message,'err');}
+}
+
+async function loadBlogHistory(){
+    const el=document.getElementById('blogHistory');
+    if(!el)return;
+    try{
+        const rid=currentData?.restaurant_id||0;
+        const resp=await fetch(API_BASE+'/api/content/history?type=blog&restaurant_id='+rid,{headers:{'Authorization':'Bearer '+(sessionToken||'')}});
+        const data=await resp.json();
+        if(!data.success||!data.items?.length){el.innerHTML='';return;}
+        el.innerHTML='<div style="font-size:.72rem;color:var(--mut);font-weight:700;margin:10px 0 6px;">HISTORIQUE ('+data.items.length+')</div>'+
+            data.items.slice(0,5).map(i=>`<div style="padding:6px 10px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;margin-bottom:4px;font-size:.72rem;display:flex;justify-content:space-between;align-items:center;"><span>${i.title||'Article'}</span><a href="${i.publish_url||'#'}" target="_blank" style="color:var(--org);font-size:.68rem;">→ Voir</a></div>`).join('');
+    }catch(e){}
+}
+
+async function generateRedditPosts(){
+    const name=currentData?.name||storedName||'Restaurant';
+    const city=currentData?.city||storedCity||'Paris';
+    showContentStatus('redditStatus','⏳ Génération IA en cours...','info');
+    try{
+        const resp=await fetch(API_BASE+'/api/ai/generate',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
+            body:JSON.stringify({type:'reddit',context:{name,city},restaurant_id:currentData?.restaurant_id||0})
+        });
+        const data=await resp.json();
+        if(!data.success)throw new Error(data.message||data.error||'Erreur IA');
+        const content=typeof data.result==='string'?data.result:JSON.stringify(data.result,null,2);
+        // Take first post
+        const firstPost=content.split(/---+/)[0]?.trim()||content;
+        // Try to extract subreddit + title from the format
+        const srMatch=firstPost.match(/r\/(\w+)/);
+        if(srMatch)document.getElementById('redditSubreddit').value=srMatch[1];
+        const titleMatch=firstPost.match(/(?:Titre|Title)\s*:\s*(.+)/i);
+        if(titleMatch)document.getElementById('redditTitle').value=titleMatch[1].trim();
+        else document.getElementById('redditTitle').value='Quelqu\'un a testé '+name+' ?';
+        document.getElementById('redditText').value=firstPost.replace(/(?:Titre|Title)\s*:.*\n?/i,'').trim();
+        showContentStatus('redditStatus','✅ 3 posts générés — vérifiez et publiez un par un','ok');
+    }catch(e){showContentStatus('redditStatus','❌ '+e.message,'err');}
+}
+
+async function publishRedditPost(){
+    const subreddit=document.getElementById('redditSubreddit').value.trim().replace(/^r\//,'');
+    const title=document.getElementById('redditTitle').value.trim();
+    const text=document.getElementById('redditText').value.trim();
+    if(!subreddit||!title||!text)return showContentStatus('redditStatus','❌ Subreddit, titre et texte requis','err');
+    showContentStatus('redditStatus','⏳ Publication sur Reddit...','info');
+    try{
+        const resp=await fetch(API_BASE+'/api/reddit/post',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
+            body:JSON.stringify({subreddit,title,text})
+        });
+        const data=await resp.json();
+        if(!data.success){
+            if(data.needsConfig)throw new Error('Reddit non configuré. Ajoutez vos credentials dans Paramètres');
+            throw new Error(data.error||'Erreur Reddit');
+        }
+        showContentStatus('redditStatus','✅ Publié sur r/'+subreddit+' ! '+(data.url||''),'ok');
+    }catch(e){showContentStatus('redditStatus','❌ '+e.message,'err');}
 }
 
 // ============================================================

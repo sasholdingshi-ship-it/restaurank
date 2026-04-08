@@ -3638,7 +3638,7 @@ app.get('/api/social/connections', requireAuth, (req, res) => {
 // WORDPRESS — Real REST API blog post publishing
 // ============================================================
 app.post('/api/wordpress/publish', async (req, res) => {
-  const { site_url, username, app_password, title, content, status, categories, tags } = req.body;
+  const { site_url, username, app_password, title, content, status, categories, tags, restaurant_id } = req.body;
   if (!site_url || !username || !app_password) {
     return res.json({ success: false, error: 'WordPress credentials required (site_url, username, app_password)' });
   }
@@ -3656,7 +3656,7 @@ app.post('/api/wordpress/publish', async (req, res) => {
       body: JSON.stringify({
         title: title || 'Article SEO RestauRank',
         content: content || '',
-        status: status || 'draft', // 'draft' or 'publish'
+        status: status || 'draft',
         categories: categories || [],
         tags: tags || []
       })
@@ -3664,6 +3664,13 @@ app.post('/api/wordpress/publish', async (req, res) => {
 
     const data = await resp.json();
     if (data.code) throw new Error(data.message || data.code);
+
+    // Save to history
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+      db.prepare('INSERT INTO generated_content (restaurant_id, type, title, content, published, publish_url) VALUES (?, ?, ?, ?, 1, ?)')
+        .run(restaurant_id || 0, 'blog', title || 'Article', content || '', data.link || '');
+    } catch (e) {}
 
     res.json({
       success: true,
@@ -3675,6 +3682,25 @@ app.post('/api/wordpress/publish', async (req, res) => {
   } catch (e) {
     console.error('WordPress publish error:', e.message);
     res.json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/content/history — list published blog/reddit posts
+app.get('/api/content/history', (req, res) => {
+  const { type, restaurant_id } = req.query;
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    let rows;
+    if (type && restaurant_id !== undefined) {
+      rows = db.prepare('SELECT id, type, title, publish_url, published, created_at FROM generated_content WHERE type = ? AND restaurant_id = ? ORDER BY created_at DESC LIMIT 20').all(type, parseInt(restaurant_id));
+    } else if (type) {
+      rows = db.prepare('SELECT id, type, title, publish_url, published, created_at FROM generated_content WHERE type = ? ORDER BY created_at DESC LIMIT 20').all(type);
+    } else {
+      rows = db.prepare('SELECT id, type, title, publish_url, published, created_at FROM generated_content ORDER BY created_at DESC LIMIT 20').all();
+    }
+    res.json({ success: true, items: rows || [] });
+  } catch (e) {
+    res.json({ success: true, items: [] });
   }
 });
 
@@ -7085,7 +7111,47 @@ Retourne en JSON :
   "itemId1": {"title": "...", "content": "... (HTML avec <strong>, <code>, etc.)"},
   "itemId2": {"title": "...", "content": "..."}
 }
-Inclus les corrections exactes, le code à ajouter, les textes à copier.`
+Inclus les corrections exactes, le code à ajouter, les textes à copier.`,
+
+  blog: (ctx) => `Tu es un rédacteur SEO expert pour restaurants. Écris un article de blog optimisé SEO pour "${ctx.name}" à ${ctx.city}.
+
+Cuisine : ${ctx.cuisine || 'Non spécifié'}
+Spécialités : ${ctx.specialties || ''}
+
+Format HTML :
+- <h1>Titre accrocheur avec mot-clé local (ex: "Les X meilleurs Y à ${ctx.city}")</h1>
+- <p>Introduction (100 mots) avec mention du restaurant et de la ville</p>
+- 3-4 sections <h2> avec sous-titres pertinents
+- <p>Contenu riche (total 800-1200 mots) avec mentions naturelles de "${ctx.name}" et "${ctx.city}"
+- <ul> ou <ol> pour listes (plats, conseils, raisons)
+- Inclus 2-3 anecdotes ou détails spécifiques qui donnent du vécu
+- Conclusion avec CTA discret (réserver, venir goûter)
+- Mots-clés locaux naturellement placés
+
+Ton : informatif, passionné, pas marketing. Pas de superlatifs creux.
+Retourne uniquement le HTML, sans markdown ni code blocks.`,
+
+  reddit: (ctx) => `Tu es un client de Reddit qui vient de tester "${ctx.name}" à ${ctx.city}.
+
+Écris 3 posts Reddit différents en français, chacun pour un subreddit différent (r/${ctx.city.toLowerCase()}, r/france, r/food), séparés par "---".
+
+Pour chaque post :
+- Titre (style Reddit, naturel, pas clickbait)
+- Corps : raconte une expérience réelle (un plat, un serveur, une anecdote, un moment)
+- Max 200 mots
+- Style 100% naturel Reddit : tutoiement possible, jamais promotionnel, pas de liens
+- Mention subtile du nom et de la ville
+
+Format :
+r/[subreddit]
+Titre : [...]
+[Corps du post]
+---
+r/[subreddit]
+Titre : [...]
+[Corps du post]
+---
+...`
 };
 
 // Call Claude API
