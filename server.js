@@ -1913,11 +1913,17 @@ function getRedirectUri(req) {
 
 function getOAuth2Client(req) {
   const redirectUri = getRedirectUri(req);
-  return new (getGoogle()).auth.OAuth2(
+  const client = new (getGoogle()).auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     redirectUri
   );
+  // Quota project: bill GBP API calls to the project where APIs are enabled
+  // (not to the OAuth client's home project which may lack API access)
+  if (process.env.GOOGLE_QUOTA_PROJECT) {
+    client.quotaProjectId = process.env.GOOGLE_QUOTA_PROJECT;
+  }
+  return client;
 }
 
 const SCOPES = [
