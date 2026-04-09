@@ -7213,7 +7213,19 @@ function getHubData(){
         review_count:hd.reviewCount||cd.reviewCount||null,
         price_level:hd.priceLevel||null,
         business_status:hd.businessStatus||null,
+        // Special hours / jours exceptionnels (source unique de vérité)
+        special_hours:window._specialHours||[],
     };
+}
+
+async function loadSpecialHours(){
+    const rid=currentData?.restaurant_id||0;
+    try{
+        const r=await fetch(`${API_BASE}/api/hub/special-hours?restaurant_id=${rid}`,{headers:{'Authorization':'Bearer '+sessionToken}});
+        const d=await r.json();
+        if(d.success){window._specialHours=d.specialHours||[];}
+    }catch(e){window._specialHours=window._specialHours||[];}
+    return window._specialHours;
 }
 
 async function pushHubToAll(){
@@ -7222,11 +7234,24 @@ async function pushHubToAll(){
     const status=document.getElementById('hubNapStatus');
     if(status){status.style.display='block';status.style.background='rgba(99,102,241,.1)';status.style.color='var(--ind2)';status.textContent='🚀 Publication sur tous les annuaires en cours...';}
 
+    // Load latest special hours from DB before pushing
+    await loadSpecialHours();
+    hub.special_hours=window._specialHours||[];
+
     // 1. Push to GBP if connected
     if(googleAuth?.connected){
         try{
             if(hub.description)await fetch(API_BASE+'/api/gbp/update-description',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:googleAuth.userId,location_name:googleAuth.locationName,description:hub.description})});
             addToLog('✅ GBP: description mise à jour');
+            // Push special hours if any
+            if(hub.special_hours.length>0){
+                try{
+                    const shResp=await fetch(API_BASE+'/api/hub/push-special-hours',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:currentData?.restaurant_id||0,user_id:googleAuth.userId,location_name:googleAuth.locationName})});
+                    const shData=await shResp.json();
+                    if(shData.success)addToLog(`✅ GBP: ${shData.pushed||0} jours exceptionnels poussés`);
+                    else addToLog('⚠️ GBP special hours: '+(shData.error||'erreur'));
+                }catch(e){addToLog('⚠️ GBP special hours: '+e.message);}
+            }
         }catch(e){addToLog('⚠️ GBP: '+e.message);}
     }
 
@@ -7256,7 +7281,8 @@ async function pushHubToAll(){
         reservation_url:hub.reservation_url,order_url:hub.order_url,menu_url:hub.menu_url,
         amenities:hub.amenities,payment_methods:hub.payment_methods,
         chef:hub.chef,opening_year:hub.opening_year,price_level:hub.price_level,
-        lat:hub.lat,lng:hub.lng
+        lat:hub.lat,lng:hub.lng,
+        special_hours:hub.special_hours||[]
     };
     for(const d of toConnect){
         try{
@@ -9720,6 +9746,8 @@ function getNextHoliday(){
 }
 
 function renderHolidaysAndHours(){
+    // Load persisted special hours asynchronously (non-blocking)
+    loadSpecialHours().catch(()=>{});
     const alert=document.getElementById('holidayAlert');
     const holiday=getNextHoliday();
     if(alert&&holiday){
@@ -10183,6 +10211,7 @@ async function markHolidayOpen(){
         addToLog('✅ Jour férié '+holiday.name+' : horaires normaux (sauvé localement)');
         if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn);">✅ '+holiday.name+' — Ouvert normalement (sera synchronisé avec Google).</div>';
     }
+    await loadSpecialHours();
     setTimeout(()=>{if(alertEl)alertEl.innerHTML='';},8000);
 }
 async function markHolidayClosed(){
@@ -10200,6 +10229,7 @@ async function markHolidayClosed(){
         addToLog('🔒 Jour férié '+holiday.name+' : fermé (sauvé localement)');
         if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);">🔒 '+holiday.name+' — Fermé (sera synchronisé avec Google).</div>';
     }
+    await loadSpecialHours();
     setTimeout(()=>{if(alertEl)alertEl.innerHTML='';},8000);
 }
 

@@ -2305,6 +2305,147 @@ app.post('/api/gbp/update-hours', async (req, res) => {
   }
 });
 
+// ⚡ UPDATE SPECIAL HOURS (gbp_special_hours) — jours fériés / fermetures exceptionnelles
+app.post('/api/gbp/update-special-hours', async (req, res) => {
+  try {
+    const { user_id, location_name, specialHours } = req.body;
+    // specialHours format: { specialHourPeriods: [{ startDate:{year,month,day}, endDate:{...}, openTime:{hours,minutes}, closeTime:{hours,minutes}, closed:bool }] }
+    const auth = getAuthClient(user_id);
+    if (!auth) return res.status(401).json({ error: 'Non connecté' });
+    const mybusiness = getGoogle().mybusinessbusinessinformation({ version: 'v1', auth });
+    const { data } = await mybusiness.locations.patch({
+      name: location_name,
+      updateMask: 'specialHours',
+      requestBody: { specialHours }
+    });
+    logAction(req.body.restaurant_id, 'update_special_hours', 'gbp_special_hours', 'google', 'success', req.body, data);
+    res.json({ success: true, data });
+  } catch (err) {
+    logAction(req.body.restaurant_id, 'update_special_hours', 'gbp_special_hours', 'google', 'error', req.body, { error: err.message });
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ⚡ HUB SPECIAL HOURS CRUD — source unique de vérité pour les fermetures exceptionnelles
+function ensureSpecialHoursTable() {
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS restaurant_special_hours (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      restaurant_id INTEGER NOT NULL,
+      date TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'closed',
+      open_time TEXT,
+      close_time TEXT,
+      label TEXT,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(restaurant_id, date)
+    )`);
+  } catch (e) {}
+}
+ensureSpecialHoursTable();
+
+// Calcul de Pâques (algo de Meeus/Jones/Butcher) + jours fériés français pour une année
+function frenchHolidays(year) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  const easter = new Date(year, month - 1, day);
+  const addDays = (date, n) => { const d2 = new Date(date); d2.setDate(d2.getDate() + n); return d2; };
+  const iso = d => d.toISOString().slice(0, 10);
+  return [
+    { date: `${year}-01-01`, label: 'Jour de l\'An' },
+    { date: iso(addDays(easter, 1)), label: 'Lundi de Pâques' },
+    { date: `${year}-05-01`, label: 'Fête du Travail' },
+    { date: `${year}-05-08`, label: 'Victoire 1945' },
+    { date: iso(addDays(easter, 39)), label: 'Ascension' },
+    { date: iso(addDays(easter, 50)), label: 'Lundi de Pentecôte' },
+    { date: `${year}-07-14`, label: 'Fête Nationale' },
+    { date: `${year}-08-15`, label: 'Assomption' },
+    { date: `${year}-11-01`, label: 'Toussaint' },
+    { date: `${year}-11-11`, label: 'Armistice 1918' },
+    { date: `${year}-12-25`, label: 'Noël' }
+  ];
+}
+
+app.get('/api/hub/french-holidays', (req, res) => {
+  const year = parseInt(req.query.year) || new Date().getFullYear();
+  res.json({ success: true, year, holidays: frenchHolidays(year) });
+});
+
+app.get('/api/hub/special-hours', requireAuth, (req, res) => {
+  try {
+    const rid = parseInt(req.query.restaurant_id) || 0;
+    const rows = db.prepare('SELECT * FROM restaurant_special_hours WHERE restaurant_id = ? ORDER BY date ASC').all(rid);
+    res.json({ success: true, specialHours: rows });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.post('/api/hub/special-hours', requireAuth, (req, res) => {
+  try {
+    const { restaurant_id, date, status, open_time, close_time, label } = req.body;
+    if (!date || !status) return res.json({ success: false, error: 'date + status requis' });
+    const rid = parseInt(restaurant_id) || 0;
+    db.prepare(`INSERT INTO restaurant_special_hours (restaurant_id, date, status, open_time, close_time, label, updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+      ON CONFLICT(restaurant_id, date) DO UPDATE SET status=excluded.status, open_time=excluded.open_time, close_time=excluded.close_time, label=excluded.label, updated_at=datetime('now')`)
+      .run(rid, date, status, open_time || null, close_time || null, label || null);
+    res.json({ success: true });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+app.delete('/api/hub/special-hours', requireAuth, (req, res) => {
+  try {
+    const { restaurant_id, date } = req.body;
+    db.prepare('DELETE FROM restaurant_special_hours WHERE restaurant_id = ? AND date = ?').run(parseInt(restaurant_id) || 0, date);
+    res.json({ success: true });
+  } catch (e) { res.json({ success: false, error: e.message }); }
+});
+
+// Helper: convert stored rows → GBP specialHourPeriods format
+function toGbpSpecialHours(rows) {
+  const periods = (rows || []).map(r => {
+    const [y, m, d] = r.date.split('-').map(Number);
+    const dateObj = { year: y, month: m, day: d };
+    const p = { startDate: dateObj, endDate: dateObj, closed: r.status === 'closed' };
+    if (r.status !== 'closed' && r.open_time && r.close_time) {
+      const [oh, om] = r.open_time.split(':').map(Number);
+      const [ch, cm] = r.close_time.split(':').map(Number);
+      p.openTime = { hours: oh || 0, minutes: om || 0 };
+      p.closeTime = { hours: ch || 0, minutes: cm || 0 };
+    }
+    return p;
+  });
+  return { specialHourPeriods: periods };
+}
+
+// Push special hours to GBP from the stored hub data
+app.post('/api/hub/push-special-hours', requireAuth, async (req, res) => {
+  try {
+    const { restaurant_id, user_id, location_name } = req.body;
+    const rid = parseInt(restaurant_id) || 0;
+    const rows = db.prepare('SELECT * FROM restaurant_special_hours WHERE restaurant_id = ? AND date >= date(\'now\',\'-1 day\') ORDER BY date ASC').all(rid);
+    if (!rows.length) return res.json({ success: true, pushed: 0, note: 'Aucun jour exceptionnel à pousser' });
+    const specialHours = toGbpSpecialHours(rows);
+    const auth = getAuthClient(user_id);
+    if (!auth) return res.json({ success: false, error: 'Google non connecté', rows });
+    const mybusiness = getGoogle().mybusinessbusinessinformation({ version: 'v1', auth });
+    const { data } = await mybusiness.locations.patch({
+      name: location_name,
+      updateMask: 'specialHours',
+      requestBody: { specialHours }
+    });
+    logAction(rid, 'push_special_hours', 'gbp_special_hours', 'google', 'success', { count: rows.length }, data);
+    res.json({ success: true, pushed: rows.length, data });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
 // ⚡ UPDATE ATTRIBUTES (gbp_attr)
 app.post('/api/gbp/update-attributes', async (req, res) => {
   try {
@@ -12932,6 +13073,14 @@ app.post('/api/gbp/special-hours', async (req, res) => {
     }
     try {
       db.prepare("INSERT INTO action_log (restaurant_id, action_type, details, created_at) VALUES (?, 'special_hours', ?, datetime('now'))").run(restaurant_id || 0, JSON.stringify({ date, is_closed, holiday_name }));
+    } catch(e) {}
+    // Persist to the canonical restaurant_special_hours table (source of truth for Hub + downstream push)
+    try {
+      ensureSpecialHoursTable();
+      db.prepare(`INSERT INTO restaurant_special_hours (restaurant_id, date, status, open_time, close_time, label, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(restaurant_id, date) DO UPDATE SET status=excluded.status, open_time=excluded.open_time, close_time=excluded.close_time, label=excluded.label, updated_at=datetime('now')`)
+        .run(restaurant_id || 0, date, is_closed ? 'closed' : 'custom', is_closed ? null : (open_time || null), is_closed ? null : (close_time || null), holiday_name || null);
     } catch(e) {}
     res.json({ success: true, source: 'queued', message: `Horaires ${holiday_name} enregistrés — sera synchronisé avec Google quand l'API sera connectée` });
   } catch(e) {
