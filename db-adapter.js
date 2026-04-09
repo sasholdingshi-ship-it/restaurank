@@ -10,7 +10,7 @@ function createDB() {
   return db;
 }
 
-const SYNC_TABLES = ['accounts', 'restaurants', 'restaurant_settings', 'sessions'];
+const SYNC_TABLES = ['accounts', 'restaurants', 'restaurant_settings', 'sessions', 'restaurant_special_hours', 'scheduled_responses', 'directory_automation', 'seo_settings'];
 
 async function setupPGSync(db) {
   const pgUrl = process.env.DATABASE_URL;
@@ -43,6 +43,10 @@ async function setupPGSync(db) {
       `CREATE TABLE IF NOT EXISTS restaurants (id SERIAL PRIMARY KEY, user_id INTEGER, owner_id INTEGER, name TEXT NOT NULL, city TEXT NOT NULL, google_place_id TEXT, google_account_id TEXT, google_location_id TEXT, audit_data TEXT, scores TEXT, completed_actions TEXT DEFAULT '{}', platform_status TEXT DEFAULT '{}', hub_data TEXT, last_audit TIMESTAMP, created_at TIMESTAMP DEFAULT NOW())`,
       `CREATE TABLE IF NOT EXISTS restaurant_settings (id SERIAL PRIMARY KEY, restaurant_id INTEGER NOT NULL DEFAULT 0, type TEXT NOT NULL, data TEXT DEFAULT '{}', updated_at TIMESTAMP DEFAULT NOW())`,
       `CREATE TABLE IF NOT EXISTS sessions (id TEXT PRIMARY KEY, account_id INTEGER NOT NULL, expires_at TIMESTAMP NOT NULL, created_at TIMESTAMP DEFAULT NOW())`,
+      `CREATE TABLE IF NOT EXISTS restaurant_special_hours (id SERIAL PRIMARY KEY, restaurant_id INTEGER NOT NULL, date TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'closed', open_time TEXT, close_time TEXT, label TEXT, updated_at TIMESTAMP DEFAULT NOW(), UNIQUE(restaurant_id, date))`,
+      `CREATE TABLE IF NOT EXISTS scheduled_responses (id SERIAL PRIMARY KEY, restaurant_id INTEGER, platform TEXT, review_id TEXT, reply_text TEXT, scheduled_at TEXT, status TEXT DEFAULT 'pending', created_at TIMESTAMP DEFAULT NOW())`,
+      `CREATE TABLE IF NOT EXISTS directory_automation (id SERIAL PRIMARY KEY, restaurant_id INTEGER, platform TEXT, status TEXT, claim_url TEXT, automation_log TEXT, updated_at TIMESTAMP DEFAULT NOW())`,
+      `CREATE TABLE IF NOT EXISTS seo_settings (id SERIAL PRIMARY KEY, restaurant_id INTEGER NOT NULL, setting_type TEXT NOT NULL, setting_data TEXT DEFAULT '{}', updated_at TIMESTAMP DEFAULT NOW())`,
     ];
     for (const sql of creates) {
       try { await pool.query(sql); } catch (e) {}

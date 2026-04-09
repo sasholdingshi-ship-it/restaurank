@@ -4318,6 +4318,29 @@ function getBaseUrl(req) {
 }
 
 // --- META STATUS (config + connection check) ---
+// DB health check — confirms PG sync is active + lists synced tables
+app.get('/api/db/status', requireAuth, (req, res) => {
+  const pgConfigured = !!process.env.DATABASE_URL;
+  const tables = {};
+  try {
+    const tableList = db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all();
+    for (const t of tableList) {
+      try {
+        const count = db.prepare(`SELECT COUNT(*) as c FROM ${t.name}`).get();
+        tables[t.name] = count?.c || 0;
+      } catch (e) {}
+    }
+  } catch (e) {}
+  res.json({
+    sqlite: { path: process.env.DB_PATH || 'restaurank.db', tables },
+    postgres: {
+      configured: pgConfigured,
+      synced_tables: ['accounts', 'restaurants', 'restaurant_settings', 'sessions', 'restaurant_special_hours', 'scheduled_responses', 'directory_automation', 'seo_settings'],
+      sync_interval_minutes: 5
+    }
+  });
+});
+
 app.get('/api/meta/status', requireAuth, (req, res) => {
   const configured = !!(process.env.META_APP_ID || process.env.FACEBOOK_APP_ID) && !!(process.env.META_APP_SECRET || process.env.FACEBOOK_APP_SECRET);
   let connected = false, pages = 0, instagram = false, connected_at = null;
