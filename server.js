@@ -4145,6 +4145,23 @@ function getBaseUrl(req) {
   return `${proto}://${host}`;
 }
 
+// --- META STATUS (config + connection check) ---
+app.get('/api/meta/status', requireAuth, (req, res) => {
+  const configured = !!(process.env.META_APP_ID || process.env.FACEBOOK_APP_ID) && !!(process.env.META_APP_SECRET || process.env.FACEBOOK_APP_SECRET);
+  let connected = false, pages = 0, instagram = false, connected_at = null;
+  try {
+    const u = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(req.account.id);
+    const st = JSON.parse(u?.social_tokens || '{}');
+    if (st.meta_token) {
+      connected = true;
+      pages = (st.fb_pages || []).length;
+      instagram = !!st.ig_account_id;
+      connected_at = st.meta_connected_at || null;
+    }
+  } catch (e) {}
+  res.json({ configured, connected, pages, instagram, connected_at, app_id_present: !!process.env.META_APP_ID, app_secret_present: !!process.env.META_APP_SECRET });
+});
+
 // --- FACEBOOK / INSTAGRAM (Meta) OAuth 2.0 ---
 app.get('/auth/facebook', (req, res) => {
   const appId = process.env.META_APP_ID || process.env.FACEBOOK_APP_ID;

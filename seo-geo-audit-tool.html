@@ -599,8 +599,12 @@
                             <div style="font-size:.72rem;color:var(--mut);">NAP + Horaires + Description — source unique de vérité</div>
                         </div>
                     </div>
-                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="scrapeHubData()">🔄 Récupérer auto</button>
+                    <div style="display:flex;gap:8px;">
+                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:linear-gradient(135deg,#1877f2,#0866ff);" onclick="connectMeta()">🔗 Connecter Meta</button>
+                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="scrapeHubData()">🔄 Récupérer auto</button>
+                    </div>
                 </div>
+                <div id="metaStatus" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:.72rem;"></div>
                 <div id="hubNapStatus" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(99,102,241,.1);font-size:.75rem;color:var(--ind2);"></div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                     <div class="hub-field">

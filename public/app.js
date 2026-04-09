@@ -6910,6 +6910,27 @@ let hubPhotos=[];
 let hubPhotoFilter='all';
 let hubPhotoSelected=new Set();
 
+async function connectMeta(){
+    const st=document.getElementById('metaStatus');
+    if(st){st.style.display='block';st.style.background='rgba(24,119,242,.1)';st.style.color='#1877f2';st.textContent='⏳ Vérification config Meta…';}
+    try{
+        const r=await fetch('/api/meta/status',{headers:{'Authorization':'Bearer '+sessionToken}});
+        const d=await r.json();
+        if(!d.configured){
+            if(st){st.style.background='rgba(249,115,22,.12)';st.style.color='var(--org)';st.innerHTML='⚠️ META_APP_ID non configuré sur le serveur. Admin : ajouter META_APP_ID + META_APP_SECRET dans les variables d\'environnement. Guide : developers.facebook.com → Business app → Facebook Login + Instagram Graph API.';}
+            return;
+        }
+        if(d.connected){
+            if(st){st.style.background='rgba(34,197,94,.12)';st.style.color='var(--grn)';st.innerHTML=`✅ Connecté — ${d.pages||0} Page(s) Facebook${d.instagram?' + Instagram Business':''}. <button onclick="window.location.href='/auth/facebook'" style="background:none;border:none;color:#1877f2;cursor:pointer;text-decoration:underline;font-size:.72rem;">Reconnecter</button>`;}
+            return;
+        }
+        // Configured but not connected → launch OAuth
+        window.location.href='/auth/facebook';
+    }catch(e){
+        if(st){st.style.background='rgba(239,68,68,.12)';st.style.color='var(--red)';st.textContent='❌ Erreur: '+e.message;}
+    }
+}
+
 async function scrapeHubData(){
     const status=document.getElementById('hubNapStatus');
     if(status){status.style.display='block';status.style.background='rgba(99,102,241,.1)';status.style.color='var(--ind2)';status.textContent='🔄 Récupération des données en cours...';}
