@@ -7435,24 +7435,77 @@ app.post('/api/scrape-gmb', async (req, res) => {
         const ogImage = siteHtml.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
         if (ogImage) result.branding.ogImage = ogImage[1];
 
-        // Logo from <img> tags with "logo" in src, alt, or class
-        const logoImgMatch = siteHtml.match(/<img[^>]*(?:class=["'][^"']*logo[^"']*["']|alt=["'][^"']*logo[^"']*["']|src=["'][^"']*logo[^"']*["'])[^>]*src=["']([^"']+)["']/i)
-          || siteHtml.match(/<img[^>]*src=["']([^"']*logo[^"']+)["']/i);
-        if (logoImgMatch) {
-          let logoUrl = logoImgMatch[1];
-          if (logoUrl.startsWith('//')) logoUrl = 'https:' + logoUrl;
-          else if (logoUrl.startsWith('/')) logoUrl = new URL(logoUrl, normalized).href;
-          result.branding.logo = logoUrl;
+        // ═══════════════════════════════════════════
+        // LOGO DETECTION — 6 strategies (robust for SPAs and unconventional markup)
+        // ═══════════════════════════════════════════
+        const absolutizeLogo = (u) => {
+          if (!u) return null;
+          u = u.trim().replace(/['"]/g, '');
+          if (u.startsWith('//')) return 'https:' + u;
+          if (u.startsWith('http')) return u;
+          if (u.startsWith('data:')) return u;
+          try { return new URL(u, normalized).href; } catch { return null; }
+        };
+        const isValidLogo = u => u && !/tracking|pixel|analytics|gtm|facebook|fbcdn|gravatar/i.test(u);
+
+        // Strategy 1: <img> with "logo" or "brand" keyword in class/alt/src (attribute order agnostic)
+        if (!result.branding.logo) {
+          const m = siteHtml.match(/<img\b[^>]*(?:class|alt|id|src)=["'][^"']*(?:logo|brand)[^"']*["'][^>]*>/i);
+          if (m) {
+            const srcMatch = m[0].match(/\bsrc=["']([^"']+)["']/i) || m[0].match(/\bdata-src=["']([^"']+)["']/i);
+            if (srcMatch) {
+              const url = absolutizeLogo(srcMatch[1]);
+              if (isValidLogo(url)) result.branding.logo = url;
+            }
+          }
         }
 
-        // SVG logo in <header> or <nav>
+        // Strategy 2: Apple touch icon (always square, always logo-sized, always present)
         if (!result.branding.logo) {
-          const svgLogo = siteHtml.match(/<(?:header|nav)[^>]*>[\s\S]{0,3000}?<(?:img|svg)[^>]*(?:logo|brand)[^>]*(?:src=["']([^"']+)["'])?/i);
-          if (svgLogo && svgLogo[1]) {
-            let svgUrl = svgLogo[1];
-            if (svgUrl.startsWith('/')) svgUrl = new URL(svgUrl, normalized).href;
-            result.branding.logo = svgUrl;
+          const m = siteHtml.match(/<link[^>]*rel=["'](?:apple-touch-icon|apple-touch-icon-precomposed)["'][^>]*href=["']([^"']+)["']/i)
+                 || siteHtml.match(/<link[^>]*href=["']([^"']+)["'][^>]*rel=["'](?:apple-touch-icon|apple-touch-icon-precomposed)["']/i);
+          if (m) {
+            const url = absolutizeLogo(m[1]);
+            if (isValidLogo(url)) result.branding.logo = url;
           }
+        }
+
+        // Strategy 3: First <img> in <header> or <nav> (logo is almost always in the top nav)
+        if (!result.branding.logo) {
+          const headerBlock = siteHtml.match(/<(?:header|nav)[^>]*>[\s\S]{0,5000}?<\/(?:header|nav)>/i);
+          if (headerBlock) {
+            const firstImg = headerBlock[0].match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i);
+            if (firstImg) {
+              const url = absolutizeLogo(firstImg[1]);
+              if (isValidLogo(url)) result.branding.logo = url;
+            }
+          }
+        }
+
+        // Strategy 4: CSS background-image in header/nav/brand classes (for div-based logos)
+        if (!result.branding.logo) {
+          const cssLogoMatch = siteHtml.match(/\.(?:header|nav|brand|logo)[^{]*\{[^}]*background(?:-image)?\s*:\s*url\(["']?([^"')]+)["']?\)/i);
+          if (cssLogoMatch) {
+            const url = absolutizeLogo(cssLogoMatch[1]);
+            if (isValidLogo(url)) result.branding.logo = url;
+          }
+        }
+
+        // Strategy 5: First <img> in the top 10KB of HTML (body start) — usually the logo
+        if (!result.branding.logo) {
+          const topHtml = siteHtml.slice(0, 10000);
+          const firstImg = topHtml.match(/<img\b[^>]*\bsrc=["']([^"']+)["']/i);
+          if (firstImg) {
+            const url = absolutizeLogo(firstImg[1]);
+            // Extra guard: prefer it only if the URL looks like a logo or brand asset
+            if (isValidLogo(url) && /\.(png|jpe?g|svg|webp)(\?|$)/i.test(url)) result.branding.logo = url;
+          }
+        }
+
+        // Strategy 6: Fallback to og:image (often the logo or main brand image)
+        if (!result.branding.logo && result.branding.ogImage) {
+          const url = absolutizeLogo(result.branding.ogImage);
+          if (isValidLogo(url)) result.branding.logo = url;
         }
 
         // ═══════════════════════════════════════════
@@ -7679,11 +7732,38 @@ app.post('/api/scrape-gmb', async (req, res) => {
               result.branding.pageAuthority = mozData.results[0].page_authority || null;
               result.branding.backlinks = mozData.results[0].external_pages_to_root_domain || null;
             }
+          } else if (process.env.OPENPAGERANK_API_KEY) {
+            // Fallback: OpenPageRank (free up to 1000 req/day, gives 0-10 score)
+            try {
+              const host = new URL(normalized).hostname.replace(/^www\./, '');
+              const oprResp = await fetch(`https://openpagerank.com/api/v1.0/getPageRank?domains%5B0%5D=${encodeURIComponent(host)}`, {
+                headers: { 'API-OPR': process.env.OPENPAGERANK_API_KEY },
+                signal: AbortSignal.timeout(8000)
+              });
+              const oprData = await oprResp.json();
+              const row = oprData.response?.[0];
+              if (row && row.status_code === 200) {
+                // OpenPageRank gives 0-10; scale to 0-100 so UI treats it consistently with DA
+                const pr = parseFloat(row.page_rank_decimal) || 0;
+                result.branding.domainAuthority = Math.round(pr * 10);
+                result.branding.daSource = 'openpagerank';
+                result.branding.pageRank = pr;
+                result.branding.daMessage = `Score OpenPageRank: ${pr}/10 — proxy gratuit du DA Moz`;
+              } else {
+                result.branding.domainAuthority = null;
+                result.branding.daSource = 'unavailable';
+                result.branding.daMessage = `OpenPageRank: aucune donnée pour ${host}`;
+              }
+            } catch (e) {
+              result.branding.domainAuthority = null;
+              result.branding.daSource = 'unavailable';
+              result.branding.daMessage = 'OpenPageRank: ' + e.message;
+            }
           } else {
-            // No Moz API — DA unknown. Don't estimate.
+            // No Moz, no OpenPageRank — DA unknown. Don't estimate.
             result.branding.domainAuthority = null;
             result.branding.daSource = 'unavailable';
-            result.branding.daMessage = 'Configurez MOZ_ACCESS_ID + MOZ_SECRET_KEY pour obtenir le DA réel';
+            result.branding.daMessage = 'Configurez MOZ_ACCESS_ID + MOZ_SECRET_KEY (DA réel) ou OPENPAGERANK_API_KEY (gratuit, 1000 req/jour, https://www.domcop.com/openpagerank/)';
           }
         } catch (e) { console.warn('DA estimation error:', e.message); }
 
