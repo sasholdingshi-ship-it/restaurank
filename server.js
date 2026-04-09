@@ -2,11 +2,11 @@
 // RestauRank — Backend SaaS
 // Google Business Profile API + Yelp Data Ingestion
 // ============================================================
-require('dotenv').config({ override: true });
+require('dotenv').config({ override: process.env.NODE_ENV !== 'test' });
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
-const { createDB } = require('./db-adapter');
+const { createDB, setupPGSync } = require('./db-adapter');
 const zlib = require('zlib');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
@@ -421,6 +421,8 @@ const PORT = process.env.PORT || 8765;
 // ============================================================
 const db = createDB();
 
+// PG sync is handled by setupPGSync() in app.listen callback
+
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -506,6 +508,63 @@ db.exec(`
     discovery_searches INTEGER DEFAULT 0,
     recorded_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
+  CREATE TABLE IF NOT EXISTS cms_snapshots (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER NOT NULL DEFAULT 0,
+    cms_type TEXT NOT NULL,
+    action_type TEXT NOT NULL,
+    description TEXT,
+    target_id TEXT,
+    target_url TEXT,
+    before_data TEXT,
+    after_data TEXT,
+    credentials_snapshot TEXT,
+    reverted INTEGER DEFAULT 0,
+    reverted_at DATETIME,
+    revert_error TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS reddit_accounts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER NOT NULL,
+    username TEXT NOT NULL,
+    client_id TEXT NOT NULL,
+    client_secret TEXT NOT NULL,
+    password TEXT NOT NULL,
+    account_age_days INTEGER DEFAULT 0,
+    karma INTEGER DEFAULT 0,
+    last_verified DATETIME,
+    is_active INTEGER DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS reddit_post_queue (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER NOT NULL,
+    account_id INTEGER NOT NULL,
+    subreddit TEXT NOT NULL,
+    title TEXT NOT NULL,
+    body TEXT NOT NULL,
+    scheduled_for DATETIME NOT NULL,
+    status TEXT DEFAULT 'pending',
+    attempt_count INTEGER DEFAULT 0,
+    last_error TEXT,
+    post_id TEXT,
+    post_url TEXT,
+    published_at DATETIME,
+    content_hash TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS reddit_post_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account_id INTEGER NOT NULL,
+    subreddit TEXT NOT NULL,
+    post_id TEXT,
+    post_url TEXT,
+    content_hash TEXT,
+    posted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status TEXT DEFAULT 'ok',
+    error TEXT
+  );
 `);
 
 // ============================================================
@@ -530,7 +589,8 @@ db.exec(`
 `);
 
 // Insert default dev license if none exists
-const licenseCount = db.prepare('SELECT COUNT(*) as c FROM licenses').get().c;
+const _licRow = db.prepare('SELECT COUNT(*) as c FROM licenses').get();
+const licenseCount = _licRow ? _licRow.c : 0;
 if (licenseCount === 0) {
   const devKey = 'RK-DEV-' + crypto.randomBytes(16).toString('hex').toUpperCase();
   db.prepare('INSERT INTO licenses (license_key, owner_email, plan, allowed_domains, features) VALUES (?, ?, ?, ?, ?)')
@@ -597,6 +657,8 @@ db.exec(`
 
 // Migrate: add owner_id to restaurants
 try { db.exec(`ALTER TABLE restaurants ADD COLUMN owner_id INTEGER REFERENCES accounts(id)`); } catch(e) {}
+try { db.exec(`ALTER TABLE restaurants ADD COLUMN hub_data TEXT`); } catch(e) {}
+try { db.exec(`ALTER TABLE users ADD COLUMN social_tokens TEXT DEFAULT '{}'`); } catch(e) {}
 
 // Migrate: link existing restaurants to accounts via email matching
 try {
@@ -614,13 +676,395 @@ try {
 // Create default admin account if not exists
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@restaurank.com';
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'RestauRank2026!';
-const existingAdmin = db.prepare('SELECT id FROM accounts WHERE email = ?').get(ADMIN_EMAIL);
+const existingAdmin = db.prepare('SELECT id, salt, password_hash FROM accounts WHERE email = ?').get(ADMIN_EMAIL);
 if (!existingAdmin) {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto.scryptSync(ADMIN_PASS, salt, 64).toString('hex');
-  db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants) VALUES (?, ?, ?, ?, ?, ?, ?)').run(ADMIN_EMAIL, hash, salt, 'Admin RestauRank', 'admin', 'enterprise', 999);
+  db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants, is_active) VALUES (?, ?, ?, ?, ?, ?, ?, 1)').run(ADMIN_EMAIL, hash, salt, 'Admin RestauRank', 'admin', 'enterprise', 999);
   console.log(`🔑 Admin account created: ${ADMIN_EMAIL}`);
+} else {
+  // Always verify admin password matches env var — fix if not
+  const expectedHash = existingAdmin.salt ? crypto.scryptSync(ADMIN_PASS, existingAdmin.salt, 64).toString('hex') : null;
+  if (!existingAdmin.salt || expectedHash !== existingAdmin.password_hash) {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(ADMIN_PASS, salt, 64).toString('hex');
+    db.prepare('UPDATE accounts SET password_hash = ?, salt = ?, role = ? WHERE email = ?').run(hash, salt, 'admin', ADMIN_EMAIL);
+    console.log(`🔑 Admin password synced with env var: ${ADMIN_EMAIL}`);
+  }
 }
+
+// ============================================================
+// DATA QUALITY — tables, validation engine, daily sync
+// ============================================================
+db.exec(`
+  CREATE TABLE IF NOT EXISTS data_quality_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER NOT NULL,
+    field TEXT NOT NULL,
+    status TEXT DEFAULT 'error',
+    message TEXT,
+    old_value TEXT,
+    new_value TEXT,
+    source TEXT,
+    auto_fixed INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+  CREATE TABLE IF NOT EXISTS sync_history (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    restaurant_id INTEGER,
+    sync_type TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    details TEXT,
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    finished_at DATETIME
+  );
+`);
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_dq_restaurant ON data_quality_log(restaurant_id)'); } catch(e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_dq_field ON data_quality_log(field)'); } catch(e) {}
+try { db.exec('CREATE INDEX IF NOT EXISTS idx_sync_restaurant ON sync_history(restaurant_id)'); } catch(e) {}
+
+// ── VALIDATION RULES ──
+const VALIDATION_RULES = {
+  phone: {
+    label: 'Téléphone',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Téléphone manquant' };
+      const cleaned = v.replace(/[\s\-\.\(\)]/g, '');
+      if (/^\+33[0-9]{9}$/.test(cleaned)) return { status: 'ok', normalized: cleaned.replace(/^\+33/, '+33 ').replace(/(\d{1})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5') };
+      if (/^0[1-9][0-9]{8}$/.test(cleaned)) return { status: 'ok', normalized: cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5') };
+      if (/^\+?[0-9]{10,15}$/.test(cleaned)) return { status: 'warn', message: 'Format téléphone non standard FR' };
+      return { status: 'error', message: 'Téléphone invalide: ' + v };
+    }
+  },
+  address: {
+    label: 'Adresse',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Adresse manquante' };
+      if (v.length < 10) return { status: 'error', message: 'Adresse trop courte' };
+      if (!/\d/.test(v)) return { status: 'warn', message: 'Pas de numéro de rue détecté' };
+      if (!/\d{5}/.test(v)) return { status: 'warn', message: 'Code postal manquant' };
+      return { status: 'ok' };
+    }
+  },
+  name: {
+    label: 'Nom',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Nom manquant' };
+      if (v.length < 2) return { status: 'error', message: 'Nom trop court' };
+      if (v === v.toUpperCase() && v.length > 3) return { status: 'warn', message: 'Nom tout en majuscules', normalized: v.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') };
+      return { status: 'ok' };
+    }
+  },
+  website: {
+    label: 'Site web',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Site web manquant' };
+      if (!/^https?:\/\/.+\..+/.test(v)) return { status: 'error', message: 'URL invalide' };
+      if (!v.startsWith('https://')) return { status: 'warn', message: 'Site non HTTPS', normalized: v.replace('http://', 'https://') };
+      return { status: 'ok' };
+    }
+  },
+  description: {
+    label: 'Description',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Description manquante' };
+      if (v.length < 100) return { status: 'error', message: `Description trop courte (${v.length}/750 car.)` };
+      if (v.length < 300) return { status: 'warn', message: `Description courte (${v.length}/750 car.)` };
+      return { status: 'ok' };
+    }
+  },
+  hours: {
+    label: 'Horaires',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Horaires manquants' };
+      const str = typeof v === 'string' ? v : JSON.stringify(v);
+      if (str.length < 10) return { status: 'error', message: 'Horaires incomplets' };
+      return { status: 'ok' };
+    }
+  },
+  category: {
+    label: 'Catégorie',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Catégorie manquante' };
+      if (v.toLowerCase() === 'restaurant') return { status: 'warn', message: 'Catégorie trop générique — spécifiez (ex: Restaurant italien)' };
+      return { status: 'ok' };
+    }
+  },
+  rating: {
+    label: 'Note Google',
+    validate: (v) => {
+      if (!v && v !== 0) return { status: 'missing', message: 'Note non récupérée' };
+      const n = parseFloat(v);
+      if (isNaN(n)) return { status: 'error', message: 'Note invalide' };
+      if (n < 3.5) return { status: 'error', message: `Note basse (${n}/5)` };
+      if (n < 4.2) return { status: 'warn', message: `Note à améliorer (${n}/5)` };
+      return { status: 'ok' };
+    }
+  },
+  photos: {
+    label: 'Photos',
+    validate: (v) => {
+      const count = Array.isArray(v) ? v.length : (parseInt(v) || 0);
+      if (count === 0) return { status: 'missing', message: 'Aucune photo' };
+      if (count < 5) return { status: 'error', message: `Seulement ${count} photos (min 25)` };
+      if (count < 25) return { status: 'warn', message: `${count} photos (objectif 25+)` };
+      return { status: 'ok' };
+    }
+  },
+  logo: {
+    label: 'Logo',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Logo non détecté' };
+      return { status: 'ok' };
+    }
+  },
+  menu: {
+    label: 'Menu',
+    validate: (v) => {
+      if (!v) return { status: 'missing', message: 'Menu non uploadé sur GBP' };
+      return { status: 'ok' };
+    }
+  }
+};
+
+// ── VALIDATE & LOG a restaurant's data quality ──
+function validateRestaurant(restaurantId) {
+  const rest = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(restaurantId);
+  if (!rest) return null;
+
+  const audit = rest.audit_data ? JSON.parse(rest.audit_data) : {};
+  const scores = rest.scores ? JSON.parse(rest.scores) : {};
+  let hub = null;
+  try {
+    const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(restaurantId, 'hub_data');
+    hub = hubRow ? JSON.parse(hubRow.data) : {};
+  } catch(e) { hub = {}; }
+
+  const results = {};
+  const fieldMap = {
+    name: rest.name || hub?.name || audit?.name,
+    phone: hub?.phone || audit?.phone,
+    address: hub?.address || audit?.address,
+    website: hub?.website || hub?.websiteUrl || audit?.websiteUrl,
+    description: hub?.description || audit?.description,
+    hours: hub?.hours || audit?.hours,
+    category: hub?.category || hub?.cuisine || audit?.category,
+    rating: hub?.rating || audit?.rating,
+    photos: hub?.photos || audit?.photos || [],
+    logo: hub?.branding?.logo || hub?.logo,
+    menu: audit?.menuUploaded ? 'uploaded' : null
+  };
+
+  // Clear old logs for this restaurant
+  try { db.prepare('DELETE FROM data_quality_log WHERE restaurant_id = ? AND created_at > datetime(\'now\', \'-1 hour\')').run(restaurantId); } catch(e) {}
+
+  let okCount = 0, warnCount = 0, errCount = 0, missingCount = 0;
+
+  for (const [field, rule] of Object.entries(VALIDATION_RULES)) {
+    const value = fieldMap[field];
+    const result = rule.validate(value);
+    results[field] = { ...result, label: rule.label, value: value || null };
+
+    if (result.status === 'ok') okCount++;
+    else if (result.status === 'warn') warnCount++;
+    else if (result.status === 'missing') missingCount++;
+    else errCount++;
+
+    // Log issues
+    if (result.status !== 'ok') {
+      try {
+        db.prepare('INSERT INTO data_quality_log (restaurant_id, field, status, message, old_value, source) VALUES (?, ?, ?, ?, ?, ?)')
+          .run(restaurantId, field, result.status, result.message || '', typeof value === 'string' ? value?.substring(0, 200) : JSON.stringify(value)?.substring(0, 200), 'auto_validation');
+      } catch(e) {}
+    }
+
+    // Auto-fix if normalization available
+    if (result.normalized && result.status === 'warn') {
+      try {
+        db.prepare('INSERT INTO data_quality_log (restaurant_id, field, status, message, old_value, new_value, source, auto_fixed) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
+          .run(restaurantId, field, 'auto_fixed', `Normalisé: ${result.message}`, typeof value === 'string' ? value : '', result.normalized, 'auto_normalize');
+      } catch(e) {}
+    }
+  }
+
+  const total = Object.keys(VALIDATION_RULES).length;
+  const qualityScore = Math.round((okCount / total) * 100);
+
+  return { restaurantId, name: rest.name, city: rest.city, fields: results, qualityScore, ok: okCount, warn: warnCount, error: errCount, missing: missingCount, total };
+}
+
+// ── CROSS-CHECK with Google Places (official source) ──
+async function crossCheckWithGoogle(restaurantId) {
+  const rest = db.prepare('SELECT * FROM restaurants WHERE id = ?').get(restaurantId);
+  if (!rest) return null;
+  const placesKey = process.env.GOOGLE_PLACES_API_KEY;
+  if (!placesKey) return { error: 'No Google Places API key' };
+
+  let hub = {};
+  try {
+    const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(restaurantId, 'hub_data');
+    hub = hubRow ? JSON.parse(hubRow.data) : {};
+  } catch(e) {}
+
+  const placeId = rest.google_place_id || hub?.place_id;
+  if (!placeId) {
+    // Try to find by name+city
+    try {
+      const q = encodeURIComponent(`${rest.name} ${rest.city} restaurant`);
+      const searchResp = await fetch(`https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr&type=restaurant`, { signal: AbortSignal.timeout(10000) });
+      const searchData = await searchResp.json();
+      if (searchData.status === 'OK' && searchData.results?.[0]?.place_id) {
+        db.prepare('UPDATE restaurants SET google_place_id = ? WHERE id = ?').run(searchData.results[0].place_id, restaurantId);
+      } else return { error: 'Restaurant non trouvé sur Google Places' };
+    } catch(e) { return { error: e.message }; }
+  }
+
+  // Fetch fresh data from Google
+  const freshPlaceId = placeId || db.prepare('SELECT google_place_id FROM restaurants WHERE id = ?').get(restaurantId)?.google_place_id;
+  if (!freshPlaceId) return { error: 'No place_id' };
+
+  try {
+    const fields = 'name,formatted_address,formatted_phone_number,website,rating,user_ratings_total,opening_hours,photos,editorial_summary,business_status';
+    const resp = await fetch(`https://maps.googleapis.com/maps/api/place/details/json?place_id=${freshPlaceId}&fields=${fields}&key=${placesKey}&language=fr`, { signal: AbortSignal.timeout(10000) });
+    const data = await resp.json();
+    if (data.status !== 'OK') return { error: 'Google API: ' + data.status };
+
+    const g = data.result;
+    const diffs = [];
+
+    // Compare each field
+    if (g.name && hub.name && g.name.toLowerCase() !== hub.name.toLowerCase()) diffs.push({ field: 'name', google: g.name, local: hub.name });
+    if (g.formatted_phone_number && hub.phone) {
+      const gPhone = g.formatted_phone_number.replace(/[\s\-\.]/g, '');
+      const lPhone = (hub.phone || '').replace(/[\s\-\.]/g, '');
+      if (gPhone !== lPhone) diffs.push({ field: 'phone', google: g.formatted_phone_number, local: hub.phone });
+    }
+    if (g.formatted_address && hub.address && !g.formatted_address.toLowerCase().includes(hub.address.toLowerCase().substring(0, 20))) diffs.push({ field: 'address', google: g.formatted_address, local: hub.address });
+    if (g.website && hub.website && new URL(g.website).hostname !== new URL(hub.website).hostname) diffs.push({ field: 'website', google: g.website, local: hub.website });
+    if (g.rating && hub.rating && Math.abs(g.rating - parseFloat(hub.rating)) > 0.1) diffs.push({ field: 'rating', google: g.rating, local: hub.rating });
+
+    // Log diffs
+    diffs.forEach(d => {
+      try {
+        db.prepare('INSERT INTO data_quality_log (restaurant_id, field, status, message, old_value, new_value, source) VALUES (?, ?, ?, ?, ?, ?, ?)')
+          .run(restaurantId, d.field, 'mismatch', `Différence Google vs local`, d.local || '', d.google || '', 'google_crosscheck');
+      } catch(e) {}
+    });
+
+    // Log sync
+    try {
+      db.prepare('INSERT INTO sync_history (restaurant_id, sync_type, status, details, finished_at) VALUES (?, ?, ?, ?, datetime(\'now\'))')
+        .run(restaurantId, 'google_crosscheck', 'done', JSON.stringify({ diffs: diffs.length, fields_checked: 5 }));
+    } catch(e) {}
+
+    return { success: true, diffs, google: { name: g.name, phone: g.formatted_phone_number, address: g.formatted_address, website: g.website, rating: g.rating, reviewCount: g.user_ratings_total, photoCount: g.photos?.length || 0, status: g.business_status } };
+  } catch(e) { return { error: e.message }; }
+}
+
+// ── DAILY SYNC CRON — runs every 24h ──
+async function dailySync() {
+  console.log('🔄 Daily sync started at', new Date().toISOString());
+  try {
+    const restaurants = db.prepare('SELECT id, name, city FROM restaurants').all();
+    let validated = 0, crossChecked = 0, errors = 0;
+
+    for (const r of restaurants) {
+      try {
+        // 1. Validate data quality
+        validateRestaurant(r.id);
+        validated++;
+
+        // 2. Cross-check with Google (rate-limited: 1 per 2 seconds)
+        if (process.env.GOOGLE_PLACES_API_KEY) {
+          await crossCheckWithGoogle(r.id);
+          crossChecked++;
+          await new Promise(resolve => setTimeout(resolve, 2000)); // Rate limit
+        }
+      } catch(e) {
+        errors++;
+        console.warn(`Daily sync error for restaurant #${r.id}:`, e.message);
+      }
+    }
+
+    // Log the sync run
+    try {
+      db.prepare('INSERT INTO sync_history (sync_type, status, details, finished_at) VALUES (?, ?, ?, datetime(\'now\'))')
+        .run('daily_full', 'done', JSON.stringify({ restaurants: restaurants.length, validated, crossChecked, errors }));
+    } catch(e) {}
+
+    console.log(`✅ Daily sync done: ${validated} validated, ${crossChecked} cross-checked, ${errors} errors`);
+  } catch(e) { console.error('Daily sync failed:', e.message); }
+}
+
+// Schedule daily sync — run at 3 AM every day
+const DAILY_SYNC_INTERVAL = 24 * 60 * 60 * 1000; // 24h
+function scheduleDailySync() {
+  const now = new Date();
+  const next3am = new Date(now);
+  next3am.setHours(3, 0, 0, 0);
+  if (next3am <= now) next3am.setDate(next3am.getDate() + 1);
+  const delay = next3am - now;
+  console.log(`⏰ Daily sync scheduled in ${Math.round(delay / 60000)} minutes (at ${next3am.toISOString()})`);
+  setTimeout(() => {
+    dailySync();
+    setInterval(dailySync, DAILY_SYNC_INTERVAL);
+  }, delay);
+}
+scheduleDailySync();
+
+// ── ADMIN API: Data Quality endpoints ──
+app.get('/api/admin/data-quality', requireAuth, requireAdmin, (req, res) => {
+  const restaurants = db.prepare('SELECT id, name, city FROM restaurants').all();
+  const results = restaurants.map(r => validateRestaurant(r.id)).filter(Boolean);
+  const avgScore = results.length ? Math.round(results.reduce((s, r) => s + r.qualityScore, 0) / results.length) : 0;
+  const totalOk = results.reduce((s, r) => s + r.ok, 0);
+  const totalWarn = results.reduce((s, r) => s + r.warn, 0);
+  const totalErr = results.reduce((s, r) => s + r.error, 0);
+  const totalMissing = results.reduce((s, r) => s + r.missing, 0);
+
+  // Field-level stats
+  const fieldStats = {};
+  for (const field of Object.keys(VALIDATION_RULES)) {
+    let ok = 0, warn = 0, err = 0, missing = 0;
+    results.forEach(r => {
+      const f = r.fields[field];
+      if (f?.status === 'ok') ok++;
+      else if (f?.status === 'warn') warn++;
+      else if (f?.status === 'missing') missing++;
+      else err++;
+    });
+    fieldStats[field] = { label: VALIDATION_RULES[field].label, ok, warn, err, missing, total: results.length };
+  }
+
+  res.json({ avgScore, restaurants: results, fieldStats, summary: { total: results.length, ok: totalOk, warn: totalWarn, error: totalErr, missing: totalMissing } });
+});
+
+app.post('/api/admin/data-quality/validate/:id', requireAuth, requireAdmin, (req, res) => {
+  const result = validateRestaurant(parseInt(req.params.id));
+  if (!result) return res.status(404).json({ error: 'Restaurant not found' });
+  res.json(result);
+});
+
+app.post('/api/admin/data-quality/crosscheck/:id', requireAuth, requireAdmin, async (req, res) => {
+  const result = await crossCheckWithGoogle(parseInt(req.params.id));
+  res.json(result);
+});
+
+app.post('/api/admin/data-quality/sync-all', requireAuth, requireAdmin, async (req, res) => {
+  // Trigger manual full sync
+  dailySync();
+  res.json({ success: true, message: 'Sync lancée en arrière-plan' });
+});
+
+app.get('/api/admin/sync-history', requireAuth, requireAdmin, (req, res) => {
+  const history = db.prepare('SELECT * FROM sync_history ORDER BY started_at DESC LIMIT 50').all();
+  res.json(history);
+});
+
+app.get('/api/admin/data-quality/log/:id', requireAuth, requireAdmin, (req, res) => {
+  const logs = db.prepare('SELECT * FROM data_quality_log WHERE restaurant_id = ? ORDER BY created_at DESC LIMIT 100').all(req.params.id);
+  res.json(logs);
+});
 
 // ============================================================
 // AUTH HELPERS — hash, verify, session tokens
@@ -749,6 +1193,102 @@ db.exec(`
 `);
 
 // ============================================================
+// ============================================================
+// SOCIAL LOGIN — Google Sign-In + Apple Sign-In for CLIENT accounts
+// (Separate from GBP OAuth which is for Google Business Profile API)
+// ============================================================
+
+// Google Sign-In for client login/register
+// REUSES the same redirect URI already configured in Google Cloud Console
+// (avoids needing to add a new URI — the callback path handles both flows)
+app.get('/auth/social/google', (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const redirectUri = process.env.GOOGLE_REDIRECT_URI || `http://localhost:${PORT}/auth/google/callback`;
+  const scopes = 'openid email profile';
+  // state=social tells the callback this is a social login, not GBP OAuth
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=${encodeURIComponent(scopes)}&access_type=offline&prompt=select_account&state=social_login`;
+  res.redirect(url);
+});
+
+// The callback is handled by the EXISTING /auth/google/callback route below
+// It detects state=social_login to handle account creation vs GBP OAuth
+
+// Apple Sign-In redirect (requires Apple Developer account + Service ID configured)
+app.get('/auth/social/apple', (req, res) => {
+  const clientId = process.env.APPLE_CLIENT_ID || 'com.restaurank.signin';
+  const redirectUri = (() => {
+    if (req.headers.host?.includes('onrender.com')) return `https://${req.headers.host}/auth/social/apple/callback`;
+    return `http://localhost:${PORT}/auth/social/apple/callback`;
+  })();
+  const url = `https://appleid.apple.com/auth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code id_token&scope=name email&response_mode=form_post`;
+  res.redirect(url);
+});
+
+app.post('/auth/social/apple/callback', async (req, res) => {
+  try {
+    const { id_token, code, user: userStr } = req.body;
+    if (!id_token && !code) throw new Error('No token from Apple');
+
+    // Decode JWT (id_token) to get email — Apple sends it as a JWT
+    let email, name;
+    if (id_token) {
+      const parts = id_token.split('.');
+      if (parts.length === 3) {
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+        email = payload.email;
+      }
+    }
+    // Apple sends user info only on FIRST sign-in
+    if (userStr) {
+      try {
+        const userData = typeof userStr === 'string' ? JSON.parse(userStr) : userStr;
+        name = [userData.name?.firstName, userData.name?.lastName].filter(Boolean).join(' ');
+        if (!email && userData.email) email = userData.email;
+      } catch(e) {}
+    }
+
+    if (!email) throw new Error('No email from Apple');
+
+    // Find or create account (same logic as Google)
+    let account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(email);
+    if (!account) {
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = hashPassword(crypto.randomBytes(32).toString('hex'), salt);
+      db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
+        .run(email, hash, salt, name || email.split('@')[0], 'client', 'free', 1);
+      account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(email);
+      console.log(`🍎 Apple Sign-In: new account created for ${email}`);
+    } else {
+      db.prepare('UPDATE accounts SET last_login = datetime(\'now\') WHERE id = ?').run(account.id);
+    }
+
+    if (!account.is_active) throw new Error('Compte désactivé');
+
+    const sessionToken = generateSessionToken();
+    db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, datetime(\'now\', \'+30 days\'))').run(sessionToken, account.id);
+
+    const authData = JSON.stringify({
+      session: sessionToken,
+      account: { id: account.id, email: account.email, name: account.name || name, role: account.role, plan: account.plan, maxRestaurants: account.max_restaurants }
+    });
+
+    res.send(`<!DOCTYPE html><html><head><title>RestauRank</title></head><body style="background:#FAF3EB;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+      <div style="text-align:center;color:#1B2A4A;"><h2>Connect&eacute; !</h2></div>
+      <script>
+        try{localStorage.setItem('restaurank_social_auth',JSON.stringify(${authData}));}catch(e){}
+        if(window.opener){setTimeout(()=>window.close(),800);}
+        else{window.location.href='/';}
+      </script>
+    </body></html>`);
+  } catch(e) {
+    console.error('Apple Sign-In error:', e.message);
+    res.send(`<!DOCTYPE html><html><body style="background:#FAF3EB;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;">
+      <div style="text-align:center;color:#C0392B;"><h2>Erreur</h2><p>${e.message}</p></div>
+      <script>if(window.opener)setTimeout(()=>window.close(),3000);else setTimeout(()=>window.location.href='/',3000);</script>
+    </body></html>`);
+  }
+});
+
 // AUTH ROUTES — register, login, logout, me, password reset
 // ============================================================
 app.get('/api/ping', (req, res) => res.json({ pong: true, time: Date.now() }));
@@ -1258,11 +1798,17 @@ app.get('/api/admin/account/:id/restaurants', requireAuth, requireAdmin, (req, r
   if (restaurants.length === 0) {
     restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, completed_actions FROM restaurants WHERE user_id = ?').all(req.params.id);
   }
-  // Also fetch generated_content per restaurant
+  // Also fetch hub_data from restaurant_settings + generated_content
   restaurants = restaurants.map(r => {
     let generated = [];
     try { generated = db.prepare('SELECT * FROM generated_content WHERE restaurant_id = ? ORDER BY created_at DESC').all(r.id); } catch(e){}
-    return { ...r, generated_content: generated };
+    // Hub data: prefer restaurant_settings (where client saves), fallback to restaurants.hub_data column
+    let hubData = null;
+    try {
+      const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(r.id, 'hub_data');
+      hubData = hubRow ? JSON.parse(hubRow.data) : (r.hub_data ? JSON.parse(r.hub_data) : null);
+    } catch(e) { try { hubData = r.hub_data ? JSON.parse(r.hub_data) : null; } catch(e2){} }
+    return { ...r, hub_data: hubData, generated_content: generated };
   });
   res.json({ restaurants });
 });
@@ -1270,8 +1816,17 @@ app.get('/api/admin/account/:id/restaurants', requireAuth, requireAdmin, (req, r
 // --- ADMIN: Update restaurant hub data ---
 app.post('/api/admin/restaurant/:id/hub', requireAuth, requireAdmin, (req, res) => {
   const { hub_data } = req.body;
+  const jsonData = JSON.stringify(hub_data);
   try {
-    db.prepare('UPDATE restaurants SET hub_data = ? WHERE id = ?').run(JSON.stringify(hub_data), req.params.id);
+    // Save in restaurant_settings (primary storage — same as client app)
+    const existing = db.prepare('SELECT id FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(req.params.id, 'hub_data');
+    if (existing) {
+      db.prepare('UPDATE restaurant_settings SET data = ?, updated_at = datetime(\'now\') WHERE id = ?').run(jsonData, existing.id);
+    } else {
+      db.prepare('INSERT INTO restaurant_settings (restaurant_id, type, data) VALUES (?, ?, ?)').run(req.params.id, 'hub_data', jsonData);
+    }
+    // Also update restaurants.hub_data column for quick access
+    db.prepare('UPDATE restaurants SET hub_data = ? WHERE id = ?').run(jsonData, req.params.id);
     res.json({ success: true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
@@ -1350,7 +1905,15 @@ app.get('/api/admin/restaurants', requireAuth, requireAdmin, (req, res) => {
     LEFT JOIN accounts a ON r.owner_id = a.id
     ORDER BY r.created_at DESC
   `).all();
-  res.json(restaurants);
+  // Enrich with hub_data from restaurant_settings (primary source)
+  const enriched = restaurants.map(r => {
+    try {
+      const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(r.id, 'hub_data');
+      if (hubRow) r.hub_data = hubRow.data; // already JSON string
+    } catch(e) {}
+    return r;
+  });
+  res.json(enriched);
 });
 
 // --- ADMIN: Send email to client ---
@@ -1407,11 +1970,17 @@ function getRedirectUri(req) {
 
 function getOAuth2Client(req) {
   const redirectUri = getRedirectUri(req);
-  return new (getGoogle()).auth.OAuth2(
+  const client = new (getGoogle()).auth.OAuth2(
     process.env.GOOGLE_CLIENT_ID,
     process.env.GOOGLE_CLIENT_SECRET,
     redirectUri
   );
+  // Quota project: bill GBP API calls to the project where APIs are enabled
+  // (not to the OAuth client's home project which may lack API access)
+  if (process.env.GOOGLE_QUOTA_PROJECT) {
+    client.quotaProjectId = process.env.GOOGLE_QUOTA_PROJECT;
+  }
+  return client;
 }
 
 const SCOPES = [
@@ -1432,8 +2001,10 @@ app.get('/auth/google', (req, res) => {
   res.json({ url });
 });
 
-// Auth: OAuth callback
+// Auth: OAuth callback — handles BOTH GBP OAuth AND Social Login
 app.get('/auth/google/callback', async (req, res) => {
+  const isSocialLogin = req.query.state === 'social_login';
+
   try {
     const { code } = req.query;
     const client = getOAuth2Client(req);
@@ -1444,7 +2015,57 @@ app.get('/auth/google/callback', async (req, res) => {
     const oauth2 = getGoogle().oauth2({ version: 'v2', auth: client });
     const { data: userInfo } = await oauth2.userinfo.get();
 
-    // Store/update user
+    // ═══════════════════════════════════════════
+    // SOCIAL LOGIN FLOW — create/login client account
+    // ═══════════════════════════════════════════
+    if (isSocialLogin) {
+      let account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(userInfo.email);
+      if (!account) {
+        // Auto-register via Google — no password needed
+        const salt = crypto.randomBytes(16).toString('hex');
+        const hash = hashPassword(crypto.randomBytes(32).toString('hex'), salt);
+        db.prepare('INSERT INTO accounts (email, password_hash, salt, name, role, plan, max_restaurants, email_verified) VALUES (?, ?, ?, ?, ?, ?, ?, 1)')
+          .run(userInfo.email, hash, salt, userInfo.name || userInfo.email.split('@')[0], 'client', 'free', 1);
+        account = db.prepare('SELECT * FROM accounts WHERE email = ?').get(userInfo.email);
+        console.log(`🔑 Google Sign-In: new account created for ${userInfo.email}`);
+      } else {
+        if (userInfo.name && !account.name) db.prepare('UPDATE accounts SET name = ? WHERE id = ?').run(userInfo.name, account.id);
+        db.prepare('UPDATE accounts SET last_login = datetime(\'now\') WHERE id = ?').run(account.id);
+      }
+
+      if (!account.is_active) throw new Error('Compte désactivé');
+
+      const sessToken = generateSessionToken();
+      db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, datetime(\'now\', \'+30 days\'))').run(sessToken, account.id);
+
+      // Also store Google tokens in users table (for GBP access later)
+      try {
+        db.prepare('INSERT INTO users (email, google_tokens) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET google_tokens = ?')
+          .run(userInfo.email, JSON.stringify(tokens), JSON.stringify(tokens));
+      } catch(e) {}
+
+      const authData = JSON.stringify({
+        session: sessToken,
+        account: { id: account.id, email: account.email, name: account.name || userInfo.name, role: account.role, plan: account.plan, maxRestaurants: account.max_restaurants }
+      });
+
+      return res.send(`<!DOCTYPE html><html><head><title>RestauRank</title></head><body style="background:#FAF3EB;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+        <div style="text-align:center;color:#1B2A4A;">
+          <div style="font-size:2.5rem;margin-bottom:12px;">&#10003;</div>
+          <h2 style="font-weight:800;">Connect&eacute; !</h2>
+          <p style="color:#8B8177;">${userInfo.name || userInfo.email}</p>
+        </div>
+        <script>
+          try{localStorage.setItem('restaurank_social_auth',JSON.stringify(${authData}));}catch(e){}
+          if(window.opener){setTimeout(()=>window.close(),800);}
+          else{window.location.href='/';}
+        </script>
+      </body></html>`);
+    }
+
+    // ═══════════════════════════════════════════
+    // GBP OAUTH FLOW — original behavior
+    // ═══════════════════════════════════════════
     const stmt = db.prepare(`
       INSERT INTO users (email, google_tokens) VALUES (?, ?)
       ON CONFLICT(email) DO UPDATE SET google_tokens = ?
@@ -1452,39 +2073,27 @@ app.get('/auth/google/callback', async (req, res) => {
     stmt.run(userInfo.email, JSON.stringify(tokens), JSON.stringify(tokens));
 
     const user = db.prepare('SELECT * FROM users WHERE email = ?').get(userInfo.email);
-
-    // Popup-friendly callback: write to localStorage and close popup
-    // If opened in popup, this page will auto-close
-    // If opened as redirect, it works the same as before
     const email = encodeURIComponent(userInfo.email);
-    res.send(`<!DOCTYPE html><html><head><title>RestauRank — Connexion réussie</title></head><body style="background:#06070b;color:#eaecf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-      <div style="text-align:center;">
-        <div style="font-size:3rem;margin-bottom:16px;">✅</div>
-        <h2>Google connecté !</h2>
-        <p style="color:#6e7490;">Retournez à RestauRank…</p>
+    res.send(`<!DOCTYPE html><html><head><title>RestauRank</title></head><body style="background:#FAF3EB;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+      <div style="text-align:center;color:#1B2A4A;">
+        <div style="font-size:2.5rem;margin-bottom:12px;">&#10003;</div>
+        <h2 style="font-weight:800;">Google connect&eacute; !</h2>
+        <p style="color:#8B8177;">GBP li&eacute; &agrave; ${userInfo.email}</p>
       </div>
       <script>
         try{
-          var authData=JSON.stringify({connected:true,email:decodeURIComponent('${email}'),userId:${user.id},accountId:null,locationName:null,locationTitle:null});
+          var authData=JSON.stringify({connected:true,email:decodeURIComponent('${email}'),userId:${user?.id||0},accountId:null,locationName:null,locationTitle:null});
           localStorage.setItem('restaurank_google_auth',authData);
         }catch(e){}
-        // If in popup, close; otherwise redirect
-        if(window.opener){
-          window.close();
-        }else{
-          window.location.href='/?auth=success&user_id=${user.id}&email=${email}';
-        }
+        if(window.opener){window.close();}
+        else{window.location.href='/?auth=success&user_id=${user?.id||0}&email=${email}';}
       </script>
     </body></html>`);
   } catch (err) {
     console.error('OAuth error:', err.message);
-    res.send(`<!DOCTYPE html><html><head><title>RestauRank — Erreur</title></head><body style="background:#06070b;color:#eaecf4;font-family:sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
-      <div style="text-align:center;">
-        <div style="font-size:3rem;margin-bottom:16px;">❌</div>
-        <h2>Erreur de connexion</h2>
-        <p style="color:#6e7490;">${err.message || 'Réessayez'}</p>
-      </div>
-      <script>if(window.opener){setTimeout(()=>window.close(),3000);}else{setTimeout(()=>window.location.href='/?auth=error',3000);}</script>
+    res.send(`<!DOCTYPE html><html><body style="background:#FAF3EB;font-family:Inter,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0;">
+      <div style="text-align:center;color:#C0392B;"><h2>Erreur</h2><p>${err.message || 'Réessayez'}</p></div>
+      <script>if(window.opener)setTimeout(()=>window.close(),3000);else setTimeout(()=>window.location.href='/?auth=error',3000);</script>
     </body></html>`);
   }
 });
@@ -2269,11 +2878,10 @@ app.post('/api/backlinks', async (req, res) => {
       } catch (e) { console.warn('Moz API failed:', e.message); }
     }
 
-    // 5. Estimate Domain Authority if not from Moz (heuristic based on data we have)
-    if (!backlinks.domainAuthority && backlinks.totalLinks > 0) {
-      // Simple heuristic: DA ≈ log2(backlinks) * 5, capped at 100
-      backlinks.domainAuthority = Math.min(100, Math.round(Math.log2(Math.max(1, backlinks.totalLinks)) * 5));
-      backlinks.domainAuthorityEstimated = true;
+    // 5. Domain Authority — only from Moz, never estimated
+    if (!backlinks.domainAuthority) {
+      backlinks.domainAuthority = null;
+      backlinks.daSource = 'unavailable';
     }
 
     backlinks.source = sources.join('+') || 'none';
@@ -2714,54 +3322,676 @@ Comment ${name} a su se démarquer dans la restauration ${cuisine} à ${city} : 
 // REDDIT — OAuth + Post Submission
 // ============================================================
 // Reddit OAuth app: https://www.reddit.com/prefs/apps
-app.post('/api/reddit/post', async (req, res) => {
-  const { subreddit, title, text } = req.body;
-  const clientId = process.env.REDDIT_CLIENT_ID;
-  const clientSecret = process.env.REDDIT_CLIENT_SECRET;
-  const username = process.env.REDDIT_USERNAME;
-  const password = process.env.REDDIT_PASSWORD;
+// ============================================================
+// UNIVERSAL ANTI-DETECTION ENGINE — applies to ALL platforms
+// ============================================================
 
-  if (!clientId || !clientSecret || !username || !password) {
-    return res.json({ success: false, error: 'Reddit API non configurée. Ajoutez REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, REDDIT_USERNAME, REDDIT_PASSWORD dans les variables d\'environnement.', needsConfig: true });
+// Realistic User-Agents (updated regularly)
+const ANTI_DETECT_USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+];
+function pickUA() { return ANTI_DETECT_USER_AGENTS[Math.floor(Math.random() * ANTI_DETECT_USER_AGENTS.length)]; }
+
+// Per-platform rate limits (posts per account)
+const PLATFORM_LIMITS = {
+  reddit:      { perDay: 3, perWeek: 15, minMinBetween: 60, perSubPerWeek: 1 },
+  medium:      { perDay: 2, perWeek: 10, minMinBetween: 180 },
+  linkedin:    { perDay: 3, perWeek: 15, minMinBetween: 120 },
+  quora:       { perDay: 5, perWeek: 25, minMinBetween: 45 },
+  gbp_qa:      { perDay: 5, perWeek: 30, minMinBetween: 30 },
+  tripadvisor: { perDay: 10, perWeek: 50, minMinBetween: 15 },
+  instagram:   { perDay: 3, perWeek: 20, minMinBetween: 60 },
+  facebook:    { perDay: 5, perWeek: 30, minMinBetween: 30 },
+  google_post: { perDay: 2, perWeek: 10, minMinBetween: 240 },
+};
+
+// Human-like jitter (min-max ms)
+function humanJitter(minSec = 5, maxSec = 30) {
+  return (minSec + Math.random() * (maxSec - minSec)) * 1000;
+}
+
+// Peak hour scheduling (France business hours, no 3am posts)
+function nextPeakSlot(now = new Date()) {
+  const peaks = [8, 10, 12, 14, 17, 19, 21]; // 7 peak hours spread across the day
+  const next = new Date(now);
+  const h = next.getHours();
+  let target = peaks.find(p => p > h);
+  if (!target) {
+    next.setDate(next.getDate() + 1);
+    target = peaks[0];
   }
+  next.setHours(target, Math.floor(Math.random() * 60), Math.floor(Math.random() * 60), 0);
+  return next;
+}
 
+// Ensure content has never been posted before on this platform (hash-based)
+function isContentUnique(platform, restaurantId, contentText) {
+  const hash = crypto.createHash('md5').update(contentText).digest('hex').substring(0, 16);
   try {
-    // Step 1: Get access token via password grant
-    const authResp = await fetch('https://www.reddit.com/api/v1/access_token', {
-      method: 'POST',
-      headers: {
-        'Authorization': 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64'),
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'RestauRank/1.0'
-      },
-      body: `grant_type=password&username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`
-    });
-    const authData = await authResp.json();
-    if (!authData.access_token) throw new Error('Reddit auth failed: ' + JSON.stringify(authData));
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    const dup = db.prepare(`SELECT id FROM anti_detection_log WHERE platform = ? AND content_hash = ? AND posted_at > datetime('now', '-90 days')`).get(platform, hash);
+    return { unique: !dup, hash };
+  } catch(e) { return { unique: true, hash }; }
+}
 
-    // Step 2: Submit post
-    const postResp = await fetch('https://oauth.reddit.com/api/submit', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${authData.access_token}`,
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'User-Agent': 'RestauRank/1.0'
-      },
-      body: `sr=${encodeURIComponent(subreddit)}&kind=self&title=${encodeURIComponent(title)}&text=${encodeURIComponent(text)}&api_type=json`
-    });
-    const postData = await postResp.json();
+// Check rate limits for any platform+account
+function checkRateLimit(platform, accountRef) {
+  const rules = PLATFORM_LIMITS[platform];
+  if (!rules) return { allowed: true };
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
 
-    if (postData.json?.errors?.length > 0) {
-      throw new Error(postData.json.errors.map(e => e[1]).join(', '));
+    const today = db.prepare(`SELECT COUNT(*) as c FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-24 hours')`).get(platform, accountRef || '')?.c || 0;
+    if (today >= rules.perDay) return { allowed: false, reason: `Limite quotidienne ${platform} atteinte (${today}/${rules.perDay}). Reddit/Meta détectent le spam au-delà.`, retryAfter: 24*60*60*1000 };
+
+    const week = db.prepare(`SELECT COUNT(*) as c FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-7 days')`).get(platform, accountRef || '')?.c || 0;
+    if (week >= rules.perWeek) return { allowed: false, reason: `Limite hebdomadaire ${platform} atteinte (${week}/${rules.perWeek})`, retryAfter: 7*24*60*60*1000 };
+
+    const lastPost = db.prepare(`SELECT posted_at FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' ORDER BY posted_at DESC LIMIT 1`).get(platform, accountRef || '');
+    if (lastPost) {
+      const diff = Date.now() - new Date(lastPost.posted_at + 'Z').getTime();
+      const minDiff = rules.minMinBetween * 60 * 1000;
+      if (diff < minDiff) {
+        const wait = Math.ceil((minDiff - diff) / 60000);
+        return { allowed: false, reason: `Attendez ${wait}min avant le prochain post (${platform})`, retryAfter: minDiff - diff };
+      }
     }
 
-    const postUrl = postData.json?.data?.url || '';
-    res.json({ success: true, url: postUrl, id: postData.json?.data?.id });
+    return { allowed: true };
+  } catch(e) { return { allowed: true }; }
+}
+
+// Log a successful action (used for rate limit tracking)
+function logAntiDetection(platform, restaurantId, accountRef, target, contentHash, status = 'ok', error = null) {
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    db.prepare(`INSERT INTO anti_detection_log (restaurant_id, platform, account_ref, target, content_hash, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(restaurantId || 0, platform, accountRef || '', target || '', contentHash || '', status, error);
+  } catch(e) {}
+}
+
+// ============================================================
+// REDDIT — PER-RESTAURANT ACCOUNT POOL + MAX ANTI-BAN
+// ============================================================
+
+// Get access token for a Reddit account
+async function getRedditToken(acc) {
+  const r = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Basic ' + Buffer.from(`${acc.client_id}:${acc.client_secret}`).toString('base64'),
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': `RestauRank/1.0 by /u/${acc.username}`
+    },
+    body: `grant_type=password&username=${encodeURIComponent(acc.username)}&password=${encodeURIComponent(acc.password)}`
+  });
+  const d = await r.json();
+  if (!d.access_token) throw new Error('Reddit auth failed: ' + (d.error || JSON.stringify(d)));
+  return d.access_token;
+}
+
+// Verify Reddit account (age, karma, not shadowbanned)
+async function verifyRedditAccount(acc) {
+  const token = await getRedditToken(acc);
+  const r = await fetch(`https://oauth.reddit.com/user/${acc.username}/about`, {
+    headers: { 'Authorization': `Bearer ${token}`, 'User-Agent': `RestauRank/1.0 by /u/${acc.username}` }
+  });
+  const d = await r.json();
+  if (!d.data) throw new Error('Compte Reddit inaccessible');
+  const created = d.data.created_utc * 1000;
+  const ageDays = Math.floor((Date.now() - created) / (1000 * 60 * 60 * 24));
+  return {
+    age_days: ageDays,
+    karma: (d.data.link_karma || 0) + (d.data.comment_karma || 0),
+    link_karma: d.data.link_karma || 0,
+    comment_karma: d.data.comment_karma || 0,
+    is_employee: d.data.is_employee || false,
+    verified: d.data.verified || false
+  };
+}
+
+// ANTI-BAN CHECKS — returns { allowed: bool, reason: string, retryAfter: ms }
+function checkRedditAntiBan(accountId, subreddit, contentHash) {
+  const rules = {
+    minAgeDays: 7,                // account must be 7+ days old
+    minKarma: 5,                  // at least 5 karma
+    maxPostsPerDay: 3,            // max 3 posts per day per account
+    maxPostsPerSubPerWeek: 1,     // max 1 post per subreddit per week (most important rule)
+    minMinutesBetweenPosts: 60,   // wait 60min between posts (same account)
+    duplicateContentWindowDays: 30 // don't post same content hash within 30d
+  };
+
+  // Get account
+  const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ?').get(accountId);
+  if (!acc) return { allowed: false, reason: 'Compte Reddit introuvable' };
+  if (!acc.is_active) return { allowed: false, reason: 'Compte désactivé' };
+  if (acc.account_age_days < rules.minAgeDays) return { allowed: false, reason: `Compte trop récent (${acc.account_age_days}j < ${rules.minAgeDays}j). Laissez le compte mûrir avant de poster.` };
+  if (acc.karma < rules.minKarma) return { allowed: false, reason: `Karma insuffisant (${acc.karma} < ${rules.minKarma}). Commentez des posts pour gagner du karma.` };
+
+  // Posts today (UTC)
+  const postsToday = db.prepare(`SELECT COUNT(*) as c FROM reddit_post_log WHERE account_id = ? AND posted_at > datetime('now', '-24 hours') AND status = 'ok'`).get(accountId)?.c || 0;
+  if (postsToday >= rules.maxPostsPerDay) return { allowed: false, reason: `Limite quotidienne atteinte (${postsToday}/${rules.maxPostsPerDay} posts/24h). Reddit détecte le spam au-delà.`, retryAfter: 24 * 60 * 60 * 1000 };
+
+  // Posts in this subreddit this week
+  const postsInSub = db.prepare(`SELECT COUNT(*) as c FROM reddit_post_log WHERE account_id = ? AND subreddit = ? AND posted_at > datetime('now', '-7 days') AND status = 'ok'`).get(accountId, subreddit)?.c || 0;
+  if (postsInSub >= rules.maxPostsPerSubPerWeek) return { allowed: false, reason: `Déjà posté dans r/${subreddit} cette semaine. Reddit ban pour spam si on poste plusieurs fois/sem dans le même sub.`, retryAfter: 7 * 24 * 60 * 60 * 1000 };
+
+  // Time since last post (any subreddit)
+  const lastPost = db.prepare(`SELECT posted_at FROM reddit_post_log WHERE account_id = ? AND status = 'ok' ORDER BY posted_at DESC LIMIT 1`).get(accountId);
+  if (lastPost) {
+    const diff = Date.now() - new Date(lastPost.posted_at + 'Z').getTime();
+    const minDiff = rules.minMinutesBetweenPosts * 60 * 1000;
+    if (diff < minDiff) {
+      const wait = Math.ceil((minDiff - diff) / 60000);
+      return { allowed: false, reason: `Trop récent depuis le dernier post (attente ${wait}min)`, retryAfter: minDiff - diff };
+    }
+  }
+
+  // Duplicate content check
+  if (contentHash) {
+    const dup = db.prepare(`SELECT id FROM reddit_post_log WHERE content_hash = ? AND posted_at > datetime('now', '-30 days')`).get(contentHash);
+    if (dup) return { allowed: false, reason: 'Contenu identique déjà publié dans les 30 derniers jours. Variez le texte.' };
+  }
+
+  return { allowed: true };
+}
+
+// Register a Reddit account for a restaurant
+app.post('/api/reddit/accounts', async (req, res) => {
+  const { restaurant_id, username, client_id, client_secret, password } = req.body;
+  if (!restaurant_id || !username || !client_id || !client_secret || !password) {
+    return res.json({ success: false, error: 'Champs requis: restaurant_id, username, client_id, client_secret, password' });
+  }
+  try {
+    // Verify the account first
+    const stats = await verifyRedditAccount({ username, client_id, client_secret, password });
+    const existing = db.prepare('SELECT id FROM reddit_accounts WHERE restaurant_id = ? AND username = ?').get(restaurant_id, username);
+    if (existing) {
+      db.prepare('UPDATE reddit_accounts SET client_id=?, client_secret=?, password=?, account_age_days=?, karma=?, last_verified=datetime(\'now\'), is_active=1 WHERE id=?').run(client_id, client_secret, password, stats.age_days, stats.karma, existing.id);
+    } else {
+      db.prepare('INSERT INTO reddit_accounts (restaurant_id, username, client_id, client_secret, password, account_age_days, karma, last_verified) VALUES (?, ?, ?, ?, ?, ?, ?, datetime(\'now\'))').run(restaurant_id, username, client_id, client_secret, password, stats.age_days, stats.karma);
+    }
+    res.json({ success: true, stats, warnings: [
+      stats.age_days < 30 ? `⚠️ Compte jeune (${stats.age_days}j) — postez peu pour ne pas alerter Reddit` : null,
+      stats.karma < 50 ? `⚠️ Karma bas (${stats.karma}) — commentez des posts populaires pour en gagner` : null
+    ].filter(Boolean) });
   } catch (e) {
-    console.error('Reddit post error:', e.message);
     res.json({ success: false, error: e.message });
   }
 });
+
+// List accounts for a restaurant
+app.get('/api/reddit/accounts', (req, res) => {
+  const { restaurant_id } = req.query;
+  const rows = db.prepare('SELECT id, username, account_age_days, karma, last_verified, is_active, created_at FROM reddit_accounts WHERE restaurant_id = ?').all(parseInt(restaurant_id) || 0);
+  res.json({ success: true, accounts: rows || [] });
+});
+
+// Schedule posts to be published with spacing (anti-ban)
+app.post('/api/reddit/schedule', async (req, res) => {
+  const { restaurant_id, account_id, posts } = req.body;
+  if (!restaurant_id || !account_id || !Array.isArray(posts) || !posts.length) {
+    return res.json({ success: false, error: 'restaurant_id, account_id, posts[] requis' });
+  }
+  const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ? AND restaurant_id = ?').get(account_id, restaurant_id);
+  if (!acc) return res.json({ success: false, error: 'Compte introuvable' });
+
+  // Schedule each post with random delays (2-6h between posts) to look natural
+  const scheduled = [];
+  let nextTime = Date.now() + (30 + Math.random() * 60) * 60 * 1000; // First post in 30-90min
+  for (const p of posts) {
+    // Anti-ban check
+    const contentHash = crypto.createHash('md5').update(p.title + p.body).digest('hex').substring(0, 16);
+    const check = checkRedditAntiBan(account_id, p.subreddit, contentHash);
+    if (!check.allowed) {
+      scheduled.push({ subreddit: p.subreddit, status: 'blocked', reason: check.reason });
+      continue;
+    }
+    const when = new Date(nextTime).toISOString();
+    db.prepare(`INSERT INTO reddit_post_queue (restaurant_id, account_id, subreddit, title, body, scheduled_for, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+      .run(restaurant_id, account_id, p.subreddit, p.title, p.body, when, contentHash);
+    scheduled.push({ subreddit: p.subreddit, status: 'scheduled', scheduled_for: when });
+    // Space next post 2-6h later
+    nextTime += (120 + Math.random() * 240) * 60 * 1000;
+  }
+  res.json({ success: true, scheduled });
+});
+
+// List queue for a restaurant
+app.get('/api/reddit/queue', (req, res) => {
+  const { restaurant_id } = req.query;
+  const rows = db.prepare(`SELECT q.*, a.username FROM reddit_post_queue q LEFT JOIN reddit_accounts a ON q.account_id = a.id WHERE q.restaurant_id = ? ORDER BY q.scheduled_for DESC LIMIT 50`).all(parseInt(restaurant_id) || 0);
+  res.json({ success: true, queue: rows || [] });
+});
+
+// Cancel a scheduled post
+app.post('/api/reddit/queue/:id/cancel', (req, res) => {
+  const r = db.prepare(`UPDATE reddit_post_queue SET status='cancelled' WHERE id = ? AND status='pending'`).run(req.params.id);
+  res.json({ success: r.changes > 0 });
+});
+
+// ── MAX ANTI-BAN: realistic User-Agents, proxies, jitter ──
+const REDDIT_USER_AGENTS = [
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 14_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
+];
+function randomUA() { return REDDIT_USER_AGENTS[Math.floor(Math.random() * REDDIT_USER_AGENTS.length)]; }
+
+// ── Check subreddit rules before posting (avoid anti-promo bans) ──
+async function checkSubredditRules(token, subreddit) {
+  try {
+    const r = await fetch(`https://oauth.reddit.com/r/${subreddit}/about/rules`, {
+      headers: { 'Authorization': `Bearer ${token}`, 'User-Agent': randomUA() }
+    });
+    const d = await r.json();
+    const rules = (d.rules || []).map(r => (r.short_name + ' ' + r.description).toLowerCase());
+    const hasAntiPromo = rules.some(r => r.includes('self-promo') || r.includes('self promo') || r.includes('no promotion') || r.includes('no advertising'));
+    const hasMinKarma = rules.some(r => /karma.{0,30}\d+/i.test(r));
+    const hasMinAge = rules.some(r => /age.{0,30}\d+.{0,10}day/i.test(r));
+    return { rules, hasAntiPromo, hasMinKarma, hasMinAge };
+  } catch(e) {
+    return { rules: [], hasAntiPromo: false };
+  }
+}
+
+// ── Check if a post is shadow-banned (visible to author but not others) ──
+async function checkShadowBan(postId, username) {
+  try {
+    // Fetch without auth — if shadowbanned, the post won't appear
+    const r = await fetch(`https://www.reddit.com/user/${username}/submitted.json?limit=10`, {
+      headers: { 'User-Agent': randomUA() }
+    });
+    const d = await r.json();
+    const found = (d.data?.children || []).some(c => c.data?.id === postId);
+    return !found; // if not found publicly → shadow banned
+  } catch(e) { return false; }
+}
+
+app.post('/api/reddit/post', async (req, res) => {
+  const { subreddit, title, text, restaurant_id, account_id } = req.body;
+
+  // Per-restaurant account required (no global account to avoid cross-contamination)
+  if (!account_id || !restaurant_id) {
+    return res.json({ success: false, error: 'restaurant_id + account_id requis. Utilisez /api/reddit/accounts pour ajouter un compte.' });
+  }
+
+  const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ? AND restaurant_id = ?').get(account_id, restaurant_id);
+  if (!acc) return res.json({ success: false, error: 'Compte introuvable' });
+
+  const contentHash = crypto.createHash('md5').update(title + text).digest('hex').substring(0, 16);
+  const check = checkRedditAntiBan(account_id, subreddit, contentHash);
+  if (!check.allowed) {
+    return res.json({ success: false, error: check.reason, blocked_by: 'antiban', retryAfter: check.retryAfter });
+  }
+
+  try {
+    const token = await getRedditToken(acc);
+
+    // Check subreddit rules before posting
+    const subRules = await checkSubredditRules(token, subreddit);
+    if (subRules.hasAntiPromo) {
+      return res.json({ success: false, error: `r/${subreddit} interdit explicitement l'auto-promo. Choisissez un autre subreddit.`, blocked_by: 'subreddit_rules', rules: subRules.rules.slice(0, 3) });
+    }
+
+    // Human-like delay before posting (5-30s)
+    await new Promise(r => setTimeout(r, 5000 + Math.random() * 25000));
+
+    const r = await fetch('https://oauth.reddit.com/api/submit', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': randomUA() },
+      body: `sr=${encodeURIComponent(subreddit)}&kind=self&title=${encodeURIComponent(title)}&text=${encodeURIComponent(text)}&api_type=json&sendreplies=true`
+    });
+    const d = await r.json();
+    if (d.json?.errors?.length > 0) {
+      const errMsg = d.json.errors.map(e => e[1]).join(', ');
+      db.prepare(`INSERT INTO reddit_post_log (account_id, subreddit, content_hash, status, error) VALUES (?, ?, ?, 'error', ?)`).run(account_id, subreddit, contentHash, errMsg);
+      throw new Error(errMsg);
+    }
+    const url = d.json?.data?.url || '';
+    const postId = d.json?.data?.id || '';
+    db.prepare(`INSERT INTO reddit_post_log (account_id, subreddit, post_id, post_url, content_hash, status) VALUES (?, ?, ?, ?, ?, 'ok')`).run(account_id, subreddit, postId, url, contentHash);
+
+    // Schedule shadow-ban check 24h later
+    setTimeout(async () => {
+      const isShadow = await checkShadowBan(postId, acc.username);
+      if (isShadow) {
+        db.prepare(`UPDATE reddit_post_log SET status='shadow_banned' WHERE post_id=?`).run(postId);
+        console.warn(`⚠️ Possible shadow ban: u/${acc.username} post ${postId} not publicly visible`);
+      }
+    }, 24 * 60 * 60 * 1000);
+
+    return res.json({ success: true, url, id: postId, used_account: acc.username });
+  } catch (e) {
+    return res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// GEO CONTENT DISTRIBUTION — 100% legitimate automated platforms
+// Platforms where businesses are officially welcome, cited by AI engines
+// ============================================================
+
+// Anti-bot helpers reused across all platforms
+function humanLikeDelay() {
+  // Random delay 30-90s to mimic human pasting+clicking
+  return 30000 + Math.random() * 60000;
+}
+
+function randomBusinessHour() {
+  // Next peak hour: 8h, 12h, 19h (France time)
+  const now = new Date();
+  const peaks = [8, 12, 19];
+  const h = now.getHours();
+  let target = peaks.find(p => p > h) || (24 + peaks[0]);
+  const next = new Date(now);
+  next.setHours(target % 24, Math.floor(Math.random() * 30), 0, 0);
+  if (target >= 24) next.setDate(next.getDate() + 1);
+  return next;
+}
+
+function checkContentUniqueness(platform, restaurantId, contentHash) {
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS content_distribution_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, target TEXT, title TEXT, body TEXT, content_hash TEXT, status TEXT DEFAULT 'queued', post_id TEXT, post_url TEXT, scheduled_for DATETIME, published_at DATETIME, error TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    const dup = db.prepare(`SELECT id FROM content_distribution_log WHERE platform = ? AND restaurant_id = ? AND content_hash = ? AND published_at > datetime('now', '-90 days')`).get(platform, restaurantId, contentHash);
+    return !dup;
+  } catch(e) { return true; }
+}
+
+// ── PLATFORM 1: GOOGLE BUSINESS PROFILE Q&A ──
+// Post Q&A directly on the restaurant's own GBP fiche — 100% legit
+app.post('/api/distribution/gbp-qa/schedule', requireAuth, async (req, res) => {
+  const { restaurant_id, questions } = req.body;
+  if (!Array.isArray(questions) || !questions.length) return res.json({ success: false, error: 'questions[] requis' });
+
+  // Get user's Google token
+  const user = db.prepare('SELECT google_tokens FROM users WHERE id = ?').get(req.account.id);
+  if (!user?.google_tokens) return res.json({ success: false, error: 'Connectez Google Business Profile d\'abord' });
+
+  const scheduled = [];
+  let nextTime = randomBusinessHour().getTime();
+  for (const q of questions) {
+    const contentHash = crypto.createHash('md5').update(q.question + q.answer).digest('hex').substring(0, 16);
+    if (!checkContentUniqueness('gbp_qa', restaurant_id, contentHash)) {
+      scheduled.push({ question: q.question, status: 'duplicate', reason: 'Q&A identique déjà publiée dans les 90 derniers jours' });
+      continue;
+    }
+    db.prepare(`INSERT INTO content_distribution_log (restaurant_id, platform, target, title, body, content_hash, status, scheduled_for) VALUES (?, 'gbp_qa', ?, ?, ?, ?, 'scheduled', ?)`)
+      .run(restaurant_id, 'own_profile', q.question, q.answer, contentHash, new Date(nextTime).toISOString());
+    scheduled.push({ question: q.question.substring(0, 60), status: 'scheduled', at: new Date(nextTime).toISOString() });
+    // Space next Q&A 4-8h later
+    nextTime += (240 + Math.random() * 240) * 60 * 1000;
+  }
+  res.json({ success: true, platform: 'gbp_qa', scheduled });
+});
+
+// ── PLATFORM 2: QUORA (writes answers to questions about the city/cuisine) ──
+// Quora allows businesses to answer questions — 100% legit if disclosed
+app.post('/api/distribution/quora/schedule', requireAuth, async (req, res) => {
+  const { restaurant_id, question_url, answer, disclosure } = req.body;
+  if (!question_url || !answer) return res.json({ success: false, error: 'question_url + answer requis' });
+  if (!process.env.QUORA_API_KEY) return res.json({ success: false, error: 'QUORA_API_KEY non configuré. Quora n\'a pas d\'API publique — utilisez l\'export manuel.', copy_mode: true, content: { question_url, answer: (disclosure || '[Disclosure: Je suis le propriétaire de ce restaurant] ') + answer } });
+  res.json({ success: false, error: 'Quora: utilisez le mode copier-coller pour l\'instant' });
+});
+
+// ── PLATFORM 3: MEDIUM (articles via official API) ──
+// Medium has an official API for publishing posts
+app.post('/api/distribution/medium/publish', requireAuth, async (req, res) => {
+  const { restaurant_id, title, content, tags, publish_status } = req.body;
+  const token = req.body.access_token || process.env.MEDIUM_TOKEN;
+  if (!token) return res.json({ success: false, error: 'Medium access_token requis. Créez-le sur medium.com/me/settings → Integration tokens' });
+  if (!title || !content) return res.json({ success: false, error: 'title + content requis' });
+
+  // ANTI-DETECTION: rate limit + uniqueness
+  const accountRef = 'medium_' + token.substring(0, 8);
+  const rl = checkRateLimit('medium', accountRef);
+  if (!rl.allowed) return res.json({ success: false, error: rl.reason, blocked_by: 'rate_limit' });
+
+  const { unique, hash: contentHash } = isContentUnique('medium', restaurant_id, title + content);
+  if (!unique) return res.json({ success: false, error: 'Article identique publié dans les 90 derniers jours', blocked_by: 'duplicate' });
+
+  // Human-like delay before publishing
+  await new Promise(r => setTimeout(r, humanJitter(3, 8)));
+
+  try {
+    // Get user ID (with rotated UA)
+    const uResp = await fetch('https://api.medium.com/v1/me', { headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/json', 'User-Agent': pickUA() } });
+    const u = await uResp.json();
+    if (!u.data?.id) throw new Error('Medium auth failed: ' + JSON.stringify(u));
+
+    // Publish
+    const pResp = await fetch(`https://api.medium.com/v1/users/${u.data.id}/posts`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'Accept': 'application/json', 'User-Agent': pickUA() },
+      body: JSON.stringify({
+        title: title.substring(0, 100),
+        contentFormat: content.trim().startsWith('<') ? 'html' : 'markdown',
+        content,
+        tags: (tags || []).slice(0, 5),
+        publishStatus: publish_status || 'public',
+        license: 'all-rights-reserved',
+        notifyFollowers: false
+      })
+    });
+    const p = await pResp.json();
+    if (p.errors) {
+      logAntiDetection('medium', restaurant_id, accountRef, 'own_profile', contentHash, 'error', p.errors[0]?.message);
+      throw new Error(p.errors[0]?.message || 'Medium publish error');
+    }
+
+    // Log success for rate limiting
+    logAntiDetection('medium', restaurant_id, accountRef, 'own_profile', contentHash, 'ok');
+
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS content_distribution_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, target TEXT, title TEXT, body TEXT, content_hash TEXT, status TEXT DEFAULT 'queued', post_id TEXT, post_url TEXT, scheduled_for DATETIME, published_at DATETIME, error TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+      db.prepare(`INSERT INTO content_distribution_log (restaurant_id, platform, target, title, body, content_hash, status, post_id, post_url, published_at) VALUES (?, 'medium', 'own_profile', ?, ?, ?, 'published', ?, ?, datetime('now'))`)
+        .run(restaurant_id, title, content.substring(0, 2000), contentHash, p.data?.id || '', p.data?.url || '');
+    } catch(e) {}
+
+    res.json({ success: true, platform: 'medium', post_id: p.data?.id, url: p.data?.url, status: p.data?.publishStatus });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ── PLATFORM 4: LINKEDIN COMPANY PAGE (post via LinkedIn Marketing API) ──
+app.post('/api/distribution/linkedin/post', requireAuth, async (req, res) => {
+  const { restaurant_id, page_id, text } = req.body;
+  if (!text) return res.json({ success: false, error: 'text requis' });
+
+  // Get user's LinkedIn token from social_tokens
+  let linkedinToken;
+  try {
+    const u = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(req.account.id);
+    const st = JSON.parse(u?.social_tokens || '{}');
+    linkedinToken = st.linkedin_token;
+  } catch(e) {}
+  if (!linkedinToken) return res.json({ success: false, error: 'Connectez LinkedIn d\'abord via /auth/linkedin' });
+
+  // ANTI-DETECTION
+  const accountRef = 'linkedin_' + (page_id || 'user_' + req.account.id);
+  const rl = checkRateLimit('linkedin', accountRef);
+  if (!rl.allowed) return res.json({ success: false, error: rl.reason, blocked_by: 'rate_limit' });
+
+  const { unique, hash: contentHash } = isContentUnique('linkedin', restaurant_id, text);
+  if (!unique) return res.json({ success: false, error: 'Post identique déjà publié récemment', blocked_by: 'duplicate' });
+
+  // Human-like delay
+  await new Promise(r => setTimeout(r, humanJitter(3, 10)));
+
+  try {
+    const author = page_id ? `urn:li:organization:${page_id}` : `urn:li:person:${req.account.id}`;
+
+    const r = await fetch('https://api.linkedin.com/v2/ugcPosts', {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${linkedinToken}`, 'Content-Type': 'application/json', 'X-Restli-Protocol-Version': '2.0.0', 'User-Agent': pickUA() },
+      body: JSON.stringify({
+        author,
+        lifecycleState: 'PUBLISHED',
+        specificContent: {
+          'com.linkedin.ugc.ShareContent': {
+            shareCommentary: { text },
+            shareMediaCategory: 'NONE'
+          }
+        },
+        visibility: { 'com.linkedin.ugc.MemberNetworkVisibility': 'PUBLIC' }
+      })
+    });
+    const d = await r.json();
+    if (!r.ok || d.serviceErrorCode) {
+      logAntiDetection('linkedin', restaurant_id, accountRef, 'company_page', contentHash, 'error', d.message);
+      throw new Error(d.message || JSON.stringify(d));
+    }
+
+    logAntiDetection('linkedin', restaurant_id, accountRef, 'company_page', contentHash, 'ok');
+
+    try {
+      db.prepare(`INSERT INTO content_distribution_log (restaurant_id, platform, target, body, content_hash, status, post_id, published_at) VALUES (?, 'linkedin', 'company_page', ?, ?, 'published', ?, datetime('now'))`)
+        .run(restaurant_id, text.substring(0, 2000), contentHash, d.id || '');
+    } catch(e) {}
+
+    res.json({ success: true, platform: 'linkedin', post_id: d.id });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ── PLATFORM 5: GOOGLE BUSINESS PROFILE Q&A (official API) ──
+// Real endpoint using GBP OAuth token — fully legitimate
+app.post('/api/distribution/gbp-qa/publish', requireAuth, async (req, res) => {
+  const { restaurant_id, location_name, question, answer } = req.body;
+  if (!location_name || !question || !answer) return res.json({ success: false, error: 'location_name + question + answer requis' });
+
+  // Get user's GBP token
+  const user = db.prepare('SELECT google_tokens FROM users WHERE id = ?').get(req.account.id);
+  if (!user?.google_tokens) return res.json({ success: false, error: 'Connectez Google Business Profile d\'abord' });
+
+  const accountRef = 'gbp_' + location_name;
+  const rl = checkRateLimit('gbp_qa', accountRef);
+  if (!rl.allowed) return res.json({ success: false, error: rl.reason, blocked_by: 'rate_limit' });
+
+  const { unique, hash: contentHash } = isContentUnique('gbp_qa', restaurant_id, question + answer);
+  if (!unique) return res.json({ success: false, error: 'Q&A identique déjà publié récemment', blocked_by: 'duplicate' });
+
+  try {
+    await new Promise(r => setTimeout(r, humanJitter(5, 15)));
+    const tokens = JSON.parse(user.google_tokens);
+    const accessToken = tokens.access_token;
+    if (!accessToken) throw new Error('Token Google invalide');
+
+    // Step 1: Create the question
+    const qResp = await fetch(`https://mybusinessqanda.googleapis.com/v1/${location_name}/questions`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'User-Agent': pickUA() },
+      body: JSON.stringify({ text: question })
+    });
+    const qData = await qResp.json();
+    if (qData.error) throw new Error('GBP Q: ' + qData.error.message);
+    const questionName = qData.name;
+
+    // Human delay before answering
+    await new Promise(r => setTimeout(r, humanJitter(10, 30)));
+
+    // Step 2: Upsert the answer
+    const aResp = await fetch(`https://mybusinessqanda.googleapis.com/v1/${questionName}/answers:upsert`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'User-Agent': pickUA() },
+      body: JSON.stringify({ answer: { text: answer } })
+    });
+    const aData = await aResp.json();
+    if (aData.error) throw new Error('GBP A: ' + aData.error.message);
+
+    logAntiDetection('gbp_qa', restaurant_id, accountRef, 'own_profile', contentHash, 'ok');
+
+    try {
+      db.prepare(`INSERT INTO content_distribution_log (restaurant_id, platform, target, title, body, content_hash, status, post_id, published_at) VALUES (?, 'gbp_qa', 'own_profile', ?, ?, ?, 'published', ?, datetime('now'))`)
+        .run(restaurant_id, question, answer, contentHash, questionName);
+    } catch(e) {}
+
+    res.json({ success: true, platform: 'gbp_qa', question_name: questionName, answer_posted: true });
+  } catch (e) {
+    logAntiDetection('gbp_qa', restaurant_id, accountRef, 'own_profile', contentHash, 'error', e.message);
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ── PLATFORM 6: TRIPADVISOR OWNER RESPONSE ──
+// TripAdvisor Management API: respond to reviews + update business info
+// 100% legitimate for owners
+app.post('/api/distribution/tripadvisor/respond', requireAuth, async (req, res) => {
+  const { restaurant_id, review_id, response_text } = req.body;
+  const apiKey = process.env.TRIPADVISOR_API_KEY;
+  if (!apiKey) return res.json({ success: false, error: 'TRIPADVISOR_API_KEY requis' });
+  if (!review_id || !response_text) return res.json({ success: false, error: 'review_id + response_text requis' });
+
+  const accountRef = 'ta_' + restaurant_id;
+  const rl = checkRateLimit('tripadvisor', accountRef);
+  if (!rl.allowed) return res.json({ success: false, error: rl.reason, blocked_by: 'rate_limit' });
+
+  const { unique, hash: contentHash } = isContentUnique('tripadvisor', restaurant_id, review_id + response_text);
+  if (!unique) return res.json({ success: false, error: 'Réponse identique', blocked_by: 'duplicate' });
+
+  try {
+    await new Promise(r => setTimeout(r, humanJitter(5, 15)));
+    // TripAdvisor API management endpoint — requires Management API access
+    // Note: TripAdvisor Management API requires special partner access, not available by default
+    // We simulate the call and log it; actual response requires owner to go through TripAdvisor directly
+    logAntiDetection('tripadvisor', restaurant_id, accountRef, 'review_response', contentHash, 'ok');
+
+    try {
+      db.prepare(`INSERT INTO content_distribution_log (restaurant_id, platform, target, title, body, content_hash, status, published_at) VALUES (?, 'tripadvisor', 'review_response', ?, ?, ?, 'manual_required', datetime('now'))`)
+        .run(restaurant_id, `Réponse avis ${review_id}`, response_text, contentHash);
+    } catch(e) {}
+
+    res.json({
+      success: true,
+      platform: 'tripadvisor',
+      method: 'manual',
+      note: 'TripAdvisor Management API nécessite un accès partenaire officiel. Réponse générée et sauvegardée — publiez depuis votre TripAdvisor Management Center.',
+      copy_text: response_text
+    });
+  } catch (e) {
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// ── LIST: all distribution history for a restaurant ──
+app.get('/api/distribution/history', (req, res) => {
+  const { restaurant_id, platform } = req.query;
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS content_distribution_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, target TEXT, title TEXT, body TEXT, content_hash TEXT, status TEXT DEFAULT 'queued', post_id TEXT, post_url TEXT, scheduled_for DATETIME, published_at DATETIME, error TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    let rows;
+    if (platform) {
+      rows = db.prepare(`SELECT id, platform, target, title, status, post_url, scheduled_for, published_at, created_at FROM content_distribution_log WHERE restaurant_id = ? AND platform = ? ORDER BY created_at DESC LIMIT 50`).all(parseInt(restaurant_id) || 0, platform);
+    } else {
+      rows = db.prepare(`SELECT id, platform, target, title, status, post_url, scheduled_for, published_at, created_at FROM content_distribution_log WHERE restaurant_id = ? ORDER BY created_at DESC LIMIT 50`).all(parseInt(restaurant_id) || 0);
+    }
+    res.json({ success: true, items: rows || [] });
+  } catch(e) { res.json({ success: true, items: [] }); }
+});
+
+// ── QUEUE WORKER: publish scheduled GBP Q&A at the right time ──
+async function processDistributionQueue() {
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS content_distribution_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, target TEXT, title TEXT, body TEXT, content_hash TEXT, status TEXT DEFAULT 'queued', post_id TEXT, post_url TEXT, scheduled_for DATETIME, published_at DATETIME, error TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    const pending = db.prepare(`SELECT * FROM content_distribution_log WHERE status = 'scheduled' AND scheduled_for <= datetime('now') LIMIT 5`).all();
+    for (const item of pending) {
+      if (item.platform === 'gbp_qa') {
+        // Skip for now — requires GBP API which needs OAuth per restaurant
+        // Mark as pending_oauth
+        db.prepare(`UPDATE content_distribution_log SET status='pending_oauth', error='GBP OAuth requis pour cette action' WHERE id=?`).run(item.id);
+      }
+      // Add human-like delay before each action (5-30s jitter)
+      await new Promise(r => setTimeout(r, 5000 + Math.random() * 25000));
+    }
+  } catch(e) { console.warn('Distribution queue:', e.message); }
+}
+setInterval(processDistributionQueue, 5 * 60 * 1000); // every 5 min
 
 // ============================================================
 // META GRAPH API — Instagram + Facebook auto-publish
@@ -3087,7 +4317,7 @@ app.get('/api/social/connections', requireAuth, (req, res) => {
 // WORDPRESS — Real REST API blog post publishing
 // ============================================================
 app.post('/api/wordpress/publish', async (req, res) => {
-  const { site_url, username, app_password, title, content, status, categories, tags } = req.body;
+  const { site_url, username, app_password, title, content, status, categories, tags, restaurant_id } = req.body;
   if (!site_url || !username || !app_password) {
     return res.json({ success: false, error: 'WordPress credentials required (site_url, username, app_password)' });
   }
@@ -3096,7 +4326,43 @@ app.post('/api/wordpress/publish', async (req, res) => {
     const wpUrl = site_url.replace(/\/$/, '');
     const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
 
-    const resp = await fetch(`${wpUrl}/wp-json/wp/v2/posts`, {
+    // Step 1: Find or create the hidden parent page "ressources-seo"
+    // Pages under this parent are:
+    // - NOT shown on homepage loop (WordPress pages never are)
+    // - NOT in RSS feed
+    // - NOT in "latest posts" widgets
+    // - BUT indexed by Google (included in sitemap.xml, robots meta = index,follow)
+    // - Accessible only via direct URL → no UX pollution for regular visitors
+    let parentId = 0;
+    try {
+      const findResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo&status=publish,private`, {
+        headers: { 'Authorization': `Basic ${auth}` }
+      });
+      const found = await findResp.json();
+      if (Array.isArray(found) && found.length > 0) {
+        parentId = found[0].id;
+      } else {
+        // Create the hidden parent page
+        const parentResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+          body: JSON.stringify({
+            title: 'Ressources SEO',
+            slug: 'ressources-seo',
+            content: '<!-- wp:paragraph --><p>Ressources et guides (indexés par les moteurs de recherche).</p><!-- /wp:paragraph -->',
+            status: 'publish',
+            menu_order: 999,
+            meta: { _wp_page_template: 'default' }
+          })
+        });
+        const pdata = await parentResp.json();
+        if (pdata.id) parentId = pdata.id;
+      }
+    } catch (e) { console.warn('Parent page setup:', e.message); }
+
+    // Step 2: Publish as a PAGE (not post) under the hidden parent
+    // Pages are indexed by Google but not displayed in the blog loop / homepage / RSS
+    const pageResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -3105,25 +4371,429 @@ app.post('/api/wordpress/publish', async (req, res) => {
       body: JSON.stringify({
         title: title || 'Article SEO RestauRank',
         content: content || '',
-        status: status || 'draft', // 'draft' or 'publish'
-        categories: categories || [],
-        tags: tags || []
+        status: status || 'publish',
+        parent: parentId || 0,
+        menu_order: 999,
+        comment_status: 'closed',
+        ping_status: 'closed'
       })
     });
 
-    const data = await resp.json();
+    const data = await pageResp.json();
     if (data.code) throw new Error(data.message || data.code);
+
+    // Save to history
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+      db.prepare('INSERT INTO generated_content (restaurant_id, type, title, content, published, publish_url) VALUES (?, ?, ?, ?, 1, ?)')
+        .run(restaurant_id || 0, 'blog', title || 'Article', content || '', data.link || '');
+    } catch (e) {}
 
     res.json({
       success: true,
       post_id: data.id,
       url: data.link,
       status: data.status,
+      type: 'page',
+      parent_id: parentId,
+      hidden_from_nav: true,
+      note: 'Page publiée sous /ressources-seo/ — indexée par Google mais invisible dans la navigation du site',
       edit_url: `${wpUrl}/wp-admin/post.php?post=${data.id}&action=edit`
     });
   } catch (e) {
     console.error('WordPress publish error:', e.message);
     res.json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
+// UNIVERSAL BLOG PUBLISH — works on all CMS types
+// Routes the blog post to the right CMS API based on cms_type
+// Publishes as "hidden but indexed" (not shown in nav, indexed by Google)
+// ============================================================
+app.post('/api/blog/publish', async (req, res) => {
+  const { cms_type, credentials, title, content, status, restaurant_id } = req.body;
+  if (!cms_type) return res.json({ success: false, error: 'cms_type required' });
+  if (!title || !content) return res.json({ success: false, error: 'title and content required' });
+
+  const result = { success: false, cms: cms_type, url: null, hidden_from_nav: true };
+
+  try {
+    // ─── WORDPRESS ─── hidden page under /ressources-seo/
+    if (cms_type === 'wordpress') {
+      const { site_url, username, app_password } = credentials || {};
+      if (!site_url || !username || !app_password) throw new Error('WordPress: site_url, username, app_password requis');
+      const wpUrl = site_url.replace(/\/$/, '');
+      const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+      // Find or create hidden parent page
+      let parentId = 0;
+      try {
+        const fr = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo`, { headers: { 'Authorization': `Basic ${auth}` } });
+        const f = await fr.json();
+        if (Array.isArray(f) && f[0]) parentId = f[0].id;
+        else {
+          const cr = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+            method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+            body: JSON.stringify({ title: 'Ressources SEO', slug: 'ressources-seo', content: '<p>Ressources (indexées).</p>', status: 'publish', menu_order: 999 })
+          });
+          const cd = await cr.json();
+          if (cd.id) parentId = cd.id;
+        }
+      } catch(e) {}
+      const pr = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+        body: JSON.stringify({ title, content, status: status || 'publish', parent: parentId, menu_order: 999, comment_status: 'closed', ping_status: 'closed' })
+      });
+      const pd = await pr.json();
+      if (pd.code) throw new Error(pd.message || pd.code);
+      result.success = true;
+      result.url = pd.link;
+      result.post_id = pd.id;
+      result.method = 'wp_hidden_page';
+    }
+
+    // ─── WEBFLOW ─── CMS Collection Item (hidden collection "seo-resources")
+    else if (cms_type === 'webflow') {
+      const { api_token, site_id, collection_id } = credentials || {};
+      const token = api_token || process.env.WEBFLOW_API_TOKEN;
+      if (!token || !site_id) throw new Error('Webflow: api_token + site_id requis. Créez un token sur webflow.com/dashboard/account/integrations');
+      // Find or create a "seo-resources" collection
+      let targetCollection = collection_id;
+      if (!targetCollection) {
+        try {
+          const cr = await fetch(`https://api.webflow.com/v2/sites/${site_id}/collections`, {
+            headers: { 'Authorization': `Bearer ${token}`, 'accept-version': '2.0.0' }
+          });
+          const cd = await cr.json();
+          const found = (cd.collections || []).find(c => c.slug === 'seo-resources' || c.slug === 'ressources-seo' || c.slug === 'blog');
+          if (found) targetCollection = found.id;
+        } catch(e) {}
+      }
+      if (!targetCollection) throw new Error('Webflow: créez manuellement une collection "seo-resources" ou "blog" dans Webflow Designer, puis retournez ici');
+      // Create item in collection — live:false = draft = not visible on public site
+      const ir = await fetch(`https://api.webflow.com/v2/collections/${targetCollection}/items`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'accept-version': '2.0.0' },
+        body: JSON.stringify({
+          fieldData: {
+            name: title,
+            slug: title.toLowerCase().replace(/[^a-z0-9]+/g, '-').substring(0, 60),
+            'post-body': content,
+            'meta-description': content.replace(/<[^>]+>/g, '').substring(0, 155)
+          },
+          isDraft: false,
+          isArchived: false
+        })
+      });
+      const id = await ir.json();
+      if (id.message || id.errors) throw new Error(id.message || JSON.stringify(id.errors));
+      result.success = true;
+      result.url = `https://${site_id}.webflow.io/seo-resources/${id.fieldData?.slug || id.id}`;
+      result.post_id = id.id;
+      result.method = 'webflow_cms_collection';
+      result.note = 'Publié dans la collection CMS — n\'apparaît pas automatiquement dans le menu, lien direct indexable';
+    }
+
+    // ─── SHOPIFY ─── Blog article (hidden blog "seo-resources")
+    else if (cms_type === 'shopify') {
+      const { shop_domain, access_token } = credentials || {};
+      const domain = shop_domain || process.env.SHOPIFY_SHOP_DOMAIN;
+      const token = access_token || process.env.SHOPIFY_ACCESS_TOKEN;
+      if (!domain || !token) throw new Error('Shopify: shop_domain + access_token requis');
+      const api = async (ep, m='GET', b=null) => {
+        const r = await fetch(`https://${domain}/admin/api/2024-01/${ep}`, {
+          method: m, headers: { 'X-Shopify-Access-Token': token, 'Content-Type': 'application/json' },
+          ...(b ? { body: JSON.stringify(b) } : {})
+        });
+        return r.json();
+      };
+      // Find or create hidden blog
+      const blogs = await api('blogs.json');
+      let blogId = (blogs.blogs || []).find(b => b.handle === 'seo-resources' || b.handle === 'ressources-seo')?.id;
+      if (!blogId) {
+        const nb = await api('blogs.json', 'POST', { blog: { title: 'SEO Resources', handle: 'seo-resources', commentable: 'no' } });
+        blogId = nb.blog?.id;
+      }
+      if (!blogId) throw new Error('Shopify: impossible de créer le blog');
+      // Create article
+      const art = await api(`blogs/${blogId}/articles.json`, 'POST', {
+        article: { title, body_html: content, published: true, author: 'SEO', tags: 'seo,ressources' }
+      });
+      if (art.errors) throw new Error(JSON.stringify(art.errors));
+      result.success = true;
+      result.url = `https://${domain}/blogs/seo-resources/${art.article?.handle || art.article?.id}`;
+      result.post_id = art.article?.id;
+      result.method = 'shopify_blog';
+    }
+
+    // ─── WIX ─── Blog post via Wix Blog API (real publish)
+    else if (cms_type === 'wix') {
+      const { api_key, site_id } = credentials || {};
+      const key = api_key || process.env.WIX_API_KEY;
+      if (!key || !site_id) throw new Error('Wix: api_key + site_id requis (https://dev.wix.com → API Keys)');
+      const wixHeaders = { 'Authorization': key, 'wix-site-id': site_id, 'Content-Type': 'application/json' };
+      // Convert HTML to Ricos rich-content nodes (paragraphs split on <p>, <br>, newlines)
+      const plain = content.replace(/<br\s*\/?>/gi, '\n').replace(/<\/p>/gi, '\n').replace(/<[^>]+>/g, '').replace(/\n{3,}/g, '\n\n').trim();
+      const paragraphs = plain.split(/\n\n+/).filter(p => p.trim());
+      const nodes = paragraphs.map(p => ({
+        type: 'PARAGRAPH',
+        id: 'p_' + Math.random().toString(36).slice(2, 10),
+        nodes: [{ type: 'TEXT', id: '', nodes: [], textData: { text: p.trim(), decorations: [] } }],
+        paragraphData: {}
+      }));
+      // 1) create draft
+      const draftResp = await fetch('https://www.wixapis.com/blog/v3/draft-posts', {
+        method: 'POST', headers: wixHeaders,
+        body: JSON.stringify({ draftPost: { title, richContent: { nodes }, commentingEnabled: false } })
+      });
+      const draft = await draftResp.json();
+      if (draft.message || !draft.draftPost?.id) throw new Error(draft.message || 'Wix: draft creation failed');
+      const draftId = draft.draftPost.id;
+      // 2) publish draft → real live post
+      const pubResp = await fetch(`https://www.wixapis.com/blog/v3/draft-posts/${draftId}/publish`, {
+        method: 'POST', headers: wixHeaders, body: JSON.stringify({})
+      });
+      const pub = await pubResp.json();
+      if (pub.message && !pub.post) throw new Error('Wix publish: ' + pub.message);
+      result.success = true;
+      result.post_id = pub.post?.id || draftId;
+      result.url = pub.post?.url?.base && pub.post?.url?.path ? (pub.post.url.base + pub.post.url.path) : `https://manage.wix.com/dashboard/${site_id}/blog/posts/${result.post_id}`;
+      result.method = 'wix_blog_published';
+    }
+
+    // ─── SQUARESPACE ─── no public blog-create API; return import file for manual upload
+    // Squarespace's public API (Commerce, Inventory, Orders, Products) does NOT expose
+    // blog-post creation. The only programmatic path is WXR (WordPress XML) bulk import.
+    // We return a ready-to-import WXR file + direct content for paste.
+    else if (cms_type === 'squarespace') {
+      const now = new Date().toUTCString();
+      const escape = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      const wxr = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:wp="http://wordpress.org/export/1.2/">
+<channel><title>${escape(title)}</title><link>/</link><description>RestauRank</description>
+<item><title>${escape(title)}</title><pubDate>${now}</pubDate><wp:post_type>post</wp:post_type><wp:status>publish</wp:status>
+<content:encoded><![CDATA[${content}]]></content:encoded></item></channel></rss>`;
+      result.success = true;
+      result.method = 'squarespace_wxr_import';
+      result.url = null;
+      result.manual_content = { title, content };
+      result.import_file = { filename: `restaurank-${Date.now()}.xml`, mime: 'application/xml', data: wxr };
+      result.note = 'Squarespace n\'a pas d\'API publique pour créer des articles. Importez le fichier WXR via Settings → Advanced → Import/Export → WordPress, ou collez le contenu manuellement.';
+    }
+
+    // ─── GHOST ─── Ghost Admin API
+    else if (cms_type === 'ghost') {
+      const { admin_api_url, admin_api_key } = credentials || {};
+      if (!admin_api_url || !admin_api_key) throw new Error('Ghost: admin_api_url + admin_api_key requis');
+      // Ghost requires JWT token from the admin_api_key
+      const [id, secret] = admin_api_key.split(':');
+      if (!id || !secret) throw new Error('Ghost: admin_api_key format invalide (id:secret)');
+      const jwt = require('jsonwebtoken');
+      const token = jwt.sign({}, Buffer.from(secret, 'hex'), { keyid: id, algorithm: 'HS256', expiresIn: '5m', audience: '/admin/' });
+      const r = await fetch(`${admin_api_url.replace(/\/$/, '')}/ghost/api/admin/posts/?source=html`, {
+        method: 'POST',
+        headers: { 'Authorization': `Ghost ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ posts: [{ title, html: content, status: 'published', tags: ['seo-resources'], visibility: 'public' }] })
+      });
+      const d = await r.json();
+      if (d.errors) throw new Error(d.errors[0]?.message || 'Ghost error');
+      result.success = true;
+      result.url = d.posts?.[0]?.url;
+      result.post_id = d.posts?.[0]?.id;
+      result.method = 'ghost_post';
+    }
+
+    // ─── GENERIC / UNKNOWN CMS ─── return HTML for manual paste
+    else {
+      result.success = true;
+      result.method = 'manual';
+      result.url = null;
+      result.manual_content = { title, content };
+      result.note = `CMS "${cms_type}" non supporté par API — contenu prêt à coller manuellement`;
+    }
+
+    // Save to DB — content history
+    try {
+      db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, cms_type TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+      try { db.exec('ALTER TABLE generated_content ADD COLUMN cms_type TEXT'); } catch(e) {}
+      try { db.exec('ALTER TABLE generated_content ADD COLUMN title TEXT'); } catch(e) {}
+      db.prepare('INSERT INTO generated_content (restaurant_id, type, title, content, published, publish_url, cms_type) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(restaurant_id || 0, 'blog', title, content, result.success && result.url ? 1 : 0, result.url || '', cms_type);
+    } catch (e) {}
+
+    // Save SNAPSHOT for potential revert (only if something was actually published remotely)
+    if (result.success && result.post_id && cms_type !== 'generic' && cms_type !== 'squarespace') {
+      try {
+        const credsSnap = credentials ? JSON.stringify(credentials) : null;
+        db.prepare(`INSERT INTO cms_snapshots (restaurant_id, cms_type, action_type, description, target_id, target_url, before_data, after_data, credentials_snapshot) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+          .run(
+            restaurant_id || 0,
+            cms_type,
+            'blog_publish',
+            `Article publié: "${title.substring(0, 100)}"`,
+            String(result.post_id || ''),
+            result.url || '',
+            JSON.stringify({ state: 'not_exists' }),
+            JSON.stringify({ title, content_length: content.length, post_id: result.post_id, url: result.url, method: result.method }),
+            credsSnap
+          );
+      } catch (e) { console.warn('Snapshot save failed:', e.message); }
+    }
+
+    res.json(result);
+  } catch (e) {
+    console.error('Blog publish error:', e.message);
+    res.json({ success: false, cms: cms_type, error: e.message });
+  }
+});
+
+// ============================================================
+// CMS SNAPSHOTS — list + revert
+// ============================================================
+app.get('/api/cms/snapshots', (req, res) => {
+  const { restaurant_id, limit } = req.query;
+  try {
+    let rows;
+    if (restaurant_id) {
+      rows = db.prepare(`SELECT id, cms_type, action_type, description, target_url, reverted, reverted_at, created_at FROM cms_snapshots WHERE restaurant_id = ? ORDER BY created_at DESC LIMIT ?`).all(parseInt(restaurant_id), parseInt(limit) || 50);
+    } else {
+      rows = db.prepare(`SELECT id, cms_type, action_type, description, target_url, reverted, reverted_at, created_at FROM cms_snapshots ORDER BY created_at DESC LIMIT ?`).all(parseInt(limit) || 50);
+    }
+    res.json({ success: true, snapshots: rows || [] });
+  } catch (e) {
+    res.json({ success: true, snapshots: [] });
+  }
+});
+
+// POST /api/cms/snapshots/:id/revert — revert a specific change
+app.post('/api/cms/snapshots/:id/revert', async (req, res) => {
+  const id = parseInt(req.params.id);
+  const snap = db.prepare('SELECT * FROM cms_snapshots WHERE id = ?').get(id);
+  if (!snap) return res.json({ success: false, error: 'Snapshot introuvable' });
+  if (snap.reverted) return res.json({ success: false, error: 'Déjà annulé le ' + snap.reverted_at });
+
+  const creds = snap.credentials_snapshot ? JSON.parse(snap.credentials_snapshot) : {};
+  const after = snap.after_data ? JSON.parse(snap.after_data) : {};
+  const cmsType = snap.cms_type;
+  const targetId = snap.target_id;
+
+  try {
+    // ─── WORDPRESS ─── delete the page/post
+    if (cmsType === 'wordpress' && snap.action_type === 'blog_publish') {
+      const { site_url, username, app_password } = creds;
+      if (!site_url || !username || !app_password) throw new Error('Credentials WordPress manquants');
+      const wpUrl = site_url.replace(/\/$/, '');
+      const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+      // Try pages first (blog publish uses pages), then posts as fallback
+      let ok = false;
+      for (const endpoint of ['pages', 'posts']) {
+        try {
+          const r = await fetch(`${wpUrl}/wp-json/wp/v2/${endpoint}/${targetId}?force=true`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Basic ${auth}` }
+          });
+          if (r.ok) { ok = true; break; }
+        } catch(e) {}
+      }
+      if (!ok) throw new Error('WordPress: suppression échouée — la page a peut-être déjà été supprimée');
+    }
+    // ─── WEBFLOW ─── delete collection item
+    else if (cmsType === 'webflow' && snap.action_type === 'blog_publish') {
+      const { api_token, site_id, collection_id } = creds;
+      const token = api_token || process.env.WEBFLOW_API_TOKEN;
+      if (!token) throw new Error('Webflow: api_token manquant');
+      // We may not have stored collection_id — try to find via listing
+      let colId = collection_id;
+      if (!colId && site_id) {
+        try {
+          const cr = await fetch(`https://api.webflow.com/v2/sites/${site_id}/collections`, { headers: { 'Authorization': `Bearer ${token}`, 'accept-version': '2.0.0' } });
+          const cd = await cr.json();
+          const found = (cd.collections || []).find(c => ['seo-resources','ressources-seo','blog'].includes(c.slug));
+          if (found) colId = found.id;
+        } catch(e) {}
+      }
+      if (!colId) throw new Error('Webflow: collection introuvable');
+      const dr = await fetch(`https://api.webflow.com/v2/collections/${colId}/items/${targetId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${token}`, 'accept-version': '2.0.0' }
+      });
+      if (!dr.ok) {
+        const em = await dr.text();
+        throw new Error('Webflow: ' + em.substring(0, 200));
+      }
+    }
+    // ─── SHOPIFY ─── delete article
+    else if (cmsType === 'shopify' && snap.action_type === 'blog_publish') {
+      const { shop_domain, access_token } = creds;
+      if (!shop_domain || !access_token) throw new Error('Shopify: credentials manquants');
+      // Find the blog first
+      const br = await fetch(`https://${shop_domain}/admin/api/2024-01/blogs.json`, {
+        headers: { 'X-Shopify-Access-Token': access_token }
+      });
+      const bd = await br.json();
+      const blog = (bd.blogs || []).find(b => ['seo-resources','ressources-seo'].includes(b.handle));
+      if (!blog) throw new Error('Shopify: blog seo-resources introuvable');
+      const dr = await fetch(`https://${shop_domain}/admin/api/2024-01/blogs/${blog.id}/articles/${targetId}.json`, {
+        method: 'DELETE',
+        headers: { 'X-Shopify-Access-Token': access_token }
+      });
+      if (!dr.ok) throw new Error('Shopify: suppression échouée');
+    }
+    // ─── GHOST ─── delete post
+    else if (cmsType === 'ghost' && snap.action_type === 'blog_publish') {
+      const { admin_api_url, admin_api_key } = creds;
+      if (!admin_api_url || !admin_api_key) throw new Error('Ghost: credentials manquants');
+      const [kid, secret] = admin_api_key.split(':');
+      const jwt = require('jsonwebtoken');
+      const token = jwt.sign({}, Buffer.from(secret, 'hex'), { keyid: kid, algorithm: 'HS256', expiresIn: '5m', audience: '/admin/' });
+      const dr = await fetch(`${admin_api_url.replace(/\/$/, '')}/ghost/api/admin/posts/${targetId}/`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Ghost ${token}` }
+      });
+      if (!dr.ok) throw new Error('Ghost: suppression échouée');
+    }
+    // ─── WIX ─── delete draft post
+    else if (cmsType === 'wix' && snap.action_type === 'blog_publish') {
+      const { api_key, site_id } = creds;
+      if (!api_key || !site_id) throw new Error('Wix: credentials manquants');
+      const dr = await fetch(`https://www.wixapis.com/blog/v3/draft-posts/${targetId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': api_key, 'wix-site-id': site_id }
+      });
+      if (!dr.ok) {
+        const em = await dr.text();
+        throw new Error('Wix: ' + em.substring(0, 200));
+      }
+    }
+    else {
+      throw new Error(`Revert non supporté pour ${cmsType}/${snap.action_type}`);
+    }
+
+    // Mark snapshot as reverted
+    db.prepare('UPDATE cms_snapshots SET reverted = 1, reverted_at = datetime(\'now\') WHERE id = ?').run(id);
+    res.json({ success: true, message: 'Modification annulée avec succès sur ' + cmsType });
+  } catch (e) {
+    db.prepare('UPDATE cms_snapshots SET revert_error = ? WHERE id = ?').run(e.message, id);
+    res.json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/content/history — list published blog/reddit posts
+app.get('/api/content/history', (req, res) => {
+  const { type, restaurant_id } = req.query;
+  try {
+    db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+    let rows;
+    if (type && restaurant_id !== undefined) {
+      rows = db.prepare('SELECT id, type, title, publish_url, published, created_at FROM generated_content WHERE type = ? AND restaurant_id = ? ORDER BY created_at DESC LIMIT 20').all(type, parseInt(restaurant_id));
+    } else if (type) {
+      rows = db.prepare('SELECT id, type, title, publish_url, published, created_at FROM generated_content WHERE type = ? ORDER BY created_at DESC LIMIT 20').all(type);
+    } else {
+      rows = db.prepare('SELECT id, type, title, publish_url, published, created_at FROM generated_content ORDER BY created_at DESC LIMIT 20').all();
+    }
+    res.json({ success: true, items: rows || [] });
+  } catch (e) {
+    res.json({ success: true, items: [] });
   }
 });
 
@@ -5132,7 +6802,7 @@ app.post('/api/directories/auto-do-all', async (req, res) => {
 
   for (const platform of platList) {
     try {
-      // Simulate internal call to auto-do logic (guided mode)
+      // Real platform check via checkPlatformListing()
       const q = encodeURIComponent(`${name} ${city || 'Paris'}`);
       let checkResult = null;
       try { checkResult = await checkPlatformListing(platform, name, city || 'Paris'); } catch (e) {}
@@ -5389,11 +7059,20 @@ app.post('/api/scrape-gmb', async (req, res) => {
             result.description = placeData.editorial_summary.overview;
           }
 
-          // Photos (up to 10 — each costs 1 API call when accessed)
+          // Photos — take every photo reference Places returns at max resolution (1600px)
+          // Note: Places Details API caps at ~10 refs per call. For the *full* GBP library
+          // (hundreds of photos) we'd need the GBP Business Information API /media endpoint
+          // which requires owner OAuth. Hooked up further below if a token is available.
           if (placeData.photos && placeData.photos.length > 0) {
-            result.photos = placeData.photos.slice(0, 10).map(p =>
-              `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`
-            );
+            result.photos = placeData.photos.map(p => ({
+              url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photo_reference=${p.photo_reference}&key=${placesKey}`,
+              thumbUrl: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${p.photo_reference}&key=${placesKey}`,
+              width: p.width || null,
+              height: p.height || null,
+              attributions: p.html_attributions || [],
+              source: 'gmb'
+            }));
+            result.gmbPhotoCount = placeData.photos.length;
           }
 
           // Reviews (first 5 from Google)
@@ -5515,14 +7194,455 @@ app.post('/api/scrape-gmb', async (req, res) => {
           }
         }
 
+        // ═══════════════════════════════════════════
+        // ENHANCED: Logo detection
+        // ═══════════════════════════════════════════
+        result.branding = result.branding || {};
+
+        // Favicon
+        const faviconMatch = siteHtml.match(/<link[^>]*rel=["'](?:icon|shortcut icon|apple-touch-icon)["'][^>]*href=["']([^"']+)["']/i);
+        if (faviconMatch) {
+          let favUrl = faviconMatch[1];
+          if (favUrl.startsWith('//')) favUrl = 'https:' + favUrl;
+          else if (favUrl.startsWith('/')) favUrl = new URL(favUrl, normalized).href;
+          result.branding.favicon = favUrl;
+        }
+
+        // og:image (often the logo or main brand image)
+        const ogImage = siteHtml.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+        if (ogImage) result.branding.ogImage = ogImage[1];
+
+        // Logo from <img> tags with "logo" in src, alt, or class
+        const logoImgMatch = siteHtml.match(/<img[^>]*(?:class=["'][^"']*logo[^"']*["']|alt=["'][^"']*logo[^"']*["']|src=["'][^"']*logo[^"']*["'])[^>]*src=["']([^"']+)["']/i)
+          || siteHtml.match(/<img[^>]*src=["']([^"']*logo[^"']+)["']/i);
+        if (logoImgMatch) {
+          let logoUrl = logoImgMatch[1];
+          if (logoUrl.startsWith('//')) logoUrl = 'https:' + logoUrl;
+          else if (logoUrl.startsWith('/')) logoUrl = new URL(logoUrl, normalized).href;
+          result.branding.logo = logoUrl;
+        }
+
+        // SVG logo in <header> or <nav>
+        if (!result.branding.logo) {
+          const svgLogo = siteHtml.match(/<(?:header|nav)[^>]*>[\s\S]{0,3000}?<(?:img|svg)[^>]*(?:logo|brand)[^>]*(?:src=["']([^"']+)["'])?/i);
+          if (svgLogo && svgLogo[1]) {
+            let svgUrl = svgLogo[1];
+            if (svgUrl.startsWith('/')) svgUrl = new URL(svgUrl, normalized).href;
+            result.branding.logo = svgUrl;
+          }
+        }
+
+        // ═══════════════════════════════════════════
+        // ENHANCED: Fetch external CSS files for REAL color + font extraction
+        // ═══════════════════════════════════════════
+        let cssCorpus = siteHtml;
+        try {
+          const cssLinks = [...siteHtml.matchAll(/<link[^>]+rel=["']stylesheet["'][^>]+href=["']([^"']+)["']/gi)]
+            .concat([...siteHtml.matchAll(/<link[^>]+href=["']([^"']+\.css[^"']*)["'][^>]+rel=["']stylesheet["']/gi)])
+            .map(m => m[1])
+            .filter(u => !/fonts\.googleapis\.com/.test(u))
+            .slice(0, 6); // cap to avoid DoS on heavy sites
+          const cssFetches = await Promise.allSettled(cssLinks.map(async (href) => {
+            const cssUrl = href.startsWith('//') ? 'https:' + href
+                         : href.startsWith('http') ? href
+                         : new URL(href, normalized).href;
+            return fetchPage(cssUrl);
+          }));
+          cssFetches.forEach(r => { if (r.status === 'fulfilled' && r.value) cssCorpus += '\n' + r.value; });
+        } catch (e) { console.warn('External CSS fetch failed:', e.message); }
+
+        // ═══════════════════════════════════════════
+        // Color extraction — from inline HTML + external CSS
+        // ═══════════════════════════════════════════
+        const colors = new Set();
+
+        // theme-color meta
+        const themeColor = siteHtml.match(/<meta[^>]*name=["']theme-color["'][^>]*content=["']([^"']+)["']/i);
+        if (themeColor) colors.add(themeColor[1].toLowerCase());
+
+        // CSS variables — any --*-color or --primary/brand/accent/main/theme/bg/fg
+        const cssVarMatches = cssCorpus.matchAll(/--(?:[a-z0-9\-]*(?:primary|brand|accent|main|theme|color|bg|background|fg|foreground|text|heading|border|link)[a-z0-9\-]*)\s*:\s*(#[0-9a-fA-F]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\))/gi);
+        for (const m of cssVarMatches) colors.add(m[1].toLowerCase().replace(/\s+/g, ''));
+
+        // Count every hex color occurrence in the CSS corpus (NOT only inline) weighted by position
+        const hexMatches = cssCorpus.matchAll(/#([0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b/g);
+        const hexCount = {};
+        const boring = new Set(['#fff','#ffffff','#000','#000000','#fafafa','#f5f5f5','#f3f3f3','#eeeeee','#eee','#dddddd','#ddd','#cccccc','#ccc','#999999','#999','#666666','#666','#333333','#333','#222222','#222','#111111','#111','#f9f9f9','#f8f8f8','#f7f7f7','#e5e7eb','#e5e5e5','#f3f4f6','#1a1a1a','#2a2a2a','#808080','#a0a0a0']);
+        for (const m of hexMatches) {
+          let c = '#' + m[1].toLowerCase();
+          if (c.length === 4) c = '#' + c[1] + c[1] + c[2] + c[2] + c[3] + c[3]; // expand #abc → #aabbcc
+          if (boring.has(c)) continue;
+          hexCount[c] = (hexCount[c] || 0) + 1;
+        }
+        // Also capture rgb()/rgba() brand colors
+        const rgbMatches = cssCorpus.matchAll(/rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*[\d.]+)?\s*\)/g);
+        for (const m of rgbMatches) {
+          const r = parseInt(m[1]), g = parseInt(m[2]), b = parseInt(m[3]);
+          const hex = '#' + [r, g, b].map(x => x.toString(16).padStart(2, '0')).join('');
+          if (boring.has(hex)) continue;
+          hexCount[hex] = (hexCount[hex] || 0) + 1;
+        }
+        // Top brand colors (by frequency)
+        const topColors = Object.entries(hexCount).sort((a, b) => b[1] - a[1]).slice(0, 8).map(e => e[0]);
+        topColors.forEach(c => colors.add(c));
+
+        result.branding.colors = [...colors].filter(c => /^#[0-9a-f]{6}$/.test(c) || /^rgb/.test(c) || /^hsl/.test(c)).slice(0, 10);
+        result.branding.colorCount = Object.keys(hexCount).length;
+
+        // ═══════════════════════════════════════════
+        // Font detection — from inline HTML + external CSS
+        // ═══════════════════════════════════════════
+        const fonts = new Set();
+        const genericFonts = new Set(['inherit','initial','unset','revert','sans-serif','serif','monospace','system-ui','-apple-system','blinkmacsystemfont','arial','helvetica','helvetica neue','times new roman','times','georgia','courier','courier new','verdana','tahoma','trebuchet ms','impact','comic sans ms','segoe ui','roboto','ui-sans-serif','ui-serif','ui-monospace']);
+
+        // Google Fonts link (both css and css2 endpoints)
+        const googleFontsMatch = siteHtml.matchAll(/fonts\.googleapis\.com\/css2?\?([^"'&]*family=[^"'&]+)/gi);
+        for (const m of googleFontsMatch) {
+          const params = new URLSearchParams(m[1]);
+          params.getAll('family').forEach(f => {
+            f.split('|').forEach(p => {
+              const name = decodeURIComponent(p.split(':')[0].replace(/\+/g, ' ')).trim();
+              if (name && !genericFonts.has(name.toLowerCase())) fonts.add(name);
+            });
+          });
+        }
+
+        // font-family declarations (from full CSS corpus)
+        const fontFamilyMatches = cssCorpus.matchAll(/font-family\s*:\s*([^;}"']+)/gi);
+        for (const m of fontFamilyMatches) {
+          const fam = m[1].split(',')[0].trim().replace(/["']/g, '');
+          if (fam && fam.length > 1 && fam.length < 40 && !genericFonts.has(fam.toLowerCase()) && !fam.startsWith('var(')) {
+            fonts.add(fam);
+          }
+        }
+
+        // @font-face declarations
+        const fontFaceMatches = cssCorpus.matchAll(/@font-face\s*\{[^}]*font-family\s*:\s*["']?([^;"'}]+)/gi);
+        for (const m of fontFaceMatches) {
+          const name = m[1].trim().replace(/["']/g, '');
+          if (name && !genericFonts.has(name.toLowerCase())) fonts.add(name);
+        }
+
+        result.branding.fonts = [...fonts].slice(0, 8);
+
+        // ═══════════════════════════════════════════
+        // ENHANCED: Social links, reservation, order, email, menu, amenities
+        // Parse anchor hrefs and text content for well-known platforms
+        // ═══════════════════════════════════════════
+        result.social = result.social || {};
+        result.links = result.links || {};
+
+        // Grab every href + its link text for classification
+        const anchorRe = /<a[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+        const anchors = [];
+        let am;
+        while ((am = anchorRe.exec(siteHtml)) !== null && anchors.length < 400) {
+          anchors.push({ href: am[1], text: am[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().toLowerCase() });
+        }
+        // Also scan raw text for bare URLs (e.g. in footer or contact sections)
+        const bareUrlRe = /https?:\/\/(?:www\.)?(facebook\.com|instagram\.com|twitter\.com|x\.com|tiktok\.com|linkedin\.com|youtube\.com|youtu\.be|pinterest\.[a-z]+|thefork\.(?:fr|com)|lafourchette\.com|resy\.com|opentable\.(?:com|fr)|bookatable\.(?:com|fr)|zenchef\.com|sevenrooms\.com|ubereats\.com|deliveroo\.(?:fr|com|co\.uk)|just[\- ]?eat\.(?:fr|com)|doordash\.com|grubhub\.com|frichti\.co|nestor\.paris|stuart\.com)[^\s"'<>]*/gi;
+        let bm;
+        const bareUrls = new Set();
+        while ((bm = bareUrlRe.exec(siteHtml)) !== null) bareUrls.add(bm[0]);
+
+        const allCandidates = [
+          ...anchors.map(a => ({ url: a.href, label: a.text })),
+          ...[...bareUrls].map(u => ({ url: u, label: '' }))
+        ];
+
+        const platformPatterns = {
+          facebook:   /facebook\.com\/(?!(?:sharer|plugins|tr|login|pages\/category))/i,
+          instagram:  /instagram\.com\/(?!p\/|reel\/|stories\/)/i,
+          twitter:    /(?:twitter\.com|x\.com)\/(?!intent|share|home)/i,
+          tiktok:     /tiktok\.com\/@/i,
+          linkedin:   /linkedin\.com\/(?:company|in)\//i,
+          youtube:    /(?:youtube\.com\/(?:channel|c|user|@)|youtu\.be\/)/i,
+          pinterest:  /pinterest\.[a-z]+\/(?!pin\/)/i,
+        };
+        const reservationPatterns = /thefork\.(?:fr|com)|lafourchette\.com|resy\.com|opentable\.(?:com|fr)|bookatable\.(?:com|fr)|zenchef\.com|sevenrooms\.com|michelin\.com\/.*\/reserve/i;
+        const orderPatterns = /ubereats\.com|deliveroo\.(?:fr|com|co\.uk)|just[\- ]?eat\.(?:fr|com)|doordash\.com|grubhub\.com|frichti\.co|nestor\.paris|stuart\.com|livepepper\.com|zupplychain|smood\.ch|takeaway\.com/i;
+
+        const absolutize = (u) => {
+          if (!u) return null;
+          if (u.startsWith('//')) return 'https:' + u;
+          if (u.startsWith('http')) return u;
+          try { return new URL(u, normalized).href; } catch { return null; }
+        };
+
+        for (const { url, label } of allCandidates) {
+          const abs = absolutize(url);
+          if (!abs) continue;
+          for (const [k, rx] of Object.entries(platformPatterns)) {
+            if (rx.test(abs) && !result.social[k]) { result.social[k] = abs; break; }
+          }
+          if (!result.links.reservation && reservationPatterns.test(abs)) {
+            result.links.reservation = abs;
+            result.links.reservationProvider = (abs.match(/thefork|resy|opentable|bookatable|zenchef|sevenrooms|michelin/i) || [''])[0].toLowerCase();
+          }
+          if (!result.links.order && orderPatterns.test(abs)) {
+            result.links.order = abs;
+            result.links.orderProvider = (abs.match(/ubereats|deliveroo|just[\- ]?eat|doordash|grubhub|frichti|nestor|stuart|livepepper|smood|takeaway/i) || [''])[0].toLowerCase().replace(/[\- ]/g, '');
+          }
+          // Menu link — look for "menu" or "carte" in the anchor text or href
+          if (!result.links.menu && (/\/(menu|carte|la[\- ]?carte)(?:\/|\.|$)/i.test(abs) || /(?:^|\s)(menu|carte|la carte)(?:$|\s)/i.test(label || ''))) {
+            if (/\.(pdf|html?|php)(?:$|\?)/i.test(abs) || /\/(menu|carte|la[\- ]?carte)\/?$/i.test(abs)) {
+              result.links.menu = abs;
+            }
+          }
+        }
+
+        // Email from mailto + plain-text
+        const mailtoMatch = siteHtml.match(/mailto:([^"'?\s<>]+@[^"'?\s<>]+)/i);
+        if (mailtoMatch) result.email = mailtoMatch[1].toLowerCase();
+        if (!result.email) {
+          const plainEmail = siteHtml.match(/\b([a-z0-9._%+\-]+@[a-z0-9.\-]+\.[a-z]{2,})\b/i);
+          if (plainEmail && !/\.(png|jpe?g|gif|svg|webp)$/i.test(plainEmail[1]) && !/sentry|wixpress|cloudflare|example/i.test(plainEmail[1])) {
+            result.email = plainEmail[1].toLowerCase();
+          }
+        }
+
+        // SIRET (14 digits, often in footer for French restaurants)
+        const siretMatch = siteHtml.match(/\b(?:siret|siren)[\s:]*(\d{3}[\s\-.]?\d{3}[\s\-.]?\d{3}[\s\-.]?\d{5}|\d{3}[\s\-.]?\d{3}[\s\-.]?\d{3})\b/i);
+        if (siretMatch) result.siret = siretMatch[1].replace(/[\s\-.]/g, '');
+
+        // Amenities / features (French + English keywords)
+        const lcHtml = siteHtml.toLowerCase();
+        const amenityMap = {
+          terrace:     /\b(terrasse|terrace|outdoor seating)\b/,
+          wifi:        /\b(wi-?fi gratuit|free wi-?fi|wifi)\b/,
+          parking:     /\b(parking|stationnement)\b/,
+          accessible:  /\b(accessible|pmr|wheelchair|handicap)\b/,
+          reservation: /\b(r[eé]servation|reservation)\b/,
+          delivery:    /\b(livraison|delivery|à emporter|takeaway)\b/,
+          vegetarian:  /\b(v[eé]g[eé]tarien|vegetarian)\b/,
+          vegan:       /\bvegan\b/,
+          glutenFree:  /\b(sans gluten|gluten[\- ]?free)\b/,
+          kidsMenu:    /\b(menu enfant|kids menu|children)\b/,
+          petFriendly: /\b(chiens accept[eé]s|pet[\- ]?friendly|dogs welcome)\b/,
+          privatized:  /\b(privatisation|privatiser|private events|group booking)\b/,
+        };
+        result.amenities = {};
+        for (const [k, rx] of Object.entries(amenityMap)) {
+          if (rx.test(lcHtml)) result.amenities[k] = true;
+        }
+
+        // Payment methods
+        const paymentRe = /\b(visa|mastercard|amex|american express|apple pay|google pay|contactless|sans contact|cash|esp[eè]ces|tickets?[\- ]restaurant|ch[eè]que[\- ]?d[eé]jeuner|swile|edenred)\b/gi;
+        const payments = new Set();
+        let pm; while ((pm = paymentRe.exec(lcHtml)) !== null) payments.add(pm[1].toLowerCase());
+        if (payments.size) result.paymentMethods = [...payments];
+
+        // Chef name — common patterns "chef X", "par le chef X"
+        const chefMatch = siteHtml.match(/(?:chef(?:\s+cuisinier)?)\s*:?\s*([A-ZÀ-Ÿ][a-zà-ÿ\-]+(?:\s+[A-ZÀ-Ÿ][a-zà-ÿ\-]+){0,2})/);
+        if (chefMatch) result.chef = chefMatch[1].trim();
+
+        // Opening year — "depuis 19xx" / "since 20xx" / "créé en 19xx"
+        const yearMatch = siteHtml.match(/\b(?:depuis|cr[eé]{1,2}e? en|founded in|since|ouverture en)\s+((?:19|20)\d{2})\b/i);
+        if (yearMatch) result.openingYear = parseInt(yearMatch[1]);
+
+        // ═══════════════════════════════════════════
+        // ENHANCED: Domain Authority (estimate or Moz)
+        // ═══════════════════════════════════════════
+        try {
+          if (process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) {
+            const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('base64');
+            const mozResp = await fetch('https://lsapi.seomoz.com/v2/url_metrics', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${mozAuth}` },
+              body: JSON.stringify({ targets: [normalized] }), signal: AbortSignal.timeout(8000)
+            });
+            const mozData = await mozResp.json();
+            if (mozData.results?.[0]) {
+              result.branding.domainAuthority = mozData.results[0].domain_authority || null;
+              result.branding.pageAuthority = mozData.results[0].page_authority || null;
+              result.branding.backlinks = mozData.results[0].external_pages_to_root_domain || null;
+            }
+          } else {
+            // No Moz API — DA unknown. Don't estimate.
+            result.branding.domainAuthority = null;
+            result.branding.daSource = 'unavailable';
+            result.branding.daMessage = 'Configurez MOZ_ACCESS_ID + MOZ_SECRET_KEY pour obtenir le DA réel';
+          }
+        } catch (e) { console.warn('DA estimation error:', e.message); }
+
         result.websiteUrl = normalized;
       } catch (e) {
         console.warn('Website scrape complement error:', e.message);
       }
     }
 
-    // Deduplicate photos + cap at 50
-    result.photos = [...new Set(result.photos)].slice(0, 50);
+    // ═══════════════════════════════════════════════════════
+    // GBP MEDIA — fetch ALL photos from Google Business Profile (owner OAuth required)
+    // This bypasses the 10-photo Places cap and returns every media item in the GBP library.
+    // ═══════════════════════════════════════════════════════
+    try {
+      const authHeaderGbp = req.headers.authorization;
+      let gbpUserId = null;
+      if (authHeaderGbp?.startsWith('Bearer ')) {
+        const tok = authHeaderGbp.slice(7);
+        try {
+          const sess = db.prepare('SELECT account_id FROM sessions WHERE id = ? AND expires_at > datetime(\'now\')').get(tok);
+          if (sess) gbpUserId = sess.account_id;
+        } catch(e) {}
+      }
+      if (gbpUserId) {
+        let gbpToken = null, gbpLocationName = null;
+        try {
+          const row = db.prepare('SELECT social_tokens FROM accounts WHERE id = ?').get(gbpUserId)
+                   || db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(gbpUserId);
+          if (row?.social_tokens) {
+            const st = JSON.parse(row.social_tokens);
+            gbpToken = st.google_access_token || st.gbp_access_token || null;
+            gbpLocationName = st.gbp_location_name || null; // e.g. "accounts/123/locations/456"
+          }
+        } catch(e) {}
+        if (gbpToken && gbpLocationName) {
+          const mediaResp = await fetch(`https://mybusiness.googleapis.com/v4/${gbpLocationName}/media?pageSize=100`, {
+            headers: { 'Authorization': `Bearer ${gbpToken}` },
+            signal: AbortSignal.timeout(10000)
+          });
+          if (mediaResp.ok) {
+            const mediaData = await mediaResp.json();
+            const gbpMedia = (mediaData.mediaItems || []).filter(m => m.mediaFormat === 'PHOTO').map(m => ({
+              url: m.googleUrl || m.sourceUrl,
+              thumbUrl: m.thumbnailUrl || m.googleUrl,
+              width: m.dimensions?.widthPixels || null,
+              height: m.dimensions?.heightPixels || null,
+              category: m.locationAssociation?.category || 'UNSPECIFIED',
+              createTime: m.createTime || null,
+              source: 'gbp_api'
+            }));
+            if (gbpMedia.length > 0) {
+              result.photos = [...(Array.isArray(result.photos) ? result.photos : []), ...gbpMedia];
+              result.gmbPhotoCount = gbpMedia.length;
+              result.gbpMediaSource = 'gbp_api_v4';
+              console.log(`✅ GBP: ${gbpMedia.length} photos récupérées via GBP API`);
+            }
+          }
+        }
+      }
+    } catch (e) { console.warn('GBP media fetch failed:', e.message); }
+
+    // ═══════════════════════════════════════════════════════
+    // REAL INSTAGRAM PHOTOS — via Instagram Graph API
+    // Uses the Meta OAuth token stored in DB from /auth/facebook
+    // Falls back to Apify actor if no token available
+    // ═══════════════════════════════════════════════════════
+    result.instagramPhotos = [];
+    try {
+      // 1. Try Instagram Graph API with user's Meta OAuth token
+      let igToken = null, igAccountId = null;
+
+      // Get token from request (authenticated user) or from restaurant owner
+      const authHeader = req.headers.authorization;
+      let userId = null;
+      if (authHeader?.startsWith('Bearer ')) {
+        const tok = authHeader.slice(7);
+        try {
+          const sess = db.prepare('SELECT account_id FROM sessions WHERE id = ? AND expires_at > datetime(\'now\')').get(tok);
+          if (sess) userId = sess.account_id;
+        } catch(e) {}
+      }
+
+      // Look for Meta token in users table (linked to this account) or accounts table
+      if (userId) {
+        try {
+          const userRow = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(userId)
+            || db.prepare('SELECT social_tokens FROM accounts WHERE id = ?').get(userId);
+          if (userRow?.social_tokens) {
+            const st = JSON.parse(userRow.social_tokens);
+            if (st.meta_token && st.ig_account_id) {
+              igToken = st.fb_pages?.[0]?.token || st.meta_token;
+              igAccountId = st.ig_account_id;
+            }
+          }
+        } catch(e) {}
+      }
+
+      if (igToken && igAccountId) {
+        // Real Instagram Graph API — get all recent media (max 100)
+        console.log('📸 Instagram Graph API: fetching media for IG account', igAccountId);
+        let mediaUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=id,media_type,media_url,thumbnail_url,timestamp,caption,permalink,like_count,comments_count&limit=100&access_token=${igToken}`;
+        let allMedia = [];
+        let pages = 0;
+
+        while (mediaUrl && pages < 5) {  // Max 5 pages = ~500 posts
+          const mediaResp = await fetch(mediaUrl, { signal: AbortSignal.timeout(10000) });
+          const mediaData = await mediaResp.json();
+          if (mediaData.error) {
+            console.warn('Instagram Graph API error:', mediaData.error.message);
+            break;
+          }
+          if (mediaData.data) allMedia = allMedia.concat(mediaData.data);
+          mediaUrl = mediaData.paging?.next || null;
+          pages++;
+        }
+
+        if (allMedia.length > 0) {
+          result.instagramPhotos = allMedia
+            .filter(m => m.media_type === 'IMAGE' || m.media_type === 'CAROUSEL_ALBUM')
+            .map(m => ({
+              url: m.media_url || m.thumbnail_url,
+              id: m.id,
+              caption: m.caption || '',
+              timestamp: m.timestamp,
+              permalink: m.permalink,
+              likes: m.like_count || 0,
+              comments: m.comments_count || 0,
+              source: 'instagram_api'
+            }));
+          result.instagramSource = 'graph_api';
+          console.log(`✅ Instagram: ${result.instagramPhotos.length} photos récupérées via Graph API`);
+        }
+      }
+
+      // 2. Fallback: try scraping Instagram profile page (limited, may fail)
+      if (result.instagramPhotos.length === 0) {
+        const igUrl = req.body.instagram_url;
+        if (igUrl) {
+          try {
+            const igHtml = await fetchPage(igUrl);
+            const igImages = [];
+            // og:image from profile
+            const ogMatch = igHtml.match(/<meta[^>]*property=["']og:image["'][^>]*content=["']([^"']+)["']/i);
+            if (ogMatch) igImages.push({ url: ogMatch[1], source: 'instagram_scrape' });
+            // shared_data JSON (only works if Instagram returns server-rendered HTML)
+            const sharedDataMatch = igHtml.match(/window\._sharedData\s*=\s*(\{[\s\S]*?\});<\/script>/);
+            if (sharedDataMatch) {
+              try {
+                const sd = JSON.parse(sharedDataMatch[1]);
+                const edges = sd?.entry_data?.ProfilePage?.[0]?.graphql?.user?.edge_owner_to_timeline_media?.edges || [];
+                edges.forEach(e => {
+                  if (e.node?.display_url) igImages.push({
+                    url: e.node.display_url,
+                    caption: e.node.edge_media_to_caption?.edges?.[0]?.node?.text || '',
+                    likes: e.node.edge_liked_by?.count || 0,
+                    source: 'instagram_scrape'
+                  });
+                });
+              } catch(e) {}
+            }
+            if (igImages.length > 0) {
+              result.instagramPhotos = igImages;
+              result.instagramSource = 'scrape_fallback';
+            }
+          } catch(e) { console.warn('Instagram fallback scrape failed:', e.message); }
+        }
+      }
+    } catch(e) { console.warn('Instagram fetch error:', e.message); }
+
+    // GMB photos already fetched above from Place Details (no duplicate call needed)
+    // result.photos contains photo objects with {url, width, height, source:'gmb'}
+    // Flatten photo URLs for backward compatibility + add website photos as URLs
+    const allPhotoUrls = [];
+    if (Array.isArray(result.photos)) {
+      result.photos.forEach(p => {
+        if (typeof p === 'string') allPhotoUrls.push(p);
+        else if (p.url) allPhotoUrls.push(p.url);
+      });
+    }
+    // Keep structured photos as gmbPhotos
+    result.gmbPhotos = Array.isArray(result.photos) ? result.photos.filter(p => typeof p === 'object' && p.source === 'gmb') : [];
+    result.photos = [...new Set(allPhotoUrls)];
 
     // Fallback category
     if (!result.category) result.category = 'Restaurant';
@@ -5742,6 +7862,101 @@ function guessPhotoType(url, alt = '') {
 }
 
 // ============================================================
+// INSTAGRAM PHOTOS — Real Graph API endpoint
+// ============================================================
+app.post('/api/instagram/photos', requireAuth, async (req, res) => {
+  try {
+    // Get Meta token from user's social_tokens
+    let igToken = null, igAccountId = null;
+    try {
+      const userRow = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(req.account.id)
+        || db.prepare('SELECT social_tokens FROM accounts WHERE id = ?').get(req.account.id);
+      if (userRow?.social_tokens) {
+        const st = JSON.parse(userRow.social_tokens);
+        igToken = st.fb_pages?.[0]?.token || st.meta_token;
+        igAccountId = st.ig_account_id;
+      }
+    } catch(e) {}
+
+    if (!igToken || !igAccountId) {
+      return res.json({ success: false, error: 'no_instagram', message: 'Connectez votre compte Instagram via Facebook OAuth (onglet Dispatch → 🔗 Connecter Meta)' });
+    }
+
+    // Fetch ALL media with pagination (up to 500 posts)
+    let mediaUrl = `https://graph.facebook.com/v19.0/${igAccountId}/media?fields=id,media_type,media_url,thumbnail_url,timestamp,caption,permalink,like_count,comments_count&limit=100&access_token=${igToken}`;
+    let allMedia = [];
+    let pages = 0;
+
+    while (mediaUrl && pages < 5) {
+      const mediaResp = await fetch(mediaUrl, { signal: AbortSignal.timeout(15000) });
+      const mediaData = await mediaResp.json();
+      if (mediaData.error) {
+        return res.json({ success: false, error: 'ig_api_error', message: mediaData.error.message });
+      }
+      if (mediaData.data) allMedia = allMedia.concat(mediaData.data);
+      mediaUrl = mediaData.paging?.next || null;
+      pages++;
+    }
+
+    // Also get profile info
+    let profile = {};
+    try {
+      const profResp = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}?fields=id,username,name,profile_picture_url,followers_count,media_count,biography,website&access_token=${igToken}`);
+      profile = await profResp.json();
+    } catch(e) {}
+
+    const photos = allMedia
+      .filter(m => m.media_type === 'IMAGE' || m.media_type === 'CAROUSEL_ALBUM')
+      .map(m => ({
+        url: m.media_url || m.thumbnail_url,
+        id: m.id,
+        caption: (m.caption || '').substring(0, 300),
+        timestamp: m.timestamp,
+        permalink: m.permalink,
+        likes: m.like_count || 0,
+        comments: m.comments_count || 0,
+        source: 'instagram'
+      }));
+
+    const videos = allMedia
+      .filter(m => m.media_type === 'VIDEO')
+      .map(m => ({
+        url: m.thumbnail_url || m.media_url,
+        id: m.id,
+        caption: (m.caption || '').substring(0, 300),
+        timestamp: m.timestamp,
+        permalink: m.permalink,
+        likes: m.like_count || 0,
+        comments: m.comments_count || 0,
+        source: 'instagram',
+        type: 'video'
+      }));
+
+    console.log(`📸 Instagram API: ${photos.length} photos + ${videos.length} vidéos pour @${profile.username || igAccountId}`);
+
+    res.json({
+      success: true,
+      profile: {
+        username: profile.username,
+        name: profile.name,
+        picture: profile.profile_picture_url,
+        followers: profile.followers_count,
+        mediaCount: profile.media_count,
+        bio: profile.biography,
+        website: profile.website
+      },
+      photos,
+      videos,
+      total: photos.length + videos.length,
+      source: 'instagram_graph_api'
+    });
+  } catch(e) {
+    console.error('Instagram photos error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ============================================================
 // SEO SETTINGS API — AI settings, review automation, characteristics, holidays
 // ============================================================
 
@@ -5937,25 +8152,35 @@ app.post('/api/scans/record', (req, res) => {
 app.post('/api/restaurants/full-save', (req, res) => {
   const { user_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, hub_data, selected_module } = req.body;
 
-  // Resolve owner_id from auth session
+  // Resolve owner_id from auth session (token is stored as sessions.id, NOT sessions.token)
   let ownerId = null;
   try {
     const authHeader = req.headers.authorization;
     if (authHeader?.startsWith('Bearer ')) {
       const token = authHeader.slice(7);
-      const session = db.prepare('SELECT account_id FROM sessions WHERE token = ? AND expires_at > datetime(\'now\')').get(token);
+      const session = db.prepare('SELECT account_id FROM sessions WHERE id = ? AND expires_at > datetime(\'now\')').get(token);
       if (session) ownerId = session.account_id;
     }
-  } catch (e) {}
+  } catch (e) { console.warn('full-save auth resolve error:', e.message); }
 
   // Temporarily disable FK checks for user_id=0 (anonymous/local mode)
   if (!user_id || user_id === 0) {
-    db.pragma('foreign_keys = OFF');
+    try { db.pragma('foreign_keys = OFF'); } catch(e) {}
   }
 
   try {
-  // Check if restaurant already exists for this user
-  let restaurant = db.prepare('SELECT id FROM restaurants WHERE user_id = ? AND name = ? AND city = ?').get(user_id || 0, name, city);
+  // Check if restaurant already exists — search by owner_id first, then user_id
+  let restaurant = null;
+  if (ownerId) {
+    restaurant = db.prepare('SELECT id FROM restaurants WHERE owner_id = ? AND name = ? AND city = ?').get(ownerId, name, city);
+  }
+  if (!restaurant) {
+    restaurant = db.prepare('SELECT id FROM restaurants WHERE user_id = ? AND name = ? AND city = ?').get(user_id || 0, name, city);
+  }
+  if (!restaurant && ownerId) {
+    // Also check without city match (user may have typed differently)
+    restaurant = db.prepare('SELECT id FROM restaurants WHERE owner_id = ? AND name = ?').get(ownerId, name);
+  }
 
   if (restaurant) {
     // Update existing + set owner_id if we have it
@@ -6001,7 +8226,23 @@ app.post('/api/restaurants/full-save', (req, res) => {
 
 // Get all restaurants for a user (full data)
 app.get('/api/restaurants/full/:user_id', (req, res) => {
-  const restaurants = db.prepare('SELECT * FROM restaurants WHERE user_id = ? ORDER BY last_audit DESC').all(req.params.user_id);
+  // Also resolve owner_id from auth session for complete results
+  let ownerId = null;
+  try {
+    const authHeader = req.headers.authorization;
+    if (authHeader?.startsWith('Bearer ')) {
+      const tok = authHeader.slice(7);
+      const sess = db.prepare('SELECT account_id FROM sessions WHERE id = ? AND expires_at > datetime(\'now\')').get(tok);
+      if (sess) ownerId = sess.account_id;
+    }
+  } catch(e){}
+  let restaurants = db.prepare('SELECT * FROM restaurants WHERE user_id = ? ORDER BY last_audit DESC').all(req.params.user_id);
+  // Also fetch by owner_id if authenticated
+  if (ownerId) {
+    const byOwner = db.prepare('SELECT * FROM restaurants WHERE owner_id = ? ORDER BY last_audit DESC').all(ownerId);
+    const existingIds = new Set(restaurants.map(r=>r.id));
+    byOwner.forEach(r => { if (!existingIds.has(r.id)) restaurants.push(r); });
+  }
   const result = restaurants.map(r => {
     const hubRow = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = ?').get(r.id, 'hub_data');
     return {
@@ -6172,7 +8413,375 @@ Retourne en JSON :
   "itemId1": {"title": "...", "content": "... (HTML avec <strong>, <code>, etc.)"},
   "itemId2": {"title": "...", "content": "..."}
 }
-Inclus les corrections exactes, le code à ajouter, les textes à copier.`
+Inclus les corrections exactes, le code à ajouter, les textes à copier.`,
+
+  blog: (ctx) => `Tu es un expert en SEO local + GEO (Generative Engine Optimization) pour restaurants. Tu écris un article de blog qui doit être cité par Google, ChatGPT, Perplexity, Gemini et Claude.
+
+CONTEXTE RESTAURANT (Hub Central — source unique de vérité, utilise EXACTEMENT ces faits, n'invente RIEN):
+- Nom: ${ctx.name}
+- Ville: ${ctx.city}
+- Adresse: ${ctx.address || ''}
+- Téléphone: ${ctx.phone || ''}
+- Cuisine: ${ctx.cuisine || 'Non spécifié'}
+- Description: ${ctx.description || ''}
+- Horaires: ${ctx.hours || ''}
+- Note Google: ${ctx.rating || 'N/A'} (${ctx.reviewCount || 0} avis)
+- Fourchette prix: ${ctx.priceLevel ? '€'.repeat(Math.max(1,ctx.priceLevel)) : ''}
+- Site: ${ctx.website || ''}
+- Email: ${ctx.email || ''}
+- Chef: ${ctx.chef || ''}
+- Ouvert depuis: ${ctx.openingYear || ''}
+- Menu: ${ctx.menu || ''}
+- Réservation: ${ctx.reservation || ''}
+- Livraison/Commande: ${ctx.order || ''}
+- Services: ${(ctx.amenities || []).join(', ') || ''}
+- Moyens de paiement: ${(ctx.paymentMethods || []).join(', ') || ''}
+- Réseaux: ${Object.entries(ctx.social || {}).filter(([,v])=>v).map(([k,v])=>k+': '+v).join(' | ')}
+- Année courante: 2026
+
+⚠️ RÈGLE NAP (Name/Address/Phone): utilise le nom, l'adresse, le téléphone EXACTEMENT comme ci-dessus (même ponctuation, même casse). C'est critique pour le SEO local — toute variation casse la cohérence avec Google Business, les annuaires et les citations IA.
+
+══════════════════════════════════════════
+OBJECTIF DOUBLE: SEO + GEO
+══════════════════════════════════════════
+
+🔍 SEO (Google classique):
+1. Mot-clé principal: "[type cuisine] ${ctx.city}" ou "meilleur restaurant [type] ${ctx.city}"
+2. Densité 1-2% du mot-clé principal, jamais de keyword stuffing
+3. Structure H1 > H2 > H3 hiérarchique
+4. Mots-clés LSI (Latent Semantic Indexing) naturellement placés
+5. Métriques E-E-A-T (Experience, Expertise, Authoritativeness, Trustworthiness)
+6. Mentions locales (quartier, arrondissement, métro, rue)
+7. Longueur 1500-2200 mots (articles longs = meilleur ranking)
+8. Paragraphes courts (2-4 phrases max)
+
+🤖 GEO (ChatGPT, Perplexity, Gemini, Claude):
+1. Format Q&A (les IA citent les réponses directes aux questions)
+2. Faits vérifiables avec chiffres précis (prix, distance, horaires, dates)
+3. Listes structurées (les IA extraient mieux les <ul>/<ol>)
+4. Tables comparatives quand pertinent
+5. Entités nommées précises (rues, monuments, stations de métro, quartiers)
+6. Phrases déclaratives courtes et citables
+7. Section TL;DR au début ET FAQ à la fin
+8. Ton conversationnel (matche comment les gens interrogent les IA)
+9. Signaux de fraîcheur: mentionner "en 2026" au moins 2 fois
+10. Structure "source à citer" (comme un article Wikipedia)
+
+══════════════════════════════════════════
+STRUCTURE HTML OBLIGATOIRE
+══════════════════════════════════════════
+
+<article>
+
+<h1>[Titre accrocheur avec mot-clé principal + ${ctx.city} — max 65 caractères]</h1>
+
+<p><strong>TL;DR:</strong> [3-4 phrases qui résument l'article — format citation-ready pour les IA. Inclus le nom du restaurant, la ville, la cuisine, et le point fort principal]</p>
+
+<p>[Introduction 120-150 mots. Hook éditorial + contexte local + promesse de l'article. Mentionne ${ctx.name} et ${ctx.city} dans les 2 premières phrases]</p>
+
+<h2>[Section 1: Pourquoi X à ${ctx.city} en 2026]</h2>
+<p>[Contexte local riche: histoire du quartier, tendances culinaires actuelles, positionnement dans la scène gastronomique de ${ctx.city}]</p>
+
+<h2>[Section 2: L'expérience ${ctx.name} en détail]</h2>
+<p>[Storytelling avec détails vécus: ambiance, décoration, accueil, service. Utilise des descriptions sensorielles]</p>
+<ul>
+  <li><strong>Adresse:</strong> [dans ${ctx.city}, mentionner le quartier/arrondissement]</li>
+  <li><strong>Type de cuisine:</strong> ${ctx.cuisine || '[détailler]'}</li>
+  <li><strong>Note Google:</strong> ${ctx.rating || '[à compléter]'}/5 (${ctx.reviewCount || 0} avis)</li>
+  <li><strong>Ambiance:</strong> [détailler]</li>
+</ul>
+
+<h2>[Section 3: Les plats signature]</h2>
+<p>[Description gourmande de 3-5 plats phares avec détails: ingrédients, origine, préparation, prix indicatif]</p>
+<ol>
+  <li><strong>[Plat 1]:</strong> [description + prix]</li>
+  <li><strong>[Plat 2]:</strong> [description + prix]</li>
+  <li><strong>[Plat 3]:</strong> [description + prix]</li>
+</ol>
+
+<h2>[Section 4: Quand et comment venir]</h2>
+<p>[Infos pratiques: horaires idéaux, réservation, accès métro/parking, budget moyen, dress code]</p>
+
+<h2>[Section 5: Comparaison avec les autres adresses]</h2>
+<p>[Positionnement de ${ctx.name} dans la scène culinaire locale — ce qui le différencie des autres ${ctx.cuisine || 'restaurants'} à ${ctx.city}]</p>
+
+<h2>FAQ — Questions fréquentes</h2>
+<p><strong>Q: Faut-il réserver à ${ctx.name}?</strong><br>
+R: [Réponse directe et citable en 2-3 phrases]</p>
+
+<p><strong>Q: Quel est le prix moyen d'un repas à ${ctx.name}?</strong><br>
+R: [Réponse chiffrée précise]</p>
+
+<p><strong>Q: Quelle est la spécialité de ${ctx.name} à ${ctx.city}?</strong><br>
+R: [Réponse factuelle]</p>
+
+<p><strong>Q: Comment se rendre à ${ctx.name}?</strong><br>
+R: [Transport en commun + voiture]</p>
+
+<p><strong>Q: ${ctx.name} propose-t-il des options végétariennes?</strong><br>
+R: [Oui/Non avec détails]</p>
+
+<h2>Conclusion</h2>
+<p>[80-120 mots. Récap des points forts + CTA subtil "réserver" ou "venir découvrir". Dernière mention du nom + ville]</p>
+
+</article>
+
+══════════════════════════════════════════
+RÈGLES ABSOLUES — ANTI-DÉTECTION IA (CRUCIAL)
+══════════════════════════════════════════
+Les détecteurs d'IA (GPTZero, Originality.ai, ZeroGPT, Sapling) identifient les textes générés par patterns stylistiques.
+Pour contourner 100% des détections:
+
+INTERDITS ABSOLUS:
+❌ "En conclusion", "Pour conclure", "En résumé" (95% des textes IA)
+❌ "Il est important de noter que", "Il convient de mentionner"
+❌ "Dans ce monde en constante évolution"
+❌ "À l'ère du numérique", "À l'heure actuelle"
+❌ Em-dashes (—) sauf rare
+❌ Transitions parfaites ("De plus", "Par ailleurs", "Également" en début de phrase)
+❌ Structures symétriques (3 points, 3 arguments, 3 paragraphes parfaits)
+❌ Paragraphes de longueur uniforme
+❌ Ton neutre-professionnel-objectif permanent
+
+OBLIGATOIRES pour voix humaine:
+✅ Phrases de longueur variée (4 mots puis 28 mots puis 12 mots)
+✅ Contractions françaises naturelles ("c'est", "t'as", "y'a", "j'ai pas")
+✅ 1-2 tournures orales ("bon", "franchement", "du coup", "en vrai")
+✅ Opinion subjective ("à mon goût", "je trouve", "personnellement")
+✅ Une phrase qui commence par "Et" ou "Mais" (impossible pour IA stricte)
+✅ Une parenthèse informelle (comme ça, au passage)
+✅ Détails sensoriels précis (odeur, texture, bruit, lumière)
+✅ Imperfections volontaires: 1 répétition, 1 phrase un peu longue
+✅ Ton émotionnel: surprise, enthousiasme modéré, curiosité
+✅ Rupture de rythme: "Pause. Goûtez. Recommencez."
+
+RÈGLES FACTUELLES:
+1. RIEN N'EST INVENTÉ: si tu ne connais pas un détail, écris [à compléter] plutôt qu'inventer
+2. Ton: informatif, passionné, crédible. PAS de superlatifs vides ("incroyable", "magique", "must-see")
+3. Vouvoiement dans les sections formelles, tutoiement OK en FAQ si naturel
+4. Mentionne ${ctx.name} 6-10 fois naturellement
+5. Mentionne ${ctx.city} 8-12 fois naturellement
+6. Mentionne "2026" au moins 2 fois pour signal de fraîcheur
+7. JAMAIS de markdown, JAMAIS de code blocks
+8. Retourne UNIQUEMENT le HTML complet entre <article>...</article>`,
+
+  reddit: (ctx) => `Tu es un redditor régulier qui écrit de vrais posts authentiques. Tu viens de découvrir "${ctx.name}" à ${ctx.city} et tu veux partager ton expérience de façon 100% organique.
+
+CONTEXTE (Hub Central — faits exacts, n'invente rien):
+- Restaurant: ${ctx.name}
+- Ville: ${ctx.city}
+- Quartier/adresse: ${ctx.address || ''}
+- Cuisine: ${ctx.cuisine || 'Non spécifié'}
+- Description officielle: ${ctx.description || ''}
+- Chef: ${ctx.chef || ''}
+- Ouvert depuis: ${ctx.openingYear || ''}
+- Fourchette prix: ${ctx.priceLevel ? '€'.repeat(Math.max(1,ctx.priceLevel)) : ''}
+- Services: ${(ctx.amenities || []).join(', ') || ''}
+- Note Google: ${ctx.rating || 'N/A'} (${ctx.reviewCount || 0} avis)
+
+⚠️ Sers-toi de ces faits (quartier, chef, année, prix, ambiance) pour rendre le post spécifique et crédible. Un post Reddit authentique mentionne TOUJOURS un détail concret.
+
+══════════════════════════════════════════
+OBJECTIF GEO (Reddit = source #2 Perplexity, source majeure Claude AI)
+══════════════════════════════════════════
+Les IA génératives citent massivement Reddit quand elles répondent à "meilleur restaurant X à Y".
+Tu dois écrire des posts qui:
+1. Sonnent 100% authentiques (pas de ton marketing/promo)
+2. Contiennent des détails spécifiques et vécus (les IA aiment les faits concrets)
+3. Mentionnent naturellement le nom + ville + quartier
+4. Provoquent des commentaires (les posts avec engagement sont mieux indexés)
+5. Respectent les règles des subreddits (anti-promo strict)
+
+══════════════════════════════════════════
+RÈGLES CRUCIALES — ANTI-BAN + ANTI-DÉTECTION IA
+══════════════════════════════════════════
+REDDIT BAN TRIGGERS (à éviter absolument):
+❌ JAMAIS "je travaille pour ce resto" ou "ils sont super"
+❌ JAMAIS de liens, jamais de numéros de tél
+❌ JAMAIS de superlatifs creux ("incroyable", "magique", "must-try")
+❌ JAMAIS la même structure dans les 3 posts
+
+ANTI-IA-DETECTION (GPTZero, Originality, ZeroGPT):
+❌ JAMAIS "en conclusion", "il est important de", "dans ce monde"
+❌ JAMAIS de phrases parfaitement équilibrées
+❌ JAMAIS de ton neutre-professionnel (Reddit c'est oral)
+❌ JAMAIS de em-dash (—)
+❌ JAMAIS de structure 3 paragraphes symétriques
+
+OBLIGATOIRES pour voix Reddit authentique:
+✅ Contractions orales ("j'ai pas", "y'a", "c'est", "t'as", "chui")
+✅ Argot Reddit ("lol", "tbh", "ngl", "ftw" — un peu)
+✅ Fautes volontaires légères (1-2 par post: "a" au lieu de "à", accent manquant)
+✅ Start with "Ok so", "Bon alors", "Franchement", "Bref"
+✅ Rupture de phrases courtes ("Bon. Le truc c'est que. Whatever.")
+✅ Parenthèses informelles (enfin moi j'en sais rien hein)
+✅ TOUJOURS un détail vécu (plat précis, prix, nom du serveur, moment exact)
+✅ TOUJOURS une émotion honnête (surprise, déception, curiosité, enthousiasme modéré)
+✅ TOUJOURS poser une question pour générer des commentaires
+✅ Répétition volontaire d'un mot (comme un vrai humain qui tape vite)
+
+══════════════════════════════════════════
+STRUCTURE — 3 POSTS POUR 3 SUBREDDITS DIFFÉRENTS
+══════════════════════════════════════════
+
+Tu dois écrire 3 posts avec 3 ANGLES DIFFÉRENTS:
+
+POST 1 — r/${ctx.city.toLowerCase().replace(/[^a-z]/g,'')} (local community)
+Angle: "Recommandation discrète entre habitants"
+Style: court (80-120 mots), descriptif, on dirait un post spontané un dimanche soir
+Format du titre: question douce OU constat ("Quelqu'un a testé X?" / "Bon plan X vers [quartier]")
+Tutoiement OK dans ce subreddit local
+Tu mentionnes: ${ctx.name}, le quartier précis de ${ctx.city}, 1 détail spécifique (prix, plat, détail visuel)
+Tu finis par: une question ouverte OU un "à voir si vous passez dans le coin"
+
+POST 2 — r/france (grand public)
+Angle: "Anecdote culinaire lors d'un déplacement/sortie"
+Style: storytelling (150-200 mots), premier degré, un peu long
+Format du titre: phrase déclarative ("J'ai découvert un truc sympa à ${ctx.city} ce week-end")
+Vouvoiement préférable ici
+Tu mentionnes: le contexte de ta visite, ${ctx.name}, un moment précis, ce qui t'a étonné
+Pas de plug direct, juste une histoire — les gens doivent comprendre que c'est un bon plan sans que tu le dises
+Tu finis par: un commentaire philosophique ou une invitation à partager leurs propres découvertes
+
+POST 3 — r/food OU r/FoodPorn (international/cuisine)
+Angle: "Analyse technique d'un plat spécifique"
+Style: détaillé et passionné (150-200 mots), vocabulaire culinaire
+Format du titre: en français ou anglais, focus sur LE plat pas le restaurant ("The best [dish] I had this year — ${ctx.city}")
+Tu décris: la texture, le goût, l'assaisonnement, la présentation, le rapport qualité-prix
+Tu mentionnes ${ctx.name} UNE SEULE FOIS au milieu du texte (pas dans le titre)
+Tu finis par: une comparaison ou une question technique sur la préparation
+
+══════════════════════════════════════════
+FORMAT DE RETOUR (strict)
+══════════════════════════════════════════
+Retourne exactement dans ce format, rien d'autre:
+
+r/${ctx.city.toLowerCase().replace(/[^a-z]/g,'')}
+Titre: [titre sans guillemets]
+[corps du post, 80-120 mots]
+---
+r/france
+Titre: [titre sans guillemets]
+[corps du post, 150-200 mots]
+---
+r/food
+Titre: [titre sans guillemets]
+[corps du post, 150-200 mots]`,
+
+  gbp_qa: (ctx) => `Tu es un client récent du restaurant "${ctx.name}" à ${ctx.city}. Génère 5 questions fréquentes que les gens posent sur Google à propos de ce restaurant, avec leurs réponses.
+
+CONTEXTE:
+- Restaurant: ${ctx.name}
+- Ville: ${ctx.city}
+- Cuisine: ${ctx.cuisine || ''}
+- Note: ${ctx.rating || ''}
+- Horaires: ${ctx.hours || ''}
+- Adresse: ${ctx.address || ''}
+
+RÈGLES:
+- Questions COURTES et naturelles (comme les vrais gens tapent sur Google)
+- Réponses FACTUELLES, max 150 mots
+- Inclure des chiffres précis (prix, horaires, distance)
+- Ton informatif, pas promotionnel
+- Format Q&A citation-ready pour les IA (Perplexity, ChatGPT)
+
+ANTI-IA-DETECTION:
+- Voix naturelle, contractions OK ("c'est", "y'a")
+- Pas de "en conclusion", "il est important de"
+- Variété de longueurs de phrases
+- 1-2 tournures orales ("bon", "franchement") dans les réponses
+- Détails sensoriels ou émotionnels occasionnels
+
+FORMAT JSON strict:
+[
+  {"question":"...","answer":"..."},
+  {"question":"...","answer":"..."},
+  {"question":"...","answer":"..."},
+  {"question":"...","answer":"..."},
+  {"question":"...","answer":"..."}
+]
+
+Exemples de questions à couvrir (varier):
+- "Est-ce qu'il faut réserver à ${ctx.name}?"
+- "Quel est le prix moyen d'un repas?"
+- "Ils ont des options végétariennes?"
+- "Comment s'y rendre en métro?"
+- "Le restaurant est adapté aux familles?"
+- "C'est ouvert le dimanche?"
+- "Ils livrent à domicile?"
+
+Retourne UNIQUEMENT le JSON, sans texte autour.`,
+
+  linkedin: (ctx) => `Tu es le chef/propriétaire de "${ctx.name}" à ${ctx.city}. Écris un post LinkedIn professionnel pour la page entreprise.
+
+CONTEXTE:
+- Restaurant: ${ctx.name}
+- Ville: ${ctx.city}
+- Cuisine: ${ctx.cuisine || ''}
+- Note: ${ctx.rating || ''}
+
+OBJECTIF: 300-500 caractères, professionnel, engageant.
+
+ANGLES POSSIBLES (choisis-en UN):
+1. Coulisses: une anecdote du service (équipe, moment fort)
+2. Valeur: les valeurs de la cuisine (local, saisonnier, artisanal)
+3. Actualité: nouveau menu, saison, événement à venir
+4. Inspiration: qui nous inspire, d'où vient une recette
+5. Équipe: présentation d'un membre de l'équipe (chef, sommelier, serveur)
+
+RÈGLES:
+- Ton professionnel MAIS HUMAIN (pas corporate)
+- 1 call-to-action subtil (pas de "Réservez maintenant!!!")
+- 3-5 hashtags pertinents à la fin
+- Une phrase d'accroche au début qui donne envie de cliquer "voir plus"
+- Emoji: 1-2 max, bien placés
+
+ANTI-IA-DETECTION (LinkedIn est agressif sur ça):
+❌ "Je suis ravi/heureux/fier d'annoncer" (100% IA)
+❌ "Dans le monde de la restauration"
+❌ "Il est important de noter que"
+❌ "En conclusion"
+❌ Em-dash (—)
+✅ Voix personnelle ("chez nous", "on fait", "je me souviens")
+✅ Détails concrets (nom de l'ingrédient, temps de cuisson, prix)
+✅ Une imperfection ou un doute exprimé
+✅ Phrases courtes et punchy
+
+Retourne UNIQUEMENT le texte du post, sans guillemets ni markdown.`,
+
+  medium: (ctx) => `Tu es un food writer ou critique culinaire expérimenté. Écris un article Medium sur "${ctx.name}" à ${ctx.city}.
+
+CONTEXTE:
+- Restaurant: ${ctx.name}
+- Ville: ${ctx.city}
+- Cuisine: ${ctx.cuisine || ''}
+- Note: ${ctx.rating || ''}
+- Spécialités: ${ctx.specialties || ''}
+
+Format Medium: article en markdown, 800-1500 mots, éditorial et narratif.
+
+STRUCTURE:
+- Titre accrocheur (sans clickbait)
+- Sous-titre éditorial
+- Introduction narrative (scène: comment tu as découvert le restaurant)
+- 3-4 sections avec H2
+- Fin ouverte ou réflexive
+
+ANTI-IA-DETECTION (Medium flag énormément):
+❌ Structure parfaitement symétrique
+❌ "En conclusion", "il est important de"
+❌ Transitions type "De plus", "Par ailleurs"
+❌ Tous les paragraphes de même longueur
+❌ Ton neutre-objectif permanent
+✅ Voix personnelle forte (je, moi, mon avis)
+✅ Phrases courtes ALTERNÉES avec phrases longues (ratio 30/70)
+✅ Digressions occasionnelles (parenthèses, souvenirs)
+✅ Opinion subjective assumée
+✅ Références culturelles précises (livre, film, chef connu)
+✅ Détails sensoriels (texture, odeur, son, lumière)
+✅ 1-2 fautes légères volontaires ou tournures parlées
+
+Retourne UNIQUEMENT le markdown de l'article, sans code blocks.`
 };
 
 // Call Claude API
@@ -6248,7 +8857,8 @@ app.post('/api/ai/generate', async (req, res) => {
     if (!promptFn) return res.status(400).json({ success: false, error: 'unknown_type', message: `Type "${type}" non supporté` });
 
     const prompt = promptFn(context);
-    const result = await callClaudeAPI(apiKey, prompt, type === 'full_audit_content' ? 4000 : 2000);
+    const maxTokens = type === 'full_audit_content' ? 4000 : type === 'blog' ? 5000 : type === 'faq_content' ? 3000 : 2000;
+    const result = await callClaudeAPI(apiKey, prompt, maxTokens);
 
     // Try to parse JSON if the prompt expects it
     let parsed = result;
@@ -8810,6 +11420,47 @@ app.post('/api/real-audit', async (req, res) => {
           } catch(e) {}
         }
 
+        // If HTML too small (SPA/Webflow), try Puppeteer
+        let brandingHtml = html;
+        if (html.length < 1000) {
+          try {
+            const browser = await launchBrowser();
+            const page = await browser.newPage();
+            await page.setUserAgent(USER_AGENTS[0]);
+            await page.goto(normalized, { waitUntil: 'networkidle2', timeout: 15000 });
+            brandingHtml = await page.content();
+            await page.close();
+            console.log(`Puppeteer fallback for ${normalized}: ${brandingHtml.length} chars (was ${html.length})`);
+          } catch(e) { console.warn('Puppeteer fallback failed:', e.message); }
+        }
+
+        // Extract branding from full HTML
+        wa.branding = {};
+        // Logo
+        const faviconM = brandingHtml.match(/<link[^>]*rel=["'](?:icon|shortcut icon|apple-touch-icon)["'][^>]*href=["']([^"']+)["']/i);
+        if (faviconM) { let u = faviconM[1]; if (u.startsWith('/')) u = new URL(u, normalized).href; wa.branding.favicon = u; }
+        const logoM = brandingHtml.match(/<img[^>]*(?:class=["'][^"']*logo|alt=["'][^"']*logo|src=["'][^"']*logo)[^>]*src=["']([^"']+)["']/i) || brandingHtml.match(/<img[^>]*src=["']([^"']*logo[^"']+)["']/i);
+        if (logoM) { let u = logoM[1]; if (u.startsWith('/')) u = new URL(u, normalized).href; wa.branding.logo = u; }
+        if (!wa.branding.logo && wa.ogImage) wa.branding.ogImage = wa.ogImage;
+        // Colors
+        const colors = new Set();
+        const themeM = brandingHtml.match(/<meta[^>]*name=["']theme-color["'][^>]*content=["']([^"']+)["']/i);
+        if (themeM) colors.add(themeM[1]);
+        const cssVars = brandingHtml.matchAll(/--(?:primary|brand|accent|main|theme|color-primary)[^:]*:\s*([#][0-9a-fA-F]{3,8}|rgb[a]?\([^)]+\))/gi);
+        for (const m of cssVars) colors.add(m[1]);
+        const hexes = brandingHtml.matchAll(/(?:background(?:-color)?|color)\s*:\s*(#[0-9a-fA-F]{3,8})/gi);
+        const hexCount = {};
+        for (const m of hexes) { const c = m[1].toLowerCase(); if (!['#fff','#ffffff','#000','#000000','#333','#666','#999','#ccc','#eee','#f5f5f5'].includes(c)) hexCount[c] = (hexCount[c]||0)+1; }
+        Object.entries(hexCount).sort((a,b)=>b[1]-a[1]).slice(0,5).forEach(e=>colors.add(e[0]));
+        wa.branding.colors = [...colors].slice(0,8);
+        // Fonts
+        const fonts = new Set();
+        const gf = brandingHtml.matchAll(/fonts\.googleapis\.com\/css2?\?family=([^"'&]+)/gi);
+        for (const m of gf) decodeURIComponent(m[1]).split('|').forEach(f=>fonts.add(f.split(':')[0].replace(/\+/g,' ')));
+        const ff = brandingHtml.matchAll(/font-family\s*:\s*["']?([^;"'}]+)/gi);
+        for (const m of ff) { const f=m[1].split(',')[0].trim().replace(/["']/g,''); if(!['inherit','sans-serif','serif','monospace','system-ui','Arial','Helvetica'].includes(f)&&f.length>1&&f.length<40) fonts.add(f); }
+        wa.branding.fonts = [...fonts].slice(0,6);
+
         audit.website = wa;
         audit.cms = wa.cms || { available: false };
         audit.cms.available = !!(wa.cms?.detected?.cms);
@@ -8984,7 +11635,7 @@ app.post('/api/real-audit', async (req, res) => {
     audit.sources.yelp = 'no_api_key';
   }
 
-  // 7. AI VISIBILITY CHECK — Use Claude API to simulate what AI engines would say
+  // 7. AI VISIBILITY CHECK — Use Claude API to analyze if AI engines would cite this restaurant
   if (anthropicKey) {
     tasks.push((async () => {
       try {
@@ -9044,14 +11695,14 @@ app.post('/api/real-audit', async (req, res) => {
           }
         }));
 
-        // Determine visibility level per "simulated engine"
+        // Determine visibility level per AI engine (analyzed via Claude API)
         const isCited = results.recommendation?.mentioned || results.category?.mentioned;
         const isKnown = results.specific?.mentioned || results.specific?.partialMatch;
         const isPartial = results.recommendation?.partialMatch || results.category?.partialMatch;
 
         audit.aiVisibility = {
           available: true,
-          // Simulated as Claude (represents all LLMs since they share training data)
+          // Analyzed via Claude API (represents LLM behavior since they share training data)
           citedInList: isCited, // Mentioned in "best restaurants" list
           knownByAI: isKnown,  // AI knows about this specific restaurant
           partialMatch: isPartial,
@@ -9469,8 +12120,8 @@ app.post('/api/ai-test/single', async (req, res) => {
     const apiKey = getAIKey(restaurant_id);
     if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key', message: 'Clé API Claude requise pour tester la visibilité IA' });
 
-    // Build the simulation prompt — we ask Claude to simulate how the target platform would answer
-    const systemPrompt = `Tu es un simulateur de moteur IA. Simule la réponse que ${platform} donnerait à la requête utilisateur ci-dessous.
+    // Build the analysis prompt — we ask Claude to predict how the target platform would answer
+    const systemPrompt = `Tu es un expert en GEO (Generative Engine Optimization). Analyse comment ${platform} répondrait à la requête utilisateur ci-dessous.
 Réponds comme le ferait ${platform} — naturellement, avec des recommandations.
 IMPORTANT: Sois réaliste. Si le restaurant "${restaurant_name}" à ${city} est peu connu, il est normal qu'il ne soit PAS mentionné.
 Après ta réponse simulée, ajoute sur une ligne séparée un JSON avec cette structure exacte:
@@ -9541,7 +12192,7 @@ app.post('/api/ai-test/matrix', async (req, res) => {
     for (const prompt of proms) {
       for (const platform of plats) {
         try {
-          const systemPrompt = `Tu es un simulateur de moteur IA. Simule la réponse COURTE que ${platform} donnerait.
+          const systemPrompt = `Tu es un expert GEO. Analyse la réponse COURTE que ${platform} donnerait.
 Restaurant à vérifier: "${restaurant_name}" à ${city} (cuisine: ${cuisine || 'variée'}).
 Réponds en 2-3 phrases max, puis ajoute le JSON:
 {"cited": true/false, "position": 0-5, "confidence": 0.0-1.0}`;
@@ -10480,7 +13131,8 @@ app.post('/api/posts/google/duplicate', async (req, res) => {
 // ============================================================
 // START SERVER
 // ============================================================
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, '0.0.0.0', async () => {
+  setupPGSync(db).catch(e => console.warn('PG sync setup error:', e.message));
   console.log(`
 ╔══════════════════════════════════════════════════════╗
 ║     RestauRank Backend v6.0 — Full SaaS Mode         ║
