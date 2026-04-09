@@ -7220,11 +7220,28 @@ function getHubData(){
 
 async function loadSpecialHours(){
     const rid=currentData?.restaurant_id||0;
+    const merged={};
+    // 1) Local DB (source of truth edited via RestauRank)
     try{
         const r=await fetch(`${API_BASE}/api/hub/special-hours?restaurant_id=${rid}`,{headers:{'Authorization':'Bearer '+sessionToken}});
         const d=await r.json();
-        if(d.success){window._specialHours=d.specialHours||[];}
-    }catch(e){window._specialHours=window._specialHours||[];}
+        if(d.success)(d.specialHours||[]).forEach(s=>{merged[s.date]={...s,source:'local'};});
+    }catch(e){}
+    // 2) GBP (what Google already knows) — only if connected
+    if(googleAuth?.connected){
+        try{
+            const r=await fetch(`${API_BASE}/api/gbp/get-special-hours?user_id=${encodeURIComponent(googleAuth.userId)}&location_name=${encodeURIComponent(googleAuth.locationName)}`);
+            const d=await r.json();
+            if(d.success){
+                window._gbpSpecialHoursLoaded=true;
+                (d.specialHours||[]).forEach(s=>{
+                    if(merged[s.date])merged[s.date].source='synced'; // present both sides
+                    else merged[s.date]={...s,source:'gbp'};
+                });
+            }
+        }catch(e){}
+    }
+    window._specialHours=Object.values(merged).sort((a,b)=>a.date.localeCompare(b.date));
     return window._specialHours;
 }
 
@@ -9768,13 +9785,25 @@ async function renderHolidaysAndHours(){
     const upcoming=getUpcomingHolidays(8);
     if(!upcoming.length){alert.innerHTML='';return;}
     let html='<div style="display:flex;flex-direction:column;gap:6px;">';
+    const today=new Date();
+    const in30d=new Date(today.getTime()+30*86400000).toISOString().slice(0,10);
     for(const h of upcoming){
         const d=new Date(h.date);
         const label=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
-        const st=getHolidayStatus(h.date);
+        const sh=(window._specialHours||[]).find(s=>s.date===h.date);
+        const st=sh?sh.status:null;
+        const src=sh?sh.source:null; // local | gbp | synced
         let pill='';
         if(st==='closed')pill='<span style="background:rgba(239,68,68,.15);color:var(--red);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">🔒 Fermé</span>';
         else if(st==='custom'||st==='open')pill='<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">✅ Ouvert</span>';
+        // Sync badge
+        if(src==='synced')pill+=' <span style="background:rgba(59,130,246,.15);color:#60a5fa;padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Synchronisé avec Google">🔄 Sync</span>';
+        else if(src==='gbp')pill+=' <span style="background:rgba(139,92,246,.15);color:#a78bfa;padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Vient de Google">G</span>';
+        else if(src==='local')pill+=' <span style="background:rgba(245,158,11,.15);color:var(--org);padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Pas encore poussé sur Google">⚠️ Local</span>';
+        // Hole detection: holiday in next 30 days + no status
+        if(!st&&h.date<=in30d&&googleAuth?.connected&&window._gbpSpecialHoursLoaded){
+            pill='<span style="background:rgba(239,68,68,.15);color:var(--red);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;" title="Google attend une réponse">⚠️ Non déclaré sur Google</span>';
+        }
         const btns=st?`<button class="holiday-btn" style="padding:4px 10px;font-size:.7rem;" onclick="clearHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}')">↺ Annuler</button>`:
             `<button class="holiday-btn" onclick="setHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}',false)">J'ouvre normalement</button>
              <button class="holiday-btn" onclick="setHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}',true)">Je suis fermé</button>`;

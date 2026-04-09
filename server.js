@@ -2305,6 +2305,37 @@ app.post('/api/gbp/update-hours', async (req, res) => {
   }
 });
 
+// ⚡ GET SPECIAL HOURS — lit ce qui est déjà saisi sur GBP
+app.get('/api/gbp/get-special-hours', async (req, res) => {
+  try {
+    const { user_id, location_name } = req.query;
+    const auth = getAuthClient(user_id);
+    if (!auth) return res.json({ success: false, error: 'Non connecté' });
+    const mybusiness = getGoogle().mybusinessbusinessinformation({ version: 'v1', auth });
+    const { data } = await mybusiness.locations.get({
+      name: location_name,
+      readMask: 'specialHours,regularHours'
+    });
+    // Normalize GBP specialHourPeriods -> flat { date, status, open_time, close_time } list
+    const periods = data.specialHours?.specialHourPeriods || [];
+    const normalized = periods.map(p => {
+      const sd = p.startDate || {};
+      const date = `${sd.year}-${String(sd.month).padStart(2, '0')}-${String(sd.day).padStart(2, '0')}`;
+      const pad = n => String(n || 0).padStart(2, '0');
+      return {
+        date,
+        status: p.closed ? 'closed' : 'custom',
+        open_time: p.openTime ? `${pad(p.openTime.hours)}:${pad(p.openTime.minutes)}` : null,
+        close_time: p.closeTime ? `${pad(p.closeTime.hours)}:${pad(p.closeTime.minutes)}` : null,
+        source: 'gbp'
+      };
+    });
+    res.json({ success: true, specialHours: normalized, regularHours: data.regularHours || null });
+  } catch (err) {
+    res.json({ success: false, error: err.message });
+  }
+});
+
 // ⚡ UPDATE SPECIAL HOURS (gbp_special_hours) — jours fériés / fermetures exceptionnelles
 app.post('/api/gbp/update-special-hours', async (req, res) => {
   try {
