@@ -6860,8 +6860,14 @@ app.post('/api/directories/update-status', (req, res) => {
 // AI-POWERED DIRECTORY AUTOMATION — Puppeteer + Smart Agent
 // ============================================================
 app.post('/api/directories/auto-do', async (req, res) => {
-  const { platform, name, city, address, phone, website, email, restaurant_id } = req.body;
+  const { platform, name, city, address, phone, website, email, restaurant_id, special_hours } = req.body;
   if (!platform || !name) return res.status(400).json({ error: 'platform and name required' });
+
+  // Build human-readable special hours summary (for guided steps)
+  const futureSH = (special_hours || []).filter(s => s.date >= new Date().toISOString().slice(0, 10));
+  const shSummary = futureSH.length
+    ? futureSH.map(s => `${s.date}: ${s.status === 'closed' ? 'FERMÉ' : 'horaires ' + (s.open_time || '?') + '-' + (s.close_time || '?')}${s.label ? ' (' + s.label + ')' : ''}`).join(' · ')
+    : '';
 
   const q = encodeURIComponent(`${name} ${city || 'Paris'}`);
   const nap = { name, address: address || '', city: city || '', phone: phone || '', website: website || '', email: email || '' };
@@ -6929,6 +6935,9 @@ app.post('/api/directories/auto-do', async (req, res) => {
     needsManual: true,
     url: i === 0 ? cfg.url : ''
   }));
+  if (shSummary) {
+    steps.push({ step: `${cfg.steps.length + 1}. ⚠️ Renseigner les jours exceptionnels: ${shSummary}`, needsManual: true, url: '' });
+  }
 
   // Store in DB
   try {

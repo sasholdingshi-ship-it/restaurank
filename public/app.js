@@ -9726,41 +9726,108 @@ function toggleChar(id){
     fetchTimeout(`${API_BASE}/api/settings/characteristics`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,data:window._hubChars})},5000).catch(()=>{});
 }
 
-const FRENCH_HOLIDAYS=[
-    {date:'2026-01-01',name:'Jour de l\'an'},
-    {date:'2026-04-13',name:'Lundi de Pâques'},
-    {date:'2026-05-01',name:'Fête du Travail'},
-    {date:'2026-05-08',name:'Victoire 1945'},
-    {date:'2026-05-21',name:'Ascension'},
-    {date:'2026-05-31',name:'Lundi de Pentecôte'},
-    {date:'2026-07-14',name:'Fête nationale'},
-    {date:'2026-08-15',name:'Assomption'},
-    {date:'2026-11-01',name:'Toussaint'},
-    {date:'2026-11-11',name:'Armistice 1918'},
-    {date:'2026-12-25',name:'Noël'}
-];
+let FRENCH_HOLIDAYS=[];
 
-function getNextHoliday(){
-    const today=new Date();
-    return FRENCH_HOLIDAYS.find(h=>new Date(h.date)>today);
+async function loadFrenchHolidays(){
+    const now=new Date();
+    const years=[now.getFullYear(),now.getFullYear()+1];
+    try{
+        const all=[];
+        for(const y of years){
+            const r=await fetch(`${API_BASE}/api/hub/french-holidays?year=${y}`);
+            const d=await r.json();
+            if(d.success)all.push(...d.holidays.map(h=>({date:h.date,name:h.label})));
+        }
+        FRENCH_HOLIDAYS=all.sort((a,b)=>a.date.localeCompare(b.date));
+    }catch(e){}
+    return FRENCH_HOLIDAYS;
 }
 
-function renderHolidaysAndHours(){
-    // Load persisted special hours asynchronously (non-blocking)
-    loadSpecialHours().catch(()=>{});
+function getNextHoliday(){
+    const today=new Date().toISOString().slice(0,10);
+    return FRENCH_HOLIDAYS.find(h=>h.date>=today);
+}
+
+function getUpcomingHolidays(n=6){
+    const today=new Date().toISOString().slice(0,10);
+    return FRENCH_HOLIDAYS.filter(h=>h.date>=today).slice(0,n);
+}
+
+function getHolidayStatus(date){
+    const sh=(window._specialHours||[]).find(s=>s.date===date);
+    if(!sh)return null;
+    return sh.status;
+}
+
+async function renderHolidaysAndHours(){
+    // Load persisted special hours + dynamic holidays
+    await loadSpecialHours().catch(()=>{});
+    if(!FRENCH_HOLIDAYS.length)await loadFrenchHolidays().catch(()=>{});
     const alert=document.getElementById('holidayAlert');
-    const holiday=getNextHoliday();
-    if(alert&&holiday){
-        const d=new Date(holiday.date);
-        alert.innerHTML=`<div class="holiday-alert">
-            <span>⚠️</span>
-            <span><strong>${holiday.name}</strong> — ${d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</span>
-            <div class="holiday-buttons" style="margin-left:auto;">
-                <button class="holiday-btn" onclick="markHolidayOpen()">J'ouvre normalement</button>
-                <button class="holiday-btn" onclick="markHolidayClosed()">Je suis fermé</button>
-            </div>
+    if(!alert)return;
+    const upcoming=getUpcomingHolidays(8);
+    if(!upcoming.length){alert.innerHTML='';return;}
+    let html='<div style="display:flex;flex-direction:column;gap:6px;">';
+    for(const h of upcoming){
+        const d=new Date(h.date);
+        const label=d.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
+        const st=getHolidayStatus(h.date);
+        let pill='';
+        if(st==='closed')pill='<span style="background:rgba(239,68,68,.15);color:var(--red);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">🔒 Fermé</span>';
+        else if(st==='custom'||st==='open')pill='<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">✅ Ouvert</span>';
+        const btns=st?`<button class="holiday-btn" style="padding:4px 10px;font-size:.7rem;" onclick="clearHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}')">↺ Annuler</button>`:
+            `<button class="holiday-btn" onclick="setHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}',false)">J'ouvre normalement</button>
+             <button class="holiday-btn" onclick="setHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}',true)">Je suis fermé</button>`;
+        html+=`<div class="holiday-alert"><span>⚠️</span>
+            <span><strong>${h.name}</strong> — ${label}</span>
+            ${pill}
+            <div class="holiday-buttons" style="margin-left:auto;">${btns}</div>
         </div>`;
     }
+    // Custom closure input
+    html+=`<div class="holiday-alert" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.25);">
+        <span>➕</span>
+        <span><strong>Fermeture exceptionnelle</strong> (congés, travaux, événement privé…)</span>
+        <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <input type="date" id="customCloseDate" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#fff;padding:5px 8px;border-radius:6px;font-size:.7rem;">
+            <input type="text" id="customCloseLabel" placeholder="Motif (ex: Congés été)" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#fff;padding:5px 8px;border-radius:6px;font-size:.7rem;width:140px;">
+            <button class="holiday-btn" onclick="addCustomClosure()">Ajouter</button>
+        </div>
+    </div>`;
+    alert.innerHTML=html+'</div>';
+}
+
+async function setHolidayStatus(date,name,isClosed){
+    const rid=currentData?.restaurant_id||0;
+    try{
+        await fetch(`${API_BASE}/api/gbp/special-hours`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,date,is_closed:isClosed,holiday_name:name})});
+        addToLog((isClosed?'🔒 ':'✅ ')+name+' — '+(isClosed?'fermé':'ouvert normalement'));
+    }catch(e){}
+    await loadSpecialHours();
+    renderHolidaysAndHours();
+}
+
+async function clearHolidayStatus(date,name){
+    const rid=currentData?.restaurant_id||0;
+    try{
+        await fetch(`${API_BASE}/api/hub/special-hours`,{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:rid,date})});
+        addToLog('↺ '+name+' — statut supprimé');
+    }catch(e){}
+    await loadSpecialHours();
+    renderHolidaysAndHours();
+}
+
+async function addCustomClosure(){
+    const date=document.getElementById('customCloseDate')?.value;
+    const label=document.getElementById('customCloseLabel')?.value||'Fermeture exceptionnelle';
+    if(!date){alert('Choisissez une date');return;}
+    const rid=currentData?.restaurant_id||0;
+    try{
+        await fetch(`${API_BASE}/api/hub/special-hours`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:rid,date,status:'closed',label})});
+        addToLog('🔒 '+label+' ('+date+') — ajouté');
+    }catch(e){alert('Erreur: '+e.message);}
+    await loadSpecialHours();
+    renderHolidaysAndHours();
 }
 
 async function renderTargetKeywords(){
