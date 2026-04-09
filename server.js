@@ -6985,24 +6985,49 @@ app.post('/api/scrape-gmb', async (req, res) => {
       let foundPlaceId = place_id || null;
 
       // Step A: Find place_id via Text Search (if not provided)
+      // CRITICAL: validate the returned place is actually in the requested city.
+      // Without this, Google's Text Search can return a same-named restaurant in another
+      // city (e.g. "Le Bistrot" in Paris when user asked for "Le Bistrot" in Châteaudun).
       if (!foundPlaceId) {
+        const normalizeCity = s => (s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '');
+        const wantCity = normalizeCity(city);
         const q = encodeURIComponent(`${name} ${city} restaurant`);
-        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr&type=restaurant`;
+        const searchUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${q}&key=${placesKey}&language=fr&region=fr&type=restaurant`;
         const searchResp = await fetch(searchUrl);
         const searchData = await searchResp.json();
         if (searchData.status === 'OK' && searchData.results && searchData.results.length > 0) {
-          foundPlaceId = searchData.results[0].place_id;
-          // Store basic data from text search as fallback
-          const ts = searchData.results[0];
-          result.address = ts.formatted_address || null;
-          result.rating = ts.rating || null;
-          result.reviewCount = ts.user_ratings_total || null;
-          result.lat = ts.geometry?.location?.lat || null;
-          result.lng = ts.geometry?.location?.lng || null;
-          if (ts.photos && ts.photos.length > 0) {
-            result.photos = ts.photos.slice(0, 10).map(p =>
-              `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`
-            );
+          // Score each candidate: +2 if city is in formatted_address, +1 if name matches loosely
+          const wantName = (name || '').toLowerCase().trim();
+          const scored = searchData.results.slice(0, 10).map(r => {
+            const addr = normalizeCity(r.formatted_address || '');
+            const rName = (r.name || '').toLowerCase().trim();
+            let score = 0;
+            if (wantCity && addr.includes(wantCity)) score += 3;
+            if (wantName && rName.includes(wantName)) score += 2;
+            if (wantName && wantName.includes(rName)) score += 1;
+            score += Math.min((r.user_ratings_total || 0) / 1000, 1); // mild popularity tiebreak
+            return { r, score };
+          }).sort((a, b) => b.score - a.score);
+          const best = scored[0];
+          // Require minimum confidence (at least city match OR strong name match)
+          if (best && best.score >= 2) {
+            const ts = best.r;
+            foundPlaceId = ts.place_id;
+            result.address = ts.formatted_address || null;
+            result.rating = ts.rating || null;
+            result.reviewCount = ts.user_ratings_total || null;
+            result.lat = ts.geometry?.location?.lat || null;
+            result.lng = ts.geometry?.location?.lng || null;
+            if (ts.photos && ts.photos.length > 0) {
+              result.photos = ts.photos.slice(0, 10).map(p =>
+                `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`
+              );
+            }
+            result.matchConfidence = best.score;
+          } else {
+            console.warn(`Places: low-confidence match for "${name}" in "${city}" (best score ${best?.score}), refusing to return data to avoid mixing restaurants`);
+            result.matchConfidence = 0;
+            result.matchWarning = `Aucun restaurant "${name}" trouvé avec certitude à ${city}. Vérifiez l'orthographe ou fournissez un place_id.`;
           }
         } else {
           console.warn('Places Text Search: no results for', name, city, 'status:', searchData.status);

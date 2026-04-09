@@ -1919,14 +1919,14 @@ async function saveAllData(){
         // Save to server — ALL data including hub, full scores with categories
         try{
             const fullScores={seo:currentScores.seo,geo:currentScores.geo,categories:currentScores.categories||[]};
-            await fetchTimeout(`${API_BASE}/api/restaurants/full-save`,{
+            const fsResp=await fetchTimeout(`${API_BASE}/api/restaurants/full-save`,{
                 method:'POST',
                 headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
                 body:JSON.stringify({
                     user_id:uid,
                     name:currentData.name,
                     city:currentData.city,
-                    google_place_id:currentData.google_place_id||null,
+                    google_place_id:currentData.google_place_id||currentData.place_id||window._hubData?.place_id||null,
                     audit_data:currentData,
                     scores:fullScores,
                     completed_actions:{...completedActions},
@@ -1934,6 +1934,12 @@ async function saveAllData(){
                     hub_data:window._hubData||null
                 })
             },10000);
+            // Capture the restaurant id so Hub data, content history, etc. get linked
+            // to the correct row (fixes: all saves going to restaurant_id=0 orphan).
+            try{
+                const fsData=await fsResp.json();
+                if(fsData?.id){currentData.restaurant_id=fsData.id;currentData.restaurantId=fsData.id;}
+            }catch(e){}
         }catch(e){console.warn('Server save failed',e);}
 
         // Also update local cache
@@ -1963,6 +1969,35 @@ function showSaveIndicator(){
     if(el){el.classList.add('show');setTimeout(()=>el.classList.remove('show'),1500);}
 }
 
+// Reset all per-restaurant global state. MUST be called when switching restaurants
+// to prevent data from restaurant A leaking into restaurant B's dashboard, Hub Central,
+// blog/Reddit generation, or directory push.
+function resetRestaurantContext(){
+    // Hub Central state
+    window._hubData=null;
+    hubPhotos=[];
+    try{hubPhotoSelected.clear?.();}catch(e){}
+    hubPhotoFilter='all';
+    // Audit / analysis state
+    window._realAudit=null;
+    window._realAuditData=null;
+    window._realAuditDetails=null;
+    window._semanticAnalysis=null;
+    window._currentReviews=null;
+    window._suggestedTerms=null;
+    // Directories
+    try{Object.keys(dirCheckResults).forEach(k=>delete dirCheckResults[k]);}catch(e){}
+    try{Object.keys(dirClaimData).forEach(k=>delete dirClaimData[k]);}catch(e){}
+    try{Object.keys(dirAgentResults).forEach(k=>delete dirAgentResults[k]);}catch(e){}
+    // Clear any Hub form inputs so populateHub doesn't think they're user-edited
+    ['hubName','hubCategory','hubAddress','hubPhone','hubWebsite','hubDescription','hubHours','hubLogo','hubLogo2','hubFacebook','hubTwitter','hubInstagram','hubReservation','hubOrder','hubDA'].forEach(id=>{
+        const e=document.getElementById(id);if(e)e.value='';
+    });
+    const hc=document.getElementById('hubColors');if(hc)hc.innerHTML='';
+    const hf=document.getElementById('hubFonts');if(hf)hf.innerHTML='';
+    const hl=document.getElementById('hubLogoPreview');if(hl)hl.innerHTML='<span style="font-size:.6rem;color:var(--mut);">Logo</span>';
+}
+
 async function loadRestaurant(key){
     // Try to load from server first
     let store=_serverDataCache;
@@ -1971,6 +2006,8 @@ async function loadRestaurant(key){
     }
     if(!store)store=loadAllDataLocal();
     if(!store||!store.restaurants[key])return;
+    // ── CRITICAL: wipe old restaurant's state before loading the new one
+    resetRestaurantContext();
     const r=store.restaurants[key];
     storedName=r.name;
     storedCity=r.city;
@@ -1980,7 +2017,7 @@ async function loadRestaurant(key){
     if(r.completedActions)Object.assign(completedActions,r.completedActions);
     Object.keys(platformStatus).forEach(k=>delete platformStatus[k]);
     if(r.platformStatus)Object.assign(platformStatus,r.platformStatus);
-    // Restore hub data from DB
+    // Restore hub data from DB (only if this restaurant actually has saved hub data)
     if(r.hubData)window._hubData=r.hubData;
     currentScores=computeScores(currentData);
     // Preserve per-item scores from DB if available
