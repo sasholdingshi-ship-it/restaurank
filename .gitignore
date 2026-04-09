@@ -2,3 +2,9 @@
 .secrets.md
 node_modules/
 *.db
+.claude/
+RestauRank-backup-*/
+.DS_Store
+*.db-shm
+*.db-wal
+.claude/

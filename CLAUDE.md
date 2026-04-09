@@ -41,17 +41,18 @@ SaaS webapp qui audite la visibilité en ligne d'un restaurant sur Google (SEO l
 
 ```
 restaurank/
-├── seo-geo-audit-tool.html   # Frontend single-file (~11500 lignes)
-├── server.js                  # Backend Node.js (~9180 lignes)
-├── package.json               # express, better-sqlite3, stripe, puppeteer, nodemailer, googleapis
+├── seo-geo-audit-tool.html   # Frontend client (~12000 lignes)
+├── admin.html                 # Dashboard admin séparé (/admin)
+├── server.js                  # Backend Node.js (~11500 lignes)
+├── db-adapter.js              # SQLite (runtime) + PostgreSQL (backup sync)
+├── init-db.sql                # Schéma PostgreSQL natif (20 tables)
+├── setup-db.js                # Migration SQLite → PostgreSQL
+├── package.json               # express, better-sqlite3, pg, stripe, googleapis
 ├── .env                       # Env vars locales (gitignored)
 ├── .env.example               # Template env vars
 ├── .gitignore                 # .env, node_modules/, *.db
 ├── Dockerfile                 # Docker Node 20
 ├── Procfile                   # `web: node server.js`
-├── railway.json               # Config Railway (backup)
-├── build.js                   # Obfuscation JS
-├── deploy.sh                  # Script déploiement
 ├── restaurank-wp-plugin/      # Plugin WordPress auto-apply SEO
 └── restaurank-wp-plugin.zip
 ```
@@ -157,37 +158,69 @@ Resend API (RESEND_API_KEY) → SMTP Nodemailer (SMTP_HOST) → console dev_log
 
 ---
 
+### 6. Database Architecture
+- **Runtime** : SQLite (better-sqlite3) — toutes les queries sont sync
+- **Backup** : PostgreSQL Neon (si `DATABASE_URL` set) — sync async en arrière-plan
+- **db-adapter.js** : `createDB()` retourne toujours SQLite. `setupPGSync(db)` fait :
+  - Startup : restore PG → SQLite (récupère les données persistées)
+  - Toutes les 5 min : backup SQLite → PG (persiste les nouvelles données)
+- **Ne JAMAIS utiliser PG pour les queries runtime** — SQLite only
+- Tables sync : accounts, restaurants, restaurant_settings, sessions
+
+### 7. Admin Dashboard (`/admin`)
+- Fichier séparé `admin.html` servi à `GET /admin`
+- Login dédié (vérifie `role=admin`)
+- Charte graphique ラグランパンチ : bleu marine `#1B2A4A`, orange `#D95B2B`, beige `#FAF3EB`
+- Onglets : Clients, Restaurants, Invitations, Qualité Data, Paramètres
+- Fiche client : Audit (49 items + IA), Hub Central (éditable), IA Contenu (8 types)
+- Qualité Data : validation 11 règles, cross-check Google, sync quotidienne 3h AM
+
+### 8. Social Login
+- `GET /auth/social/google` → redirige vers Google OAuth avec `state=social_login`
+- Le callback `/auth/google/callback` détecte `state=social_login` pour créer/connecter un compte client
+- Réutilise le même redirect URI que GBP OAuth (pas besoin de config Google Console)
+- Apple Sign-In : code prêt, besoin d'un Apple Developer Service ID
+
+### 9. Hub Central Scraping
+- `/api/scrape-gmb` : Google Places API (photos 1600px, toutes les données GMB)
+- Logo : favicon, og:image, `<img>` avec class/alt/src "logo"
+- Couleurs : theme-color, CSS variables, hex fréquents
+- Polices : Google Fonts links, font-family CSS, @font-face
+- Domain Authority : Moz API ou estimation heuristique
+- Instagram : Graph API via Meta OAuth token (real, pas scrape HTML)
+
+---
+
 ## ✅ Ce qui fonctionne
 
 - Landing → Google Maps confirmation → scan animé → dashboard SEO/GEO
 - 7 catégories, 49 items d'audit avec contenu auto-généré
-- Hub Central : NAP centralisé, photos, push all
-- CMS Detection (8 CMS supportés)
-- WordPress Auto-Apply via REST API
+- Hub Central : NAP, photos GMB/Instagram/site, logo, couleurs, polices, DA
+- CMS Detection (8 CMS supportés) + WordPress Auto-Apply
 - Directory auto-check 11 plateformes + auto-claim
 - Audit réel site web (crawl title, meta, schema, FAQ, NAP, OG)
-- Auth complète (inscription, login, sessions, reset password)
-- Email Resend fonctionnel (testé 2026-03-28)
+- Auth complète (inscription, login, sessions, reset password, Google Sign-In)
+- Email Resend fonctionnel
 - Stripe intégration (mode test)
-- Admin dashboard
-- Multi-site + localStorage persistence
+- Admin dashboard séparé (`/admin`) avec charte graphique
+- Data quality engine (11 règles + cross-check Google + sync quotidienne)
+- Claude AI connecté à chaque fonction (génération, audit, bulk)
+- Instagram Graph API (real photos, likes, captions)
+- PG sync backup (SQLite runtime + Neon backup)
 
 ## ⏳ En attente / À faire
 
 - **GBP API access** : ticket #6569000040778 (2026-03-22)
-- **DB persistante** : migrer SQLite → PostgreSQL (Render reset SQLite à chaque deploy)
 - **Stripe Price IDs** : créer les plans dans Stripe dashboard
+- **Apple Sign-In** : créer Service ID dans Apple Developer ($99/an)
 - **Domaine email custom** : vérifier domaine dans Resend
-- **Wix/Squarespace/Shopify APIs** : actuellement instructions manuelles
 - **Tests automatisés** : aucun test existant
-- **Séparer le frontend** : 11500 lignes en un seul fichier
 
 ## 🐛 Problèmes connus
 
 - Render cold start ~30s après 15 min d'inactivité
 - SMTP bloqué sur Render → contourné via Resend
-- Le .env local a un SMTP_PASS différent de celui sur Render
-- Google Maps scrape limité (JS rendering) → GBP API résoudra ça
+- SQLite reset à chaque deploy Render → contourné via PG sync backup
 
 ---
 
@@ -233,6 +266,11 @@ curl -X POST https://restaurank.onrender.com/api/send-welcome-email \
 | 2026-03-25 | Puppeteer scraping | JS rendering pour Google Maps |
 | 2026-03-28 | Resend (pas SMTP) | Render bloque SMTP sortant |
 | 2026-03-28 | RESEND_FROM séparé | Resend exige domaine vérifié |
+| 2026-03-31 | Admin dashboard séparé | `/admin` invisible des clients |
+| 2026-03-31 | SQLite runtime + PG backup | deasync incompatible Docker, SQLite = sync fiable |
+| 2026-03-31 | Google Sign-In via state param | Réutilise le même redirect URI, 0 config Console |
+| 2026-03-31 | Charte ラグランパンチ | Bleu marine + orange + beige |
+| 2026-03-31 | Data quality engine | 11 règles validation + cross-check Google + cron 3h |
 
 ## Permissions
 ```json

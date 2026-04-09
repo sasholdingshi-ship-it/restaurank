@@ -8664,6 +8664,7 @@ CONTEXTE RESTAURANT (Hub Central — source unique de vérité, utilise EXACTEME
 
 ⚠️ RÈGLE NAP (Name/Address/Phone): utilise le nom, l'adresse, le téléphone EXACTEMENT comme ci-dessus (même ponctuation, même casse). C'est critique pour le SEO local — toute variation casse la cohérence avec Google Business, les annuaires et les citations IA.
 
+
 ══════════════════════════════════════════
 OBJECTIF DOUBLE: SEO + GEO
 ══════════════════════════════════════════
@@ -8803,6 +8804,7 @@ CONTEXTE (Hub Central — faits exacts, n'invente rien):
 - Note Google: ${ctx.rating || 'N/A'} (${ctx.reviewCount || 0} avis)
 
 ⚠️ Sers-toi de ces faits (quartier, chef, année, prix, ambiance) pour rendre le post spécifique et crédible. Un post Reddit authentique mentionne TOUJOURS un détail concret.
+
 
 ══════════════════════════════════════════
 OBJECTIF GEO (Reddit = source #2 Perplexity, source majeure Claude AI)
