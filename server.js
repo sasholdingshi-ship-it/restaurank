@@ -8657,34 +8657,100 @@ RÈGLE D'OR: le post NE DOIT PAS être interchangeable avec un autre restaurant.
 
 Réponds UNIQUEMENT avec le texte du post brut, sans guillemets, sans markdown.`,
 
-  faq_content: (ctx) => `Tu es un expert SEO pour restaurants. Génère 10 questions/réponses FAQ optimisées pour le restaurant "${ctx.name}" à ${ctx.city}.
+  faq_content: (ctx) => `Tu es un expert SEO local + GEO pour restaurants. Génère 12 questions/réponses FAQ ultra-personnalisées pour "${ctx.name}" à ${ctx.city}.
 
-Cuisine : ${ctx.cuisine || 'Non spécifié'}
-Services : ${ctx.services || 'Sur place, à emporter'}
-Horaires : ${ctx.hours || 'Midi et soir'}
+CONTEXTE RESTAURANT (Hub Central — utilise EXACTEMENT ces faits):
+- Nom: ${ctx.name}
+- Ville: ${ctx.city}
+- Adresse: ${ctx.address || 'non précisée'}
+- Téléphone: ${ctx.phone || 'non précisé'}
+- Cuisine: ${ctx.cuisine || 'non spécifié'}
+- Description: ${ctx.description || ''}
+- Plats signatures: ${ctx.specialties || 'non précisé'}
+- Note Google: ${ctx.rating || 'N/A'}/5 (${ctx.reviewCount || 0} avis)
+- Prix: ${ctx.priceLevel ? '€'.repeat(Math.max(1,ctx.priceLevel)) : 'non précisé'}
+- Chef: ${ctx.chef || 'non précisé'}
+- Ouvert depuis: ${ctx.openingYear || 'non précisé'}
+- Horaires: ${ctx.hours || 'non précisé'}
+- Services: ${(ctx.amenities || []).join(', ') || 'non précisé'}
+- Réservation: ${ctx.reservation || 'non précisé'}
+- Livraison: ${ctx.order || 'non précisé'}
+- Site web: ${ctx.website || 'non fourni'}
 
-Chaque Q&A doit :
-- Être une vraie question que les clients posent
-- Réponse courte (40-60 mots) optimisée pour la recherche vocale
-- Inclure le nom du restaurant naturellement
-- Couvrir : réservation, terrasse, livraison, végétarien, budget, parking, groupes, allergies, paiement, spécialités
+OBJECTIF DOUBLE (SEO + GEO):
+- Questions = exactement ce que les gens tapent sur Google OU demandent à ChatGPT/Perplexity/Gemini
+- Réponses = citables par les IA (phrases déclaratives, chiffres précis, nom + ville inclus)
 
-Retourne en JSON : [{"question":"...","answer":"..."}]`,
+CATÉGORIES OBLIGATOIRES (2 questions par catégorie):
+1. PRATIQUE: réservation, horaires, accès, parking
+2. MENU: spécialités, options végé/vegan/sans gluten, budget moyen
+3. AMBIANCE: terrasse, groupes, enfants, animaux, événements privés
+4. AVIS: note Google, ce qu'en disent les clients, points forts
+5. LIVRAISON: plateformes, zone de livraison, à emporter
+6. LOCALISATION: quartier, comment venir, métro/bus le plus proche
+
+RÈGLES:
+- Chaque réponse = 30-50 mots (optimisé recherche vocale "Hey Google" / "Dis Siri")
+- Chaque réponse COMMENCE par "${ctx.name}" ou une réponse directe (pas "Oui, effectivement...")
+- Chaque réponse contient 1 fait spécifique tiré du contexte (chef, prix, plat, année, quartier)
+- Si un fait n'est pas dans le contexte, écris "[à compléter par le restaurateur]" au lieu d'inventer
+- Le JSON DOIT être valide
+
+ANTI-IA-DETECTION:
+❌ Pas de "En effet", "Effectivement", "Absolument", "Tout à fait"
+❌ Pas de phrases qui commencent toutes par "Le restaurant" ou "Notre"
+✅ Varier les ouvertures: nom du resto, chiffre, "Oui/Non" direct, impératif ("Réservez via...")
+✅ 1-2 réponses avec une touche informelle ("Bonne nouvelle: ..." / "Comptez environ...")
+
+Retourne en JSON strict: [{"question":"...","answer":"...","category":"pratique|menu|ambiance|avis|livraison|localisation"}]`,
 
   schema_org: (ctx) => `Génère un JSON-LD Schema.org complet de type Restaurant pour :
-Nom : ${ctx.name}
-Ville : ${ctx.city}
-Adresse : ${ctx.address || ''}
-Téléphone : ${ctx.phone || ''}
-Site web : ${ctx.website || ''}
-Cuisine : ${ctx.cuisine || ''}
-Prix : ${ctx.priceRange || '€€'}
-Horaires : ${ctx.hours || 'Lundi-Dimanche 12h-22h'}
-Note moyenne : ${ctx.rating || '4.5'}
-Nombre d'avis : ${ctx.reviewCount || '50'}
 
-Inclus : @context, @type, name, address, telephone, url, servesCuisine, priceRange, openingHoursSpecification, aggregateRating, hasMenu, geo, sameAs, image.
-Retourne UNIQUEMENT le JSON valide, pas de texte autour.`,
+CONTEXTE (Hub Central — utilise EXACTEMENT, n'invente RIEN):
+- name: "${ctx.name}"
+- addressLocality: "${ctx.city}"
+- streetAddress: "${ctx.address || '[À COMPLÉTER]'}"
+- telephone: "${ctx.phone || '[À COMPLÉTER]'}"
+- url: "${ctx.website || ''}"
+- servesCuisine: "${ctx.cuisine || ''}"
+- priceRange: "${ctx.priceLevel ? '€'.repeat(Math.max(1,ctx.priceLevel)) : '[À COMPLÉTER]'}"
+- openingHours: "${ctx.hours || '[À COMPLÉTER]'}"
+- aggregateRating: { ratingValue: ${ctx.rating || 'null'}, reviewCount: ${ctx.reviewCount || 'null'} }
+- Chef: "${ctx.chef || ''}"
+- Ouvert depuis: ${ctx.openingYear || 'null'}
+- Logo: "${ctx.logo || ''}"
+- Description: "${(ctx.description || '').substring(0, 200)}"
+- Réservation URL: "${ctx.reservation || ''}"
+- Menu URL: "${ctx.menu || ''}"
+- Social: ${JSON.stringify(ctx.social || {})}
+- Latitude: ${ctx.lat || 'null'}
+- Longitude: ${ctx.lng || 'null'}
+- Plats signatures: "${ctx.specialties || ''}"
+- Services: ${JSON.stringify(ctx.amenities || {})}
+- Paiements acceptés: ${JSON.stringify(ctx.paymentMethods || [])}
+
+PROPRIÉTÉS OBLIGATOIRES dans le JSON-LD:
+@context, @type (Restaurant), name, address (PostalAddress complet), telephone, url,
+servesCuisine, priceRange, openingHoursSpecification (1 entry par jour si horaires fournis),
+aggregateRating (SEULEMENT si rating non null — NE PAS INVENTER une note),
+hasMenu (si menu URL fourni), geo (GeoCoordinates si lat/lng fournis),
+sameAs (array des URLs social fournies, seulement celles non vides),
+image (logo si fourni), description, foundingDate (si openingYear fourni)
+
+PROPRIÉTÉS BONUS (ajouter si les données existent):
+- potentialAction → ReserveAction (si URL réservation fournie)
+- acceptsReservations: true/false
+- paymentAccepted (si paymentMethods fourni)
+- amenityFeature (si amenities fourni: terrasse, wifi, parking, etc.)
+- founder → Person avec name (si chef fourni)
+
+RÈGLES STRICTES:
+1. Si une donnée est absente ou "[À COMPLÉTER]", NE PAS l'inclure dans le JSON (pas de champs vides ou faux)
+2. NE PAS inventer de note (aggregateRating) si rating est null
+3. NE PAS inventer d'horaires si hours est "[À COMPLÉTER]"
+4. NE PAS mettre "€€" par défaut si priceRange est "[À COMPLÉTER]"
+5. Le JSON DOIT être valide et parsable par JSON.parse()
+6. Retourne UNIQUEMENT le JSON, aucun texte autour, pas de markdown, pas de code block`,
 
   meta_tags: (ctx) => `Génère des meta tags SEO optimisés pour le restaurant "${ctx.name}" à ${ctx.city}.
 Cuisine : ${ctx.cuisine || ''}
