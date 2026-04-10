@@ -13341,45 +13341,106 @@ app.get('/api/algo-updates', async (req, res) => {
 // ============================================================
 app.post('/api/ai/keywords', async (req, res) => {
   try {
-    const { restaurant_id, restaurant_name, city, cuisine, existing_keywords } = req.body;
+    const {
+      restaurant_id, restaurant_name, city, cuisine, existing_keywords,
+      // Full Hub Central context (sent by frontend getHubData())
+      address, description, hours, rating, review_count, price_level, website,
+      chef, opening_year, specialties, menu_items, amenities, payment_methods,
+      reservation_provider, order_provider, neighborhood
+    } = req.body;
     const apiKey = getAIKey(restaurant_id);
-    if (apiKey) {
-      const prompt = `Tu es un expert SEO local pour restaurants. Génère 10 suggestions de mots-clés pour "${restaurant_name}" (cuisine ${cuisine || 'française'}) à ${city || 'Paris'}.
-
-Mots-clés existants à NE PAS répéter : ${(existing_keywords || []).join(', ')}
-
-Pour chaque mot-clé, indique :
-- Le mot-clé
-- La popularité estimée (Élevée/Moyenne/Faible)
-- Le niveau de concurrence (1-10)
-
-Réponds en JSON strict : [{"kw":"mot-clé","pop":"Élevée","comp":7},...]
-Pas de texte avant/après le JSON.`;
-      try {
-        const text = await callClaudeAPI(apiKey, prompt, 800);
-        const jsonMatch = text.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          const keywords = JSON.parse(jsonMatch[0]);
-          return res.json({ success: true, keywords, source: 'ai' });
-        }
-      } catch(e) { console.log('AI keywords error:', e.message); }
+    if (!apiKey) {
+      return res.json({ success: false, error: 'Clé IA requise pour générer des mots-clés ciblés. Configurez votre clé Anthropic dans Settings.' });
     }
-    const name = (restaurant_name || 'restaurant').toLowerCase();
-    const c = (city || 'paris').toLowerCase();
-    const keywords = [
-      { kw: `${name} ${c}`, pop: 'Élevée', comp: 3 },
-      { kw: `restaurant ${cuisine || ''} ${c}`.trim(), pop: 'Élevée', comp: 8 },
-      { kw: `meilleur restaurant ${c}`, pop: 'Élevée', comp: 9 },
-      { kw: `${name} avis`, pop: 'Moyenne', comp: 2 },
-      { kw: `${name} menu`, pop: 'Moyenne', comp: 2 },
-      { kw: `${name} réservation`, pop: 'Moyenne', comp: 3 },
-      { kw: `restaurant livraison ${c}`, pop: 'Élevée', comp: 7 },
-      { kw: `brunch ${c}`, pop: 'Moyenne', comp: 6 },
-      { kw: `restaurant terrasse ${c}`, pop: 'Moyenne', comp: 5 },
-      { kw: `restaurant romantique ${c}`, pop: 'Faible', comp: 4 }
-    ];
-    res.json({ success: true, keywords, source: 'template' });
-  } catch(e) {
+
+    // Extract neighborhood/arrondissement from address if not provided
+    const arr = (city || '').match(/(\d+)e?\s*arr/i)?.[1] || (address || '').match(/750(\d{2})/)?.[1] || '';
+    const quartier = neighborhood || (address || '').match(/\d{5}\s+(.+)$/)?.[1] || '';
+    const dishKeywords = [specialties, ...(menu_items || [])].filter(Boolean).join(', ');
+    const amenityList = amenities && typeof amenities === 'object' ? Object.keys(amenities).filter(k => amenities[k]).join(', ') : '';
+
+    const prompt = `Tu es un expert SEO local + GEO (Generative Engine Optimization) pour restaurants. Tu dois cibler les mots-clés EXACTS qui vont attirer les vrais clients de CE restaurant spécifique, et qui vont être cités par Google + ChatGPT + Perplexity + Gemini quand quelqu'un cherche un resto dans cette zone.
+
+CONTEXTE RESTAURANT (Hub Central — utilise EXACTEMENT ces faits, n'invente RIEN):
+- Nom: ${restaurant_name}
+- Ville: ${city || 'non précisé'}${arr ? ` (${arr}e arrondissement)` : ''}
+- Quartier: ${quartier || 'non précisé'}
+- Adresse: ${address || 'non précisée'}
+- Cuisine: ${cuisine || 'non spécifié'}
+- Description: ${description || 'non fournie'}
+- Plats signatures: ${specialties || 'non précisé'}
+- Items du menu: ${(menu_items || []).slice(0, 10).join(', ') || 'non fourni'}
+- Note Google: ${rating || 'N/A'}/5 (${review_count || 0} avis)
+- Fourchette de prix: ${price_level ? '€'.repeat(Math.max(1, price_level)) : 'non précisé'}
+- Chef: ${chef || 'non précisé'}
+- Année d'ouverture: ${opening_year || 'non précisé'}
+- Services: ${amenityList || 'non précisé'}
+- Réservation: ${reservation_provider || 'non précisé'}
+- Livraison/Commande: ${order_provider || 'non précisé'}
+- Site web: ${website || 'non fourni'}
+
+Mots-clés DÉJÀ CIBLÉS (à NE PAS répéter): ${(existing_keywords || []).join(', ') || 'aucun'}
+
+OBJECTIF: génère 12 mots-clés uniques répartis en 4 catégories d'intention de recherche.
+
+══════════════════════════════════════════
+LES 4 CATÉGORIES OBLIGATOIRES (3 mots-clés chacune)
+══════════════════════════════════════════
+
+1. **brand** (intent: navigationnelle) — quelqu'un qui CHERCHE déjà ce restaurant
+   - Exemples: "${restaurant_name}", "${restaurant_name} ${city}", "${restaurant_name} avis", "${restaurant_name} menu"
+   - Ces mots-clés ont peu de volume mais 100% de conversion
+
+2. **local** (intent: découverte locale) — quelqu'un qui cherche UN RESTO dans la zone
+   - Format obligatoire: [type cuisine/concept] + [ville OU quartier OU arrondissement OU station de métro proche]
+   - Doit refléter ce que le restaurant EST réellement (cuisine + spécialité + ambiance)
+   - Long-tail OBLIGATOIRE pour 2 mots-clés sur 3 (5+ mots)
+   - Exemple bon: "ramen authentique ${quartier || city}", "restaurant japonais ${arr ? arr+'e arrondissement' : city}"
+   - Exemple mauvais: "restaurant" (trop générique)
+
+3. **transactional** (intent: action immédiate) — quelqu'un qui veut RÉSERVER, COMMANDER, REGARDER LE MENU, VOIR LES PRIX
+   - Format: ${restaurant_name} + [verbe d'action] OU [type cuisine] + [ville] + [verbe d'action]
+   - Exemples: "${restaurant_name} réservation", "réserver ${cuisine || 'restaurant'} ${city}", "${restaurant_name} carte prix", "livraison ${cuisine || 'resto'} ${quartier || city}"
+
+4. **informational** (intent: recherche d'info) — quelqu'un qui SE RENSEIGNE, prépare une sortie, compare
+   - Exemples: "meilleur ${cuisine || 'restaurant'} ${city} ${new Date().getFullYear()}", "où manger ${cuisine || ''} ${city}", "restaurant ${cuisine || ''} ${quartier || city} pas cher", "que faire à ${quartier || city} ce soir"
+   - Inclus l'année courante pour capter les requêtes "fresh"
+
+══════════════════════════════════════════
+RÈGLES IMPÉRATIVES
+══════════════════════════════════════════
+- Personnalise CHAQUE mot-clé avec le contexte du restaurant (cuisine, quartier, ambiance, plats)
+- JAMAIS de mots-clés génériques sans contexte ("restaurant", "où manger", "menu")
+- 50% minimum doivent être long-tail (5+ mots) — c'est là que se trouve le trafic qualifié
+- Pour la catégorie 'local', utilise au moins 1 fois le quartier ou l'arrondissement spécifique (pas seulement la ville)
+- Si le restaurant a un plat signature, génère au moins 1 mot-clé qui le mentionne
+- Pour 'informational', inclus systématiquement l'année ${new Date().getFullYear()} dans 1 mot-clé
+- Adapte le ton aux intentions (transactional = verbes d'action, informational = questions)
+
+⚠️ NE PAS INVENTER DE VOLUMES OU DE CONCURRENCE — donne juste l'intention et un raisonnement court (30 mots max).
+
+Réponds en JSON strict (pas de markdown, pas de texte avant/après):
+[
+  {"kw":"mot-clé exact","cat":"brand|local|transactional|informational","intent":"navigationnelle|découverte|action|recherche","reason":"pourquoi ce mot-clé est pertinent pour CE resto en 1 phrase"},
+  ...12 entrées au total, 3 par catégorie
+]`;
+
+    try {
+      const text = await callClaudeAPI(apiKey, prompt, 2500);
+      const jsonMatch = text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        const keywords = JSON.parse(jsonMatch[0]);
+        // Validate categories
+        const validCats = new Set(['brand', 'local', 'transactional', 'informational']);
+        const filtered = keywords.filter(k => k && k.kw && validCats.has(k.cat));
+        return res.json({ success: true, keywords: filtered, source: 'ai', model: 'claude' });
+      }
+      return res.json({ success: false, error: 'Réponse IA invalide (pas de JSON détecté)' });
+    } catch (e) {
+      console.log('AI keywords error:', e.message);
+      return res.json({ success: false, error: e.message });
+    }
+  } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });

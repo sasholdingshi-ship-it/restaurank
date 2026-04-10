@@ -9862,47 +9862,67 @@ async function addCustomClosure(){
 async function renderTargetKeywords(){
     const rid=currentData?.restaurant_id||1;
     let keywords=window._targetKeywords||null;
-    
+
     if(!keywords){
         try{
             const r=await fetchTimeout(`${API_BASE}/api/keywords?restaurant_id=${rid}`,{},5000);
             const j=await r.json();
             if(j.success&&j.keywords.length>0){
-                keywords=j.keywords.map(k=>({kw:k.keyword,lang:k.language,pop:k.popularity,comp:k.competitors,id:k.id}));
+                keywords=j.keywords.map(k=>({kw:k.keyword,lang:k.language||'FR',cat:k.category||k.popularity||'local',intent:k.intent||'',reason:k.reason||'',id:k.id}));
                 window._targetKeywords=keywords;
             }
         }catch(e){}
     }
-    
-    if(!keywords){
-        keywords=[
-            {kw:`Restaurant ${currentData?.city||''}`,lang:'FR',pop:'Élevée',comp:12},
-            {kw:`Meilleur resto ${currentData?.city||''}`,lang:'FR',pop:'Moyenne',comp:8},
-            {kw:`${currentData?.name||'Restaurant'} ${currentData?.city||''}`,lang:'FR',pop:'Élevée',comp:5},
-            {kw:'Restaurant gastronomique',lang:'FR',pop:'Faible',comp:15},
-            {kw:'Où manger',lang:'FR',pop:'Moyenne',comp:20}
-        ];
-        window._targetKeywords=keywords;
-        // Save to server
-        fetchTimeout(`${API_BASE}/api/keywords/bulk`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,keywords:keywords.map(k=>({keyword:k.kw,language:k.lang,popularity:k.pop,competitors:k.comp}))})},5000).catch(()=>{});
+
+    const list=document.getElementById('keywordsList');
+    const header=document.getElementById('keywordHeaderText');
+
+    if(!keywords||!keywords.length){
+        // No fake fallback — prompt user to generate AI suggestions
+        if(list)list.innerHTML=`<tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--mut);">
+            <div style="font-size:.9rem;margin-bottom:8px;">Aucun mot-clé ciblé pour ce restaurant.</div>
+            <div style="font-size:.7rem;margin-bottom:12px;">Génère 12 suggestions adaptées à ton restaurant via l'IA (Hub Central → cuisine, quartier, plats, services).</div>
+            <button class="btn-gen" style="font-size:.75rem;padding:6px 14px;" onclick="generateKeywordSuggestions()">💡 Générer 12 mots-clés ciblés (IA)</button>
+        </td></tr></tbody>`;
+        if(header)header.textContent='Mots-clés cibles (0)';
+        return;
     }
-    
+
+    const catLabels={brand:'🏷️ Brand',local:'📍 Local',transactional:'💰 Action',informational:'ℹ️ Info'};
+    const catColors={
+        brand:'background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);',
+        local:'background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);',
+        transactional:'background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);',
+        informational:'background:rgba(139,92,246,.15);color:#c4b5fd;border:1px solid rgba(139,92,246,.3);'
+    };
     let html=`<tbody>`;
     keywords.forEach((k,i)=>{
-        const badgeClass=k.pop==='Élevée'?'badge-high':k.pop==='Moyenne'?'badge-medium':'badge-low';
+        const cat=k.cat||'local';
+        const tag=catLabels[cat]||cat;
+        const color=catColors[cat]||catColors.local;
+        const reason=k.reason?`<div style="font-size:.62rem;color:var(--mut);margin-top:3px;">${k.reason}</div>`:'';
         html+=`<tr>
-            <td>${k.kw}</td>
-            <td>${k.lang}</td>
-            <td><span class="badge-pop ${badgeClass}">${k.pop}</span></td>
-            <td>${k.comp}</td>
-            <td><button class="btn-gen" style="font-size:.7rem;padding:2px 8px;" onclick="viewKeywordAnalysis(${i})">Voir (20)</button></td>
+            <td><div style="font-weight:600;">${k.kw}</div>${reason}</td>
+            <td><span style="${color}padding:3px 8px;border-radius:6px;font-size:.62rem;font-weight:700;">${tag}</span></td>
+            <td style="font-size:.7rem;color:var(--mut);">${k.intent||''}</td>
+            <td><button class="btn-gen" style="font-size:.7rem;padding:2px 8px;" onclick="viewKeywordAnalysis(${i})">Voir SERP</button></td>
+            <td><button class="btn-gen" style="font-size:.7rem;padding:2px 8px;background:rgba(239,68,68,.15);color:var(--red);" onclick="removeKeyword(${i})">×</button></td>
         </tr>`;
     });
     html+=`</tbody>`;
-    const list=document.getElementById('keywordsList');
     if(list)list.innerHTML=html;
-    const header=document.getElementById('keywordHeaderText');
     if(header)header.textContent=`Mots-clés cibles (${keywords.length})`;
+}
+
+function removeKeyword(i){
+    if(!window._targetKeywords)return;
+    const removed=window._targetKeywords[i];
+    window._targetKeywords.splice(i,1);
+    addToLog('🗑️ Mot-clé retiré: '+removed.kw);
+    renderTargetKeywords();
+    // Persist to server
+    const rid=currentData?.restaurant_id||1;
+    fetchTimeout(`${API_BASE}/api/keywords/bulk`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,keywords:window._targetKeywords.map(k=>({keyword:k.kw,language:k.lang||'FR',category:k.cat,intent:k.intent,reason:k.reason}))})},5000).catch(()=>{});
 }
 
 function switchHourTab(tab){
@@ -10185,52 +10205,85 @@ function confirmEditKeywords(){
 }
 async function generateKeywordSuggestions(){
     const name=currentData?.name||storedName||'restaurant';
-    const city=currentData?.city||storedCity||'';
-    const cuisine=currentData?.cuisine||'';
+    // Pull the FULL Hub Central context — keywords must be adapted to each client
+    const hub=getHubData();
+    const city=hub.city||currentData?.city||storedCity||'';
+    const cuisine=hub.category||currentData?.cuisine||'';
     const existing=window._targetKeywords||[];
     const existingKws=existing.map(e=>e.kw);
 
-    // Show loading in the keyword panel
     const btn=document.querySelector('[onclick*="generateKeywordSuggestions"]');
-    if(btn){btn.disabled=true;btn.textContent='⏳ Recherche IA…';}
+    if(btn){btn.disabled=true;btn.textContent='⏳ Analyse IA…';}
 
     let suggestions=[];
     try{
         const rid=currentData?.restaurant_id||0;
-        const resp=await fetchTimeout(`${API_BASE}/api/ai/keywords`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,restaurant_name:name,city,cuisine,existing_keywords:existingKws})},12000);
+        const payload={
+            restaurant_id:rid,
+            restaurant_name:name,
+            city, cuisine,
+            existing_keywords:existingKws,
+            // Full Hub context
+            address:hub.address,
+            description:hub.description,
+            hours:hub.hours,
+            rating:hub.rating,
+            review_count:hub.review_count,
+            price_level:hub.price_level,
+            website:hub.website,
+            chef:hub.chef,
+            opening_year:hub.opening_year,
+            specialties:hub.specialties||currentData?.specialties||'',
+            menu_items:hub.menu_items||[],
+            amenities:hub.amenities||{},
+            payment_methods:hub.payment_methods||[],
+            reservation_provider:hub.reservation_provider||'',
+            order_provider:hub.order_provider||''
+        };
+        const resp=await fetchTimeout(`${API_BASE}/api/ai/keywords`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},25000);
         const data=await resp.json();
         if(data.success&&data.keywords){
             suggestions=data.keywords;
-            addToLog('💡 '+suggestions.length+' suggestions de mots-clés'+(data.source==='ai'?' (IA)':' (template)'));
+            addToLog('💡 '+suggestions.length+' mots-clés ciblés générés (IA, contexte Hub Central)');
+        } else {
+            addToLog('⚠️ '+(data.error||'Erreur IA'));
         }
-    }catch(e){console.log('Keywords API error:',e.message);}
-
-    // Fallback local
-    if(!suggestions.length){
-        suggestions=[
-            {kw:name.toLowerCase()+' '+city.toLowerCase(),pop:'Élevée',comp:3},
-            {kw:'restaurant '+city.toLowerCase(),pop:'Élevée',comp:8},
-            {kw:'meilleur restaurant '+city.toLowerCase(),pop:'Élevée',comp:9},
-            {kw:'avis '+name.toLowerCase(),pop:'Moyenne',comp:2},
-            {kw:name.toLowerCase()+' menu',pop:'Moyenne',comp:2},
-            {kw:name.toLowerCase()+' réservation',pop:'Moyenne',comp:3},
-            {kw:'restaurant livraison '+city.toLowerCase(),pop:'Élevée',comp:7},
-            {kw:'brunch '+city.toLowerCase(),pop:'Moyenne',comp:6},
-            {kw:'restaurant terrasse '+city.toLowerCase(),pop:'Moyenne',comp:5},
-            {kw:'restaurant romantique '+city.toLowerCase(),pop:'Faible',comp:4}
-        ];
+    }catch(e){
+        console.log('Keywords API error:',e.message);
+        addToLog('⚠️ Erreur IA: '+e.message);
     }
 
     if(btn){btn.disabled=false;btn.textContent='💡 Suggestions IA';}
+
+    if(!suggestions.length){
+        showToast('Aucune suggestion générée. Vérifiez votre clé API IA dans Settings.','error');
+        return;
+    }
 
     // Filter out already existing keywords
     const newSuggestions=suggestions.filter(s=>!existingKws.find(e=>e.toLowerCase()===s.kw.toLowerCase()));
     if(!newSuggestions.length){showToast('Toutes les suggestions sont déjà dans votre liste !','info');return;}
 
-    // Show inline selection panel instead of prompt()
+    // Show inline selection panel with category tags + reasons (NO fake popularity/comp)
     window._kwSuggestions=newSuggestions;window._kwExisting=existing;
-    const popColors={Élevée:'var(--grn)',Moyenne:'var(--ylw)',Faible:'var(--red)'};
-    const items=newSuggestions.map((s,i)=>`<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;cursor:pointer;transition:background .15s;" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='transparent'"><input type="checkbox" checked class="kwSugCheck" data-idx="${i}" style="width:18px;height:18px;accent-color:var(--acc);"><span style="flex:1;font-size:.95rem;">${s.kw}</span><span style="font-size:.75rem;padding:2px 8px;border-radius:10px;background:${popColors[s.pop]||'var(--mut)'};color:#fff;">${s.pop}</span><span style="font-size:.75rem;color:var(--mut);">${s.comp}/10</span></label>`).join('');
+    const catLabels={brand:'🏷️ Brand',local:'📍 Local',transactional:'💰 Action',informational:'ℹ️ Info'};
+    const catColors={brand:'#a5b4fc',local:'#6ee7b7',transactional:'#fbbf24',informational:'#c4b5fd'};
+    const items=newSuggestions.map((s,i)=>{
+        const cat=s.cat||'local';
+        const tag=catLabels[cat]||cat;
+        const color=catColors[cat]||'#a5b4fc';
+        return `<label style="display:flex;align-items:flex-start;gap:10px;padding:10px;border-radius:8px;cursor:pointer;transition:background .15s;border:1px solid rgba(255,255,255,.05);margin-bottom:6px;" onmouseover="this.style.background='rgba(255,255,255,.05)'" onmouseout="this.style.background='transparent'">
+            <input type="checkbox" checked class="kwSugCheck" data-idx="${i}" style="width:18px;height:18px;margin-top:2px;accent-color:var(--acc);">
+            <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
+                    <span style="font-weight:600;font-size:.9rem;">${s.kw}</span>
+                    <span style="font-size:.6rem;padding:2px 8px;border-radius:10px;background:rgba(255,255,255,.1);color:${color};font-weight:700;">${tag}</span>
+                </div>
+                ${s.reason?`<div style="font-size:.7rem;color:var(--mut);line-height:1.4;">${s.reason}</div>`:''}
+                ${s.intent?`<div style="font-size:.62rem;color:var(--mut2);margin-top:2px;font-style:italic;">Intent: ${s.intent}</div>`:''}
+            </div>
+        </label>`;
+    }).join('');
     const panel=document.createElement('div');panel.id='kwSugPanel';
     panel.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
     panel.onclick=e=>{if(e.target===panel)panel.remove();};
@@ -10253,6 +10306,9 @@ function addSelectedKeywords(){
     renderTargetKeywords();
     addToLog('💡 '+toAdd.length+' mot(s)-clé(s) ajouté(s)');
     showToast('✅ '+toAdd.length+' mots-clés ajoutés !');
+    // Persist with full categorization (cat, intent, reason) — NO fake popularity/comp
+    const rid=currentData?.restaurant_id||1;
+    fetchTimeout(`${API_BASE}/api/keywords/bulk`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,keywords:existing.map(k=>({keyword:k.kw,language:k.lang||'FR',category:k.cat||'local',intent:k.intent||'',reason:k.reason||''}))})},5000).catch(()=>{});
 }
 function viewKeywordAnalysis(i){
     const kw=(window._targetKeywords||[])[i];
