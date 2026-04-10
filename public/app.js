@@ -4181,6 +4181,7 @@ function switchDashTab(tab){
     if(tab==='team'){try{renderTeam();}catch(e){}}
     if(tab==='agent'){try{loadAgentHistory();}catch(e){}}
     if(tab==='content'){try{loadBlogHistory();loadCMSSnapshots();renderContentCMSStatus();}catch(e){}}
+    if(tab==='social'){try{renderGooglePostsList();renderPostPhotoGrid();}catch(e){}}
 }
 
 // Show CMS connection status at the top of the Content tab
@@ -5243,9 +5244,14 @@ async function publishSocialPost(){
     if(googleAuth?.connected){
         if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> Publication…';}
         try{
+            const postType=document.getElementById('postType')?.value||'STANDARD';
+            const photoUrl=window._selectedPostPhoto||null;
+            const hub=getHubData();
+            const ctaUrl=hub.reservation_url||hub.order_url||hub.website||currentData?.websiteUrl||'';
+            const ctaType=hub.reservation_url?'BOOK':hub.order_url?'ORDER':'LEARN_MORE';
             const resp=await fetch(API_BASE+'/api/gbp/create-post',{method:'POST',headers:{'Content-Type':'application/json'},
                 body:JSON.stringify({user_id:googleAuth.userId,location_name:googleAuth.locationName,
-                    post:{text:content,type:'STANDARD',callToAction:{actionType:'LEARN_MORE',url:currentData?.websiteUrl||''}}
+                    post:{text:content,type:postType,photo_url:photoUrl,cta:{type:ctaType,url:ctaUrl}}
                 })});
             const result=await resp.json();
             if(result.success||result.data){
@@ -9942,7 +9948,25 @@ function switchHourTab(tab){
 // ============================================================
 function openGooglePostCreator(){
     switchDashTab('social');
-    document.getElementById('postType').focus();
+    document.getElementById('quickCompose').style.display='block';
+    document.getElementById('socialContent')?.focus();
+}
+
+// Render Hub Central photo selector for Google Posts
+function renderPostPhotoGrid(){
+    const grid=document.getElementById('postPhotoGrid');
+    const container=document.getElementById('postPhotoSelector');
+    if(!grid||!container)return;
+    const photos=(hubPhotos||[]).filter(p=>p.url&&!p.isVideo).slice(0,12);
+    if(!photos.length){container.style.display='none';return;}
+    container.style.display='block';
+    grid.innerHTML=photos.map(p=>`<div onclick="selectPostPhoto('${p.url.replace(/'/g,"\\'")}')" style="min-width:60px;width:60px;height:60px;border-radius:8px;overflow:hidden;cursor:pointer;border:2px solid ${window._selectedPostPhoto===p.url?'var(--ind)':'transparent'};flex-shrink:0;">
+        <img src="${p.url}" style="width:100%;height:100%;object-fit:cover;" onerror="this.parentElement.style.display='none'">
+    </div>`).join('');
+}
+function selectPostPhoto(url){
+    window._selectedPostPhoto=window._selectedPostPhoto===url?null:url;
+    renderPostPhotoGrid();
 }
 
 async function renderGooglePostsList(){

@@ -864,36 +864,46 @@
     <!-- SOCIAL TAB -->
     <div class="dash-tab-content" id="tabSocial">
         <div class="social-container" style="padding:20px;max-width:900px;margin:0 auto;">
-            <!-- GOOGLE POSTS SECTION -->
+            <!-- UNIFIED GOOGLE POSTS -->
             <div class="chart-section">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                    <h3 class="chart-title">📮 Google Posts</h3>
-                    <button class="btn-gen" style="font-size:.75rem;padding:6px 12px;" onclick="openGooglePostCreator()">➕ Créer un Google Post</button>
-                </div>
-                <div id="googlePostsList"></div>
-            </div>
-
-            <!-- GENERATE & PUBLISH FORM -->
-            <div class="chart-section">
-                <h3 class="chart-title">📝 Générer et publier</h3>
-                <div style="display:flex;flex-direction:column;gap:12px;">
                     <div>
-                        <label style="font-size:.8rem;font-weight:700;display:block;margin-bottom:6px;color:var(--mut);">Type de post</label>
-                        <select id="postType" style="width:100%;padding:8px;border:1px solid var(--bdr);border-radius:6px;background:var(--s2);color:var(--txt);font-family:inherit;">
-                            <option value="news">Nouveauté 🎉</option>
-                            <option value="offer">Offre spéciale 🏷️</option>
-                            <option value="event">Événement 🎊</option>
-                            <option value="seasonal">Saisonnier 🍂</option>
-                            <option value="promo">Promotion 💥</option>
-                        </select>
+                        <h3 class="chart-title" style="margin:0;">📮 Google Posts</h3>
+                        <div style="font-size:.7rem;color:var(--mut);margin-top:2px;">Brouillons générés par IA — modifiez puis publiez. Anti-ban Google + anti-détection IA.</div>
                     </div>
-                    <textarea id="socialContent" placeholder="Contenu de votre post (optionnel - laisser vide pour générer automatiquement)..." style="width:100%;padding:10px;border:1px solid var(--bdr);border-radius:6px;background:var(--s2);color:var(--txt);font-family:inherit;font-size:.8rem;min-height:80px;resize:vertical;"></textarea>
-                    <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                        <button class="btn-gen" onclick="generateSocialContent()">🤖 Générer avec IA</button>
-                        <button class="btn-gen" style="background:linear-gradient(135deg,var(--cyn),#0891b2));color:#fff;" onclick="publishSocialPost()">🚀 Publier maintenant</button>
-                        <button class="btn-gen" style="background:var(--s3);" onclick="schedulePost()">⏰ Programmer</button>
+                    <div style="display:flex;gap:6px;">
+                        <button class="btn-gen" style="font-size:.72rem;padding:6px 12px;" onclick="generateSocialContent()">🤖 +1 post</button>
+                        <button class="btn-gen" style="font-size:.72rem;padding:6px 12px;background:linear-gradient(135deg,#8b5cf6,var(--ind));" onclick="generateGooglePostPack()">⚡ +5 posts variés</button>
                     </div>
                 </div>
+
+                <!-- Photo selector from Hub Central -->
+                <div id="postPhotoSelector" style="margin-bottom:12px;display:none;">
+                    <label style="font-size:.72rem;font-weight:700;color:var(--mut);display:block;margin-bottom:6px;">📷 Photo du Hub Central (optionnel — cliquez pour sélectionner)</label>
+                    <div id="postPhotoGrid" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0;"></div>
+                </div>
+
+                <!-- Post list (drafts + published) -->
+                <div id="googlePostsList"></div>
+
+                <!-- Quick compose (collapsed by default) -->
+                <div id="quickCompose" style="display:none;margin-top:12px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:14px;">
+                    <div style="display:flex;gap:8px;margin-bottom:8px;">
+                        <select id="postType" style="flex:1;padding:8px;border:1px solid var(--bdr);border-radius:6px;background:var(--s1);color:var(--txt);font-family:inherit;font-size:.8rem;">
+                            <option value="STANDARD">Actualité 📰</option>
+                            <option value="OFFER">Offre 🏷️</option>
+                            <option value="EVENT">Événement 🎊</option>
+                        </select>
+                        <button class="btn-gen" style="font-size:.72rem;padding:6px 10px;" onclick="generateSocialContent()">🤖 Générer</button>
+                    </div>
+                    <textarea id="socialContent" placeholder="Écrivez ou générez un post..." style="width:100%;padding:10px;border:1px solid var(--bdr);border-radius:6px;background:var(--s1);color:var(--txt);font-family:inherit;font-size:.8rem;min-height:70px;resize:vertical;box-sizing:border-box;"></textarea>
+                    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
+                        <button class="btn-gen" style="background:linear-gradient(135deg,var(--ind),#e6734a);color:#fff;flex:1;" onclick="publishSocialPost()">🚀 Publier</button>
+                        <button class="btn-gen" style="background:var(--s3);flex:1;" onclick="schedulePost()">⏰ Programmer</button>
+                        <button class="btn-gen" style="background:var(--s1);flex:0;" onclick="document.getElementById('quickCompose').style.display='none'">✕</button>
+                    </div>
+                </div>
+                <button class="btn-gen" style="width:100%;margin-top:8px;font-size:.75rem;padding:8px;background:var(--s2);border:1px solid var(--bdr);" onclick="document.getElementById('quickCompose').style.display='block';document.getElementById('socialContent').focus();">✏️ Écrire un post manuellement</button>
             </div>
 
             <div class="post-calendar" id="postCalendar"></div>

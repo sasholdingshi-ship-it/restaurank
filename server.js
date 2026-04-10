@@ -2509,18 +2509,23 @@ app.post('/api/gbp/create-post', async (req, res) => {
     const mybusiness = getGoogle().mybusinessbusinessinformation({ version: 'v1', auth });
 
     // Posts use a separate endpoint
+    const postData = {
+      languageCode: 'fr-FR',
+      summary: post.text,
+      topicType: post.type || 'STANDARD',
+      callToAction: post.cta ? {
+        actionType: post.cta.type || 'LEARN_MORE',
+        url: post.cta.url
+      } : undefined
+    };
+    // Attach photo if provided (GBP supports 1 media item per post)
+    if (post.photo_url) {
+      postData.media = [{ mediaFormat: 'PHOTO', sourceUrl: post.photo_url }];
+    }
     const response = await auth.request({
       url: `https://mybusiness.googleapis.com/v4/${location_name}/localPosts`,
       method: 'POST',
-      data: {
-        languageCode: 'fr-FR',
-        summary: post.text,
-        topicType: post.type || 'STANDARD',
-        callToAction: post.cta ? {
-          actionType: post.cta.type || 'LEARN_MORE',
-          url: post.cta.url
-        } : undefined
-      }
+      data: postData
     });
 
     logAction(req.body.restaurant_id, 'create_post', 'gbp_posts', 'google', 'success', req.body, response.data);
@@ -13311,12 +13316,13 @@ async function generateGooglePost(payload, apiKey) {
     restaurant_name, city, cuisine, tone,
     address, description, rating, review_count, price_level, website,
     chef, opening_year, specialties, menu_items, amenities,
-    reservation_url, order_url, target_keywords
+    reservation_url, order_url, target_keywords, already_generated
   } = payload;
 
   const arr = (city || '').match(/(\d+)e?\s*arr/i)?.[1] || (address || '').match(/750(\d{2})/)?.[1] || '';
   const quartier = (address || '').match(/\d{5}\s+(.+)$/)?.[1] || '';
   const amenityList = amenities && typeof amenities === 'object' ? Object.keys(amenities).filter(k => amenities[k]).join(', ') : '';
+  const antiRepeat = (already_generated || []).length ? `\n\n⚠️ ANTI-RÉPÉTITION — Ces posts ont DÉJÀ été générés pour ce restaurant. Tu DOIS écrire un post COMPLÈTEMENT DIFFÉRENT (sujet, angle, structure, premier mot, émotion):\n${(already_generated || []).map((t,i) => `${i+1}. "${t}"`).join('\n')}\nNe reprends AUCUN mot des 3 premiers mots de ces posts. Change de sujet: si le précédent parlait du plat, parle du chef/de l'ambiance/du quartier/d'un événement/d'un service.` : '';
   const ctaUrl = reservation_url || order_url || website || '';
   const ctaType = reservation_url ? 'BOOK' : order_url ? 'ORDER' : 'LEARN_MORE';
   const todayName = new Date().toLocaleDateString('fr-FR', { weekday: 'long' });
@@ -13419,7 +13425,7 @@ ADAPTATION AU JOUR DE LA SEMAINE
 TYPE DE POST DEMANDÉ: ${tone || 'STANDARD (actualité générale)'}
 ══════════════════════════════════════════
 
-Réponds UNIQUEMENT avec le texte du post, brut, sans guillemets, sans markdown, sans préambule. 1 seul post, 80-300 caractères max.`;
+Réponds UNIQUEMENT avec le texte du post, brut, sans guillemets, sans markdown, sans préambule. 1 seul post, 80-300 caractères max.${antiRepeat}`;
 
   const text = await callClaudeAPI(apiKey, prompt, 600);
   const cleaned = text.trim().replace(/^["']|["']$/g, '').replace(/^Post\s*:\s*/i, '');
@@ -13483,12 +13489,18 @@ app.post('/api/ai/google-posts/pack', async (req, res) => {
     ];
 
     const posts = [];
+    const alreadyGenerated = []; // Track generated posts to force diversity
     for (const v of variants) {
       let result = null;
       for (let attempt = 0; attempt < 3; attempt++) {
-        result = await generateGooglePost({ ...req.body, tone: v.tone }, apiKey);
+        result = await generateGooglePost({
+          ...req.body,
+          tone: v.tone,
+          already_generated: alreadyGenerated // anti-repetition context
+        }, apiKey);
         if (result.success || !result.regenerate) break;
       }
+      if (result?.success && result?.content) alreadyGenerated.push(result.content);
       posts.push({ ...(result || { success: false, error: 'no response' }), gbp_type: v.type });
     }
 
