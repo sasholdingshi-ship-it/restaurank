@@ -139,3 +139,73 @@ model MonthlyExpense {
   amount Float  @default(0)
   @@unique([year, month, type])
 }
+
+model ZeltySale {
+  id           Int      @id @default(autoincrement())
+  year         Int
+  month        Int
+  restaurantId Int      // Yatai Restaurant.id (mapped from Zelty id_restaurant)
+  zeltyId      Int      // Original Zelty restaurant id
+  totalHT      Float    @default(0)  // sum of final_amount_exc_tax (in €)
+  totalTTC     Float    @default(0)  // sum of final_amount_inc_tax (in €)
+  ordersCount  Int      @default(0)
+  eatInTTC     Float    @default(0)
+  takeawayTTC  Float    @default(0)
+  deliveryTTC  Float    @default(0)
+  syncedAt     DateTime @default(now())
+  @@unique([year, month, restaurantId])
+  @@index([year, month])
+}
+
+model ZeltyDishSale {
+  id            Int      @id @default(autoincrement())
+  year          Int
+  month         Int
+  restaurantId  Int      // Yatai Restaurant.id
+  zeltyItemId   Int      // Zelty dish item_id (catalog id, stable across orders)
+  name          String   // Zelty dish name
+  quantity      Int      @default(0)  // total units sold this month
+  yataiProductRef String?  // mapped Yatai Product.ref (if matched)
+  syncedAt      DateTime @default(now())
+  @@unique([year, month, restaurantId, zeltyItemId])
+  @@index([year, month])
+  @@index([yataiProductRef])
+}
+
+// BOM for customer-facing dishes sold via Zelty POS.
+// Sourced from the "Coût Plat" Excel sheet + manually-added à la carte items.
+// One DishBom per dish (e.g. "Ramen Tradi base"), with ingredients that reference
+// labo products (e.g. "Bouillon Porc") by name.
+model DishBom {
+  id                 Int       @id @default(autoincrement())
+  name               String    @unique             // e.g. "Ramen Tradi base"
+  category           String                        // "DONBURI" | "RAMEN" | "TAPAS" | "DESSERT" | "ALA_CARTE"
+  zeltyKeywords      String    @default("[]")      // JSON array of keywords to match Zelty dish names
+  isALaCarte         Boolean   @default(false)
+  ingredients        DishBomIngredient[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model DishBomIngredient {
+  id                    Int     @id @default(autoincrement())
+  dishBomId             Int
+  name                  String               // e.g. "Bouillon Porc", "Œuf Mollet"
+  qtyPerPortion         Float   @default(0)  // quantity consumed per portion sold (kg, unit, etc.)
+  unit                  String?              // "kg", "unit", "L"
+  yataiProductKeywords  String  @default("[]") // JSON array of keywords to match Yatai Rekki product names
+  dishBom               DishBom @relation(fields: [dishBomId], references: [id], onDelete: Cascade)
+  @@index([dishBomId])
+}
+
+// Generic snapshot system for data rollback.
+// Stores a JSON dump of an entity at a point in time so we can restore
+// after a mistake (bad edit, bad import, accidental delete).
+model Snapshot {
+  id        Int      @id @default(autoincrement())
+  entity    String   // "DishBom", "Recipe", "Ingredient", etc.
+  label     String   // Human label: "Avant import", "Auto-save avant edit X", etc.
+  data      String   // JSON dump of all rows for that entity
+  createdAt DateTime @default(now())
+  @@index([entity, createdAt])
+}

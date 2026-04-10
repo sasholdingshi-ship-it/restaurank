@@ -29,13 +29,19 @@ export async function GET(req: NextRequest) {
   let matchedItems = 0
   let unmatchedItems = 0
 
-  const LABO_SIREN = '913995627'
+  // Per-restaurant Rekki cost (labo billings) — used for correlation with Zelty sales
+  const rekkiByRestaurant = new Map<number, { rekkiHT: number; foodCost: number }>()
+
+  const LABO_RESTAURANT_ID = 3 // Yatai Chateaudun (9ème) = labo
   for (const order of orders) {
-    if (order.restaurant.siren === LABO_SIREN) continue // skip labo (no self-invoicing)
+    if (order.restaurantId === LABO_RESTAURANT_ID) continue // skip labo (no self-invoicing)
+    let orderRevenue = 0
+    let orderFoodCost = 0
     for (const item of order.items) {
       const qty = item.quantity
       const unitPrice = item.unitPrice ?? item.product.priceHt ?? 0
       revenue += qty * unitPrice
+      orderRevenue += qty * unitPrice
 
       const recipe = recipeByRef.get(item.product.ref)
       if (recipe) {
@@ -46,6 +52,7 @@ export async function GET(req: NextRequest) {
 
         foodCost += foodCostPerUnit * qty
         staffCostTheo += laborCostPerUnit * qty
+        orderFoodCost += foodCostPerUnit * qty
         matchedItems++
       } else {
         unmatchedItems++
@@ -54,13 +61,61 @@ export async function GET(req: NextRequest) {
     // Add extras to revenue
     for (const extra of (order.extras || [])) {
       revenue += extra.price * extra.quantity
+      orderRevenue += extra.price * extra.quantity
     }
+
+    const prev = rekkiByRestaurant.get(order.restaurantId) || { rekkiHT: 0, foodCost: 0 }
+    rekkiByRestaurant.set(order.restaurantId, {
+      rekkiHT: prev.rekkiHT + orderRevenue,
+      foodCost: prev.foodCost + orderFoodCost,
+    })
   }
 
   // Get manual expenses
   const expenses = await prisma.monthlyExpense.findMany({ where: { year, month } })
   const expenseMap: Record<string, number> = {}
   for (const e of expenses) expenseMap[e.type] = e.amount
+
+  // Get Zelty sales — actual customer POS revenue per restaurant
+  const zeltySales = await prisma.zeltySale.findMany({ where: { year, month } })
+  const zeltyByRestaurant: Record<number, { totalHT: number; totalTTC: number; ordersCount: number; eatInTTC: number; takeawayTTC: number; deliveryTTC: number }> = {}
+  let zeltyTotalHT = 0
+  let zeltyTotalTTC = 0
+  let zeltyOrdersCount = 0
+  for (const z of zeltySales) {
+    zeltyByRestaurant[z.restaurantId] = {
+      totalHT: z.totalHT, totalTTC: z.totalTTC, ordersCount: z.ordersCount,
+      eatInTTC: z.eatInTTC, takeawayTTC: z.takeawayTTC, deliveryTTC: z.deliveryTTC,
+    }
+    // Exclude labo from consolidated CA (Y Chateaudun = labo, restaurantId 3)
+    if (z.restaurantId !== LABO_RESTAURANT_ID) {
+      zeltyTotalHT += z.totalHT
+      zeltyTotalTTC += z.totalTTC
+      zeltyOrdersCount += z.ordersCount
+    }
+  }
+
+  // Per-restaurant correlation: Rekki cost vs Zelty revenue
+  const restaurants = await prisma.restaurant.findMany({ where: { id: { not: LABO_RESTAURANT_ID } }, orderBy: { id: 'asc' } })
+  const correlation = restaurants.map(r => {
+    const rekki = rekkiByRestaurant.get(r.id) || { rekkiHT: 0, foodCost: 0 }
+    const zelty = zeltyByRestaurant[r.id] || { totalHT: 0, totalTTC: 0, ordersCount: 0, eatInTTC: 0, takeawayTTC: 0, deliveryTTC: 0 }
+    const foodCostRatio = zelty.totalHT > 0 ? (rekki.foodCost / zelty.totalHT * 100) : 0
+    const rekkiRatio = zelty.totalHT > 0 ? (rekki.rekkiHT / zelty.totalHT * 100) : 0
+    return {
+      restaurantId: r.id, name: r.name, arrondissement: r.arrondissement,
+      rekkiHT: Math.round(rekki.rekkiHT * 100) / 100,
+      rekkiFoodCost: Math.round(rekki.foodCost * 100) / 100,
+      zeltyHT: Math.round(zelty.totalHT * 100) / 100,
+      zeltyTTC: Math.round(zelty.totalTTC * 100) / 100,
+      zeltyOrders: zelty.ordersCount,
+      zeltyEatIn: Math.round(zelty.eatInTTC * 100) / 100,
+      zeltyTakeaway: Math.round(zelty.takeawayTTC * 100) / 100,
+      zeltyDelivery: Math.round(zelty.deliveryTTC * 100) / 100,
+      foodCostRatio: Math.round(foodCostRatio * 100) / 100,
+      rekkiRatio: Math.round(rekkiRatio * 100) / 100,
+    }
+  })
 
   return NextResponse.json({
     year, month,
@@ -83,5 +138,10 @@ export async function GET(req: NextRequest) {
     matchedItems,
     unmatchedItems,
     hourlyRate: Math.round(hourlyRate * 100) / 100,
+    // Zelty CA (POS réel client, hors labo)
+    zeltyHT: Math.round(zeltyTotalHT * 100) / 100,
+    zeltyTTC: Math.round(zeltyTotalTTC * 100) / 100,
+    zeltyOrdersCount,
+    correlation,
   })
 }

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["@libsql/client"],
+  serverExternalPackages: ["@libsql/client", "pdf-parse"],
   experimental: {
     serverActions: {
       bodySizeLimit: "4mb",

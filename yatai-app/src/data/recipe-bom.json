@@ -1,0 +1,932 @@
+{
+  "Curry Veggie": {
+    "category": "DONBURI",
+    "ingredients": [
+      {
+        "name": "Aubergines",
+        "qty": 0.025
+      },
+      {
+        "name": "Courgette",
+        "qty": 0.025
+      },
+      {
+        "name": "Sauce Curry",
+        "qty": 0.25
+      },
+      {
+        "name": "PDT Grennaile",
+        "qty": 0.05
+      },
+      {
+        "name": "Œuf Mollet",
+        "qty": 1.0
+      },
+      {
+        "name": "Gingembre",
+        "qty": 0.01
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Riz",
+        "qty": 0.006
+      },
+      {
+        "name": "Radis Mariné",
+        "qty": 0.012
+      }
+    ]
+  },
+  "Curry Tonkatsu": {
+    "category": "DONBURI",
+    "ingredients": [
+      {
+        "name": "Tonkatsu",
+        "qty": 0.15
+      },
+      {
+        "name": "Sauce Curry",
+        "qty": 0.25
+      },
+      {
+        "name": "PDT Grennaile",
+        "qty": 0.05
+      },
+      {
+        "name": "Demi Œuf Mollet",
+        "qty": 0.5
+      },
+      {
+        "name": "Radis Mariné",
+        "qty": 0.012
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Gingembre",
+        "qty": 0.01
+      },
+      {
+        "name": "Riz",
+        "qty": 0.006
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Curry Torikatsu": {
+    "category": "DONBURI",
+    "ingredients": [
+      {
+        "name": "Torikatsu",
+        "qty": 0.15
+      },
+      {
+        "name": "PDT Grennaile",
+        "qty": 0.05
+      },
+      {
+        "name": "Sauce Curry",
+        "qty": 0.25
+      },
+      {
+        "name": "Radis Mariné",
+        "qty": 0.012
+      },
+      {
+        "name": "Gingembre",
+        "qty": 0.01
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Riz",
+        "qty": 0.006
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Demi Oeuf Mollet",
+        "qty": 0.5
+      }
+    ]
+  },
+  "Tonkatsu Don": {
+    "category": "DONBURI",
+    "ingredients": [
+      {
+        "name": "Tonkatsu",
+        "qty": 0.15
+      },
+      {
+        "name": "Riz",
+        "qty": 0.006
+      },
+      {
+        "name": "Chou Rapé",
+        "qty": 0.01
+      },
+      {
+        "name": "Demi Oeuf Mollet",
+        "qty": 0.5
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Mayonnaise",
+        "qty": 0.01
+      },
+      {
+        "name": "Sauce Goma",
+        "qty": 0.06
+      },
+      {
+        "name": "Sauce Tonkatsu",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Torikatsu Don": {
+    "category": "DONBURI",
+    "ingredients": [
+      {
+        "name": "Torikatsu",
+        "qty": 0.15
+      },
+      {
+        "name": "Riz",
+        "qty": 0.006
+      },
+      {
+        "name": "Chou Rapé",
+        "qty": 0.01
+      },
+      {
+        "name": "Demi Oeuf Mollet",
+        "qty": 0.5
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Sauce Goma",
+        "qty": 0.06
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Mayonnaise",
+        "qty": 0.01
+      },
+      {
+        "name": "Sauce Tonkatsu",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Donburi Magret": {
+    "category": "DONBURI",
+    "ingredients": [
+      {
+        "name": "magret don",
+        "qty": 0.09
+      },
+      {
+        "name": "riz",
+        "qty": 0.006
+      },
+      {
+        "name": "œuf parfait",
+        "qty": 1.0
+      },
+      {
+        "name": "Sauce Tonkatsu",
+        "qty": 0.02
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Gyudon": {
+    "category": "DONBURI",
+    "ingredients": [
+      {
+        "name": "bœuf gyudon",
+        "qty": 0.1
+      },
+      {
+        "name": "riz",
+        "qty": 0.006
+      },
+      {
+        "name": "œuf parfait",
+        "qty": 1.0
+      },
+      {
+        "name": "cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Gingembre",
+        "qty": 0.01
+      }
+    ]
+  },
+  "Ramen Signature": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "Bouillon Porc",
+        "qty": 0.4
+      },
+      {
+        "name": "Nouille Bio",
+        "qty": 0.12
+      },
+      {
+        "name": "Wagyu sur place",
+        "qty": 1.0
+      },
+      {
+        "name": "Oeuf Mollet",
+        "qty": 1.0
+      },
+      {
+        "name": "Truffe",
+        "qty": 0.003
+      },
+      {
+        "name": "Enoki",
+        "qty": 0.02
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Nori",
+        "qty": 0.01
+      },
+      {
+        "name": "Huile Truffe",
+        "qty": 0.003
+      },
+      {
+        "name": "Shoyu Tare",
+        "qty": 0.02
+      },
+      {
+        "name": "Foie gras",
+        "qty": 0.04
+      }
+    ]
+  },
+  "Ramen Tradi base": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "Bouillon Porc",
+        "qty": 0.4
+      },
+      {
+        "name": "Nouille Bio",
+        "qty": 0.12
+      },
+      {
+        "name": "Huile Han",
+        "qty": 0.01
+      },
+      {
+        "name": "Bambou",
+        "qty": 0.05
+      },
+      {
+        "name": "Porc Chashu",
+        "qty": 0.075
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Shoyu Tare",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Ramen Tradi Spé": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "Bouillon Porc",
+        "qty": 0.4
+      },
+      {
+        "name": "Nouille Bio",
+        "qty": 0.12
+      },
+      {
+        "name": "Huile Han",
+        "qty": 0.01
+      },
+      {
+        "name": "Bambou",
+        "qty": 0.05
+      },
+      {
+        "name": "Porc Chashu Spé",
+        "qty": 0.15
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Oeuf Mollet",
+        "qty": 1.0
+      },
+      {
+        "name": "Nori",
+        "qty": 0.01
+      },
+      {
+        "name": "Shoyu tare",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Ramen Moment Base": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "Poulet Chashu",
+        "qty": 0.08
+      },
+      {
+        "name": "Asperge",
+        "qty": 0.2785
+      },
+      {
+        "name": "Poulet Spicy Miso",
+        "qty": 0.03
+      },
+      {
+        "name": "Bouillon poulet",
+        "qty": 0.4
+      },
+      {
+        "name": "huile poireau",
+        "qty": 0.01
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "shio tare",
+        "qty": 0.02
+      },
+      {
+        "name": "Nouille Bio",
+        "qty": 0.12
+      }
+    ]
+  },
+  "Ramen Moment Spé": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "Poulet Chashu Spé",
+        "qty": 0.11
+      },
+      {
+        "name": "Asperge",
+        "qty": 0.2785
+      },
+      {
+        "name": "Poulet Spicy Miso",
+        "qty": 0.03
+      },
+      {
+        "name": "Bouillon poulet",
+        "qty": 0.4
+      },
+      {
+        "name": "huile poireau",
+        "qty": 0.01
+      },
+      {
+        "name": "shio tare",
+        "qty": 0.02
+      },
+      {
+        "name": "Nouille Bio",
+        "qty": 0.12
+      },
+      {
+        "name": "Oeuf Mollet",
+        "qty": 1.0
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Nori",
+        "qty": 0.01
+      }
+    ]
+  },
+  "Ramen Veggie Base": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "Miso tare",
+        "qty": 0.04
+      },
+      {
+        "name": "Bouillon Veggie",
+        "qty": 0.45
+      },
+      {
+        "name": "Bambou",
+        "qty": 0.05
+      },
+      {
+        "name": "Shiitake",
+        "qty": 0.03
+      },
+      {
+        "name": "Soja",
+        "qty": 0.035
+      },
+      {
+        "name": "Nouille Bio",
+        "qty": 0.12
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Ramen Veggie Spé": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "Miso tare",
+        "qty": 0.04
+      },
+      {
+        "name": "Bouillon Veggie",
+        "qty": 0.45
+      },
+      {
+        "name": "Bambou",
+        "qty": 0.05
+      },
+      {
+        "name": "Shiitake",
+        "qty": 0.03
+      },
+      {
+        "name": "Soja",
+        "qty": 0.035
+      },
+      {
+        "name": "Nouille Bio",
+        "qty": 0.12
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Choufleur",
+        "qty": 0.04
+      },
+      {
+        "name": "Oeuf Mollet",
+        "qty": 1.0
+      },
+      {
+        "name": "Nori",
+        "qty": 0.01
+      }
+    ]
+  },
+  "Ramen Bœuf Tomate Base": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "bœuf gyudon base",
+        "qty": 0.06
+      },
+      {
+        "name": "bouillon tomate",
+        "qty": 0.4
+      },
+      {
+        "name": "soja",
+        "qty": 0.035
+      },
+      {
+        "name": "cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "filament de piment",
+        "qty": 0.01
+      },
+      {
+        "name": "tomate confite base",
+        "qty": 0.015
+      },
+      {
+        "name": "Oeuf Mollet",
+        "qty": 1.0
+      }
+    ]
+  },
+  "Ramen Bœuf Tomate Spé": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "bœuf gyudon spé",
+        "qty": 0.08
+      },
+      {
+        "name": "bouillon tomate",
+        "qty": 0.4
+      },
+      {
+        "name": "soja",
+        "qty": 0.035
+      },
+      {
+        "name": "cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "filament de piment",
+        "qty": 0.01
+      },
+      {
+        "name": "tomate confite spé",
+        "qty": 0.02
+      },
+      {
+        "name": "Oeuf Mollet",
+        "qty": 1.0
+      },
+      {
+        "name": "nori",
+        "qty": 0.01
+      }
+    ]
+  },
+  "Hiyashi": {
+    "category": "RAMEN",
+    "ingredients": [
+      {
+        "name": "nouille temomi",
+        "qty": 0.02
+      },
+      {
+        "name": "concombre hiyashi",
+        "qty": 0.05
+      },
+      {
+        "name": "omelette",
+        "qty": 0.06
+      },
+      {
+        "name": "poulet hiyashi",
+        "qty": 0.1
+      },
+      {
+        "name": "sauce hiyashi",
+        "qty": 0.04
+      },
+      {
+        "name": "sauce tomate hiyashi",
+        "qty": 0.25
+      },
+      {
+        "name": "cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "filament de piment",
+        "qty": 0.01
+      },
+      {
+        "name": "citron",
+        "qty": 0.02
+      },
+      {
+        "name": "tomate cerise",
+        "qty": 0.01
+      }
+    ]
+  },
+  "Gyoza Porc": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "Gyoza porc",
+        "qty": 5.0
+      },
+      {
+        "name": "Tuile gyoza",
+        "qty": 0.015
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Gyoza Veggie": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "Gyoza Veggie",
+        "qty": 5.0
+      },
+      {
+        "name": "Tuile gyoza",
+        "qty": 0.015
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Magret Slice": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "Magret",
+        "qty": 0.055
+      },
+      {
+        "name": "Sauce Tonkatsu",
+        "qty": 0.02
+      },
+      {
+        "name": "Miso pesto",
+        "qty": 0.01
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Concombre Goma": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "Concombre",
+        "qty": 0.065
+      },
+      {
+        "name": "Furikake",
+        "qty": 0.02
+      },
+      {
+        "name": "Filament Nori",
+        "qty": 0.01
+      },
+      {
+        "name": "Sauce Goma",
+        "qty": 0.06
+      },
+      {
+        "name": "Pignon de pain",
+        "qty": 0.01
+      }
+    ]
+  },
+  "Karaage": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "karaage",
+        "qty": 0.25
+      },
+      {
+        "name": "Salade Mesclun",
+        "qty": 0.01
+      },
+      {
+        "name": "Citron",
+        "qty": 0.02
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      },
+      {
+        "name": "Mayonnaise",
+        "qty": 0.01
+      }
+    ]
+  },
+  "Spicy Karaage": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "karaage",
+        "qty": 0.25
+      },
+      {
+        "name": "Pickle Daikon",
+        "qty": 0.02
+      },
+      {
+        "name": "Sauce Spicy Karaage",
+        "qty": 0.13
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Tonkatsu": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "Tonkatsu",
+        "qty": 0.15
+      },
+      {
+        "name": "Mayonnaise",
+        "qty": 0.01
+      },
+      {
+        "name": "Sauce Tonkatsu",
+        "qty": 0.02
+      },
+      {
+        "name": "Chou rapé",
+        "qty": 0.01
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Torikatsu": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "Torikatsu",
+        "qty": 0.15
+      },
+      {
+        "name": "Mayonnaise",
+        "qty": 0.01
+      },
+      {
+        "name": "Sauce Tonkatsu",
+        "qty": 0.02
+      },
+      {
+        "name": "Chou rapé",
+        "qty": 0.01
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Cebette",
+        "qty": 0.02
+      }
+    ]
+  },
+  "Gyoza Salade Porc": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "Gyoza Porc Salade",
+        "qty": 8.0
+      },
+      {
+        "name": "Salade Mesclun",
+        "qty": 0.01
+      },
+      {
+        "name": "Shiitake",
+        "qty": 0.03
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Sauce Goma",
+        "qty": 0.06
+      }
+    ]
+  },
+  "Gyoza Salade Veggie": {
+    "category": "TAPAS",
+    "ingredients": [
+      {
+        "name": "Gyoza Veggie Salade",
+        "qty": 8.0
+      },
+      {
+        "name": "Salade Mesclun",
+        "qty": 0.01
+      },
+      {
+        "name": "Shiitake",
+        "qty": 0.03
+      },
+      {
+        "name": "Tomate Cerise",
+        "qty": 0.01
+      },
+      {
+        "name": "Sauce Goma",
+        "qty": 0.06
+      }
+    ]
+  },
+  "Mochi Matcha": {
+    "category": "DESSERT",
+    "ingredients": [
+      {
+        "name": "Pate mochi",
+        "qty": 1.0
+      },
+      {
+        "name": "Mousse matcha",
+        "qty": 0.05
+      },
+      {
+        "name": "Azuki",
+        "qty": 0.015
+      }
+    ]
+  },
+  "Fondant Matcha": {
+    "category": "DESSERT",
+    "ingredients": [
+      {
+        "name": "Frambroise",
+        "qty": 0.01
+      },
+      {
+        "name": "Fondant Matcha",
+        "qty": 1.0
+      }
+    ]
+  },
+  "Cheesecake": {
+    "category": "DESSERT",
+    "ingredients": [
+      {
+        "name": "Cheesecake",
+        "qty": 1.0
+      }
+    ]
+  }
+}
