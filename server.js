@@ -8628,20 +8628,34 @@ Règles :
 - Signe "L'équipe ${ctx.name}"
 En français.`,
 
-  google_post: (ctx) => `Tu es un community manager pour le restaurant "${ctx.name}" à ${ctx.city}. Génère un Google Post engageant.
+  google_post: (ctx) => `Tu écris un Google Post pour "${ctx.name}" à ${ctx.city} (cuisine ${ctx.cuisine || 'non précisé'}). Tu es le restaurateur, pas un community manager.
 
-Type de post : ${ctx.postType || 'actualité'}
-Sujet : ${ctx.subject || 'Plat du jour / Actualité'}
-Cuisine : ${ctx.cuisine || 'Non spécifié'}
+Type: ${ctx.postType || 'actualité'} — Sujet: ${ctx.subject || 'plat du jour'}
+${ctx.specialties ? 'Plats signatures: ' + ctx.specialties : ''}
+${ctx.chef ? 'Chef: ' + ctx.chef : ''}
+${ctx.opening_year ? 'Ouvert depuis: ' + ctx.opening_year : ''}
 
-Règles :
-- Max 300 mots (Google tronque au-delà)
-- Commence par un emoji accrocheur
-- Inclus un CTA (Réservez, Découvrez, Venez...)
-- Mots-clés SEO locaux naturels
-- Hashtags pertinents (3-5 max)
-- Ton enthousiaste mais authentique
-En français.`,
+CONTRAINTES TECHNIQUES:
+- 80-300 caractères (pas mots) — Google tronque au-delà
+- 1 seul emoji max, en début (ou aucun)
+- AUCUN hashtag (Google les ignore et flag spam)
+- AUCUN lien ni numéro de téléphone (Google supprime le post)
+- CTA intégré naturellement à la dernière phrase
+
+ANTI-BAN GOOGLE:
+❌ Mots interdits: "incroyable", "magique", "unique", "à ne pas manquer", "must-try", "RÉSERVEZ MAINTENANT"
+❌ Pas de mention de note ("noté X étoiles", "le meilleur") — Google interdit l'auto-promo sur la note
+❌ Pas de "100%", "garantie", "offre exclusive", "dernière chance" (déclencheurs spam)
+❌ Pas de prix précis sauf si offre réelle
+❌ Pas de keyword stuffing (chaque mot-clé MAX 1 fois)
+
+ANTI-DÉTECTION IA:
+❌ Formules à bannir: "Plongez dans...", "Laissez-vous transporter...", "Au cœur de...", "Notre équipe passionnée...", "Produits frais et de saison", "Cuisine généreuse et authentique", "À deux pas de..."
+✅ Patterns humains: phrases courtes irrégulières, détails ultra-spécifiques (durée de cuisson, prénom fournisseur, ingrédient précis), tournures parlées ("On a refait...", "Cette semaine c'est...")
+
+RÈGLE D'OR: le post NE DOIT PAS être interchangeable avec un autre restaurant. Mentionne 1 fait spécifique de CE resto (plat, chef, année, quartier).
+
+Réponds UNIQUEMENT avec le texte du post brut, sans guillemets, sans markdown.`,
 
   faq_content: (ctx) => `Tu es un expert SEO pour restaurants. Génère 10 questions/réponses FAQ optimisées pour le restaurant "${ctx.name}" à ${ctx.city}.
 
@@ -13225,37 +13239,195 @@ app.post('/api/gbp/special-hours', async (req, res) => {
 // ============================================================
 // AI SOCIAL CONTENT GENERATION
 // ============================================================
+// Reusable Google Post generator — used by both single-post and pack endpoints
+async function generateGooglePost(payload, apiKey) {
+  const {
+    restaurant_name, city, cuisine, tone,
+    address, description, rating, review_count, price_level, website,
+    chef, opening_year, specialties, menu_items, amenities,
+    reservation_url, order_url, target_keywords
+  } = payload;
+
+  const arr = (city || '').match(/(\d+)e?\s*arr/i)?.[1] || (address || '').match(/750(\d{2})/)?.[1] || '';
+  const quartier = (address || '').match(/\d{5}\s+(.+)$/)?.[1] || '';
+  const amenityList = amenities && typeof amenities === 'object' ? Object.keys(amenities).filter(k => amenities[k]).join(', ') : '';
+  const ctaUrl = reservation_url || order_url || website || '';
+  const ctaType = reservation_url ? 'BOOK' : order_url ? 'ORDER' : 'LEARN_MORE';
+  const todayName = new Date().toLocaleDateString('fr-FR', { weekday: 'long' });
+  const month = new Date().toLocaleDateString('fr-FR', { month: 'long' });
+  const year = new Date().getFullYear();
+
+    // ═══════════════════════════════════════════════════════════
+    // UNIFIED GOOGLE POST PROMPT — Hub Central + anti-ban + anti-AI-detection
+    // Generates a SINGLE post (use /api/ai/google-posts/pack for 5)
+    // ═══════════════════════════════════════════════════════════
+    const prompt = `Tu écris un Google Post pour "${restaurant_name}" sur Google Business Profile. Tu es le restaurateur lui-même qui partage une actualité authentique — pas un community manager, pas une agence.
+
+CONTEXTE RESTAURANT (Hub Central — utilise EXACTEMENT ces faits, n'invente RIEN):
+- Nom: ${restaurant_name}
+- Ville: ${city || 'non précisé'}${arr ? ` (${arr}e arrondissement)` : ''}
+- Quartier: ${quartier || 'non précisé'}
+- Adresse: ${address || 'non précisée'}
+- Cuisine: ${cuisine || 'non spécifié'}
+- Description officielle: ${description || 'non fournie'}
+- Plats signatures: ${specialties || 'non précisé'}
+- Items du menu: ${(menu_items || []).slice(0, 8).join(', ') || 'non fourni'}
+- Note Google actuelle: ${rating || 'N/A'}/5 (${review_count || 0} avis)
+- Fourchette de prix: ${price_level ? '€'.repeat(Math.max(1, price_level)) : 'non précisé'}
+- Chef: ${chef || 'non précisé'}
+- Année d'ouverture: ${opening_year || 'non précisé'}
+- Services: ${amenityList || 'non précisé'}
+- Réservation possible: ${reservation_url ? 'oui' : 'non'}
+- Livraison/Commande: ${order_url ? 'oui' : 'non'}
+- Mots-clés cibles SEO: ${(target_keywords || []).slice(0, 5).map(k => k.kw || k).join(', ') || 'aucun'}
+- Date du jour: ${todayName} ${new Date().getDate()} ${month} ${year}
+- Plateforme: Google Business Profile (visible dans la fiche Google Maps + recherche locale)
+
+══════════════════════════════════════════
+CONTRAINTES TECHNIQUES GOOGLE BUSINESS POSTS
+══════════════════════════════════════════
+- Longueur RÉELLE: 80-300 caractères (pas 300 mots) — Google tronque tout le reste à "...Voir plus"
+- Format: 1-3 phrases courtes, MAXIMUM 1 emoji en début (pas 5, pas 10 — UN SEUL ou aucun)
+- CTA obligatoire intégré naturellement à la dernière phrase (pas séparé)
+- AUCUN hashtag à la fin (Google les ignore + ça fait "post Instagram" au lieu de Google natif)
+- AUCUN lien dans le texte (Google a un bouton CTA séparé qui sera ajouté automatiquement)
+- AUCUN emoji décoratif au milieu du texte (1 seul, en début, et seulement si naturel)
+
+══════════════════════════════════════════
+ANTI-BAN GOOGLE — règles strictes (Google flag les comptes spam)
+══════════════════════════════════════════
+❌ JAMAIS de superlatifs creux: "incroyable", "magique", "unique", "exceptionnel", "à ne pas manquer", "must-try"
+❌ JAMAIS de mots déclencheurs spam: "gratuit", "promotion exclusive", "offre limitée", "dernière chance", "100%", "garantie"
+❌ JAMAIS de répétition de mots-clés (keyword stuffing) — chaque mot-clé apparaît MAX 1 fois
+❌ JAMAIS d'URL dans le texte (Google supprime le post)
+❌ JAMAIS de numéro de téléphone dans le texte (interdit par les guidelines GBP)
+❌ JAMAIS d'emoji multiples (😍🔥✨💯) — Google flag comme spam
+❌ JAMAIS de "RÉSERVEZ MAINTENANT", "VENEZ VITE", "DÉCOUVREZ NOTRE" (CTA en majuscules = spam)
+❌ JAMAIS de prix précis sauf si c'est une offre réelle (mentir sur les prix = ban GBP immédiat)
+❌ JAMAIS de mention de notes/avis ("noté 5 étoiles", "le meilleur") — Google interdit l'auto-promotion sur la note
+
+══════════════════════════════════════════
+ANTI-DÉTECTION IA (GPTZero, Originality, ZeroGPT, et le détecteur interne Google)
+══════════════════════════════════════════
+❌ JAMAIS ces formules typiques d'IA:
+- "Plongez dans l'univers de..."
+- "Laissez-vous transporter..."
+- "Une expérience inoubliable..."
+- "Au cœur de [ville]..."
+- "Notre équipe passionnée..."
+- "Des produits frais et de saison..."
+- "Cuisine généreuse et authentique..."
+- "Dans une ambiance chaleureuse..."
+- "À deux pas de..."
+
+✅ À LA PLACE — utilise ces patterns humains:
+- Phrases incomplètes ou suspendues ("Tonkotsu prêt depuis 6h ce matin.")
+- Détails ultra-spécifiques (poids, durée, ingrédient précis, prénom du fournisseur)
+- Tournures parlées ("On a refait notre...", "Cette semaine c'est...")
+- Variations de longueur de phrase (1 courte, 1 longue, 1 moyenne)
+- 1 imperfection volontaire (virgule manquante, syntaxe orale)
+- Référence à une vraie info du contexte (chef, année, plat signature, quartier)
+
+══════════════════════════════════════════
+RÈGLES DE PERSONNALISATION OBLIGATOIRES
+══════════════════════════════════════════
+1. Le post DOIT mentionner au moins 1 fait spécifique de ce restaurant:
+   - Soit un plat signature exact (${specialties || 'à inventer si rien fourni'})
+   - Soit le nom du chef (${chef || ''})
+   - Soit l'année d'ouverture (${opening_year || ''})
+   - Soit un service spécifique (${amenityList || ''})
+2. Le post DOIT être pertinent pour ${todayName} (jour de la semaine) — pas un texte intemporel
+3. Le post NE DOIT PAS être interchangeable avec un autre restaurant (test: si tu remplaces le nom, ça ne doit plus marcher)
+4. Le post DOIT inclure 1 mot-clé cible (parmi: ${(target_keywords || []).slice(0, 3).map(k => k.kw || k).join(', ') || 'cuisine + ville/quartier'}) de manière 100% naturelle
+
+══════════════════════════════════════════
+ADAPTATION AU JOUR DE LA SEMAINE
+══════════════════════════════════════════
+- Lundi: arrivages, nouveau menu, équipe qui revient
+- Mardi-Jeudi: plat du moment, suggestion du chef, formule midi
+- Vendredi: ambiance week-end, soirée, événement à venir
+- Samedi: brunch, déjeuner, menu spécial
+- Dimanche: réservation pour la semaine, repos, retour lundi
+
+══════════════════════════════════════════
+TYPE DE POST DEMANDÉ: ${tone || 'STANDARD (actualité générale)'}
+══════════════════════════════════════════
+
+Réponds UNIQUEMENT avec le texte du post, brut, sans guillemets, sans markdown, sans préambule. 1 seul post, 80-300 caractères max.`;
+
+  const text = await callClaudeAPI(apiKey, prompt, 600);
+  const cleaned = text.trim().replace(/^["']|["']$/g, '').replace(/^Post\s*:\s*/i, '');
+
+  // Anti-spam validation: reject if it contains banned patterns
+  const bannedPatterns = [
+    { rx: /https?:\/\//i, name: 'URL' },
+    { rx: /www\./i, name: 'www' },
+    { rx: /\b\d{2}[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}[\s.]?\d{2}\b/, name: 'téléphone' },
+    { rx: /RÉSERVEZ\s+MAINTENANT|VENEZ\s+VITE|CLIQUEZ/i, name: 'CTA majuscules' },
+    { rx: /(?:[\u{1F300}-\u{1F9FF}][\s\S]*?){3,}/u, name: '3+ emojis' },
+    { rx: /noté\s+\d|étoiles?\s+sur|meilleur(e)?\s+restaurant/i, name: 'auto-promo note/avis' }
+  ];
+  const failed = bannedPatterns.find(p => p.rx.test(cleaned));
+  if (failed) return { success: false, error: `Post rejeté par anti-spam: ${failed.name}`, regenerate: true };
+  if (cleaned.length < 50 || cleaned.length > 320) {
+    return { success: false, error: `Post hors limites (${cleaned.length} car., target 80-300)`, regenerate: true };
+  }
+
+  return {
+    success: true,
+    content: cleaned,
+    source: 'ai',
+    cta_type: ctaType,
+    cta_url: ctaUrl,
+    char_count: cleaned.length,
+    type: tone || 'STANDARD'
+  };
+}
+
 app.post('/api/ai/social-content', async (req, res) => {
   try {
-    const { restaurant_id, restaurant_name, city, cuisine, tone, platform } = req.body;
     const apiKey = getAIKey();
-    if (apiKey) {
-      const prompt = `Tu es un expert en marketing digital pour restaurants. Génère un post ${platform || 'Google Business'} pour le restaurant "${restaurant_name}" (cuisine ${cuisine || 'française'}) à ${city || 'Paris'}.
+    if (!apiKey) return res.json({ success: false, error: 'Clé IA non configurée. La génération de posts nécessite ANTHROPIC_API_KEY côté serveur.' });
 
-Règles :
-- Ton ${tone || 'professionnel et chaleureux'}
-- Maximum 300 caractères
-- Inclus 2-3 émojis pertinents
-- Inclus 1-2 hashtags locaux
-- Le post doit donner envie de venir
-- Adapté au jour actuel (${new Date().toLocaleDateString('fr-FR', {weekday:'long'})})
-- Pas de guillemets autour du texte
-
-Réponds UNIQUEMENT avec le texte du post, rien d'autre.`;
-      try {
-        const text = await callClaudeAPI(apiKey, prompt, 400);
-        return res.json({ success: true, content: text.trim(), source: 'ai' });
-      } catch(e) { console.log('AI social content error:', e.message); }
+    // Try up to 3 times if anti-spam filter rejects
+    for (let attempt = 0; attempt < 3; attempt++) {
+      const result = await generateGooglePost(req.body, apiKey);
+      if (result.success || !result.regenerate) return res.json(result);
     }
-    const day = new Date().getDay();
-    const name = restaurant_name || 'notre restaurant';
-    const templates = [
-      `🍽️ Nouvelle semaine chez ${name} à ${city} ! Notre chef propose des créations ${cuisine} avec des produits de saison. #${(name||'').replace(/\s+/g,'')} #restaurant${city}`,
-      `✨ Ce ${['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][day]} chez ${name}, vivez une expérience ${cuisine} unique au cœur de ${city}. Réservez ! 🥂`,
-      `🔥 Envie de bien manger ? ${name} vous accueille à ${city} — cuisine ${cuisine} raffinée, produits frais, ambiance chaleureuse. #bonneadresse`
+    return res.json({ success: false, error: 'Impossible de générer un post conforme après 3 tentatives' });
+  } catch (e) {
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════
+// PACK — Generate 5 varied Google Posts in one call (rotates types)
+// ═══════════════════════════════════════════════════════════════
+app.post('/api/ai/google-posts/pack', async (req, res) => {
+  try {
+    const apiKey = getAIKey();
+    if (!apiKey) return res.json({ success: false, error: 'Clé IA non configurée' });
+
+    const variants = [
+      { type: 'STANDARD', tone: 'STANDARD — actualité de la semaine, plat du moment, atmosphère' },
+      { type: 'STANDARD', tone: 'STANDARD — mise en avant chef ou histoire/année de fondation' },
+      { type: 'EVENT', tone: 'EVENT — événement, soirée à thème, journée spéciale, jour férié approchant' },
+      { type: 'OFFER', tone: 'OFFER — offre réelle (formule midi, happy hour, menu découverte) sans mentir sur les prix' },
+      { type: 'STANDARD', tone: 'STANDARD — service spécifique mis en avant (terrasse, livraison, vegan, brunch)' }
     ];
-    res.json({ success: true, content: templates[day % templates.length], source: 'template' });
-  } catch(e) {
+
+    const posts = [];
+    for (const v of variants) {
+      let result = null;
+      for (let attempt = 0; attempt < 3; attempt++) {
+        result = await generateGooglePost({ ...req.body, tone: v.tone }, apiKey);
+        if (result.success || !result.regenerate) break;
+      }
+      posts.push({ ...(result || { success: false, error: 'no response' }), gbp_type: v.type });
+    }
+
+    res.json({ success: true, posts, generated: posts.filter(p => p.success).length, total: variants.length });
+  } catch (e) {
     res.status(500).json({ success: false, error: e.message });
   }
 });

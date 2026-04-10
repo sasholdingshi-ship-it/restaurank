@@ -5144,35 +5144,95 @@ async function autoReplyAllReviews(){
     addToLog(`✅ ${unanswered.length} réponses SEO générées`);
 }
 
-// SOCIAL PANEL — SEO-optimized Google Posts
+// SOCIAL PANEL — Generate ONE Google Post via AI (Hub Central + anti-ban + anti-AI-detection)
 async function generateSocialContent(){
     const t=document.getElementById('socialContent');
-    const name=currentData?.name||storedName||'notre restaurant';
-    const city=currentData?.city||storedCity||'Paris';
-    const cuisine=currentData?.cuisine||'gastronomique';
+    if(!t)return;
+    const hub=getHubData();
+    const name=hub.name||currentData?.name||storedName||'';
+    if(!name){alert('Aucun restaurant chargé');return;}
     t.value='⏳ Génération IA en cours…';
     t.disabled=true;
     try{
         const rid=currentData?.restaurant_id||0;
-        const resp=await fetchTimeout(`${API_BASE}/api/ai/social-content`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,restaurant_name:name,city,cuisine,platform:'Google Business'})},12000);
+        const payload={
+            restaurant_id:rid,
+            restaurant_name:name,
+            city:hub.city||currentData?.city||storedCity||'',
+            cuisine:hub.category||currentData?.cuisine||'',
+            address:hub.address,
+            description:hub.description,
+            rating:hub.rating,
+            review_count:hub.review_count,
+            price_level:hub.price_level,
+            website:hub.website,
+            chef:hub.chef,
+            opening_year:hub.opening_year,
+            specialties:hub.specialties||currentData?.specialties||'',
+            menu_items:hub.menu_items||[],
+            amenities:hub.amenities||{},
+            reservation_url:hub.reservation_url||'',
+            order_url:hub.order_url||'',
+            target_keywords:window._targetKeywords||[],
+            platform:'Google Business'
+        };
+        const resp=await fetchTimeout(`${API_BASE}/api/ai/social-content`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},20000);
         const data=await resp.json();
         if(data.success&&data.content){
             t.value=data.content;
             t.disabled=false;
-            addToLog('✨ Post social généré'+(data.source==='ai'?' par IA':' (template)'));
+            addToLog(`✨ Google Post généré (${data.char_count} car., type ${data.type||'STANDARD'})`);
             return;
         }
-    }catch(e){console.log('Social content API error:',e.message);}
-    // Fallback local si le serveur est indisponible
-    const day=new Date().getDay();
-    const fallbacks=[
-        `🍽️ Nouvelle semaine chez ${name} à ${city} ! Cuisine ${cuisine} avec des produits de saison. #${name.replace(/\s+/g,'')} #restaurant${city}`,
-        `✨ Ce ${['dimanche','lundi','mardi','mercredi','jeudi','vendredi','samedi'][day]} chez ${name}, vivez une expérience ${cuisine} unique à ${city}. Réservez ! 🥂`,
-        `🔥 Envie de bien manger ? ${name} à ${city} — cuisine ${cuisine} raffinée, produits frais. #bonneadresse`
-    ];
-    t.value=fallbacks[day%fallbacks.length];
-    t.disabled=false;
-    addToLog('✨ Post social généré (template local)');
+        t.value='';
+        t.disabled=false;
+        addToLog('⚠️ '+(data.error||'Erreur de génération'));
+        showToast('Erreur: '+(data.error||'Génération échouée'),'error');
+    }catch(e){
+        console.log('Social content API error:',e.message);
+        t.value='';
+        t.disabled=false;
+        showToast('Erreur réseau: '+e.message,'error');
+    }
+}
+
+// Generate a PACK of 5 varied Google Posts (STANDARD/EVENT/OFFER mix)
+async function generateGooglePostPack(){
+    const hub=getHubData();
+    const name=hub.name||currentData?.name||'';
+    if(!name){alert('Aucun restaurant chargé');return;}
+    const container=document.getElementById('googlePostsList');
+    if(container)container.innerHTML='<div style="text-align:center;padding:30px;color:var(--mut);"><span class="spinner-sm"></span> Génération de 5 posts en cours… (~30 sec)</div>';
+    try{
+        const rid=currentData?.restaurant_id||0;
+        const payload={
+            restaurant_id:rid,restaurant_name:name,
+            city:hub.city||currentData?.city||'',cuisine:hub.category||currentData?.cuisine||'',
+            address:hub.address,description:hub.description,rating:hub.rating,review_count:hub.review_count,
+            price_level:hub.price_level,website:hub.website,chef:hub.chef,opening_year:hub.opening_year,
+            specialties:hub.specialties||'',menu_items:hub.menu_items||[],amenities:hub.amenities||{},
+            reservation_url:hub.reservation_url||'',order_url:hub.order_url||'',
+            target_keywords:window._targetKeywords||[]
+        };
+        const resp=await fetchTimeout(`${API_BASE}/api/ai/google-posts/pack`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)},90000);
+        const data=await resp.json();
+        if(!data.success){
+            if(container)container.innerHTML='<div style="text-align:center;padding:24px;color:var(--red);">Erreur: '+(data.error||'Génération échouée')+'</div>';
+            return;
+        }
+        // Save successful posts as drafts to DB
+        const successful=(data.posts||[]).filter(p=>p.success);
+        for(const p of successful){
+            try{
+                await fetchTimeout(`${API_BASE}/api/posts/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,post_type:p.gbp_type||'STANDARD',content:p.content,status:'draft'})},5000);
+            }catch(e){}
+        }
+        addToLog(`⚡ Pack Google Posts généré: ${successful.length}/${data.total} posts (anti-ban + anti-AI-detection)`);
+        showToast(`✅ ${successful.length} posts ajoutés en brouillon`,'success');
+        renderGooglePostsList();
+    }catch(e){
+        if(container)container.innerHTML='<div style="text-align:center;padding:24px;color:var(--red);">Erreur réseau: '+e.message+'</div>';
+    }
 }
 
 async function publishSocialPost(){
@@ -9898,11 +9958,13 @@ async function renderGooglePostsList(){
     }catch(e){}
     
     if(posts.length===0){
-        posts=[
-            {date:'2026-03-22',text:'Nouveau menu printemps en ligne ! 🌸 Découvrez nos plats de saison préparés avec les meilleurs ingrédients locaux.',status:'Publié'},
-            {date:'2026-03-20',text:'Profitez de notre happy hour tous les jeudis de 17h à 19h ! 🍷 -30% sur les verres de vin sélectionnés',status:'Publié'},
-            {date:'2026-03-15',text:'Grand événement le 28 mars : soirée dégustation à 4 mains avec le chef pâtissier réputé ! Réservez maintenant 🎉',status:'Brouillon'}
-        ];
+        // No fake fallback — empty state with CTA to generate real posts via AI
+        container.innerHTML=`<div style="text-align:center;padding:24px;color:var(--mut);">
+            <div style="font-size:.9rem;margin-bottom:6px;">Aucun Google Post pour ce restaurant.</div>
+            <div style="font-size:.7rem;margin-bottom:14px;">Génère 5 posts variés (STANDARD/EVENT/OFFER) adaptés à ton restaurant via l'IA — anti-ban Google + anti-détection IA.</div>
+            <button class="btn-gen" style="font-size:.75rem;padding:8px 16px;" onclick="generateGooglePostPack()">⚡ Générer 5 posts ciblés (IA)</button>
+        </div>`;
+        return;
     }
     
     let html='';
