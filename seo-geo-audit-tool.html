@@ -1100,12 +1100,6 @@
                 <small>Obtenez votre Client ID depuis <a href="https://console.cloud.google.com" style="color:var(--ind);">Google Cloud Console</a>. Scopes requis : business.manage</small>
             </div>
             
-            <div class="settings-group" style="background:linear-gradient(135deg,rgba(99,102,241,.08),rgba(139,92,246,.08));border:1px solid rgba(99,102,241,.2);border-radius:12px;padding:14px;">
-                <label style="display:flex;align-items:center;gap:6px;">🤖 Claude API Key <span style="padding:2px 8px;border-radius:4px;background:linear-gradient(135deg,var(--ind),#8b5cf6);color:#fff;font-size:.6rem;font-weight:700;">IA POWER</span></label>
-                <input type="password" id="settingsClaudeApiKey" placeholder="sk-ant-...">
-                <small>Active la génération IA personnalisée pour TOUT le contenu (descriptions, avis, posts, FAQ, schema.org). <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--ind);">Obtenir une clé</a></small>
-                <div id="aiKeyStatus" style="font-size:.7rem;margin-top:4px;"></div>
-            </div>
 
             <div class="settings-group">
                 <label>🏪 Nom du restaurant</label>
@@ -1131,8 +1125,7 @@
 
             <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
                 <button class="btn-dispatch-all" onclick="saveSettings()">💾 Enregistrer les paramètres</button>
-                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,var(--ind),#8b5cf6);color:#fff;" onclick="testAndSaveAIKey()">🤖 Tester la clé IA</button>
-                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;" onclick="bulkGenerateAI().then(r=>{if(r)alert('Contenu IA généré pour toutes les catégories !');else alert('Erreur — vérifiez la clé API');})">⚡ Tout générer avec l'IA</button>
+                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;" onclick="bulkGenerateAI().then(r=>{if(r)alert('Contenu IA généré pour toutes les catégories !');else alert('Erreur de génération — contactez le support');})">⚡ Tout générer avec l'IA</button>
             </div>
             <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
                 <button class="btn-dispatch-all" style="background:linear-gradient(135deg,var(--cyn),#0891b2);color:#fff;" onclick="exportData()">📤 Exporter les données</button>

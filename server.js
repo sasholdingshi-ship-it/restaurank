@@ -6275,7 +6275,7 @@ app.post('/api/directories/push-all', async (req, res) => {
 // REVIEW RESPONSE — Multi-platform (Google, TripAdvisor, TheFork, Uber Eats, Deliveroo, etc.)
 app.post('/api/reviews/auto-respond', async (req, res) => {
   const { restaurant_id, platform, review_id, review_text, review_rating, reviewer_name } = req.body;
-  const apiKey = getAIKey(restaurant_id);
+  const apiKey = getAIKey();
   if (!apiKey) return res.json({ success: false, error: 'Clé API IA requise' });
 
   const restoName = req.body.restaurant_name || 'Notre restaurant';
@@ -9159,17 +9159,10 @@ async function callClaudeAPI(apiKey, prompt, maxTokens = 2000) {
 }
 
 // Get API key from settings or env
-function getAIKey(restaurantId) {
-  try {
-    const row = db.prepare("SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = 'ai_api_key'").get(restaurantId || 0);
-    if (row) { const d = JSON.parse(row.data); if (d.claude_key) return d.claude_key; }
-  } catch(e) {}
-  // Fallback to global setting
-  try {
-    const row = db.prepare("SELECT data FROM restaurant_settings WHERE type = 'ai_api_key' LIMIT 1").get();
-    if (row) { const d = JSON.parse(row.data); if (d.claude_key) return d.claude_key; }
-  } catch(e) {}
-  return process.env.CLAUDE_API_KEY || process.env.ANTHROPIC_API_KEY || null;
+function getAIKey() {
+  // Single source of truth: server env var (managed by RestauRank admin only)
+  // Clients cannot configure their own key — keeps cost control + version consistency.
+  return process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || null;
 }
 
 // POST /api/ai/generate — Universal AI content generation
@@ -9178,7 +9171,7 @@ app.post('/api/ai/generate', async (req, res) => {
     const { type, context, restaurant_id } = req.body;
     if (!type || !context) return res.status(400).json({ success: false, error: 'type and context required' });
 
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key', message: 'Clé API Claude non configurée. Allez dans Paramètres → Claude API Key.' });
 
     const promptFn = AI_PROMPTS[type];
@@ -9217,7 +9210,7 @@ app.post('/api/ai/generate', async (req, res) => {
 app.post('/api/ai/review-reply', async (req, res) => {
   try {
     const { restaurant_id, reviewText, rating, reviewerName } = req.body;
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key' });
 
     // Get restaurant info
@@ -9238,7 +9231,7 @@ app.post('/api/ai/review-reply', async (req, res) => {
 app.post('/api/ai/bulk-generate', async (req, res) => {
   try {
     const { restaurant_id, context } = req.body;
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key' });
 
     const types = ['gbp_description','meta_tags','faq_content','schema_org','directory_descriptions','social_calendar'];
@@ -9273,17 +9266,13 @@ app.post('/api/ai/bulk-generate', async (req, res) => {
   }
 });
 
-// POST /api/ai/save-key — Store API key securely
+// POST /api/ai/save-key — DEPRECATED. AI key is now managed centrally via ANTHROPIC_API_KEY env var.
 app.post('/api/ai/save-key', (req, res) => {
-  const { restaurant_id, claude_key } = req.body;
-  if (!claude_key) return res.status(400).json({ success: false, error: 'claude_key required' });
-  try {
-    db.prepare(`INSERT OR REPLACE INTO restaurant_settings (restaurant_id, type, data, updated_at) VALUES (?, 'ai_api_key', ?, datetime('now'))`)
-      .run(restaurant_id || 0, JSON.stringify({ claude_key }));
-    res.json({ success: true });
-  } catch(e) {
-    res.status(500).json({ success: false, error: e.message });
-  }
+  res.status(410).json({
+    success: false,
+    error: 'deprecated',
+    message: 'La configuration de clé IA par client a été supprimée. La clé Anthropic est désormais gérée centralement par RestauRank.'
+  });
 });
 
 // GET /api/ai/cached/:type/:restaurant_id — Get cached AI content
@@ -9762,7 +9751,7 @@ app.get('/api/directories/api-keys/:restaurant_id', (req, res) => {
 app.post('/api/directories/sync-all', async (req, res) => {
   try {
     const { restaurant_id, context } = req.body;
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
 
     // Generate optimized descriptions for all platforms
     let descriptions = {};
@@ -9932,7 +9921,7 @@ app.post('/api/onboard', requireAuth, async (req, res) => {
 
   // ── STEP 6: Generate AI content (if API key available) ──
   try {
-    const aiKey = getAIKey(restaurantId);
+    const aiKey = getAIKey();
     if (aiKey) {
       const context = {
         name, city, cuisine: cuisine || results.gmb_data?.types?.join(', ') || 'restaurant',
@@ -11432,7 +11421,7 @@ app.post('/api/agent/launch', async (req, res) => {
   if (!restaurant_name || !city) return res.status(400).json({ success: false, error: 'restaurant_name and city required' });
 
   // API key is OPTIONAL — deterministic engine works without it
-  const apiKey = getAIKey(restaurant_id);
+  const apiKey = getAIKey();
 
   // Create run
   const result = db.prepare('INSERT INTO agent_runs (restaurant_name, city, website_url, restaurant_id, status, stage) VALUES (?, ?, ?, ?, ?, ?)')
@@ -12445,7 +12434,7 @@ app.post('/api/ai-test/single', async (req, res) => {
     const { restaurant_id, platform, prompt, restaurant_name, city, cuisine } = req.body;
     if (!platform || !prompt) return res.status(400).json({ success: false, error: 'platform and prompt required' });
 
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key', message: 'Clé API Claude requise pour tester la visibilité IA' });
 
     // Build the analysis prompt — we ask Claude to predict how the target platform would answer
@@ -12512,7 +12501,7 @@ app.post('/api/ai-test/matrix', async (req, res) => {
     const proms = prompts || [];
     if (proms.length === 0) return res.status(400).json({ success: false, error: 'At least one prompt required' });
 
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) return res.status(400).json({ success: false, error: 'no_api_key' });
 
     const results = [];
@@ -12625,7 +12614,7 @@ app.post('/api/competitors/discover', async (req, res) => {
     const { restaurant_id, restaurant_name, city, cuisine, address } = req.body;
     if (!restaurant_name || !city) return res.status(400).json({ success: false, error: 'restaurant_name and city required' });
 
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) {
       return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour l\'analyse concurrentielle' });
     }
@@ -12680,7 +12669,7 @@ app.post('/api/competitors/compare', async (req, res) => {
     const { restaurant_id, restaurant_name, competitor_name, city, cuisine } = req.body;
     if (!restaurant_name || !competitor_name) return res.status(400).json({ success: false, error: 'Both restaurant names required' });
 
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) {
       return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour la comparaison' });
     }
@@ -12749,7 +12738,7 @@ app.post('/api/benchmark', async (req, res) => {
     const ratingS = rating || 0;
     const reviewsS = reviews || 0;
 
-    const apiKey = getAIKey(0);
+    const apiKey = getAIKey();
     if (apiKey) {
       // Use AI for real benchmark analysis
       const prompt = `Tu es un analyste SEO local expert. Compare les métriques du restaurant "${restaurant_name}" à ${city} (cuisine: ${cat}) avec les moyennes réelles du secteur en France.
@@ -12891,7 +12880,7 @@ app.post('/api/geo/rrf-score', async (req, res) => {
 // ============================================================
 app.post('/api/geo/schema-menu', async (req, res) => {
   const { restaurant_name, city, cuisine, restaurant_id } = req.body;
-  const apiKey = getAIKey(restaurant_id);
+  const apiKey = getAIKey();
   if (!apiKey) return res.json({ success: false, error: 'Clé API IA requise' });
   try {
     const prompt = `Pour "${restaurant_name}" à ${city} (${cuisine || 'français'}), génère un Schema.org Menu JSON-LD valide. 3-4 sections, 4-6 items/section. Prix réalistes en EUR. Retourne UNIQUEMENT le JSON:
@@ -12922,7 +12911,7 @@ app.post('/api/geo/sameas', async (req, res) => {
 // ============================================================
 app.post('/api/geo/pitch-press', async (req, res) => {
   const { restaurant_name, city, cuisine, rating, restaurant_id, target_emails } = req.body;
-  const apiKey = getAIKey(restaurant_id);
+  const apiKey = getAIKey();
   if (!apiKey) return res.json({ success: false, error: 'Clé API IA requise' });
   try {
     const prompt = `Génère un email de pitch PR food pour "${restaurant_name}" (${cuisine}) à ${city}, note ${rating}/5. Destiné à un food blogger. En français. 200 mots. Format: OBJET---SEPARATOR---CORPS---SEPARATOR---SIGNATURE`;
@@ -12945,7 +12934,7 @@ app.post('/api/geo/pitch-press', async (req, res) => {
 // ============================================================
 app.post('/api/geo/unique-claims', async (req, res) => {
   const { restaurant_name, city, cuisine, rating, reviews, restaurant_id } = req.body;
-  const apiKey = getAIKey(restaurant_id);
+  const apiKey = getAIKey();
   if (!apiKey) return res.json({ success: false, error: 'Clé API IA requise' });
   try {
     const prompt = `Pour "${restaurant_name}" à ${city} (${cuisine}, ${rating}/5, ${reviews} avis), génère 10 "unique claims" citables par les IA. JSON array: [{"claim":"...","type":"stat|award|process|heritage|sourcing","citation_score":1-10}]. Réalistes pour un ${cuisine} à ${city}.`;
@@ -12970,7 +12959,7 @@ app.post('/api/weekly-report', requireAuth, async (req, res) => {
     const name = restaurant?.name || 'Votre restaurant';
 
     // Build report with AI
-    const apiKey = getAIKey(rid);
+    const apiKey = getAIKey();
     let reportHtml = '';
     if (apiKey) {
       const prompt = `Génère un rapport hebdomadaire SEO/GEO concis en HTML pour "${name}".
@@ -13012,7 +13001,7 @@ app.post('/api/sentiment/analyze', async (req, res) => {
   try {
     const { restaurant_id, restaurant_name, reviews_sample } = req.body;
 
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) {
       return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour l\'analyse de sentiment' });
     }
@@ -13239,7 +13228,7 @@ app.post('/api/gbp/special-hours', async (req, res) => {
 app.post('/api/ai/social-content', async (req, res) => {
   try {
     const { restaurant_id, restaurant_name, city, cuisine, tone, platform } = req.body;
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (apiKey) {
       const prompt = `Tu es un expert en marketing digital pour restaurants. Génère un post ${platform || 'Google Business'} pour le restaurant "${restaurant_name}" (cuisine ${cuisine || 'française'}) à ${city || 'Paris'}.
 
@@ -13348,7 +13337,7 @@ app.post('/api/ai/keywords', async (req, res) => {
       chef, opening_year, specialties, menu_items, amenities, payment_methods,
       reservation_provider, order_provider, neighborhood
     } = req.body;
-    const apiKey = getAIKey(restaurant_id);
+    const apiKey = getAIKey();
     if (!apiKey) {
       return res.json({ success: false, error: 'Clé IA requise pour générer des mots-clés ciblés. Configurez votre clé Anthropic dans Settings.' });
     }

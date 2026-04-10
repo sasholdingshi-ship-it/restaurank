@@ -3056,17 +3056,9 @@ async function generateContentAI(itemId,name,city,data){
     }
 }
 
-// Check if AI key is configured
-async function hasAIKey(){
-    try{
-        const resp=await fetchTimeout(`${API_BASE}/api/ai/cached/gbp_description/0`,{},3000);
-        // If we can reach the server, check for key
-        const keyResp=await fetchTimeout(`${API_BASE}/api/settings/ai_api_key`,{},3000);
-        const json=await keyResp.json();
-        if(json.success&&json.data?.claude_key) return true;
-    }catch(e){}
-    return false;
-}
+// AI key is now managed centrally on the server (ANTHROPIC_API_KEY env var).
+// Always assume it's configured — if not, the server will return an explicit error per request.
+async function hasAIKey(){ return true; }
 
 // Bulk generate all AI content for current restaurant
 async function bulkGenerateAI(){
@@ -3103,17 +3095,8 @@ async function bulkGenerateAI(){
     return null;
 }
 
-// Save Claude API key
-async function saveClaudeApiKey(key){
-    try{
-        const resp=await fetchTimeout(`${API_BASE}/api/ai/save-key`,{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({restaurant_id:currentData?.restaurantId||0,claude_key:key})
-        },5000);
-        return (await resp.json()).success;
-    }catch(e){return false;}
-}
+// DEPRECATED: AI key is managed centrally on the server, clients can't configure their own.
+async function saveClaudeApiKey(){ return false; }
 
 // ============================================================
 // PLATFORM LINKS — direct links to take action
@@ -5473,16 +5456,11 @@ function dispatchAllActions(){
 // SETTINGS PANEL
 async function saveSettings(){
     const clientId=document.getElementById('settingsGoogleClientId').value.trim();
-    const claudeKey=document.getElementById('settingsClaudeApiKey').value.trim();
+    // Claude API key is no longer client-configurable — managed centrally via ANTHROPIC_API_KEY env var
     const restoName=document.getElementById('settingsRestoName').value.trim();
     const city=document.getElementById('settingsCity').value.trim();
     const cuisine=document.getElementById('settingsCuisine')?.value.trim()||'';
     const specialties=document.getElementById('settingsSpecialties')?.value.trim()||'';
-
-    // Save AI key separately (secure storage)
-    if(claudeKey){
-        await saveClaudeApiKey(claudeKey);
-    }
 
     // Save to server
     const uid=getUserId();
@@ -5622,40 +5600,8 @@ async function loadDirectoryApiKeys(){
     }catch(e){}
 }
 
-// Test and save AI key
-async function testAndSaveAIKey(){
-    const key=document.getElementById('settingsClaudeApiKey').value.trim();
-    const status=document.getElementById('aiKeyStatus');
-    if(!key){status.innerHTML='<span style="color:var(--red);">❌ Entrez une clé API</span>';return;}
-
-    status.innerHTML='<span style="color:var(--org);">🔄 Test en cours...</span>';
-
-    try{
-        // Save the key first
-        await saveClaudeApiKey(key);
-
-        // Test with a simple generation
-        const resp=await fetchTimeout(`${API_BASE}/api/ai/generate`,{
-            method:'POST',
-            headers:{'Content-Type':'application/json'},
-            body:JSON.stringify({
-                type:'meta_tags',
-                context:{name:currentData?.name||'Test Restaurant',city:currentData?.city||'Paris'},
-                restaurant_id:currentData?.restaurantId||0
-            })
-        },15000);
-        const json=await resp.json();
-        if(json.success){
-            status.innerHTML='<span style="color:var(--grn);">✅ Clé valide ! L\'IA est prête à générer du contenu personnalisé.</span>';
-            // Clear AI cache to use fresh key
-            Object.keys(_aiContentCache).forEach(k=>delete _aiContentCache[k]);
-        }else{
-            status.innerHTML=`<span style="color:var(--red);">❌ Erreur : ${json.error||json.message}</span>`;
-        }
-    }catch(e){
-        status.innerHTML=`<span style="color:var(--red);">❌ ${e.message}</span>`;
-    }
-}
+// DEPRECATED: AI key is centrally managed via ANTHROPIC_API_KEY env var on the server.
+async function testAndSaveAIKey(){ console.warn('testAndSaveAIKey is deprecated — AI key is managed server-side'); }
 
 function exportData(){
     const name=currentData?.name||storedName||'restaurant';
