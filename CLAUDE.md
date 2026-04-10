@@ -210,17 +210,29 @@ Resend API (RESEND_API_KEY) → SMTP Nodemailer (SMTP_HOST) → console dev_log
 
 ## ⏳ En attente / À faire
 
-- **GBP API access** : ticket #6569000040778 (2026-03-22)
+- **Meta App Review** (~1-2 semaines) — pour `pages_manage_posts` + `instagram_content_publish` en Standard. Privacy policy URL publique + screencast démo requis
 - **Stripe Price IDs** : créer les plans dans Stripe dashboard
 - **Apple Sign-In** : créer Service ID dans Apple Developer ($99/an)
 - **Domaine email custom** : vérifier domaine dans Resend
-- **Tests automatisés** : aucun test existant
+- **Régénérer secrets leakés** (META_APP_SECRET, OPENPAGERANK_API_KEY) — voir security_rotate_secrets.md
+
+## ✅ Résolu session 2026-04-10
+
+- DB persistante : Render disk `/data` + Neon PG sync 5min, 8 tables synchronisées (`db-adapter.js`)
+- Frontend split : 1388 lignes HTML + public/styles.css + public/app.js
+- Tests : `npm test` (7 smoke tests, node:test)
+- Hub Central SSOT : `getHubData()` 40+ champs, source unique pour blog/Reddit/annuaires
+- Special hours : table dédiée + push GBP + détection trous 30j + jours fériés FR dynamiques (algo Meeus)
+- Meta OAuth : app `RestauRank` (id `965770446105058`) live, env vars Render configurés, bouton Hub Central
+- Logo detection : 6 stratégies (apple-touch-icon, header img, CSS bg, top 10KB, og:image, etc.)
+- Domain Authority : Moz prioritaire + OpenPageRank fallback gratuit (1000 req/jour)
+- `main` ↔ `main-sync` réconciliées sur `daedeff`
 
 ## 🐛 Problèmes connus
 
 - Render cold start ~30s après 15 min d'inactivité
 - SMTP bloqué sur Render → contourné via Resend
-- SQLite reset à chaque deploy Render → contourné via PG sync backup
+- ~~SQLite reset à chaque deploy Render~~ → résolu : disque `/data` + PG sync
 
 ---
 
