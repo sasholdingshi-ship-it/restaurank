@@ -444,7 +444,7 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;-moz-use
 .gen-copy-btn:hover{border-color:var(--cyn);background:var(--s4);}
 .gen-copy-btn.copied{border-color:var(--grn);color:var(--grn);background:rgba(16,185,129,.1);}
 .gen-block-body{padding:16px;font-size:.84rem;line-height:1.7;color:var(--txt);white-space:pre-wrap;max-height:300px;overflow-y:auto;}
-.gen-block-body code{display:block;background:var(--bg);border:1px solid var(--s3);border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:.72rem;line-height:1.5;overflow-x:auto;white-space:pre;color:var(--cyn);max-height:250px;overflow-y:auto;}
+.gen-block-body code{display:block;background:#f8e5db;border:1px solid #031c331a;border-radius:8px;padding:14px;font-family:'JetBrains Mono',monospace;font-size:.72rem;line-height:1.5;overflow-x:auto;white-space:pre;color:#353233;max-height:250px;overflow-y:auto;}
 .gen-block-body .preview{background:var(--s3);border-radius:8px;padding:12px;font-family:inherit;font-size:.82rem;}
 
 /* Action tabs in modal */
