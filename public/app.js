@@ -2183,7 +2183,7 @@ function renderDashboard(){
         const div=document.createElement('div');
         div.className=`sub-score${activeCategory===cat.id?' active':''}`;
         div.onclick=()=>{activeCategory=cat.id;renderDashboard();};
-        div.innerHTML=`<div class="sub-score-header"><span class="sub-score-icon">${cat.icon}</span><span class="sub-score-name">${cat.name}</span></div><div class="sub-score-val" style="color:${color}">${cs.pct}<span style="font-size:.8rem;color:var(--mut);">/100</span></div><div class="sub-score-bar"><div class="sub-score-bar-fill" style="width:${cs.pct}%;background:${color};"></div></div>${badgeHtml}`;
+        div.innerHTML=`<div class="sub-score-header"><span class="sub-score-name">${cat.name}</span></div><div class="sub-score-val" style="color:${color}">${cs.pct}<span style="font-size:.8rem;color:var(--mut);">/100</span></div><div class="sub-score-bar"><div class="sub-score-bar-fill" style="width:${cs.pct}%;background:${color};"></div></div>${badgeHtml}`;
         subEl.appendChild(div);
     });
 
@@ -2195,7 +2195,7 @@ function renderDashboard(){
     const warnC=cat.items.filter(i=>i.status==='warn').length;
     const okC=cat.items.filter(i=>i.status==='ok').length;
 
-    let html=`<div class="detail-section"><div class="detail-title">${cat.icon} ${cat.name} <span style="font-size:.8rem;color:var(--mut);font-weight:400;">— ${cat.weight}%</span></div><div class="detail-sub">${cat.desc}<br><span style="color:var(--red);">${errC} critique${errC>1?'s':''}</span> · <span style="color:var(--org);">${warnC} avert.</span> · <span style="color:var(--grn);">${okC} OK</span></div>`;
+    let html=`<div class="detail-section"><div class="detail-title">${cat.name} <span style="font-size:.8rem;color:var(--mut);font-weight:400;">— ${cat.weight}%</span></div><div class="detail-sub">${cat.desc}<br><span style="color:var(--red);">${errC} critique${errC>1?'s':''}</span> · <span style="color:var(--org);">${warnC} avert.</span> · <span style="color:var(--grn);">${okC} OK</span></div>`;
 
     // GEO test prompts
     if(activeMainTab==='geo'&&activeCategory===CATEGORIES.filter(c=>c.group==='geo')[0]?.id){
@@ -5725,7 +5725,7 @@ function doExport(format){
         let items='';
         if(currentScores?.categories){
             Object.values(currentScores.categories).forEach(cat=>{
-                items+=`<h3 style="margin-top:20px;">${cat.icon||''} ${cat.name||''}</h3><table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><th style="text-align:left;padding:6px;border-bottom:2px solid #6366f1;">Item</th><th style="padding:6px;border-bottom:2px solid #6366f1;">Score</th><th style="padding:6px;border-bottom:2px solid #6366f1;">Statut</th></tr>`;
+                items+=`<h3 style="margin-top:20px;">${cat.name||''}</h3><table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><th style="text-align:left;padding:6px;border-bottom:2px solid #6366f1;">Item</th><th style="padding:6px;border-bottom:2px solid #6366f1;">Score</th><th style="padding:6px;border-bottom:2px solid #6366f1;">Statut</th></tr>`;
                 (cat.items||[]).forEach(it=>{
                     const color=it.status==='ok'?'#10b981':it.status==='warn'?'#f59e0b':'#ef4444';
                     items+=`<tr><td style="padding:6px;border-bottom:1px solid #eee;">${it.name}</td><td style="padding:6px;text-align:center;border-bottom:1px solid #eee;">${it.score}/10</td><td style="padding:6px;text-align:center;border-bottom:1px solid #eee;color:${color};font-weight:700;">${it.status==='ok'?'':it.status==='warn'?'':''}</td></tr>`;
@@ -6057,7 +6057,7 @@ function renderDirAutoGrid(){
 
         // Auto-sync category: show as connected summary strip (like Malou)
         if(cat==='auto'){
-            html+=`<div class="dir-category-title">${catInfo.icon} ${catInfo.title}</div>`;
+            html+=`<div class="dir-category-title">${catInfo.title}</div>`;
             html+=`<div class="dir-connected-strip">
                 <span class="strip-text">${autoConnected} plateformes connectées et mises à jour automatiquement</span>
                 <div class="strip-icons">${autoPlats.slice(0,8).map(d=>`<span class="strip-icon" title="${d.name}">${d.icon}</span>`).join('')}
@@ -6067,7 +6067,7 @@ function renderDirAutoGrid(){
             continue;
         }
 
-        html+=`<div class="dir-category-title">${catInfo.icon} ${catInfo.title}</div>`;
+        html+=`<div class="dir-category-title">${catInfo.title}</div>`;
         html+=`<div class="dir-category-grid">`;
 
         for(const d of platforms){
