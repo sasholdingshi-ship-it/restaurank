@@ -1232,3 +1232,21 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
 
 /* Hide action buttons for non-admin users — shown via JS for admins */
 .admin-action-only{display:none;}
+
+/* Fix invisible buttons on beige backgrounds — force dark border */
+.dash-tab-content.active .btn-gen,
+#groupDash .btn-gen,
+#landing .btn-gen,
+.hub-section .btn-gen{
+  background:#f8e5db !important;
+  border:1px solid #031c3340 !important;
+  color:#031c33 !important;
+}
+.dash-tab-content.active .btn-gen:hover,
+#groupDash .btn-gen:hover,
+#landing .btn-gen:hover,
+.hub-section .btn-gen:hover{
+  background:#f04b2e !important;
+  border-color:#f04b2e !important;
+  color:#f8e5db !important;
+}
