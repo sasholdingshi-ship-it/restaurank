@@ -8609,14 +8609,28 @@ app.delete('/api/restaurants/:id', (req, res) => {
 
 // AI prompt templates per content type
 const AI_PROMPTS = {
-  gbp_description: (ctx) => `Tu es un expert SEO local pour restaurants. Génère une description Google Business Profile optimisée (max 750 caractères) pour :
-Restaurant : ${ctx.name}
-Ville : ${ctx.city}
-Cuisine : ${ctx.cuisine || 'Non spécifié'}
-Spécialités : ${ctx.specialties || 'Non spécifié'}
-Ambiance : ${ctx.ambiance || 'Chaleureuse et conviviale'}
+  gbp_description: (ctx) => `Génère une description Google Business Profile (max 750 caractères) pour "${ctx.name}" à ${ctx.city}.
 
-Inclus des mots-clés locaux, le type de cuisine, les services (terrasse, livraison, réservation). Ton professionnel mais chaleureux. En français.`,
+CONTEXTE (Hub Central — EXACTEMENT ces faits):
+- Cuisine: ${ctx.cuisine || 'non spécifié'}
+- Description: ${ctx.description || ''}
+- Plats signatures: ${ctx.specialties || ''}
+- Chef: ${ctx.chef || ''}
+- Ouvert depuis: ${ctx.openingYear || ''}
+- Services: ${(ctx.amenities || []).join(', ') || ''}
+- Quartier: ${ctx.address || ''}
+- Note: ${ctx.rating || 'N/A'}/5 (${ctx.reviewCount || 0} avis)
+
+RÈGLES:
+- 750 caractères MAX (Google tronque)
+- 1 mention du quartier/arrondissement
+- 1 mention du type de cuisine
+- 1 fait différenciant (plat, chef, année)
+- Pas de superlatifs creux, pas de "Au coeur de", pas de "Notre équipe passionnée"
+- Pas de numéro de téléphone ni d'URL (interdit par Google)
+- NAP: utilise le nom "${ctx.name}" exactement comme écrit
+- Ton: professionnel, factuel, ni marketing ni froid
+En français.`,
 
   review_response: (ctx) => `Tu es le gérant du restaurant "${ctx.name}" à ${ctx.city}. Rédige une réponse professionnelle et personnalisée à cet avis Google :
 
@@ -8757,74 +8771,112 @@ RÈGLES STRICTES:
 5. Le JSON DOIT être valide et parsable par JSON.parse()
 6. Retourne UNIQUEMENT le JSON, aucun texte autour, pas de markdown, pas de code block`,
 
-  meta_tags: (ctx) => `Génère des meta tags SEO optimisés pour le restaurant "${ctx.name}" à ${ctx.city}.
-Cuisine : ${ctx.cuisine || ''}
-Spécialité : ${ctx.specialties || ''}
+  meta_tags: (ctx) => `Génère des meta tags SEO pour "${ctx.name}" à ${ctx.city}.
 
-Retourne en JSON :
-{
-  "title": "... (max 60 car.)",
-  "description": "... (max 155 car.)",
-  "og_title": "...",
-  "og_description": "...",
-  "keywords": "mot1, mot2, ..."
-}`,
+CONTEXTE:
+- Cuisine: ${ctx.cuisine || ''}
+- Plats: ${ctx.specialties || ''}
+- Quartier: ${ctx.address || ''}
+- Chef: ${ctx.chef || ''}
+- Note: ${ctx.rating || ''}/5
+- Prix: ${ctx.priceLevel ? '€'.repeat(Math.max(1,ctx.priceLevel)) : ''}
 
-  social_calendar: (ctx) => `Tu es un social media manager pour le restaurant "${ctx.name}" à ${ctx.city}. Génère un calendrier éditorial pour 1 semaine (7 jours).
+RÈGLES:
+- title: max 60 car., inclut nom + cuisine + ville
+- description: max 155 car., 1 fait différenciant (plat, chef, quartier), CTA implicite
+- Pas de superlatifs ("meilleur", "incroyable", "unique")
+- Mots-clés = ce que les gens cherchent réellement ("restaurant [cuisine] [ville]", "réserver [nom]")
 
-Cuisine : ${ctx.cuisine || 'Non spécifié'}
+Retourne en JSON strict:
+{"title":"...","description":"...","og_title":"...","og_description":"...","keywords":"..."}`,
 
-Pour chaque jour donne :
-- Plateforme (Instagram / Facebook / Google Post / TikTok)
-- Heure de publication optimale
-- Type de contenu (photo, reel, story, post)
-- Sujet / idée
-- Texte du post (prêt à copier-coller)
-- Hashtags
+  social_calendar: (ctx) => `Génère un calendrier éditorial 7 jours pour "${ctx.name}" à ${ctx.city} (cuisine ${ctx.cuisine || 'non précisé'}).
 
-Retourne en JSON : [{"day":"Lundi","platform":"...","time":"...","type":"...","subject":"...","text":"...","hashtags":"..."}]`,
+CONTEXTE:
+- Plats: ${ctx.specialties || ''}
+- Chef: ${ctx.chef || ''}
+- Services: ${(ctx.amenities || []).join(', ') || ''}
+- Note: ${ctx.rating || ''}/5
+- Réservation: ${ctx.reservation ? 'oui' : 'non'}
+- Livraison: ${ctx.order ? 'oui' : 'non'}
 
-  yelp_description: (ctx) => `Génère une description optimisée pour la fiche Yelp du restaurant "${ctx.name}" à ${ctx.city}.
-Cuisine : ${ctx.cuisine || ''}
-Spécialités : ${ctx.specialties || ''}
-Max 1500 caractères. Inclus des mots-clés que les gens cherchent sur Yelp. En français et en anglais (bilingue car Yelp est international).`,
+RÈGLES:
+- Varier les plateformes (Google Post, Instagram, Facebook — alterner)
+- Chaque post adapté au jour (lundi=rentrée, vendredi=soirée, dimanche=brunch)
+- Textes prêts à publier, 80-200 caractères, ton authentique
+- Pas de hashtags sur Google Post (interdit)
+- Pas de superlatifs creux
+- Chaque post mentionne 1 fait spécifique du restaurant (plat, chef, quartier)
+- AUCUN emoji
 
-  directory_descriptions: (ctx) => `Génère les descriptions optimisées pour TOUTES les plateformes d'annuaires pour le restaurant "${ctx.name}" à ${ctx.city}.
-Cuisine : ${ctx.cuisine || ''}
-Spécialités : ${ctx.specialties || ''}
-Téléphone : ${ctx.phone || ''}
-Site web : ${ctx.website || ''}
+Retourne en JSON strict: [{"day":"Lundi","platform":"...","time":"...","type":"...","subject":"...","text":"..."}]`,
 
-Retourne en JSON avec une clé par plateforme :
-{
-  "google": "... (max 750 car.)",
-  "yelp": "... (max 1500 car.)",
-  "tripadvisor": "... (max 1000 car.)",
-  "foursquare": "... (max 500 car.)",
-  "pagesjaunes": "... (max 400 car.)",
-  "thefork": "... (max 800 car.)",
-  "apple": "... (max 500 car.)",
-  "bing": "... (max 750 car.)"
-}
-Chaque description adaptée au style de la plateforme. En français.`,
+  yelp_description: (ctx) => `Génère une description Yelp pour "${ctx.name}" à ${ctx.city}.
 
-  full_audit_content: (ctx) => `Tu es un consultant SEO local et GEO (Generative Engine Optimization) expert pour restaurants.
+CONTEXTE:
+- Cuisine: ${ctx.cuisine || ''}
+- Plats: ${ctx.specialties || ''}
+- Chef: ${ctx.chef || ''}
+- Quartier: ${ctx.address || ''}
+- Note: ${ctx.rating || ''}/5 (${ctx.reviewCount || 0} avis)
+- Services: ${(ctx.amenities || []).join(', ') || ''}
+- Prix: ${ctx.priceLevel ? '€'.repeat(Math.max(1,ctx.priceLevel)) : ''}
 
-Restaurant : ${ctx.name}
-Ville : ${ctx.city}
-Cuisine : ${ctx.cuisine || 'Non spécifié'}
-Site web : ${ctx.website || 'Non spécifié'}
-Note Google : ${ctx.rating || 'N/A'}
-Problèmes détectés : ${ctx.issues || 'Aucun'}
+RÈGLES:
+- Max 1500 caractères
+- Bilingue FR + EN (Yelp est international)
+- Mots-clés recherchés sur Yelp: [cuisine] [ville], [plat signature], [quartier]
+- Ton factuel et descriptif (pas marketing)
+- 1 fait différenciant par langue
+- NAP: nom exactement comme écrit
+- Pas de superlatifs`,
 
-Génère des recommandations d'amélioration CONCRÈTES et PERSONNALISÉES pour chaque problème. Pas de conseils génériques — du contenu prêt à copier-coller.
+  directory_descriptions: (ctx) => `Génère les descriptions pour 8 annuaires pour "${ctx.name}" à ${ctx.city}.
 
-Retourne en JSON :
-{
-  "itemId1": {"title": "...", "content": "... (HTML avec <strong>, <code>, etc.)"},
-  "itemId2": {"title": "...", "content": "..."}
-}
-Inclus les corrections exactes, le code à ajouter, les textes à copier.`,
+CONTEXTE (Hub Central):
+- Cuisine: ${ctx.cuisine || ''}
+- Plats: ${ctx.specialties || ''}
+- Quartier: ${ctx.address || ''}
+- Téléphone: ${ctx.phone || ''}
+- Site: ${ctx.website || ''}
+- Chef: ${ctx.chef || ''}
+- Note: ${ctx.rating || ''}/5
+- Services: ${(ctx.amenities || []).join(', ') || ''}
+
+RÈGLES PAR PLATEFORME:
+- google (750 car.): factuel, mots-clés locaux, pas de tel/URL
+- yelp (1500 car.): bilingue FR+EN, ton communautaire
+- tripadvisor (1000 car.): ton voyageur, mentionner quartier/accès
+- foursquare (500 car.): court, pratique, check-in style
+- pagesjaunes (400 car.): formel, services listés
+- thefork (800 car.): focus menu/réservation, prix moyen
+- apple (500 car.): épuré, factuel
+- bing (750 car.): proche Google, mots-clés SEO
+
+RÈGLE COMMUNE: NAP identique partout ("${ctx.name}" exact), 1 fait spécifique par plateforme, pas de superlatifs.
+
+Retourne en JSON strict: {"google":"...","yelp":"...","tripadvisor":"...","foursquare":"...","pagesjaunes":"...","thefork":"...","apple":"...","bing":"..."}`,
+
+  full_audit_content: (ctx) => `Génère des recommandations SEO+GEO concrètes pour "${ctx.name}" à ${ctx.city}.
+
+CONTEXTE:
+- Cuisine: ${ctx.cuisine || 'non spécifié'}
+- Site: ${ctx.website || 'non spécifié'}
+- Note: ${ctx.rating || 'N/A'}/5 (${ctx.reviewCount || 0} avis)
+- Description: ${ctx.description || ''}
+- Plats: ${ctx.specialties || ''}
+- Chef: ${ctx.chef || ''}
+- Services: ${(ctx.amenities || []).join(', ') || ''}
+- Problèmes détectés: ${ctx.issues || 'Aucun'}
+
+RÈGLES:
+- Chaque recommandation = contenu prêt à copier-coller (pas de conseils génériques)
+- Inclure le code exact (schema.org, meta tags, etc.) quand applicable
+- Personnaliser avec les données du restaurant (nom, plats, quartier)
+- NAP: "${ctx.name}" exactement comme écrit
+
+Retourne en JSON strict:
+{"itemId1":{"title":"...","content":"... (HTML)"},"itemId2":{"title":"...","content":"..."}}`,
 
   blog: (ctx) => `Tu es un expert en SEO local + GEO (Generative Engine Optimization) pour restaurants. Tu écris un article de blog qui doit être cité par Google, ChatGPT, Perplexity, Gemini et Claude.
 
