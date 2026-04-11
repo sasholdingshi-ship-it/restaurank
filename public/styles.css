@@ -130,8 +130,8 @@ h3,.chart-title{font-size:1rem;}
 
 /* LANDING — rice-paper with beige cards on top */
 #landing{border-radius:8px;margin:68px 16px 16px;color:var(--txt);}
-.dash-header{padding:20px 24px;border-bottom:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:var(--bg);}
-.dash-logo{font-size:1.1rem;font-weight:800;background:#f04b2e;-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
+.dash-header{padding:16px 24px;border-bottom:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#f8e5db;border-radius:8px;margin:16px 16px 0;color:#031c33;}
+.dash-logo{font-size:1.1rem;font-weight:800;color:#f04b2e;}
 .dash-resto{font-size:.85rem;color:var(--mut);display:flex;align-items:center;gap:6px;}
 .btn-rescan{padding:8px 16px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--txt);font-size:.78rem;font-weight:600;font-family:inherit;cursor:pointer;transition:.2s;}
 .btn-rescan:hover{border-color:var(--ind);background:var(--s3);}
