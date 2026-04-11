@@ -1838,17 +1838,8 @@ function computeScores(data){
 // RENDER
 // ============================================================
 let currentData,currentScores,activeCategory,activeMainTab='seo';
-let selectedModule='both'; // 'seo', 'geo', or 'both'
-
-function selectModule(mod){
-    selectedModule=mod;
-    document.querySelectorAll('.module-card').forEach(c=>{
-        c.classList.toggle('active',c.dataset.module===mod);
-    });
-    // Set default active tab
-    if(mod==='geo')activeMainTab='geo';
-    else activeMainTab='seo';
-}
+const selectedModule='both'; // Always full audit — no module segmentation
+function selectModule(){} // No-op — kept for backward compat
 
 // ============================================================
 // ============================================================
