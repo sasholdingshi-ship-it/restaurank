@@ -385,7 +385,7 @@ h3,.chart-title{font-size:1rem;}
 
 /* ══ ADMIN DASHBOARD ══ */
 .admin-screen{display:none;min-height:100vh;padding:68px 16px 16px;}
-.admin-screen.active{display:block;background-color:#f8e5db;background-image:url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');background-size:242px;background-repeat:repeat;border-radius:8px;margin:0 16px;color:#031c33;}
+.admin-screen.active{display:block;} .admin-screen .btn-gen{background:#f8e5db;border:1px solid #031c3340;color:#031c33;} .admin-screen .btn-gen:hover{background:#f04b2e;border-color:#f04b2e;color:#f8e5db;} .admin-screen.active{display:block;background-color:#f8e5db;background-image:url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');background-size:242px;background-repeat:repeat;border-radius:8px;margin:0 16px;color:#031c33;}
 .admin-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
 .admin-stat{background:#f8e5db;border:1px solid #031c3322;border-radius:8px;padding:16px;text-align:center;}
 .admin-stat .as-val{font-size:1.6rem;font-weight:900;color:var(--ind);}
