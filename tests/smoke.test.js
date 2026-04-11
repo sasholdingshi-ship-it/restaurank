@@ -95,3 +95,45 @@ test('GET /api/cms/snapshots returns snapshots array', async () => {
   assert.strictEqual(j.success, true);
   assert.ok(Array.isArray(j.snapshots));
 });
+
+// SEO/GEO routes
+test('GET /robots.txt serves valid robots file', async () => {
+  const r = await fetch(`${BASE}/robots.txt`);
+  assert.strictEqual(r.status, 200);
+  const body = await r.text();
+  assert.match(body, /User-agent/);
+  assert.match(body, /Sitemap/);
+});
+
+test('GET /sitemap.xml serves valid sitemap', async () => {
+  const r = await fetch(`${BASE}/sitemap.xml`);
+  assert.strictEqual(r.status, 200);
+  const body = await r.text();
+  assert.match(body, /urlset/);
+  assert.match(body, /restaurank/);
+});
+
+test('GET /about serves public about page', async () => {
+  const r = await fetch(`${BASE}/about`);
+  assert.strictEqual(r.status, 200);
+  const body = await r.text();
+  assert.match(body, /RestauRank/);
+  assert.match(body, /SEO/);
+  assert.match(body, /GEO/);
+});
+
+test('GET /blog serves blog index with articles', async () => {
+  const r = await fetch(`${BASE}/blog`);
+  assert.strictEqual(r.status, 200);
+  const body = await r.text();
+  assert.match(body, /Blog/);
+  assert.match(body, /audit-seo-local/);
+});
+
+test('GET /blog/:slug serves article page', async () => {
+  const r = await fetch(`${BASE}/blog/audit-seo-local-restaurant`);
+  assert.strictEqual(r.status, 200);
+  const body = await r.text();
+  assert.match(body, /SEO local/);
+  assert.match(body, /BlogPosting/);
+});

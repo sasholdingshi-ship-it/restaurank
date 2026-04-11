@@ -10417,6 +10417,416 @@ app.options('/api/snippet/*', (req, res) => {
   res.sendStatus(204);
 });
 
+// ═══════════════════════════════════════════════════════
+// SEO/GEO — Public pages for search engines & AI engines
+// ═══════════════════════════════════════════════════════
+
+const SITE_URL = 'https://restaurank.onrender.com';
+
+app.get('/robots.txt', (req, res) => {
+  res.type('text/plain').send(`User-agent: *
+Allow: /
+Allow: /about
+Allow: /pricing
+Disallow: /admin
+Disallow: /api/
+Disallow: /auth/
+
+Sitemap: ${SITE_URL}/sitemap.xml
+`);
+});
+
+app.get('/about', (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>A propos de RestauRank — Audit SEO et GEO pour Restaurants</title>
+<meta name="description" content="RestauRank est le premier outil d'audit SEO local et GEO (visibilite IA) dedie aux restaurants. Decouvrez comment nous aidons les restaurateurs a etre trouves sur Google et recommandes par ChatGPT, Perplexity, Gemini.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="${SITE_URL}/about">
+<meta property="og:type" content="website">
+<meta property="og:title" content="A propos de RestauRank">
+<meta property="og:description" content="Premier outil d'audit SEO local et GEO dedie aux restaurants. Soyez trouves sur Google et recommandes par les IA.">
+<meta property="og:url" content="${SITE_URL}/about">
+<link rel="stylesheet" href="/public/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "AboutPage",
+  "mainEntity": {
+    "@type": "SoftwareApplication",
+    "name": "RestauRank",
+    "applicationCategory": "BusinessApplication",
+    "url": "${SITE_URL}"
+  }
+}
+</script>
+</head>
+<body style="background:#031c33;">
+<div style="max-width:800px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
+  <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;display:block;margin-bottom:32px;">RestauRank</a>
+
+  <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:16px;">Audit SEO local et GEO pour restaurants</h1>
+
+  <p style="font-size:1.05rem;line-height:1.7;color:#353233;margin-bottom:24px;">
+    RestauRank est une plateforme SaaS qui analyse automatiquement la visibilite en ligne d'un restaurant.
+    En quelques secondes, elle fournit un diagnostic complet sur deux axes :
+  </p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">SEO Local — Etre trouve sur Google</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:16px;">
+    RestauRank analyse 49 criteres repartis en 7 categories : Google Business Profile (completude, photos, posts, attributs),
+    avis et reputation (note, volume, taux de reponse), citations et annuaires (verification sur 29 plateformes dont
+    TripAdvisor, Yelp, PagesJaunes, TheFork, Foursquare), site web (balises meta, Schema.org, vitesse, mobile),
+    contenu et mots-cles, reseaux sociaux, et coherence NAP (nom, adresse, telephone).
+  </p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">
+    Chaque critere est note individuellement avec un score, un statut et une recommandation concrete.
+    Le score global SEO (sur 100) donne une vue synthetique de la visibilite du restaurant sur Google Search,
+    Google Maps et le Local Pack.
+  </p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">GEO — Etre recommande par les IA</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:16px;">
+    Le GEO (Generative Engine Optimization) est une nouvelle discipline. Quand un utilisateur demande a ChatGPT
+    "quel est le meilleur restaurant japonais a Lyon ?", les moteurs IA compilent des informations de multiples
+    sources pour formuler une reponse. RestauRank mesure si un restaurant apparait dans ces reponses.
+  </p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">
+    La plateforme interroge 4 moteurs IA (ChatGPT, Perplexity, Gemini, Claude) et calcule un score RRF
+    (Reciprocal Rank Fusion) — la meme methode utilisee par Bing pour classer les resultats.
+    Ce score GEO predit la probabilite qu'un restaurant soit cite dans une reponse IA.
+  </p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">Automatisation complete</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:16px;">
+    RestauRank ne se contente pas de diagnostiquer : il corrige. La plateforme detecte le CMS du restaurant
+    (WordPress, Webflow, Wix, Squarespace, Shopify, PrestaShop, Jimdo) et applique les optimisations
+    directement — Schema.org, balises meta, FAQ, coherence NAP. Elle gere aussi les Google Posts,
+    les reponses aux avis, et la presence sur les annuaires.
+  </p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">Pour qui ?</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">
+    RestauRank s'adresse aux restaurateurs independants, aux chaines de restaurants, et aux agences
+    de marketing digital specialisees dans la restauration. L'outil est concu pour etre 100% autonome :
+    le restaurateur n'a quasiment rien a faire.
+  </p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">Technologies</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:16px;">
+    La plateforme utilise les APIs officielles de Google Business Profile, Google Places, Yelp, TripAdvisor,
+    Foursquare, et les APIs des moteurs IA pour fournir des donnees reelles et verifiees — zero donnees simulees.
+    L'intelligence artificielle (Claude par Anthropic) genere le contenu SEO adapte a chaque restaurant :
+    descriptions, posts Google, articles de blog, reponses aux avis.
+  </p>
+
+  <div style="margin-top:48px;padding-top:24px;border-top:1px solid #031c3320;font-size:.85rem;color:#585254;">
+    <a href="/" style="color:#f04b2e;text-decoration:none;font-weight:600;">Lancer un audit gratuit →</a>
+    <span style="margin:0 12px;">|</span>
+    <a href="/pricing" style="color:#f04b2e;text-decoration:none;">Tarifs</a>
+  </div>
+</div>
+</body>
+</html>`);
+});
+
+// OG Image (SVG rendered as PNG-like for social sharing)
+app.get('/public/og-image.png', (req, res) => {
+  // Serve an SVG with PNG content-type hint (most crawlers accept SVG)
+  res.type('image/svg+xml').send(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#031c33"/>
+  <rect x="40" y="40" width="1120" height="550" rx="16" fill="#f8e5db"/>
+  <text x="100" y="200" font-family="Georgia,serif" font-size="72" font-weight="700" fill="#031c33">RestauRank</text>
+  <text x="100" y="280" font-family="Arial,sans-serif" font-size="32" fill="#585254">Audit SEO + GEO automatique</text>
+  <text x="100" y="330" font-family="Arial,sans-serif" font-size="32" fill="#585254">pour Restaurants</text>
+  <rect x="100" y="380" width="200" height="60" rx="8" fill="#f04b2e"/>
+  <text x="130" y="420" font-family="Arial,sans-serif" font-size="22" font-weight="600" fill="#f8e5db">SEO Local</text>
+  <rect x="320" y="380" width="280" height="60" rx="8" fill="#031c33"/>
+  <text x="350" y="420" font-family="Arial,sans-serif" font-size="22" font-weight="600" fill="#f8e5db">Visibilite IA (GEO)</text>
+  <text x="100" y="500" font-family="Arial,sans-serif" font-size="20" fill="#9e9e9e">Google Business Profile | ChatGPT | Perplexity | Gemini | Claude</text>
+  <text x="100" y="540" font-family="Arial,sans-serif" font-size="20" fill="#9e9e9e">49 criteres | 29 annuaires | 8 CMS | Corrections automatiques</text>
+</svg>`);
+});
+
+// ═══════════════════════════════════════════════════════
+// PUBLIC BLOG — SEO/GEO content for search & AI engines
+// ═══════════════════════════════════════════════════════
+
+const BLOG_ARTICLES = [
+  {
+    slug: 'audit-seo-local-restaurant',
+    title: 'Comment auditer le SEO local de votre restaurant en 2026',
+    description: 'Guide complet pour analyser et ameliorer la visibilite de votre restaurant sur Google Search, Maps et le Local Pack. 49 criteres detailles.',
+    date: '2026-04-01',
+    content: `
+      <h2>Pourquoi le SEO local est vital pour un restaurant</h2>
+      <p>46% des recherches Google ont une intention locale. Pour un restaurant, apparaitre dans le "Local Pack" (les 3 resultats avec carte) peut representer jusqu'a 40% du trafic entrant. Pourtant, la majorite des restaurateurs ne mesurent pas leur visibilite locale.</p>
+
+      <h2>Les 7 piliers du SEO local restaurant</h2>
+      <p>Un audit SEO local complet couvre 7 categories :</p>
+      <ol>
+        <li><strong>Google Business Profile</strong> — completude de la fiche, categories, attributs, photos, horaires</li>
+        <li><strong>Avis et reputation</strong> — note moyenne, volume d'avis, taux de reponse, fraicheur</li>
+        <li><strong>Citations et annuaires</strong> — presence sur TripAdvisor, Yelp, PagesJaunes, TheFork, Foursquare et 24 autres plateformes</li>
+        <li><strong>Site web technique</strong> — balises meta, Schema.org LocalBusiness, vitesse, mobile-friendly</li>
+        <li><strong>Contenu et mots-cles</strong> — pertinence semantique, FAQ, blog</li>
+        <li><strong>Reseaux sociaux</strong> — presence Instagram, Facebook, activite</li>
+        <li><strong>Coherence NAP</strong> — nom, adresse et telephone identiques partout</li>
+      </ol>
+
+      <h2>Schema.org : le secret des restaurants bien references</h2>
+      <p>L'ajout de donnees structurees Schema.org (type Restaurant ou LocalBusiness) permet a Google d'afficher des rich snippets : horaires, note, fourchette de prix, menu. Les restaurants avec Schema.org obtiennent en moyenne 30% de clics en plus dans les resultats de recherche.</p>
+
+      <h2>Les erreurs les plus frequentes</h2>
+      <ul>
+        <li>Fiche Google Business non revendiquee ou incomplete</li>
+        <li>Avis sans reponse (Google penalise le silence)</li>
+        <li>NAP incoherent entre le site web et les annuaires</li>
+        <li>Pas de Schema.org sur le site</li>
+        <li>Photos de mauvaise qualite ou absentes</li>
+      </ul>
+
+      <h2>Comment RestauRank automatise l'audit</h2>
+      <p>RestauRank analyse automatiquement les 49 criteres en quelques secondes. Il se connecte aux APIs officielles (Google Places, Yelp, TripAdvisor, Foursquare) pour verifier chaque donnee en temps reel. Le score SEO sur 100 donne une vue synthetique, et chaque critere est accompagne d'une recommandation actionnable.</p>
+    `
+  },
+  {
+    slug: 'geo-visibilite-restaurant-chatgpt',
+    title: 'GEO : comment etre recommande par ChatGPT quand on est restaurateur',
+    description: 'Le GEO (Generative Engine Optimization) est la nouvelle frontiere du referencement. Decouvrez comment les restaurants peuvent apparaitre dans les reponses de ChatGPT, Perplexity et Gemini.',
+    date: '2026-04-05',
+    content: `
+      <h2>Les moteurs IA changent la donne pour les restaurants</h2>
+      <p>De plus en plus d'utilisateurs demandent directement a ChatGPT ou Perplexity "quel est le meilleur restaurant italien pres de moi ?" au lieu de chercher sur Google. Ce comportement represente deja 15-20% des recherches de restaurants dans les grandes villes.</p>
+
+      <h2>Qu'est-ce que le GEO ?</h2>
+      <p>Le GEO (Generative Engine Optimization) est l'equivalent du SEO pour les moteurs IA. L'objectif : faire en sorte que votre restaurant soit cite et recommande quand un utilisateur pose une question a un LLM (Large Language Model). Contrairement au SEO classique, le GEO ne repose pas sur des liens ou des mots-cles, mais sur la "notoriete numerique" — la quantite et la qualite des mentions d'un restaurant sur le web.</p>
+
+      <h2>Les 4 facteurs GEO pour un restaurant</h2>
+      <ol>
+        <li><strong>Presence sur les sources autoritaires</strong> — les IA puisent dans TripAdvisor, Yelp, Google Maps, guides Michelin, blogs food. Plus un restaurant est mentionne, plus il a de chances d'etre cite.</li>
+        <li><strong>Coherence des informations</strong> — si le nom, l'adresse, la cuisine et les horaires sont identiques partout, l'IA a confiance dans les donnees.</li>
+        <li><strong>Avis recents et detailles</strong> — les IA privilegient les restaurants avec des avis recents, detailles et positifs. Un avis qui mentionne des plats specifiques a plus de poids.</li>
+        <li><strong>Contenu structure</strong> — Schema.org, FAQ, menu en ligne. Plus les donnees sont structurees, plus l'IA peut les extraire facilement.</li>
+      </ol>
+
+      <h2>Comment RestauRank mesure le GEO</h2>
+      <p>RestauRank est le premier outil a mesurer le score GEO d'un restaurant. La plateforme interroge 4 moteurs IA (ChatGPT, Perplexity, Gemini, Claude) avec des requetes typiques et analyse si le restaurant apparait dans les reponses. Le score RRF (Reciprocal Rank Fusion) quantifie cette visibilite sur une echelle de 0 a 100.</p>
+
+      <h2>Actions concretes pour ameliorer son GEO</h2>
+      <ul>
+        <li>Completer sa fiche sur un maximum d'annuaires (les 29 verifies par RestauRank)</li>
+        <li>Repondre a tous les avis Google avec des details sur les plats et l'experience</li>
+        <li>Publier regulierement des Google Posts avec des photos</li>
+        <li>Ajouter Schema.org Restaurant avec menu, horaires, fourchette de prix</li>
+        <li>Maintenir un site web avec du contenu frais (blog, actualites)</li>
+      </ul>
+    `
+  },
+  {
+    slug: 'google-business-profile-restaurant-guide',
+    title: 'Google Business Profile pour restaurants : le guide complet 2026',
+    description: 'Optimisez votre fiche Google Business Profile pour maximiser votre visibilite dans le Local Pack. Photos, posts, avis, attributs — tout ce qu\'il faut savoir.',
+    date: '2026-04-08',
+    content: `
+      <h2>Pourquoi Google Business Profile est incontournable</h2>
+      <p>Google Business Profile (anciennement Google My Business) est le facteur #1 du SEO local. Une fiche optimisee peut multiplier par 5 les appels et les demandes d'itineraire. Pour un restaurant, c'est souvent le premier point de contact avec un client potentiel.</p>
+
+      <h2>Les elements essentiels d'une fiche optimisee</h2>
+      <ol>
+        <li><strong>Categories</strong> — choisir la categorie principale precise (ex: "Restaurant japonais" plutot que "Restaurant") et ajouter 2-3 categories secondaires</li>
+        <li><strong>Description</strong> — 750 caracteres maximum, inclure la cuisine, la localisation, les specialites</li>
+        <li><strong>Photos</strong> — minimum 10 photos de qualite (facade, interieur, plats, equipe). Les fiches avec 100+ photos obtiennent 520% plus d'appels</li>
+        <li><strong>Attributs</strong> — terrasse, Wi-Fi, accessible PMR, livraison. Google affiche ces attributs dans les resultats</li>
+        <li><strong>Horaires</strong> — a jour, y compris les jours feries et horaires exceptionnels</li>
+        <li><strong>Google Posts</strong> — publier 2-3 posts par semaine (offres, evenements, nouveautes)</li>
+        <li><strong>Reponses aux avis</strong> — repondre a 100% des avis, positifs comme negatifs, sous 48h</li>
+      </ol>
+
+      <h2>Les Google Posts : un levier sous-exploite</h2>
+      <p>Les Google Posts apparaissent directement dans la fiche du restaurant sur Google Search et Maps. Ils permettent de mettre en avant un plat du jour, un evenement ou une promotion. Pourtant, moins de 15% des restaurants les utilisent regulierement.</p>
+
+      <h2>Automatiser la gestion avec RestauRank</h2>
+      <p>RestauRank se connecte directement a Google Business Profile via l'API officielle. Il permet de publier des Google Posts, repondre aux avis, mettre a jour les horaires et les attributs — le tout depuis un seul tableau de bord. L'IA genere le contenu adapte au ton et a l'identite du restaurant.</p>
+    `
+  }
+];
+
+// Blog index
+app.get('/blog', (req, res) => {
+  const articleCards = BLOG_ARTICLES.map(a => `
+    <article style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #031c3315;">
+      <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:8px;">
+        <a href="/blog/${a.slug}" style="color:#031c33;text-decoration:none;">${a.title}</a>
+      </h2>
+      <div style="font-size:.8rem;color:#9e9e9e;margin-bottom:8px;">${a.date}</div>
+      <p style="color:#585254;line-height:1.6;">${a.description}</p>
+      <a href="/blog/${a.slug}" style="color:#f04b2e;text-decoration:none;font-weight:600;font-size:.9rem;">Lire l'article →</a>
+    </article>
+  `).join('');
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Blog",
+    "name": "Blog RestauRank",
+    "description": "Articles sur le SEO local, le GEO et la visibilite en ligne des restaurants",
+    "url": `${SITE_URL}/blog`,
+    "publisher": { "@type": "Organization", "name": "RestauRank", "url": SITE_URL },
+    "blogPost": BLOG_ARTICLES.map(a => ({
+      "@type": "BlogPosting",
+      "headline": a.title,
+      "description": a.description,
+      "datePublished": a.date,
+      "url": `${SITE_URL}/blog/${a.slug}`,
+      "author": { "@type": "Organization", "name": "RestauRank" }
+    }))
+  };
+
+  res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blog RestauRank — SEO local et GEO pour restaurants</title>
+<meta name="description" content="Articles et guides sur le SEO local, le GEO (visibilite IA) et la visibilite en ligne des restaurants. Par RestauRank.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="${SITE_URL}/blog">
+<meta property="og:type" content="blog">
+<meta property="og:title" content="Blog RestauRank — SEO local et GEO pour restaurants">
+<meta property="og:url" content="${SITE_URL}/blog">
+<link rel="stylesheet" href="/public/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+</head>
+<body style="background:#031c33;">
+<div style="max-width:800px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;">
+    <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
+    <a href="/about" style="color:#585254;text-decoration:none;font-size:.9rem;">A propos</a>
+    <a href="/blog" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">Blog</a>
+  </nav>
+  <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:32px;">Blog</h1>
+  ${articleCards}
+  <div style="margin-top:32px;font-size:.85rem;color:#585254;">
+    <a href="/" style="color:#f04b2e;text-decoration:none;font-weight:600;">Lancer un audit gratuit →</a>
+  </div>
+</div>
+</body>
+</html>`);
+});
+
+// Blog article pages
+app.get('/blog/:slug', (req, res) => {
+  const article = BLOG_ARTICLES.find(a => a.slug === req.params.slug);
+  if (!article) return res.status(404).send('Article non trouve');
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": article.title,
+    "description": article.description,
+    "datePublished": article.date,
+    "url": `${SITE_URL}/blog/${article.slug}`,
+    "author": { "@type": "Organization", "name": "RestauRank", "url": SITE_URL },
+    "publisher": { "@type": "Organization", "name": "RestauRank", "url": SITE_URL },
+    "mainEntityOfPage": { "@type": "WebPage", "@id": `${SITE_URL}/blog/${article.slug}` }
+  };
+
+  res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${article.title} — RestauRank</title>
+<meta name="description" content="${article.description}">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="${SITE_URL}/blog/${article.slug}">
+<meta property="og:type" content="article">
+<meta property="og:title" content="${article.title}">
+<meta property="og:description" content="${article.description}">
+<meta property="og:url" content="${SITE_URL}/blog/${article.slug}">
+<meta property="article:published_time" content="${article.date}">
+<link rel="stylesheet" href="/public/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<style>
+  .blog-content { line-height: 1.8; color: #353233; }
+  .blog-content h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: #031c33; margin: 32px 0 12px; }
+  .blog-content p { margin-bottom: 16px; }
+  .blog-content ol, .blog-content ul { margin-bottom: 16px; padding-left: 24px; }
+  .blog-content li { margin-bottom: 8px; }
+  .blog-content strong { color: #031c33; }
+</style>
+</head>
+<body style="background:#031c33;">
+<div style="max-width:800px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;">
+    <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
+    <a href="/about" style="color:#585254;text-decoration:none;font-size:.9rem;">A propos</a>
+    <a href="/blog" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">Blog</a>
+  </nav>
+  <article>
+    <h1 style="font-family:'Playfair Display',serif;font-size:1.8rem;color:#031c33;margin-bottom:8px;">${article.title}</h1>
+    <div style="font-size:.8rem;color:#9e9e9e;margin-bottom:32px;">${article.date}</div>
+    <div class="blog-content">${article.content}</div>
+  </article>
+  <div style="margin-top:48px;padding:24px;background:#031c33;border-radius:12px;text-align:center;">
+    <div style="font-family:'Playfair Display',serif;font-size:1.2rem;color:#f8e5db;margin-bottom:8px;">Auditez votre restaurant gratuitement</div>
+    <div style="font-size:.85rem;color:#9e9e9e;margin-bottom:16px;">Score SEO + GEO en quelques secondes, sans engagement.</div>
+    <a href="/" style="display:inline-block;padding:12px 32px;background:#f04b2e;color:#f8e5db;text-decoration:none;border-radius:8px;font-weight:600;">Lancer un audit →</a>
+  </div>
+  <div style="margin-top:32px;font-size:.85rem;color:#585254;">
+    <a href="/blog" style="color:#f04b2e;text-decoration:none;">← Tous les articles</a>
+  </div>
+</div>
+</body>
+</html>`);
+});
+
+// Update sitemap to include blog articles
+app.get('/sitemap.xml', (req, res) => {
+  const now = new Date().toISOString().split('T')[0];
+  const blogUrls = BLOG_ARTICLES.map(a => `
+  <url>
+    <loc>${SITE_URL}/blog/${a.slug}</loc>
+    <lastmod>${a.date}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>`).join('');
+
+  res.type('application/xml').send(`<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.w3.org/2000/sitemaps/schemas/sitemap/0.9">
+  <url>
+    <loc>${SITE_URL}/</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/about</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/blog</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>${blogUrls}
+</urlset>`);
+});
+
+// Pricing page (public, SEO-friendly)
+app.get('/pricing', (req, res) => {
+  // Redirect to main app with pricing screen
+  res.redirect('/#pricing');
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'seo-geo-audit-tool.html'));
 });
