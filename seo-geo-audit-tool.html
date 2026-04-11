@@ -517,8 +517,7 @@
         <!-- Onglets opérationnels — visibles uniquement pour les admins -->
         <div class="dash-tab admin-only" onclick="switchDashTab('stats')" style="display:none;">SEO Stats</div>
         <div class="dash-tab admin-only" onclick="switchDashTab('content')" style="display:none;">Contenu</div>
-        <div class="dash-tab admin-only" onclick="switchDashTab('dispatch')" style="display:none;">IA Dispatch</div>
-        <div class="dash-tab admin-only" onclick="switchDashTab('agent')" style="display:none;">Agent Auto</div>
+        <div class="dash-tab admin-only" onclick="switchDashTab('dispatch')" style="display:none;">Opérations</div>
         <div class="dash-tab admin-only" onclick="switchDashTab('team')" style="display:none;">Équipe</div>
     </div>
     <!-- AUDIT TAB (default, existing content) -->
@@ -1004,9 +1003,25 @@
                 <div class="dir-auto-grid" id="dirAutoGrid"></div>
             </div>
 
+            <!-- CONTENT GENERATION (merged from Agent Auto) -->
+            <div class="auto-panel" style="background:#f8e5db;border:1px solid #031c3322;">
+                <h3 style="font-size:.95rem;font-weight:800;margin-bottom:12px;">Génération de contenu</h3>
+                <p style="font-size:.78rem;color:#585254;margin-bottom:14px;">Générez tout le contenu SEO + GEO pour ce restaurant en un clic, ou choisissez par type.</p>
+                <button class="auto-btn-full" style="background:#f04b2e;margin-bottom:14px;" onclick="bulkGenerateAI().then(r=>{if(r)addToLog('Contenu IA généré pour toutes les catégories');else addToLog('Erreur de génération')})">Tout générer (Blog + Reddit + Social + FAQ)</button>
+                <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;">
+                    <button class="btn-gen" onclick="generateBlogPost()">Blog GEO</button>
+                    <button class="btn-gen" onclick="generateRedditPost()">Reddit x3</button>
+                    <button class="btn-gen" onclick="generateGuestPost()">Guest Post</button>
+                    <button class="btn-gen" onclick="generateSocialPosts()">Social x7</button>
+                    <button class="btn-gen" onclick="generateTikTokKit()">TikTok Kit</button>
+                    <button class="btn-gen" onclick="generateFAQContent()">FAQ GEO x15</button>
+                    <button class="btn-gen" onclick="generateAllSEOContent()">Tout régénérer</button>
+                </div>
+            </div>
+
             <!-- EXECUTION LOG -->
             <div style="margin-top:16px;">
-                <h3 style="font-size:.85rem;font-weight:700;margin-bottom:8px;"> Journal d'exécution</h3>
+                <h3 style="font-size:.85rem;font-weight:700;margin-bottom:8px;">Journal d'exécution</h3>
                 <div class="dispatch-log" id="dispatchLog"></div>
             </div>
         </div>
@@ -1016,7 +1031,7 @@
     <div class="dash-tab-content" id="tabTeam"></div>
 
     <!-- AGENT AUTONOMOUS TAB -->
-    <div class="dash-tab-content" id="tabAgent">
+    <div class="dash-tab-content" id="tabAgent" style="display:none !important;">
       <div id="agentPanel" style="max-width:800px;margin:0 auto;">
         <!-- Launch screen -->
         <div id="agentLaunch">
