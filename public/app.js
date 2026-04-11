@@ -1038,7 +1038,7 @@ async function onAuthSuccess(){
     // Show admin button if admin
     document.getElementById('ubAdmin').style.display=currentAccount.role==='admin'?'inline-block':'none';
     // Show admin-only tabs and action buttons if admin
-    const isAdmin=currentAccount.role==='admin';document.querySelectorAll('.dash-tab.admin-only').forEach(t=>{
+    const isAdmin=currentAccount.role==='admin';document.querySelectorAll('.admin-only').forEach(t=>{
         t.style.display=currentAccount.role==='admin'?'':'none';
     });
 
