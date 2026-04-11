@@ -6055,15 +6055,23 @@ function renderDirAutoGrid(){
         const platforms=DIR_LIST.filter(d=>d.cat===cat);
         if(platforms.length===0)continue;
 
-        // Auto-sync category: show as connected summary strip (like Malou)
+        // Auto-sync category: collapsible list of all connected platforms
         if(cat==='auto'){
-            html+=`<div class="dir-category-title">${catInfo.title}</div>`;
-            html+=`<div class="dir-connected-strip">
-                <span class="strip-text">${autoConnected} plateformes connectées et mises à jour automatiquement</span>
+            html+=`<div class="dir-category-title" style="cursor:pointer;" onclick="document.getElementById('autoPlatsExpanded').style.display=document.getElementById('autoPlatsExpanded').style.display==='none'?'grid':'none'">${catInfo.title}</div>`;
+            html+=`<div class="dir-connected-strip" style="cursor:pointer;" onclick="document.getElementById('autoPlatsExpanded').style.display=document.getElementById('autoPlatsExpanded').style.display==='none'?'grid':'none'">
+                <span class="strip-text">${autoPlats.length} plateformes connectées et mises à jour automatiquement</span>
                 <div class="strip-icons">${autoPlats.slice(0,8).map(d=>`<span class="strip-icon" title="${d.name}">${d.icon}</span>`).join('')}
-                    <span class="strip-more">+${Math.max(0,autoPlats.length-8)} plateformes</span>
+                    <span class="strip-more" style="text-decoration:underline;">Voir les ${autoPlats.length} plateformes</span>
                 </div>
             </div>`;
+            html+=`<div id="autoPlatsExpanded" class="dir-category-grid" style="display:none;">`;
+            for(const d of autoPlats){
+                html+=`<div class="dir-auto-card">
+                    <div class="dir-card-header"><div class="dir-icon">${d.icon}</div><div><div class="dir-name">${d.name}</div><div class="dir-desc">${d.desc||''}</div></div></div>
+                    <span class="dir-status connected" style="margin-top:8px;">✓ Synchronisée</span>
+                </div>`;
+            }
+            html+=`</div>`;
             continue;
         }
 
