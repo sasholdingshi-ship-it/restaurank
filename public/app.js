@@ -2057,15 +2057,15 @@ function renderHistory(){
     const entries=Object.entries(store.restaurants).sort((a,b)=>new Date(b[1].lastAudit)-new Date(a[1].lastAudit));
     let html=`<div class="history-title">Restaurants audités (${entries.length})</div><div class="history-list">`;
     entries.forEach(([key,r])=>{
-        const avg=Math.round((r.scores.seo+r.scores.geo)/2);
-        const iconClass=avg>=60?'seo-good':avg>=40?'seo-mid':'seo-bad';
-        const icon=avg>=60?'✓':avg>=40?'!':'✗';
         const doneCount=r.platformStatus?Object.values(r.platformStatus).filter(s=>s==='done').length:0;
         const actDone=r.completedActions?Object.keys(r.completedActions).length:0;
         const date=new Date(r.lastAudit);
         const dateStr=date.toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});
+        const siteUrl=r.websiteUrl||r.website||'';
+        const domain=siteUrl?siteUrl.replace(/^https?:\/\//,'').replace(/\/.*$/,'').replace(/^www\./,''):'';
+        const logoSrc=domain?`https://www.google.com/s2/favicons?domain=${domain}&sz=64`:'';
         html+=`<button class="history-card" onclick="loadRestaurant('${key}')">
-            <div class="history-card-icon ${iconClass}">${icon}</div>
+            <div class="history-card-icon">${logoSrc?`<img src="${logoSrc}" style="width:100%;height:100%;border-radius:inherit;object-fit:cover;display:block;" onerror="this.parentElement.textContent='${(r.name||'R')[0].toUpperCase()}'">`:((r.name||'R')[0].toUpperCase())}</div>
             <div class="history-card-info">
                 <div class="history-card-name">${r.name} — ${r.city}</div>
                 <div class="history-card-meta">Dernier audit : ${dateStr} · ${doneCount} annuaires · ${actDone} actions</div>
