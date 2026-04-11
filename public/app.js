@@ -4289,7 +4289,7 @@ function renderContentCMSStatus(){
                         <div style="font-weight:800;font-size:.95rem;color:var(--org);">${instructions.name} détecté — connexion requise</div>
                         <div style="font-size:.72rem;color:var(--mut);margin-top:2px;">Pour publier automatiquement, connectez votre ${instructions.name} en donnant un accès API dédié</div>
                     </div>
-                    <button class="btn-gen" style="background:#D95B2B;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="switchDashTab('dispatch');setTimeout(()=>{const b=document.querySelector('.cms-connect-btn:not(.connected)');if(b)b.click();},500);">Se connecter maintenant</button>
+                    <button class="btn-gen" style="background:#f04b2e;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="switchDashTab('dispatch');setTimeout(()=>{const b=document.querySelector('.cms-connect-btn:not(.connected)');if(b)b.click();},500);">Se connecter maintenant</button>
                 </div>
                 <details style="margin-top:8px;">
                     <summary style="cursor:pointer;font-size:.72rem;color:var(--org);font-weight:600;"> Voir les étapes de connexion</summary>
