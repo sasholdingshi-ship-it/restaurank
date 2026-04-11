@@ -1226,3 +1226,21 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
 .landing-card *,.module-card *,.auth-box *{color:inherit;}
 .chart-section,.kpi-card,.hub-feature-section,.confirm-info,
 .group-header,.group-summary,.group-body,.landing-card,.module-card,.auth-box{color:#031c33;}
+
+/* NUCLEAR: force #031c33 on ALL text inside ALL beige panels — no exceptions */
+.dash-tab-content.active,.dash-tab-content.active *,
+#groupDash,#groupDash *,
+#landing,#landing *,
+.chart-section *,.kpi-card *,.hub-feature-section *,
+.confirm-info *,.group-header *,.group-summary *,
+.group-body *,.landing-card *,.module-card *,.auth-box *{
+  color:#031c33 !important;
+}
+/* Exceptions: buttons with white/beige text, score colors, status badges */
+.btn-scan,.btn-scan *,.auth-btn,.auth-btn *,.auto-btn-full,
+[style*="color:#f8e5db"],[style*="color:#fff"],[style*="color: #fff"],
+[style*="color:white"],[style*="color:#f04b2e"],[style*="color:var(--ind)"],
+[style*="color:var(--red)"],[style*="color:var(--grn)"],[style*="color:var(--org)"],
+.score-val,.score-grade,.kpi-value,.bench-pct-value,
+.badge-pop,.badge-high,.badge-medium,.badge-low,
+.review-stars{color:inherit !important;}
