@@ -16,7 +16,7 @@
 --mut:#5d6c7b;      /* muted text */
 --mut2:#8a9ab0;     /* extra muted */
 --ind:#f04b2e;--ind2:#f06a52;--cyn:#f04b2e;--grn:#2d7a4f;--grn2:#3d9a65;
---org:#f04b2e;--red:#c0392b;--pnk:#f7a4a3;--prp:#f7a4a3;--blu:#3898ec;
+--org:#f04b2e;--red:#f04b2e;--pnk:#f7a4a3;--prp:#f7a4a3;--blu:#3898ec;
 --acc:#f04b2e;--brand:#f04b2e;--card:#f8e5db;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
