@@ -508,16 +508,18 @@
     <!-- TAB BAR -->
     <div class="dash-tabs" id="dashTabs">
         <div class="dash-tab" onclick="goLanding()" style="background:var(--ind);color:#fff;font-weight:700;border-radius:8px;margin:4px 6px 4px 2px;padding:4px 12px;font-size:.72rem;white-space:nowrap;">← Nouvel audit</div>
-        <div class="dash-tab active" onclick="switchDashTab('audit')">Audit</div>
-        <div class="dash-tab" onclick="switchDashTab('stats')"> SEO Stats</div>
-        <div class="dash-tab" onclick="switchDashTab('hub')"> Hub Central</div>
+        <div class="dash-tab active" onclick="switchDashTab('audit')">Tableau de bord</div>
+        <div class="dash-tab" onclick="switchDashTab('hub')">Mon restaurant</div>
         <div class="dash-tab" onclick="switchDashTab('reviews')">Avis</div>
-        <div class="dash-tab" onclick="switchDashTab('social')"> Social</div>
-        <div class="dash-tab" onclick="switchDashTab('content')"> Contenu</div>
-        <div class="dash-tab" onclick="switchDashTab('dispatch')"> IA Dispatch</div>
-        <div class="dash-tab" onclick="switchDashTab('agent')" style="background:#f8e5db;font-weight:600;"> Agent Auto</div>
-        <div class="dash-tab" onclick="switchDashTab('team')">Équipe</div>
-        <div class="dash-tab" onclick="switchDashTab('settings')"> Paramètres</div>
+        <div class="dash-tab" onclick="switchDashTab('social')">Publications</div>
+        <div class="dash-tab" onclick="switchDashTab('activity')">Activité</div>
+        <div class="dash-tab" onclick="switchDashTab('settings')">Mon plan</div>
+        <!-- Onglets opérationnels — visibles uniquement pour les admins -->
+        <div class="dash-tab admin-only" onclick="switchDashTab('stats')" style="display:none;">SEO Stats</div>
+        <div class="dash-tab admin-only" onclick="switchDashTab('content')" style="display:none;">Contenu</div>
+        <div class="dash-tab admin-only" onclick="switchDashTab('dispatch')" style="display:none;">IA Dispatch</div>
+        <div class="dash-tab admin-only" onclick="switchDashTab('agent')" style="display:none;">Agent Auto</div>
+        <div class="dash-tab admin-only" onclick="switchDashTab('team')" style="display:none;">Équipe</div>
     </div>
     <!-- AUDIT TAB (default, existing content) -->
     <div class="dash-tab-content active" id="tabAudit">
@@ -1072,6 +1074,19 @@
           </button>
         </div>
       </div>
+    </div>
+
+    <!-- ACTIVITY TAB — Journal d'activité RestauRank -->
+    <div class="dash-tab-content" id="tabActivity">
+        <div style="padding:20px;max-width:800px;margin:0 auto;">
+            <h2>Activité RestauRank</h2>
+            <p style="font-size:.82rem;color:#585254;margin-bottom:20px;">Ce que RestauRank fait pour votre restaurant cette semaine.</p>
+            <div id="activityFeed" style="display:flex;flex-direction:column;gap:10px;">
+                <div style="text-align:center;padding:40px;color:#585254;font-size:.85rem;">
+                    Chargement de l'activité...
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- SETTINGS TAB -->

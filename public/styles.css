@@ -1228,3 +1228,6 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
 #pricing *,#cgv *,#privacy *,#mentions *{color:#031c33 !important;}
 #pricing a,#cgv a,#privacy a,#mentions a{color:#f04b2e !important;}
 #pricing .price-card-amount,#pricing .price-card-btn.primary{color:#f8e5db !important;}
+
+/* Hide action buttons for non-admin users — shown via JS for admins */
+.admin-action-only{display:none;}

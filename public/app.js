@@ -1037,6 +1037,10 @@ async function onAuthSuccess(){
     planEl.className='ub-plan '+currentAccount.plan;
     // Show admin button if admin
     document.getElementById('ubAdmin').style.display=currentAccount.role==='admin'?'inline-block':'none';
+    // Show admin-only tabs and action buttons if admin
+    const isAdmin=currentAccount.role==='admin';document.querySelectorAll('.dash-tab.admin-only').forEach(t=>{
+        t.style.display=currentAccount.role==='admin'?'':'none';
+    });
 
     // NEW USER → onboarding wizard
     if(window._isNewSignup){
@@ -4175,6 +4179,7 @@ function switchDashTab(tab){
     if(tab==='agent'){try{loadAgentHistory();}catch(e){}}
     if(tab==='content'){try{loadBlogHistory();loadCMSSnapshots();renderContentCMSStatus();}catch(e){}}
     if(tab==='social'){try{renderGooglePostsList();renderPostPhotoGrid();}catch(e){}}
+    if(tab==='activity'){try{renderActivityFeed();}catch(e){}}
 }
 
 // Show CMS connection status at the top of the Content tab
@@ -10618,3 +10623,108 @@ document.addEventListener('DOMContentLoaded',()=>{
     setTimeout(()=>{renderHubFeatures();renderAiSettings();renderReviewAutomation();renderGooglePostsList();renderPricingGrid();renderLegalPages();},500);
 });
 
+
+// ============================================================
+// ACTIVITY FEED — shows what RestauRank did for the client
+// ============================================================
+async function renderActivityFeed(){
+    const feed=document.getElementById('activityFeed');
+    if(!feed)return;
+    const rid=currentData?.restaurant_id||0;
+    
+    // Collect activity from multiple sources
+    let activities=[];
+    
+    // 1. Google Posts (published/scheduled)
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/posts/google?restaurant_id=${rid}`,{},5000);
+        const j=await r.json();
+        if(j.success)(j.posts||[]).forEach(p=>{
+            activities.push({
+                date:p.published_at||p.created_at,
+                type:'post',
+                title:'Google Post '+(p.status==='published'?'publié':'programmé'),
+                detail:p.content?.substring(0,100)+'...',
+                status:p.status
+            });
+        });
+    }catch(e){}
+    
+    // 2. Blog articles
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/blog/history?restaurant_id=${rid}`,{},5000);
+        const j=await r.json();
+        if(j.success)(j.articles||[]).forEach(a=>{
+            activities.push({
+                date:a.published_at||a.created_at,
+                type:'blog',
+                title:'Article blog publié',
+                detail:a.title||'',
+                status:'published'
+            });
+        });
+    }catch(e){}
+    
+    // 3. Review responses
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/reviews/history?restaurant_id=${rid}`,{},5000);
+        const j=await r.json();
+        if(j.success)(j.responses||[]).forEach(rv=>{
+            activities.push({
+                date:rv.created_at,
+                type:'review',
+                title:'Réponse avis '+(rv.platform||'Google')+' envoyée',
+                detail:rv.reply_text?.substring(0,80)+'...',
+                status:'sent'
+            });
+        });
+    }catch(e){}
+    
+    // 4. Directory actions
+    try{
+        const r=await fetchTimeout(`${API_BASE}/api/directories/history?restaurant_id=${rid}`,{},5000);
+        const j=await r.json();
+        if(j.success)(j.actions||[]).forEach(d=>{
+            activities.push({
+                date:d.updated_at,
+                type:'directory',
+                title:(d.platform||'Annuaire')+' — '+(d.status==='automated'?'connecté':'vérifié'),
+                detail:d.claim_url||'',
+                status:d.status
+            });
+        });
+    }catch(e){}
+    
+    // Sort by date (newest first)
+    activities.sort((a,b)=>new Date(b.date||0)-new Date(a.date||0));
+    
+    if(!activities.length){
+        feed.innerHTML=`<div style="text-align:center;padding:40px;color:#585254;">
+            <div style="font-size:1rem;font-weight:600;margin-bottom:8px;color:#031c33;">Aucune activité pour le moment</div>
+            <div style="font-size:.82rem;">RestauRank travaille en arrière-plan. Les actions apparaîtront ici au fur et à mesure.</div>
+        </div>`;
+        return;
+    }
+    
+    const typeIcons={
+        post:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=64" style="width:24px;height:24px;border-radius:4px;">',
+        blog:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" style="width:24px;height:24px;border-radius:4px;">',
+        review:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" style="width:24px;height:24px;border-radius:4px;">',
+        directory:'<img src="https://www.google.com/s2/favicons?domain=yelp.com&sz=64" style="width:24px;height:24px;border-radius:4px;">',
+        seo:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" style="width:24px;height:24px;border-radius:4px;">',
+    };
+    
+    feed.innerHTML=activities.slice(0,30).map(a=>{
+        const d=a.date?new Date(a.date):null;
+        const dateStr=d?d.toLocaleDateString('fr-FR',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}):'';
+        const icon=typeIcons[a.type]||'';
+        return`<div style="display:flex;gap:14px;align-items:flex-start;padding:14px;background:#f8e5db;border-radius:8px;">
+            <div style="flex-shrink:0;margin-top:2px;">${icon}</div>
+            <div style="flex:1;min-width:0;">
+                <div style="font-weight:600;font-size:.85rem;color:#031c33;">${a.title}</div>
+                ${a.detail?`<div style="font-size:.78rem;color:#585254;margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${a.detail}</div>`:''}
+            </div>
+            <div style="font-size:.7rem;color:#9e9e9e;white-space:nowrap;flex-shrink:0;">${dateStr}</div>
+        </div>`;
+    }).join('');
+}
