@@ -116,7 +116,7 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;-moz-use
 
 /* GROUP DASHBOARD — one continuous rice-paper panel */
 #groupDash{margin:16px !important;margin-top:68px !important;border-radius:8px;padding:24px !important;}
-.group-header{background:transparent;border-bottom:1px solid var(--bdr);}
+.group-header{background:#f8e5db;border-bottom:none;border-radius:8px;padding:24px;margin-bottom:12px;}
 .group-summary{background:transparent;}
 .group-body{background:transparent;}
 
