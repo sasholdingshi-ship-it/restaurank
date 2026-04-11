@@ -95,7 +95,14 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;-moz-use
 /* Yatai framing: page_wrap (#031c33 padding 24px) > page_main (#f8e5db radius 8px) */
 #dashboard{padding:0;padding-top:48px;}
 #dashboard::after,#groupDash::after{content:'';display:block;height:16px;} /* bottom spacing */
-.group-summary,.group-body,.dash-tabs-wrap,.dash-tab-content.active{background:var(--s2);color:var(--txt);border-radius:8px;margin:0 16px 12px;padding:20px;}
+/* Yatai rice-paper texture panel — bg color + tiled texture + rounded corners inside dark frame */
+.group-summary,.group-body,.dash-tabs-wrap,.dash-tab-content.active{
+  background-color:var(--s2);
+  background-image:url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');
+  background-size:242px;
+  background-repeat:repeat;
+  color:var(--txt);border-radius:8px;margin:0 16px 12px;padding:20px;
+}
 .dash-header{padding:20px 24px;border-bottom:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:var(--bg);}
 .dash-logo{font-size:1.1rem;font-weight:800;background:linear-gradient(135deg,var(--ind),var(--cyn));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
 .dash-resto{font-size:.85rem;color:var(--mut);display:flex;align-items:center;gap:6px;}
