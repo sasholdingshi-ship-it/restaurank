@@ -3624,10 +3624,12 @@ function renderNapConsistency(entries){
     <table class="nap-table"><thead><tr><th>Point de vente</th><th>Score NAP</th><th>Annuaires</th><th>Statut</th></tr></thead><tbody>`;
 
     entries.forEach(([key,r])=>{
-        const napScore=r.data.napConsistency||50;
-        const cls=napScore>=80?'nap-match':'nap-mismatch';
-        const status=napScore>=80?'✓ Cohérent':' Incohérences';
-        html+=`<tr><td><strong>${r.name}</strong> — ${r.city}</td><td class="${cls}">${napScore}%</td><td>${r.data.directoryPresence||0} annuaires</td><td class="${cls}">${status}</td></tr>`;
+        const napScore=r.data.napConsistency;
+        const hasData=napScore!==null&&napScore!==undefined;
+        const cls=hasData?(napScore>=80?'nap-match':'nap-mismatch'):'';
+        const status=hasData?(napScore>=80?'✓ Cohérent':'Incohérences'):'Non vérifié';
+        const dirs=r.data.directoryPresence||0;
+        html+=`<tr><td><strong>${r.name}</strong> — ${r.city}</td><td class="${cls}">${hasData?napScore+'%':'—'}</td><td>${dirs} annuaires</td><td class="${cls}">${status}</td></tr>`;
     });
 
     html+=`</tbody></table>
