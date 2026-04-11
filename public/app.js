@@ -1562,7 +1562,7 @@ async function openClientDetail(accountId){
                     <div style="font-size:.7rem;color:var(--mut);">SEO moyen</div>
                 </div>
                 <div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:800;color:var(--prp);">${Math.round(rests.reduce((s,r)=>{const sc=typeof r.scores==='string'?JSON.parse(r.scores||'{}'):r.scores||{};return s+(sc.geo||0);},0)/Math.max(1,rests.length))}</div>
+                    <div style="font-size:1.5rem;font-weight:800;color:#f04b2e;">${Math.round(rests.reduce((s,r)=>{const sc=typeof r.scores==='string'?JSON.parse(r.scores||'{}'):r.scores||{};return s+(sc.geo||0);},0)/Math.max(1,rests.length))}</div>
                     <div style="font-size:.7rem;color:var(--mut);">GEO moyen</div>
                 </div>
                 <div style="background:var(--bg);border-radius:10px;padding:12px;text-align:center;">
@@ -2364,7 +2364,7 @@ renderDashboard=function(){
         const rrf=window._rrfScore;
         document.getElementById('rrfScoreVal').textContent=rrf.rrf_score;
         const color=rrf.rrf_score>=70?'var(--grn)':rrf.rrf_score>=40?'var(--org)':'var(--red)';
-        document.getElementById('rrfScoreVal').parentElement.style.background=`linear-gradient(135deg,${color},var(--ind))`;
+        document.getElementById('rrfScoreVal').parentElement.style.background=`${color}`;
         document.getElementById('rrfScoreDesc').textContent=rrf.interpretation;
         document.getElementById('rrfSourcesInfo').innerHTML=Object.entries(rrf.sources||{}).map(([k,v])=>v.found?`<span style="color:var(--grn);">✓ ${k} #${v.rank}</span>`:`<span style="color:var(--red);">✗ ${k}</span>`).join('<br>');
         rrfSection.style.display='';
@@ -2495,7 +2495,7 @@ function showAction(itemId){
             if(aiContainer){
                 let aiHtml='';
                 aiContent.forEach((g,i)=>{
-                    aiHtml+=`<div class="gen-block" style="border-left:3px solid var(--ind);"><div class="gen-block-header"><div class="gen-block-label">${g.icon||''} ${g.label} <span class="auto-tag" style="background:linear-gradient(135deg,var(--ind),#8b5cf6);color:#fff;">IA Claude</span></div><button class="gen-copy-btn" onclick="copyGen(this,'ai-content-${itemId}-${i}')">Copier</button></div><div class="gen-block-body"><div id="ai-content-${itemId}-${i}">${g.content}</div></div></div>`;
+                    aiHtml+=`<div class="gen-block" style="border-left:3px solid var(--ind);"><div class="gen-block-header"><div class="gen-block-label">${g.icon||''} ${g.label} <span class="auto-tag" style="background:#f04b2e;color:#fff;">IA Claude</span></div><button class="gen-copy-btn" onclick="copyGen(this,'ai-content-${itemId}-${i}')">Copier</button></div><div class="gen-block-body"><div id="ai-content-${itemId}-${i}">${g.content}</div></div></div>`;
                 });
                 aiContainer.innerHTML=aiHtml;
                 aiContainer.style.display='block';
@@ -4843,7 +4843,7 @@ function renderReviews(){
 
     // Auto-reply-all button at top
     const headerHtml=noReviewsBanner+`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
-        <button class="auto-btn-full" id="btnAutoReplyAll" onclick="autoReplyAllReviews()" style="flex:1;min-width:200px;padding:12px;font-size:.85rem;background:linear-gradient(135deg,#f59e0b,var(--ind));">
+        <button class="auto-btn-full" id="btnAutoReplyAll" onclick="autoReplyAllReviews()" style="flex:1;min-width:200px;padding:12px;font-size:.85rem;background:#f04b2e;">
             Répondre à tous les avis (${unanswered} sans réponse)
         </button>
         <div style="font-size:.7rem;color:var(--mut);">Réponses optimisées SEO local — inclut mots-clés + nom ville</div>
@@ -4959,7 +4959,7 @@ function renderSemanticResults(d){
             <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">Expressions récurrentes (2 mots)</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
         topBigrams.forEach(t=>{
-            html+=`<span style="display:inline-block;padding:4px 10px;border-radius:20px;background:rgba(139,92,246,.1);color:var(--prp);font-size:.78rem;font-weight:600;">"${t.term}" <small style="opacity:.6;">${t.count}x</small></span>`;
+            html+=`<span style="display:inline-block;padding:4px 10px;border-radius:20px;background:rgba(240,75,46,.1);color:#f04b2e;font-size:.78rem;font-weight:600;">"${t.term}" <small style="opacity:.6;">${t.count}x</small></span>`;
         });
         html+=`</div></div>`;
     }
@@ -5390,7 +5390,7 @@ function renderTeam(){
 
             <!-- Owner card (you) -->
             <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--s1);border:1px solid var(--bdr);border-radius:10px;margin-bottom:8px;">
-                <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--ind),var(--prp));display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;font-weight:700;flex-shrink:0;">${(currentUser.email||'U')[0].toUpperCase()}</div>
+                <div style="width:38px;height:38px;border-radius:50%;background:#f04b2e;display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;font-weight:700;flex-shrink:0;">${(currentUser.email||'U')[0].toUpperCase()}</div>
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:.82rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                         ${currentUser.email}
@@ -5406,7 +5406,7 @@ function renderTeam(){
             <!-- Invited members cards -->
             ${members.map((m,i)=>`
             <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--s1);border:1px solid var(--bdr);border-radius:10px;margin-bottom:8px;">
-                <div style="width:38px;height:38px;border-radius:50%;background:${m.role==='owner'?'linear-gradient(135deg,#f59e0b,#ef4444)':m.role==='manager'?'linear-gradient(135deg,var(--grn),var(--cyn))':'linear-gradient(135deg,var(--s3),var(--s4))'};display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;font-weight:700;flex-shrink:0;">${m.email[0].toUpperCase()}</div>
+                <div style="width:38px;height:38px;border-radius:50%;background:${m.role==='owner'?'#f04b2e':m.role==='manager'?'#031c33':'#9e9e9e'};display:flex;align-items:center;justify-content:center;font-size:.85rem;color:#fff;font-weight:700;flex-shrink:0;">${m.email[0].toUpperCase()}</div>
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:.82rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.email}</div>
                     <div style="font-size:.7rem;color:var(--mut);margin-top:2px;">
@@ -5733,7 +5733,7 @@ function doExport(format){
                 items+='</table>';
             });
         }
-        const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>RestauRank — ${name}</title><style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:40px 20px;color:#1a1a2e;}h1{color:#6366f1;}h3{color:#6366f1;}.scores{display:flex;gap:40px;margin:20px 0;}.score-box{text-align:center;}.score-val{font-size:3rem;font-weight:900;}.seo{color:#6366f1;}.geo{color:#06b6d4;}@media print{body{padding:20px;}}</style></head><body>
+        const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>RestauRank — ${name}</title><style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:40px 20px;color:#1a1a2e;}h1{color:#6366f1;}h3{color:#6366f1;}.scores{display:flex;gap:40px;margin:20px 0;}.score-box{text-align:center;}.score-val{font-size:3rem;font-weight:900;}.seo{color:#6366f1;}.geo{color:#031c33;}@media print{body{padding:20px;}}</style></head><body>
         <h1>RestauRank — Rapport d'audit</h1>
         <p><strong>${name}</strong> — ${city} — ${new Date().toLocaleDateString('fr-FR')}</p>
         <div class="scores"><div class="score-box"><div class="score-val seo">${currentScores?.seo||0}</div><div>Score SEO</div></div><div class="score-box"><div class="score-val geo">${currentScores?.geo||0}</div><div>Score GEO</div></div></div>
@@ -6096,7 +6096,7 @@ function renderDirAutoGrid(){
             } else if(st==='needs_verification'){
                 btn=`<button class="dir-auto-btn connect" onclick="markPlatformDone('${d.id}')">✓ Valider la connexion</button>`;
             } else if(st==='automating'){
-                btn=`<div class="dir-progress"><span class="spinner-sm"></span><div class="prog-bar"><div class="prog-fill" style="width:${ar.progress||30}%"></div></div><span style="font-size:.6rem;color:#8b5cf6;">${ar.currentStep||'Navigation…'}</span></div>`;
+                btn=`<div class="dir-progress"><span class="spinner-sm"></span><div class="prog-bar"><div class="prog-fill" style="width:${ar.progress||30}%"></div></div><span style="font-size:.6rem;color:#f04b2e;">${ar.currentStep||'Navigation…'}</span></div>`;
             } else if(st==='locked'){
                 btn=`<button class="dir-auto-btn" onclick="showUpgradeModal('Passez au plan supérieur pour connecter plus de plateformes.','pro')" style="opacity:.6"> Débloquer</button>`;
             } else {
@@ -6107,7 +6107,7 @@ function renderDirAutoGrid(){
                 } else if(d.noApi){
                     // No public API — guide user to their dashboard
                     const urls={thefork:'https://manager.thefork.com',zenchef:'https://app.zenchef.com',opentable:'https://restaurant.opentable.com',ubereats:'https://merchants.ubereats.com',deliveroo:'https://restaurant-hub.deliveroo.net',doordash:'https://merchant-portal.doordash.com',justeat:'https://partner.just-eat.fr',sevenrooms:'https://app.sevenrooms.com',resy:'https://os.resy.com'};
-                    btn=`<button class="dir-auto-btn" onclick="window.open('${urls[d.id]||'#'}','_blank')" style="background:linear-gradient(135deg,#f59e0b,#d97706);">Gérer manuellement</button>`;
+                    btn=`<button class="dir-auto-btn" onclick="window.open('${urls[d.id]||'#'}','_blank')" style="background:#f04b2e;">Gérer manuellement</button>`;
                 } else if(d.claimUrl) {
                     // Direct link to claim/manage page on the platform
                     btn=`<button class="dir-auto-btn" onclick="window.open('${d.claimUrl}','_blank')">Réclamer la fiche</button>`;
@@ -6120,7 +6120,7 @@ function renderDirAutoGrid(){
             let agentDetail='';
             if(ar.steps&&ar.steps.length>0){
                 const stepsText=ar.steps.map(s=>`<span style="color:${s.needsManual?'var(--org)':'var(--grn)'}">• ${s.step}</span>`).join('<br>');
-                agentDetail=`<div class="dir-instructions show" style="border-color:rgba(139,92,246,.15);background:rgba(139,92,246,.03);margin-top:8px;">
+                agentDetail=`<div class="dir-instructions show" style="border-color:rgba(139,92,246,.15);background:rgba(240,75,46,.03);margin-top:8px;">
                     <div style="font-size:.65rem;line-height:1.5;">${stepsText}</div>
                     ${ar.status==='needs_verification'?`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
                         <button class="dir-auto-btn small" onclick="window.open('${ar.finalUrl||'#'}','_blank')">Ouvrir</button>
@@ -7033,7 +7033,7 @@ async function scrapePhotos(){
 
 async function fetchInstagramPhotos(){
     const status=document.getElementById('photoStatus');
-    if(status){status.style.display='block';status.style.background='linear-gradient(135deg,rgba(225,48,108,.1),rgba(247,119,55,.1))';status.style.color='#E1306C';status.textContent=' Connexion Instagram Graph API...';}
+    if(status){status.style.display='block';status.style.background='#f04b2e1a';status.style.color='#E1306C';status.textContent=' Connexion Instagram Graph API...';}
     try{
         const resp=await fetchTimeout(`${API_BASE}/api/instagram/photos`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')}},30000);
         const data=await resp.json();
@@ -8079,29 +8079,29 @@ async function renderStatsTab(){
         </p>
         <div style="background:var(--s1);border-radius:10px;border:1px solid var(--bdr);padding:20px;">
             <!-- Main CTA: Auto-Publish Everything -->
-            <button onclick="autoPublishAll()" id="btnAutoPublish" class="auto-btn-full" style="width:100%;padding:18px;font-size:.95rem;background:linear-gradient(135deg,#f59e0b,#d97706,#b45309);border:none;color:#fff;border-radius:12px;cursor:pointer;font-weight:700;margin-bottom:16px;box-shadow:0 4px 15px rgba(245,158,11,.3);letter-spacing:.3px;">
+            <button onclick="autoPublishAll()" id="btnAutoPublish" class="auto-btn-full" style="width:100%;padding:18px;font-size:.95rem;background:#f04b2e;border:none;color:#f8e5db;border-radius:8px;cursor:pointer;font-weight:700;margin-bottom:16px;box-shadow:none;letter-spacing:.3px;">
                 TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post
             </button>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-                <button onclick="generateBlogPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateBlogPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Blog GEO
                 </button>
-                <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#ff4500,#ff6b35);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Reddit x3
                 </button>
-                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f04b2e;border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
                      Guest Post
                 </button>
-                <button onclick="generateSocialPosts()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#ec4899,#be185d);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateSocialPosts()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Social x7
                 </button>
-                <button onclick="generateTikTokKit()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#000,#25f4ee);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateTikTokKit()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                      TikTok Kit x3
                 </button>
-                <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#14b8a6,#0d9488);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f04b2e;border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
                      FAQ GEO x15
                 </button>
-                <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#64748b,#475569);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Tout régénérer
                 </button>
             </div>
@@ -8229,7 +8229,7 @@ async function loadGSCChart(){
                 <div style="font-size:1.2rem;font-weight:700;color:var(--txt);">—</div>
             </div>
             <div style="padding:12px 20px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);min-width:100px;">
-                <div style="font-size:.6rem;color:#a855f7;font-weight:600;text-transform:uppercase;">Impressions</div>
+                <div style="font-size:.6rem;color:#f04b2e;font-weight:600;text-transform:uppercase;">Impressions</div>
                 <div style="font-size:1.2rem;font-weight:700;color:var(--txt);">—</div>
             </div>
             <div style="padding:12px 20px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);min-width:100px;">
@@ -8287,7 +8287,7 @@ function renderGSCChart(data){
                 <thead><tr style="border-bottom:1px solid var(--bdr);">
                     <th style="text-align:left;padding:6px;color:var(--mut);">Requête</th>
                     <th style="text-align:right;padding:6px;color:#4285f4;">Clics</th>
-                    <th style="text-align:right;padding:6px;color:#a855f7;">Impressions</th>
+                    <th style="text-align:right;padding:6px;color:#f04b2e;">Impressions</th>
                     <th style="text-align:right;padding:6px;color:#10b981;">CTR</th>
                     <th style="text-align:right;padding:6px;color:#f59e0b;">Position</th>
                 </tr></thead><tbody>
@@ -9810,7 +9810,7 @@ async function renderHolidaysAndHours(){
         else if(st==='custom'||st==='open')pill='<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">✓ Ouvert</span>';
         // Sync badge
         if(src==='synced')pill+=' <span style="background:rgba(59,130,246,.15);color:#60a5fa;padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Synchronisé avec Google">Sync</span>';
-        else if(src==='gbp')pill+=' <span style="background:rgba(139,92,246,.15);color:#a78bfa;padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Vient de Google">G</span>';
+        else if(src==='gbp')pill+=' <span style="background:rgba(240,75,46,.15);color:#a78bfa;padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Vient de Google">G</span>';
         else if(src==='local')pill+=' <span style="background:rgba(245,158,11,.15);color:var(--org);padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Pas encore poussé sur Google">! Local</span>';
         // Hole detection: holiday in next 30 days + no status
         if(!st&&h.date<=in30d&&googleAuth?.connected&&window._gbpSpecialHoursLoaded){
@@ -9905,7 +9905,7 @@ async function renderTargetKeywords(){
         brand:'background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);',
         local:'background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);',
         transactional:'background:rgba(245,158,11,.15);color:#fbbf24;border:1px solid rgba(245,158,11,.3);',
-        informational:'background:rgba(139,92,246,.15);color:#c4b5fd;border:1px solid rgba(139,92,246,.3);'
+        informational:'background:rgba(240,75,46,.15);color:#c4b5fd;border:1px solid rgba(139,92,246,.3);'
     };
     let html=`<tbody>`;
     keywords.forEach((k,i)=>{
