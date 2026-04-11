@@ -1089,49 +1089,36 @@
         </div>
     </div>
 
-    <!-- SETTINGS TAB -->
+    <!-- SETTINGS TAB — Client sees only plan + billing -->
     <div class="dash-tab-content" id="tabSettings">
         <div class="settings-container">
-            <h2 style="font-size:1rem;font-weight:800;margin-bottom:12px;"> Paramètres</h2>
-            
-            <div class="settings-group">
-                <label> Google Cloud Client ID</label>
-                <input type="text" id="settingsGoogleClientId" placeholder="YOUR_CLIENT_ID.apps.googleusercontent.com">
-                <small>Obtenez votre Client ID depuis <a href="https://console.cloud.google.com" style="color:var(--ind);">Google Cloud Console</a>. Scopes requis : business.manage</small>
-            </div>
-            
+            <h2>Mon abonnement</h2>
 
-            <div class="settings-group">
-                <label> Nom du restaurant</label>
-                <input type="text" id="settingsRestoName" placeholder="Nom de votre restaurant">
+            <div style="background:#f8e5db;border-radius:8px;padding:20px;margin-bottom:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                    <div>
+                        <div style="font-size:.7rem;color:#585254;text-transform:uppercase;letter-spacing:.5px;">Plan actuel</div>
+                        <div id="settingsPlanName" style="font-size:1.4rem;font-weight:800;color:#031c33;margin-top:4px;">—</div>
+                    </div>
+                    <button class="btn-gen" onclick="openBillingPortal()">Gérer mon abonnement</button>
+                </div>
             </div>
 
-            <div class="settings-group">
-                <label> Ville</label>
-                <input type="text" id="settingsCity" placeholder="Ville">
+            <div style="background:#f8e5db;border-radius:8px;padding:20px;margin-bottom:16px;">
+                <div style="font-weight:700;margin-bottom:12px;">Exporter mes données</div>
+                <p style="font-size:.82rem;color:#585254;margin-bottom:12px;">Téléchargez un rapport complet de votre audit SEO + GEO.</p>
+                <button class="btn-gen" onclick="exportData()">Exporter en PDF</button>
             </div>
 
-            <div class="settings-group">
-                <label> Type de cuisine</label>
-                <input type="text" id="settingsCuisine" placeholder="Japonais, Français, Italien...">
-                <small>Aide l'IA à personnaliser le contenu</small>
-            </div>
+            <!-- Hidden inputs for backward compat — populated from Hub Central -->
+            <input type="hidden" id="settingsGoogleClientId">
+            <input type="hidden" id="settingsRestoName">
+            <input type="hidden" id="settingsCity">
+            <input type="hidden" id="settingsCuisine">
+            <input type="hidden" id="settingsSpecialties">
 
-            <div class="settings-group">
-                <label>Spécialités</label>
-                <input type="text" id="settingsSpecialties" placeholder="Ramen, Sushi, Pizza...">
-                <small>Vos plats signatures — l'IA les mettra en avant</small>
-            </div>
-
-            <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
-                <button class="btn-dispatch-all" onclick="saveSettings()">Enregistrer les paramètres</button>
-                <button class="btn-dispatch-all" style="background:#f04b2e;color:#f8e5db;" onclick="bulkGenerateAI().then(r=>{if(r)alert('Contenu IA généré pour toutes les catégories !');else alert('Erreur de génération — contactez le support');})"> Tout générer avec l'IA</button>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-                <button class="btn-dispatch-all" style="background:#f8e5db;border:1px solid #031c3340;color:#031c33;" onclick="exportData()"> Exporter les données</button>
-                <button class="btn-dispatch-all" style="background:#f8e5db;border:1px solid #031c3340;color:#031c33;" onclick="openBillingPortal()"> Gérer mon abonnement</button>
-            </div>
-
+            <!-- ADMIN-ONLY: Technical settings (hidden for clients) -->
+            <div class="admin-only" style="display:none;">
             <!-- SOCIAL MEDIA CONNECTIONS -->
             <div style="margin-top:20px;padding:16px;background:#f8e5db;border:1px solid rgba(236,72,153,.2);border-radius:12px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
@@ -1329,7 +1316,9 @@
                 <button class="btn-dispatch-all" style="width:100%;margin-top:12px;" onclick="saveAiSettings()">Enregistrer les paramètres IA</button>
             </div>
 
-            <!-- ALGO WATCHDOG -->
+            </div><!-- close admin-only -->
+            <!-- ALGO WATCHDOG (also admin-only) -->
+            <div class="admin-only" style="display:none;">
             <div class="auto-panel" style="margin-top:20px;border-color:rgba(245,158,11,.3);background:#f8e5db;">
                 <div class="auto-panel-title"><span class="auto-icon"></span> Veille algorithmique</div>
                 <p style="font-size:.78rem;color:var(--mut);margin-bottom:10px;">RestauRank surveille les mises à jour Google (core updates, local pack, reviews) et ajuste automatiquement vos priorités d'optimisation.</p>

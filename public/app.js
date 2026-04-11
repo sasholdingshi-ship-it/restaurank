@@ -1034,7 +1034,7 @@ async function onAuthSuccess(){
     document.getElementById('ubEmail').textContent=currentAccount.email;
     const planEl=document.getElementById('ubPlan');
     planEl.textContent=currentAccount.plan.toUpperCase();
-    planEl.className='ub-plan '+currentAccount.plan;
+    const spn=document.getElementById("settingsPlanName");if(spn)spn.textContent=currentAccount.plan.toUpperCase();    planEl.className='ub-plan '+currentAccount.plan;
     // Show admin button if admin
     document.getElementById('ubAdmin').style.display=currentAccount.role==='admin'?'inline-block':'none';
     // Show admin-only tabs and action buttons if admin
