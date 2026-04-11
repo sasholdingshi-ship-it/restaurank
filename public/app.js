@@ -5772,7 +5772,7 @@ const CMS_INFO={
     wix:{name:'Wix',icon:'',color:'#0C6EFC',connectFields:[
         {id:'wix_token',label:'Token API Wix',placeholder:'IST...',type:'password'}
     ],connectHelp:'Allez dans Wix Dashboard → Paramètres → Clés API → Créer une clé'},
-    squarespace:{name:'Squarespace',icon:'⬛',color:'#000',connectFields:[
+    squarespace:{name:'Squarespace',icon:'⬛',color:'#031c33',connectFields:[
         {id:'sq_token',label:'Token API Squarespace',placeholder:'...',type:'password'}
     ],connectHelp:'Allez dans Squarespace → Paramètres → Avancé → Développeur → Clés API'},
     shopify:{name:'Shopify',icon:'',color:'#96bf48',connectFields:[
@@ -8089,7 +8089,7 @@ async function renderStatsTab(){
                 <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Reddit x3
                 </button>
-                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f04b2e;border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                      Guest Post
                 </button>
                 <button onclick="generateSocialPosts()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
@@ -8098,7 +8098,7 @@ async function renderStatsTab(){
                 <button onclick="generateTikTokKit()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                      TikTok Kit x3
                 </button>
-                <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f04b2e;border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
+                <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                      FAQ GEO x15
                 </button>
                 <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
