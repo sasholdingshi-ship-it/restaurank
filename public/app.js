@@ -134,7 +134,7 @@
 // ============================================================
 const CATEGORIES = [
     {
-        id:'gbp', icon:'', name:'Google Business Profile', weight:32, group:'seo',
+        id:'gbp', icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Google Business Profile', weight:32, group:'seo',
         desc:'Facteur n°1 du ranking local (32%). Audit complet de votre fiche Google.',
         items:[
             { id:'gbp_cat_primary', name:'Catégorie principale GBP', factor:'Facteur #1 Local Pack', weight:5,
@@ -194,7 +194,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'reviews', icon:'', name:'Avis & E-Réputation', weight:20, group:'seo',
+        id:'reviews', icon:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Avis & E-Réputation', weight:20, group:'seo',
         desc:'Facteur #2 (20%). Volume, note, fraîcheur, contenu textuel.',
         items:[
             { id:'rev_rating', name:'Note moyenne Google', factor:'Facteur #6 Local Pack', weight:5,
@@ -230,7 +230,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'citations', icon:'', name:'Citations & NAP', weight:13, group:'seo',
+        id:'citations', icon:'<img src="https://www.google.com/s2/favicons?domain=pagesjaunes.fr&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Citations & NAP', weight:13, group:'seo',
         desc:'6% Local Pack, 13% AI Visibility. Cohérence NAP cruciale.',
         items:[
             { id:'cit_nap', name:'Cohérence NAP', factor:'Facteur #15 + IA', weight:5,
@@ -254,7 +254,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'onpage', icon:'', name:'Site Web (On-Page)', weight:15, group:'seo',
+        id:'onpage', icon:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Site Web (On-Page)', weight:15, group:'seo',
         desc:'15% Local Pack, 33% Local Organic, 24% AI Visibility.',
         items:[
             { id:'op_schema', name:'Schema.org Restaurant', factor:'Signal structuré SEO+GEO', weight:5,
@@ -344,7 +344,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_chatgpt', icon:'', name:'Visibilité ChatGPT', weight:25, group:'geo',
+        id:'geo_chatgpt', icon:'<img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Visibilité ChatGPT', weight:25, group:'geo',
         desc:'ChatGPT utilise Yelp (48.73%), Bing, TripAdvisor comme sources.',
         items:[
             { id:'g_chatgpt', name:'Citation par ChatGPT', factor:'Test direct', weight:5,
@@ -368,7 +368,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_perplexity', icon:'', name:'Visibilité Perplexity + Gemini', weight:25, group:'geo',
+        id:'geo_perplexity', icon:'<img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Visibilité Perplexity + Gemini', weight:25, group:'geo',
         desc:'Perplexity = sources niche 24%. Gemini = site web 52.15%.',
         items:[
             { id:'g_perplexity', name:'Citation par Perplexity', factor:'Sources niche 24%', weight:4,
@@ -398,7 +398,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_signals', icon:'', name:'Signaux GEO & UGC', weight:25, group:'geo',
+        id:'geo_signals', icon:'<img src="https://www.google.com/s2/favicons?domain=reddit.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Signaux GEO & UGC', weight:25, group:'geo',
         desc:'Signaux sociaux (9% AI Visibility), UGC, mentions, données structurées.',
         items:[
             { id:'g_claude', name:'Visibilité Claude (Anthropic)', factor:'UGC x10 en F&B', weight:3,
@@ -479,15 +479,15 @@ const CATEGORIES = [
 // VERIFICATION LINKS
 // ============================================================
 const VERIFY_PLATFORMS = [
-    {name:'Google Search',icon:'',url:q=>`https://www.google.com/search?q=${q}`},
-    {name:'Google Maps',icon:'',url:q=>`https://www.google.com/maps/search/${q}`},
-    {name:'TripAdvisor',icon:'',url:q=>`https://www.tripadvisor.fr/Search?q=${q}`},
-    {name:'Yelp',icon:'',url:q=>`https://www.yelp.fr/search?find_desc=${q}`},
-    {name:'TheFork',icon:'',url:q=>`https://www.thefork.fr/search?queryText=${q}`},
-    {name:'Facebook',icon:'',url:q=>`https://www.facebook.com/search/pages/?q=${q}`},
-    {name:'Pages Jaunes',icon:'',url:q=>`https://www.pagesjaunes.fr/recherche/${q}`},
-    {name:'Bing Maps',icon:'',url:q=>`https://www.bing.com/maps?q=${q}`},
-    {name:'Foursquare',icon:'',url:q=>`https://foursquare.com/explore?q=${q}`},
+    {name:'Google Search',icon:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;" alt="Google Search">',url:q=>`https://www.google.com/search?q=${q}`},
+    {name:'Google Maps',icon:'<img src="https://www.google.com/s2/favicons?domain=maps.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;" alt="Google Maps">',url:q=>`https://www.google.com/maps/search/${q}`},
+    {name:'TripAdvisor',icon:'<img src="https://www.google.com/s2/favicons?domain=tripadvisor.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;" alt="TripAdvisor">',url:q=>`https://www.tripadvisor.fr/Search?q=${q}`},
+    {name:'Yelp',icon:'<img src="https://www.google.com/s2/favicons?domain=yelp.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;" alt="Yelp">',url:q=>`https://www.yelp.fr/search?find_desc=${q}`},
+    {name:'TheFork',icon:'<img src="https://www.google.com/s2/favicons?domain=thefork.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',url:q=>`https://www.thefork.fr/search?queryText=${q}`},
+    {name:'Facebook',icon:'<img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',url:q=>`https://www.facebook.com/search/pages/?q=${q}`},
+    {name:'Pages Jaunes',icon:'<img src="https://www.google.com/s2/favicons?domain=pagesjaunes.fr&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',url:q=>`https://www.pagesjaunes.fr/recherche/${q}`},
+    {name:'Bing Maps',icon:'<img src="https://www.google.com/s2/favicons?domain=bing.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',url:q=>`https://www.bing.com/maps?q=${q}`},
+    {name:'Foursquare',icon:'<img src="https://www.google.com/s2/favicons?domain=foursquare.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',url:q=>`https://foursquare.com/explore?q=${q}`},
 ];
 
 // ============================================================
@@ -2339,10 +2339,10 @@ renderDashboard=function(){
     const pbGrid=document.getElementById('pbGrid');
     if(pbEl&&pbGrid){
         const platforms=[
-            {name:'ChatGPT',icon:'',key:'citedByChatGPT',itemId:'geo_chatgpt'},
-            {name:'Perplexity',icon:'',key:'citedByPerplexity',itemId:'geo_perp'},
-            {name:'Gemini',icon:'',key:'citedByGemini',itemId:'geo_gemini'},
-            {name:'Claude',icon:'',key:'citedByClaude',itemId:'geo_claude'}
+            {name:'ChatGPT',icon:'<img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',key:'citedByChatGPT',itemId:'geo_chatgpt'},
+            {name:'Perplexity',icon:'<img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',key:'citedByPerplexity',itemId:'geo_perp'},
+            {name:'Gemini',icon:'<img src="https://www.google.com/s2/favicons?domain=gemini.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',key:'citedByGemini',itemId:'geo_gemini'},
+            {name:'Claude',icon:'<img src="https://www.google.com/s2/favicons?domain=claude.ai&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',key:'citedByClaude',itemId:'geo_claude'}
         ];
         pbGrid.innerHTML=platforms.map(p=>{
             const val=d[p.key]||'not';
@@ -3104,21 +3104,21 @@ async function saveClaudeApiKey(){ return false; }
 function getPlatformLinks(itemId,name,city){
     const q=encodeURIComponent(`${name} ${city}`);
     const links={
-        'gbp_cat_primary':[{icon:'',label:'Ouvrir Google Business Profile',url:'https://business.google.com',primary:true}],
-        'gbp_secondary':[{icon:'',label:'Ouvrir GBP',url:'https://business.google.com',primary:true}],
-        'gbp_desc':[{icon:'',label:'Ouvrir GBP → Description',url:'https://business.google.com',primary:true}],
-        'gbp_photos':[{icon:'',label:'Ouvrir GBP → Photos',url:'https://business.google.com',primary:true}],
-        'gbp_hours':[{icon:'',label:'Ouvrir GBP → Horaires',url:'https://business.google.com',primary:true}],
-        'gbp_attr':[{icon:'',label:'Ouvrir GBP → Attributs',url:'https://business.google.com',primary:true}],
-        'gbp_posts':[{icon:'',label:'Ouvrir GBP → Posts',url:'https://business.google.com',primary:true}],
-        'gbp_menu':[{icon:'',label:'Ouvrir GBP → Menu',url:'https://business.google.com',primary:true}],
-        'gbp_booking':[{icon:'',label:'Configurer TheFork',url:'https://www.thefork.fr/restaurant',primary:true},{icon:'',label:'GBP → Réservation',url:'https://business.google.com',primary:false}],
+        'gbp_cat_primary':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir Google Business Profile',url:'https://business.google.com',primary:true}],
+        'gbp_secondary':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP',url:'https://business.google.com',primary:true}],
+        'gbp_desc':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP → Description',url:'https://business.google.com',primary:true}],
+        'gbp_photos':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP → Photos',url:'https://business.google.com',primary:true}],
+        'gbp_hours':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP → Horaires',url:'https://business.google.com',primary:true}],
+        'gbp_attr':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP → Attributs',url:'https://business.google.com',primary:true}],
+        'gbp_posts':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP → Posts',url:'https://business.google.com',primary:true}],
+        'gbp_menu':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP → Menu',url:'https://business.google.com',primary:true}],
+        'gbp_booking':[{icon:'<img src="https://www.google.com/s2/favicons?domain=thefork.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Configurer TheFork',url:'https://www.thefork.fr/restaurant',primary:true},{icon:'',label:'GBP → Réservation',url:'https://business.google.com',primary:false}],
         'rev_rating':[{icon:'',label:'Voir mes avis Google',url:`https://www.google.com/maps/search/${q}`,primary:true}],
         'rev_count':[{icon:'',label:'Créer QR Code',url:'https://www.qr-code-generator.com',primary:true},{icon:'',label:'Mon profil Google',url:`https://www.google.com/maps/search/${q}`,primary:false}],
         'rev_recency':[{icon:'',label:'Voir avis récents',url:`https://www.google.com/maps/search/${q}`,primary:true}],
-        'rev_responses':[{icon:'',label:'Ouvrir GBP → Avis',url:'https://business.google.com',primary:true}],
+        'rev_responses':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP → Avis',url:'https://business.google.com',primary:true}],
         'rev_multi':[{icon:'',label:'Yelp Business',url:`https://biz.yelp.fr`,primary:true},{icon:'',label:'TripAdvisor',url:`https://www.tripadvisor.fr/Search?q=${q}`,primary:false},{icon:'',label:'TheFork',url:`https://www.thefork.fr/search?queryText=${q}`,primary:false}],
-        'cit_nap':[{icon:'',label:'Ouvrir GBP',url:'https://business.google.com',primary:true},{icon:'',label:'Pages Jaunes',url:`https://www.pagesjaunes.fr/recherche/${q}`,primary:false}],
+        'cit_nap':[{icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Ouvrir GBP',url:'https://business.google.com',primary:true},{icon:'<img src="https://www.google.com/s2/favicons?domain=pagesjaunes.fr&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',label:'Pages Jaunes',url:`https://www.pagesjaunes.fr/recherche/${q}`,primary:false}],
         'cit_presence':[{icon:'',label:'Yelp Business',url:'https://biz.yelp.fr',primary:true},{icon:'',label:'Foursquare Business',url:'https://business.foursquare.com',primary:false},{icon:'',label:'Apple Maps Connect',url:'https://mapsconnect.apple.com',primary:false},{icon:'',label:'Bing Places',url:'https://www.bingplaces.com',primary:false}],
         'cit_completeness':[{icon:'',label:'Vérifier mes fiches',url:`https://www.google.com/search?q=${q}`,primary:true}],
         'op_schema':[{icon:'',label:'Tester Rich Results',url:'https://search.google.com/test/rich-results',primary:true}],
@@ -3281,84 +3281,84 @@ function goLanding(){showScreen('landing');}
 // COMMAND CENTER — ANNUAIRES (auto-connexion)
 // ============================================================
 const PLATFORMS=[
-    {id:'google_gbp',icon:'',name:'Google Business Profile',tag:'seo',priority:true,
+    {id:'google_gbp',icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="google_gbp">',name:'Google Business Profile',tag:'seo',priority:true,
      why:'Facteur #1 SEO local (32%). La fiche la plus importante.',
      claimUrl:q=>`https://www.google.com/maps/search/${q}`,
      claimNote:'Trouvez votre restaurant → cliquez "Revendiquer cet établissement" ou "Vous êtes le propriétaire ?"',
      searchUrl:q=>`https://www.google.com/maps/search/${q}`,
      description:d=>`${d.name} — restaurant à ${d.city}. Cuisine authentique, produits frais de saison. Terrasse, réservation, livraison. Ambiance chaleureuse au cœur de ${d.city}.`
     },
-    {id:'yelp',icon:'',name:'Yelp',tag:'geo',priority:true,
+    {id:'yelp',icon:'<img src="https://www.google.com/s2/favicons?domain=yelp.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="yelp">',name:'Yelp',tag:'geo',priority:true,
      why:'Source #1 ChatGPT (48.73%). Critique pour la visibilité IA.',
      claimUrl:q=>`https://biz.yelp.fr/search?find_desc=${q}`,
      claimNote:'Cherchez votre restaurant → "Réclamer cet établissement" ou créez une fiche',
      searchUrl:q=>`https://www.yelp.fr/search?find_desc=${q}`,
      description:d=>`${d.name} est un restaurant situé à ${d.city}, proposant une cuisine authentique et savoureuse. Produits frais, spécialités maison, terrasse agréable. Réservation recommandée.`
     },
-    {id:'tripadvisor',icon:'',name:'TripAdvisor',tag:'geo',priority:true,
+    {id:'tripadvisor',icon:'<img src="https://www.google.com/s2/favicons?domain=tripadvisor.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="tripadvisor">',name:'TripAdvisor',tag:'geo',priority:true,
      why:'Source dominante pour Perplexity en food. Citabilité IA élevée.',
      claimUrl:q=>`https://www.tripadvisor.fr/Search?q=${q}`,
      claimNote:'Trouvez votre restaurant → "Vous êtes le propriétaire ?" → Inscrivez-vous',
      searchUrl:q=>`https://www.tripadvisor.fr/Search?q=${q}`,
      description:d=>`Découvrez ${d.name} à ${d.city}. Cuisine de qualité, cadre chaleureux, service attentionné. Idéal pour déjeuner ou dîner.`
     },
-    {id:'thefork',icon:'',name:'TheFork / LaFourchette',tag:'seo',priority:true,
+    {id:'thefork',icon:'<img src="https://www.google.com/s2/favicons?domain=thefork.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="thefork">',name:'TheFork / LaFourchette',tag:'seo',priority:true,
      why:'Intégration native Google "Réserver". Boost CTR +20%.',
      claimUrl:q=>`https://www.thefork.fr/search?queryText=${q}`,
      claimNote:'Cherchez votre restaurant → "Réclamer" ou inscrivez-vous sur manager.thefork.com',
      searchUrl:q=>`https://www.thefork.fr/search?queryText=${q}`,
      description:d=>`${d.name} — ${d.city}. Réservez en ligne et profitez de nos spécialités dans un cadre unique.`
     },
-    {id:'bing',icon:'',name:'Bing Places',tag:'geo',priority:true,
+    {id:'bing',icon:'<img src="https://www.google.com/s2/favicons?domain=bing.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="bing">',name:'Bing Places',tag:'geo',priority:true,
      why:'Source #2 pour ChatGPT. Alimente Cortana et Copilot.',
      claimUrl:q=>`https://www.bingplaces.com/Dashboard/ImportFromGoogle`,
      claimNote:'Importez directement depuis Google Business Profile ou créez manuellement',
      searchUrl:q=>`https://www.bing.com/maps?q=${q}`,
      description:d=>`${d.name}, restaurant à ${d.city}. Cuisine authentique, produits frais. Terrasse, livraison, réservation en ligne.`
     },
-    {id:'foursquare',icon:'',name:'Foursquare',tag:'geo',priority:false,
+    {id:'foursquare',icon:'<img src="https://www.google.com/s2/favicons?domain=foursquare.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="foursquare">',name:'Foursquare',tag:'geo',priority:false,
      why:'Alimente Apple Maps (Siri), Uber, Samsung, Twitter.',
      claimUrl:q=>`https://foursquare.com/search?q=${q}`,
      claimNote:'Cherchez votre restaurant → "Claim this venue"',
      searchUrl:q=>`https://foursquare.com/explore?q=${q}`,
      description:d=>`${d.name} — ${d.city}. Restaurant convivial, cuisine de qualité.`
     },
-    {id:'apple',icon:'',name:'Apple Maps (Apple Business Connect)',tag:'geo',priority:false,
+    {id:'apple',icon:'<img src="https://www.google.com/s2/favicons?domain=apple.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="apple">',name:'Apple Maps (Apple Business Connect)',tag:'geo',priority:false,
      why:'Siri, Apple Maps, CarPlay. 1 milliard d\'appareils Apple.',
      claimUrl:q=>`https://businessconnect.apple.com/search?term=${q}`,
      claimNote:'Cherchez votre restaurant → "Claim this place"',
      searchUrl:q=>`https://maps.apple.com/?q=${q}`,
      description:d=>`${d.name} à ${d.city}. Restaurant authentique.`
     },
-    {id:'pagesjaunes',icon:'',name:'Pages Jaunes',tag:'seo',priority:false,
+    {id:'pagesjaunes',icon:'<img src="https://www.google.com/s2/favicons?domain=pagesjaunes.fr&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="pagesjaunes">',name:'Pages Jaunes',tag:'seo',priority:false,
      why:'Annuaire historique FR. Bon pour les citations locales.',
      claimUrl:q=>`https://www.pagesjaunes.fr/recherche/${q}`,
      claimNote:'Trouvez votre fiche → "Vous êtes le propriétaire" → Gérez votre fiche',
      searchUrl:q=>`https://www.pagesjaunes.fr/recherche/${q}`,
      description:d=>`${d.name}, restaurant à ${d.city}.`
     },
-    {id:'facebook',icon:'',name:'Facebook (Page)',tag:'geo',priority:false,
+    {id:'facebook',icon:'<img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="facebook">',name:'Facebook (Page)',tag:'geo',priority:false,
      why:'Signal social (9% AI Visibility). Avis Facebook = citabilité.',
      claimUrl:q=>'https://www.facebook.com/pages/create/?ref_type=launch_point',
      claimNote:'Créez une Page "Restaurant" → Remplissez nom, adresse, catégorie',
      searchUrl:q=>`https://www.facebook.com/search/pages/?q=${q}`,
      description:d=>`${d.name} — votre restaurant à ${d.city}. Cuisine authentique, ambiance chaleureuse. Suivez-nous pour les actus et événements !`
     },
-    {id:'instagram',icon:'',name:'Instagram (Profil Pro)',tag:'geo',priority:false,
+    {id:'instagram',icon:'<img src="https://www.google.com/s2/favicons?domain=instagram.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="instagram">',name:'Instagram (Profil Pro)',tag:'geo',priority:false,
      why:'UGC visuel + signal social. Claude cite l\'UGC x10 en F&B.',
      claimUrl:q=>'https://www.instagram.com/accounts/emailsignup/',
      claimNote:'Créez un compte Pro → Catégorie "Restaurant" → Liez à votre page Facebook',
      searchUrl:q=>`https://www.instagram.com/explore/tags/${encodeURIComponent(q.replace(/\s+/g,''))}`,
      description:d=>`${d.name} ${d.city} | Cuisine authentique | Réservation ↓`
     },
-    {id:'waze',icon:'',name:'Waze (publicité locale)',tag:'seo',priority:false,
+    {id:'waze',icon:'<img src="https://www.google.com/s2/favicons?domain=waze.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="waze">',name:'Waze (publicité locale)',tag:'seo',priority:false,
      why:'Navigation GPS. Publicité locale ciblée pour les conducteurs.',
      claimUrl:q=>'https://ads.waze.com',
      claimNote:'Créez un compte Waze Ads → Ajoutez votre restaurant',
      searchUrl:q=>`https://www.waze.com/live-map?q=${q}`,
      description:d=>`${d.name} — ${d.city}`
     },
-    {id:'ubereats',icon:'',name:'Uber Eats',tag:'seo',priority:false,
+    {id:'ubereats',icon:'<img src="https://www.google.com/s2/favicons?domain=ubereats.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="ubereats">',name:'Uber Eats',tag:'seo',priority:false,
      why:'Visibilité livraison. Source de données pour Foursquare/Uber.',
      claimUrl:q=>'https://merchants.ubereats.com/signup',
      claimNote:'Inscrivez votre restaurant → formulaire en ligne',
@@ -5936,13 +5936,13 @@ let dirCheckResults={};
 
 const DIR_LIST=[
     // ── Référencement local (SEO + GEO) ──
-    {id:'google',icon:'',name:'Google',cat:'local',desc:'Gérez votre fiche via Google Business Profile.',connectable:true,priority:true,claimUrl:'https://business.google.com'},
-    {id:'yelp',icon:'',name:'Yelp',cat:'local',desc:'Source #1 de ChatGPT (48.7%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://biz.yelp.fr'},
-    {id:'tripadvisor',icon:'',name:'TripAdvisor',cat:'local',desc:'Source #1 de Perplexity (32.8%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.tripadvisor.fr/Owners'},
-    {id:'foursquare',icon:'',name:'Foursquare',cat:'local',desc:'Alimente Apple Maps, Uber, Samsung. Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://business.foursquare.com'},
-    {id:'bing',icon:'',name:'Bing Places',cat:'local',desc:'Importez depuis Google ou créez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.bingplaces.com'},
-    {id:'apple',icon:'',name:'Apple Plans',cat:'local',desc:'Réclamez votre lieu sur Apple Business Connect.',connectable:true,priority:false,claimUrl:'https://businessconnect.apple.com'},
-    {id:'pagesjaunes',icon:'',name:'Pages Jaunes',cat:'local',desc:'Réclamez votre fiche sur PagesJaunes.',connectable:true,priority:false,claimUrl:'https://www.pagesjaunes.fr/inscription'},
+    {id:'google',icon:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="google">',name:'Google',cat:'local',desc:'Gérez votre fiche via Google Business Profile.',connectable:true,priority:true,claimUrl:'https://business.google.com'},
+    {id:'yelp',icon:'<img src="https://www.google.com/s2/favicons?domain=yelp.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="yelp">',name:'Yelp',cat:'local',desc:'Source #1 de ChatGPT (48.7%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://biz.yelp.fr'},
+    {id:'tripadvisor',icon:'<img src="https://www.google.com/s2/favicons?domain=tripadvisor.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="tripadvisor">',name:'TripAdvisor',cat:'local',desc:'Source #1 de Perplexity (32.8%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.tripadvisor.fr/Owners'},
+    {id:'foursquare',icon:'<img src="https://www.google.com/s2/favicons?domain=foursquare.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="foursquare">',name:'Foursquare',cat:'local',desc:'Alimente Apple Maps, Uber, Samsung. Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://business.foursquare.com'},
+    {id:'bing',icon:'<img src="https://www.google.com/s2/favicons?domain=bing.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="bing">',name:'Bing Places',cat:'local',desc:'Importez depuis Google ou créez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.bingplaces.com'},
+    {id:'apple',icon:'<img src="https://www.google.com/s2/favicons?domain=apple.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="apple">',name:'Apple Plans',cat:'local',desc:'Réclamez votre lieu sur Apple Business Connect.',connectable:true,priority:false,claimUrl:'https://businessconnect.apple.com'},
+    {id:'pagesjaunes',icon:'<img src="https://www.google.com/s2/favicons?domain=pagesjaunes.fr&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="pagesjaunes">',name:'Pages Jaunes',cat:'local',desc:'Réclamez votre fiche sur PagesJaunes.',connectable:true,priority:false,claimUrl:'https://www.pagesjaunes.fr/inscription'},
     // ── Plateformes auto-sync (connectées via Google/data push) ──
     {id:'openai',icon:'',name:'ChatGPT / OpenAI',cat:'auto',desc:'Visibilité IA — données poussées automatiquement.',auto:true},
     {id:'perplexity',icon:'',name:'Perplexity',cat:'auto',desc:'Visibilité IA — optimisation GEO automatique.',auto:true},
@@ -5950,7 +5950,7 @@ const DIR_LIST=[
     {id:'gemini',icon:'',name:'Gemini / Google AI',cat:'auto',desc:'Visibilité IA — via Google Business Profile.',auto:true},
     {id:'alexa',icon:'',name:'Amazon Alexa',cat:'auto',desc:'Recherche vocale — données synchronisées.',auto:true},
     {id:'siri',icon:'',name:'Siri / Apple',cat:'auto',desc:'Recherche vocale — via Apple Business Connect.',auto:true},
-    {id:'waze',icon:'',name:'Waze',cat:'auto',desc:'Navigation — synchronisé depuis Google.',auto:true},
+    {id:'waze',icon:'<img src="https://www.google.com/s2/favicons?domain=waze.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="waze">',name:'Waze',cat:'auto',desc:'Navigation — synchronisé depuis Google.',auto:true},
     {id:'mapquest',icon:'',name:'MapQuest',cat:'auto',desc:'Navigation — données synchronisées.',auto:true},
     {id:'here',icon:'',name:'HERE Maps',cat:'auto',desc:'Navigation — données poussées automatiquement.',auto:true},
     {id:'tomtom',icon:'',name:'TomTom',cat:'auto',desc:'Navigation — synchronisé via Foursquare.',auto:true},
@@ -5974,19 +5974,19 @@ const DIR_LIST=[
     {id:'linternaute',icon:'',name:'L\'Internaute',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
     {id:'petit_fute',icon:'',name:'Petit Futé',cat:'auto',desc:'Guide voyage — données synchronisées.',auto:true},
     // ── Réseaux sociaux ──
-    {id:'facebook',icon:'',name:'Facebook',cat:'social',desc:'Publiez, répondez aux avis et messages.',connectable:true,priority:true},
-    {id:'instagram',icon:'',name:'Instagram',cat:'social',desc:'Publiez automatiquement, répondez aux commentaires.',connectable:true,priority:true},
-    {id:'tiktok',icon:'',name:'TikTok',cat:'social',desc:'Publiez automatiquement du contenu.',connectable:true,priority:false},
-    {id:'mapstr',icon:'',name:'Mapstr',cat:'social',desc:'Publiez automatiquement avec Mapstr Premium.',connectable:true,priority:false},
+    {id:'facebook',icon:'<img src="https://www.google.com/s2/favicons?domain=facebook.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="facebook">',name:'Facebook',cat:'social',desc:'Publiez, répondez aux avis et messages.',connectable:true,priority:true},
+    {id:'instagram',icon:'<img src="https://www.google.com/s2/favicons?domain=instagram.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="instagram">',name:'Instagram',cat:'social',desc:'Publiez automatiquement, répondez aux commentaires.',connectable:true,priority:true},
+    {id:'tiktok',icon:'<img src="https://www.google.com/s2/favicons?domain=tiktok.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="tiktok">',name:'TikTok',cat:'social',desc:'Publiez automatiquement du contenu.',connectable:true,priority:false},
+    {id:'mapstr',icon:'<img src="https://www.google.com/s2/favicons?domain=mapstr.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="mapstr">',name:'Mapstr',cat:'social',desc:'Publiez automatiquement avec Mapstr Premium.',connectable:true,priority:false},
     // ── Réservation & caisse ──
-    {id:'thefork',icon:'',name:'TheFork',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'zenchef',icon:'',name:'Zenchef',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'opentable',icon:'',name:'OpenTable',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'thefork',icon:'<img src="https://www.google.com/s2/favicons?domain=thefork.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="thefork">',name:'TheFork',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'zenchef',icon:'<img src="https://www.google.com/s2/favicons?domain=zenchef.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="zenchef">',name:'Zenchef',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'opentable',icon:'<img src="https://www.google.com/s2/favicons?domain=opentable.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="opentable">',name:'OpenTable',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
     {id:'sevenrooms',icon:'',name:'SevenRooms',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
     {id:'resy',icon:'',name:'Resy',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
     // ── Livraison ──
-    {id:'ubereats',icon:'',name:'Uber Eats',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'deliveroo',icon:'',name:'Deliveroo',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'ubereats',icon:'<img src="https://www.google.com/s2/favicons?domain=ubereats.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="ubereats">',name:'Uber Eats',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'deliveroo',icon:'<img src="https://www.google.com/s2/favicons?domain=deliveroo.com&sz=24" style="width:20px;height:20px;border-radius:4px;" alt="deliveroo">',name:'Deliveroo',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
     {id:'doordash',icon:'',name:'DoorDash',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
     {id:'justeat',icon:'',name:'Just Eat',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
 ];
@@ -7360,14 +7360,14 @@ async function checkNapConsistency(){
     // Also use cached real audit data
     const det=window._realAuditDetails||{};
     const addedNames=sources.map(s=>s.name.toLowerCase());
-    if(det.foursquare?.available&&det.foursquare?.found&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'',data:{name:det.foursquare.name||'',phone:det.foursquare.phone||'',address:det.foursquare.address||'',website:det.foursquare.website||''}});}
-    if(det.tripadvisor?.available&&det.tripadvisor?.found&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'',data:{name:det.tripadvisor.name||'',phone:'',address:det.tripadvisor.address||'',website:''}});}
-    if(det.yelp?.available&&det.yelp?.found&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'',data:{name:det.yelp.name||'',phone:det.yelp.phone||'',address:det.yelp.address||'',website:''}});}
+    if(det.foursquare?.available&&det.foursquare?.found&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'<img src="https://www.google.com/s2/favicons?domain=foursquare.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',data:{name:det.foursquare.name||'',phone:det.foursquare.phone||'',address:det.foursquare.address||'',website:det.foursquare.website||''}});}
+    if(det.tripadvisor?.available&&det.tripadvisor?.found&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'<img src="https://www.google.com/s2/favicons?domain=tripadvisor.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;" alt="TripAdvisor">',data:{name:det.tripadvisor.name||'',phone:'',address:det.tripadvisor.address||'',website:''}});}
+    if(det.yelp?.available&&det.yelp?.found&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'<img src="https://www.google.com/s2/favicons?domain=yelp.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;" alt="Yelp">',data:{name:det.yelp.name||'',phone:det.yelp.phone||'',address:det.yelp.address||'',website:''}});}
     // Fallback to old format
     const ra=window._realAuditData||currentData||{};
-    if(!det.foursquare&&ra._foursquare&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'',data:{name:ra._foursquare.name||'',phone:ra._foursquare.phone||'',address:ra._foursquare.address||'',website:ra._foursquare.website||''}});}
-    if(!det.tripadvisor&&ra._tripadvisor&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'',data:{name:ra._tripadvisor.name||'',phone:'',address:ra._tripadvisor.address||'',website:''}});}
-    if(!det.yelp&&ra._yelp&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'',data:{name:ra._yelp.name||'',phone:ra._yelp.phone||'',address:ra._yelp.address||'',website:''}});}
+    if(!det.foursquare&&ra._foursquare&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'<img src="https://www.google.com/s2/favicons?domain=foursquare.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;">',data:{name:ra._foursquare.name||'',phone:ra._foursquare.phone||'',address:ra._foursquare.address||'',website:ra._foursquare.website||''}});}
+    if(!det.tripadvisor&&ra._tripadvisor&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'<img src="https://www.google.com/s2/favicons?domain=tripadvisor.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;" alt="TripAdvisor">',data:{name:ra._tripadvisor.name||'',phone:'',address:ra._tripadvisor.address||'',website:''}});}
+    if(!det.yelp&&ra._yelp&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'<img src="https://www.google.com/s2/favicons?domain=yelp.com&sz=24" style="width:16px;height:16px;border-radius:3px;vertical-align:middle;" alt="Yelp">',data:{name:ra._yelp.name||'',phone:ra._yelp.phone||'',address:ra._yelp.address||'',website:''}});}
 
     // dirCheckResults
     const dirList=typeof DIR_LIST!=='undefined'?DIR_LIST:[];
