@@ -5763,19 +5763,19 @@ renderDashboard=function(){
 // ============================================================
 
 const CMS_INFO={
-    wordpress:{name:'WordPress',icon:'',color:'#21759b',connectFields:[
+    wordpress:{name:'WordPress',icon:'<img src="https://www.google.com/s2/favicons?domain=wordpress.org&sz=24" style="width:20px;height:20px;border-radius:4px;">',color:'#21759b',connectFields:[
         {id:'wp_url',label:'URL du site WordPress',placeholder:'https://www.monrestaurant.fr',type:'text'},
         {id:'wp_user',label:'Identifiant WordPress',placeholder:'admin',type:'text'},
         {id:'wp_pass',label:'Mot de passe d\'application',placeholder:'xxxx xxxx xxxx xxxx',type:'password'}
     ],connectHelp:'Allez dans WordPress Admin → Utilisateurs → Profil → Mots de passe d\'application → Créer'},
-    webflow:{name:'Webflow',icon:'',color:'#4353ff',connectFields:[{id:'wf_token',label:'Token API Webflow',placeholder:'Bearer ...',type:'password'},{id:'wf_site',label:'Site ID Webflow',placeholder:'66a36b35...',type:'text'}],connectHelp:'Allez dans Webflow → Site Settings → Apps & Integrations → API Access → Generate Token'},
-    wix:{name:'Wix',icon:'',color:'#0C6EFC',connectFields:[
+    webflow:{name:'Webflow',icon:'<img src="https://www.google.com/s2/favicons?domain=webflow.com&sz=24" style="width:20px;height:20px;border-radius:4px;">',color:'#4353ff',connectFields:[{id:'wf_token',label:'Token API Webflow',placeholder:'Bearer ...',type:'password'},{id:'wf_site',label:'Site ID Webflow',placeholder:'66a36b35...',type:'text'}],connectHelp:'Allez dans Webflow → Site Settings → Apps & Integrations → API Access → Generate Token'},
+    wix:{name:'Wix',icon:'<img src="https://www.google.com/s2/favicons?domain=wix.com&sz=24" style="width:20px;height:20px;border-radius:4px;">',color:'#0C6EFC',connectFields:[
         {id:'wix_token',label:'Token API Wix',placeholder:'IST...',type:'password'}
     ],connectHelp:'Allez dans Wix Dashboard → Paramètres → Clés API → Créer une clé'},
     squarespace:{name:'Squarespace',icon:'⬛',color:'#031c33',connectFields:[
         {id:'sq_token',label:'Token API Squarespace',placeholder:'...',type:'password'}
     ],connectHelp:'Allez dans Squarespace → Paramètres → Avancé → Développeur → Clés API'},
-    shopify:{name:'Shopify',icon:'',color:'#96bf48',connectFields:[
+    shopify:{name:'Shopify',icon:'<img src="https://www.google.com/s2/favicons?domain=shopify.com&sz=24" style="width:20px;height:20px;border-radius:4px;">',color:'#96bf48',connectFields:[
         {id:'sh_store',label:'URL Shopify',placeholder:'monrestaurant.myshopify.com',type:'text'},
         {id:'sh_token',label:'Token Admin API',placeholder:'shpat_...',type:'password'}
     ],connectHelp:'Allez dans Shopify Admin → Applications → Gérer les apps privées'},
@@ -8591,7 +8591,7 @@ async function generateAllSEOContent(){
 
     let allHtml='';
     const types=[{fn:_callContentAPI,type:'blog',title:'Article de blog SEO',icon:'',id:'blogAll'},
-                 {fn:_callContentAPI,type:'reddit',title:'Post Reddit',icon:'',id:'redditAll'},
+                 {fn:_callContentAPI,type:'reddit',title:'Post Reddit',icon:'<img src="https://www.google.com/s2/favicons?domain=reddit.com&sz=24" style="width:20px;height:20px;border-radius:4px;">',id:'redditAll'},
                  {fn:_callContentAPI,type:'guest_post',title:'Pitch Guest Post',icon:'',id:'guestAll'},
                  {fn:_callContentAPI,type:'social',title:'Posts Sociaux',icon:'',id:'socialAll'},
                  {fn:_callContentAPI,type:'faq',title:'FAQ SEO (Schema.org)',icon:'',id:'faqAll'}];
@@ -8802,7 +8802,7 @@ async function autoPublishAll(){
 
         // Display all generated content as cards
         let allHtml='<div style="margin-top:16px;">';
-        const typeLabels={blog:{title:'Article Blog GEO',icon:''},reddit:{title:'Posts Reddit x3',icon:''},social:{title:'Posts Sociaux x7',icon:''},faq:{title:'FAQ GEO x15',icon:''},guest_post:{title:'Guest Post + Pitch',icon:''}};
+        const typeLabels={blog:{title:'Article Blog GEO',icon:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=24" style="width:20px;height:20px;border-radius:4px;">'},reddit:{title:'Posts Reddit x3',icon:'<img src="https://www.google.com/s2/favicons?domain=reddit.com&sz=24" style="width:20px;height:20px;border-radius:4px;">'},social:{title:'Posts Sociaux x7',icon:'<img src="https://www.google.com/s2/favicons?domain=instagram.com&sz=24" style="width:20px;height:20px;border-radius:4px;">'},faq:{title:'FAQ GEO x15',icon:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=24" style="width:20px;height:20px;border-radius:4px;">'},guest_post:{title:'Guest Post + Pitch',icon:'<img src="https://www.google.com/s2/favicons?domain=medium.com&sz=24" style="width:20px;height:20px;border-radius:4px;">'}};
 
         // Re-fetch each content for display (auto-publish stores them but we need to show)
         for(const type of ['blog','reddit','social','faq','guest_post']){
