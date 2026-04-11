@@ -4200,17 +4200,23 @@ function renderContentCMSStatus(){
     const detected=detectedCMS?.detected?.cms||currentData?.detectedCMS?.cms;
     const cmsType=cms?.type||detected;
 
+    // Update publish button label with detected CMS name
+    const blogBtn=document.getElementById('blogPublishBtn');
+    if(blogBtn){
+        const cmsLabel=({wordpress:'WordPress',webflow:'Webflow',shopify:'Shopify',wix:'Wix',squarespace:'Squarespace',ghost:'Ghost'})[cmsType]||'';
+        blogBtn.textContent=cmsLabel?`Publier sur ${cmsLabel}`:'Publier';
+    }
+
     if(cms&&cms.connected){
-        // Connected — show green banner
+        // Connected — show banner
         const cmsName=({wordpress:'WordPress',webflow:'Webflow',shopify:'Shopify',wix:'Wix',squarespace:'Squarespace',ghost:'Ghost'})[cms.type]||cms.type;
         el.innerHTML=`
-            <div style="background:rgba(45,122,79,.08);border:1px solid rgba(45,122,79,.3);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                <div style="font-size:1.4rem;"></div>
+            <div style="background:#f8e5db;border:1px solid #031c3340;border-radius:8px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:12px;">
                 <div style="flex:1;">
-                    <div style="font-weight:700;font-size:.88rem;color:var(--grn);">${cmsName} connecté</div>
-                    <div style="font-size:.7rem;color:var(--mut);">Les articles seront publiés automatiquement en zone cachée sur votre site</div>
+                    <div style="font-weight:700;font-size:.88rem;">${cmsName} connecté</div>
+                    <div style="font-size:.7rem;color:#585254;">Les articles seront publiés automatiquement en zone cachée sur votre site</div>
                 </div>
-                <button class="btn-gen" style="font-size:.7rem;padding:6px 12px;background:var(--s2);" onclick="switchDashTab('dispatch')">Gérer</button>
+                <button class="btn-gen" style="font-size:.7rem;padding:6px 12px;" onclick="switchDashTab('dispatch')">Gérer</button>
             </div>`;
     } else if(detected){
         // Detected but not connected — show connection CTA with instructions
