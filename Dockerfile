@@ -16,6 +16,7 @@ COPY admin.html ./
 COPY db-adapter.js ./
 COPY init-db.sql ./
 COPY .env.example ./
+COPY public/ ./public/
 
 # Create data directory
 RUN mkdir -p /data
