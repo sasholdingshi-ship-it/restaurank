@@ -2443,10 +2443,10 @@ function renderScoreTrend(){
     let dots='';
     hist.forEach((h,i)=>{
         dots+=`<circle cx="${toX(i)}" cy="${toY(h.seo)}" r="3" fill="var(--ind)" opacity=".8"/>`;
-        dots+=`<circle cx="${toX(i)}" cy="${toY(h.geo)}" r="3" fill="var(--cyn)" opacity=".8"/>`;
+        dots+=`<circle cx="${toX(i)}" cy="${toY(h.geo)}" r="3" fill="#031c33" opacity=".8"/>`;
     });
 
-    chart.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${gridLines}<polyline points="${seoPoints}" fill="none" stroke="var(--ind)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${geoPoints}" fill="none" stroke="var(--cyn)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${dateLabels}</svg>`;
+    chart.innerHTML=`<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${gridLines}<polyline points="${seoPoints}" fill="none" stroke="var(--ind)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/><polyline points="${geoPoints}" fill="none" stroke="#031c33" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>${dots}${dateLabels}</svg>`;
     el.style.display='';
 }
 
