@@ -133,8 +133,8 @@ h3,.chart-title{font-size:1rem;}
 .dash-header{padding:16px 24px;border-bottom:none;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;background:#f8e5db;border-radius:8px;margin:16px 16px 0;color:#031c33;}
 .dash-logo{font-size:1.1rem;font-weight:800;color:#f04b2e;}
 .dash-resto{font-size:.85rem;color:var(--mut);display:flex;align-items:center;gap:6px;}
-.btn-rescan{padding:8px 16px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--txt);font-size:.78rem;font-weight:600;font-family:inherit;cursor:pointer;transition:.2s;}
-.btn-rescan:hover{border-color:var(--ind);background:var(--s3);}
+.btn-rescan{padding:8px 16px;border-radius:8px;border:1px solid #031c3340;background:#f8e5db;color:#031c33;font-size:.78rem;font-weight:600;font-family:inherit;cursor:pointer;transition:.2s;}
+.btn-rescan:hover{border-color:#f04b2e;background:#f04b2e;color:#f8e5db;}
 
 /* Two-score header */
 .scores-dual{display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--bdr);}
@@ -658,8 +658,8 @@ h3,.chart-title{font-size:1rem;}
 }
 
 /* ======== COMMAND CENTER — ANNUAIRES ======== */
-.cmd-toggle{display:flex;align-items:center;gap:6px;padding:10px 18px;border-radius:10px;border:1px solid rgba(6,182,212,.3);background:#f8e5db;color:var(--cyn);font-size:.82rem;font-weight:700;cursor:pointer;transition:.3s;font-family:inherit;}
-.cmd-toggle:hover{border-color:var(--cyn);transform:translateY(-1px);box-shadow:0 4px 16px rgba(6,182,212,.15);}
+.cmd-toggle{display:flex;align-items:center;gap:6px;padding:10px 18px;border-radius:8px;border:1px solid #031c3340;background:#f8e5db;color:#f04b2e;font-size:.82rem;font-weight:700;cursor:pointer;transition:.3s;font-family:inherit;}
+.cmd-toggle:hover{border-color:#f04b2e;background:#f04b2e;color:#f8e5db;}
 .cmd-panel{display:none;position:fixed;inset:0;z-index:1100;align-items:center;justify-content:center;padding:16px;}
 .cmd-panel.show{display:flex;}
 .cmd-overlay{position:absolute;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(6px);}
