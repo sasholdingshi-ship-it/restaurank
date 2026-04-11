@@ -9982,11 +9982,10 @@ async function renderGooglePostsList(){
     }catch(e){}
     
     if(posts.length===0){
-        // No fake fallback — empty state with CTA to generate real posts via AI
-        container.innerHTML=`<div style="text-align:center;padding:24px;color:var(--mut);">
-            <div style="font-size:.9rem;margin-bottom:6px;">Aucun Google Post pour ce restaurant.</div>
-            <div style="font-size:.7rem;margin-bottom:14px;">Génère 5 posts variés (STANDARD/EVENT/OFFER) adaptés à ton restaurant via l'IA — anti-ban Google + anti-détection IA.</div>
-            <button class="btn-gen" style="font-size:.75rem;padding:8px 16px;" onclick="generateGooglePostPack()">⚡ Générer 5 posts ciblés (IA)</button>
+        container.innerHTML=`<div style="text-align:center;padding:32px 20px;color:var(--mut);">
+            <div style="font-size:.85rem;font-weight:600;margin-bottom:6px;color:var(--txt);">Aucun post</div>
+            <div style="font-size:.72rem;margin-bottom:16px;line-height:1.5;">Cliquez sur "Générer x5" pour créer 5 brouillons adaptés<br>à votre restaurant, prêts à publier.</div>
+            <button class="btn-gen" style="font-size:.73rem;padding:8px 20px;" onclick="generateGooglePostPack()">Générer 5 brouillons</button>
         </div>`;
         return;
     }
@@ -9997,19 +9996,19 @@ async function renderGooglePostsList(){
         const dateStr=p.date?new Date(p.date).toLocaleDateString('fr-FR'):'';
         const editId=p.id||idx;
         const safeText=p.text.replace(/'/g,"\\'").replace(/\n/g,' ');
-        html+=`<div style="background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:12px;margin-bottom:8px;" data-post-id="${editId}">
-            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
-                <span style="font-size:.75rem;color:var(--mut);">${dateStr}</span>
-                <span ${badge} style="font-size:.65rem;font-weight:700;padding:2px 8px;border-radius:3px;">${p.status}</span>
+        html+=`<div style="background:var(--s1);border:1px solid var(--bdr);border-radius:8px;padding:14px;margin-bottom:8px;" data-post-id="${editId}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+                <span style="font-size:.7rem;color:var(--mut);font-weight:500;">${dateStr}</span>
+                <span style="font-size:.62rem;font-weight:600;padding:3px 8px;border-radius:4px;${p.status==='Publié'?'background:rgba(16,185,129,.1);color:#6ee7b7;':'background:rgba(255,255,255,.06);color:var(--mut);'}">${p.status}</span>
             </div>
-            <p style="font-size:.8rem;margin:6px 0;">${p.text}</p>
-            <div style="display:flex;gap:6px;margin-top:8px;">
-                <button style="flex:1;padding:4px;border:none;border-radius:4px;background:var(--ind);color:#fff;font-size:.65rem;cursor:pointer;" onclick="editGooglePost(${editId})">Éditer</button>
-                <button style="flex:1;padding:4px;border:none;border-radius:4px;background:var(--s3);color:var(--txt);font-size:.65rem;cursor:pointer;" onclick="duplicateGooglePost('${safeText}')">Dupliquer</button>
+            <p style="font-size:.8rem;margin:0 0 10px;line-height:1.5;color:var(--txt);">${p.text}</p>
+            <div style="display:flex;gap:6px;">
+                <button style="padding:5px 14px;border:1px solid var(--bdr);border-radius:5px;background:none;color:var(--txt);font-size:.68rem;cursor:pointer;" onclick="editGooglePost(${editId})">Modifier</button>
+                <button style="padding:5px 14px;border:1px solid var(--bdr);border-radius:5px;background:none;color:var(--mut);font-size:.68rem;cursor:pointer;" onclick="duplicateGooglePost('${safeText}')">Dupliquer</button>
             </div>
         </div>`;
     });
-    container.innerHTML=html||'<p style="text-align:center;color:var(--mut);font-size:.8rem;">Aucun post créé. Commencez à générer des posts engageants !</p>';
+    container.innerHTML=html;
 }
 
 // ============================================================

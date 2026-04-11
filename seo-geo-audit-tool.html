@@ -863,50 +863,49 @@
 
     <!-- SOCIAL TAB -->
     <div class="dash-tab-content" id="tabSocial">
-        <div class="social-container" style="padding:20px;max-width:900px;margin:0 auto;">
-            <!-- UNIFIED GOOGLE POSTS -->
-            <div class="chart-section">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
-                    <div>
-                        <h3 class="chart-title" style="margin:0;">📮 Google Posts</h3>
-                        <div style="font-size:.7rem;color:var(--mut);margin-top:2px;">Brouillons générés par IA — modifiez puis publiez. Anti-ban Google + anti-détection IA.</div>
-                    </div>
-                    <div style="display:flex;gap:6px;">
-                        <button class="btn-gen" style="font-size:.72rem;padding:6px 12px;" onclick="generateSocialContent()">🤖 +1 post</button>
-                        <button class="btn-gen" style="font-size:.72rem;padding:6px 12px;background:linear-gradient(135deg,#8b5cf6,var(--ind));" onclick="generateGooglePostPack()">⚡ +5 posts variés</button>
-                    </div>
-                </div>
+        <div style="padding:20px;max-width:860px;margin:0 auto;">
 
-                <!-- Photo selector from Hub Central -->
-                <div id="postPhotoSelector" style="margin-bottom:12px;display:none;">
-                    <label style="font-size:.72rem;font-weight:700;color:var(--mut);display:block;margin-bottom:6px;">📷 Photo du Hub Central (optionnel — cliquez pour sélectionner)</label>
-                    <div id="postPhotoGrid" style="display:flex;gap:6px;overflow-x:auto;padding:4px 0;"></div>
+            <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;">
+                <div>
+                    <h2 style="font-size:1.1rem;font-weight:800;margin:0;color:var(--txt);">Google Posts</h2>
+                    <p style="font-size:.72rem;color:var(--mut);margin:4px 0 0;">Générez, modifiez et publiez vos posts Google Business.</p>
                 </div>
-
-                <!-- Post list (drafts + published) -->
-                <div id="googlePostsList"></div>
-
-                <!-- Quick compose (collapsed by default) -->
-                <div id="quickCompose" style="display:none;margin-top:12px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;padding:14px;">
-                    <div style="display:flex;gap:8px;margin-bottom:8px;">
-                        <select id="postType" style="flex:1;padding:8px;border:1px solid var(--bdr);border-radius:6px;background:var(--s1);color:var(--txt);font-family:inherit;font-size:.8rem;">
-                            <option value="STANDARD">Actualité 📰</option>
-                            <option value="OFFER">Offre 🏷️</option>
-                            <option value="EVENT">Événement 🎊</option>
-                        </select>
-                        <button class="btn-gen" style="font-size:.72rem;padding:6px 10px;" onclick="generateSocialContent()">🤖 Générer</button>
-                    </div>
-                    <textarea id="socialContent" placeholder="Écrivez ou générez un post..." style="width:100%;padding:10px;border:1px solid var(--bdr);border-radius:6px;background:var(--s1);color:var(--txt);font-family:inherit;font-size:.8rem;min-height:70px;resize:vertical;box-sizing:border-box;"></textarea>
-                    <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-                        <button class="btn-gen" style="background:linear-gradient(135deg,var(--ind),#e6734a);color:#fff;flex:1;" onclick="publishSocialPost()">🚀 Publier</button>
-                        <button class="btn-gen" style="background:var(--s3);flex:1;" onclick="schedulePost()">⏰ Programmer</button>
-                        <button class="btn-gen" style="background:var(--s1);flex:0;" onclick="document.getElementById('quickCompose').style.display='none'">✕</button>
-                    </div>
+                <div style="display:flex;gap:6px;">
+                    <button class="btn-gen" style="font-size:.7rem;padding:6px 14px;background:var(--s2);border:1px solid var(--bdr);color:var(--txt);" onclick="generateSocialContent()">+ Nouveau</button>
+                    <button class="btn-gen" style="font-size:.7rem;padding:6px 14px;" onclick="generateGooglePostPack()">Générer x5</button>
                 </div>
-                <button class="btn-gen" style="width:100%;margin-top:8px;font-size:.75rem;padding:8px;background:var(--s2);border:1px solid var(--bdr);" onclick="document.getElementById('quickCompose').style.display='block';document.getElementById('socialContent').focus();">✏️ Écrire un post manuellement</button>
             </div>
 
-            <div class="post-calendar" id="postCalendar"></div>
+            <!-- Photo selector from Hub Central -->
+            <div id="postPhotoSelector" style="margin-bottom:16px;display:none;">
+                <div style="font-size:.7rem;font-weight:600;color:var(--mut);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;">Photo (optionnel)</div>
+                <div id="postPhotoGrid" style="display:flex;gap:6px;overflow-x:auto;padding:2px 0;"></div>
+            </div>
+
+            <!-- Post list -->
+            <div id="googlePostsList"></div>
+
+            <!-- Quick compose -->
+            <div id="quickCompose" style="display:none;margin-top:14px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;padding:16px;">
+                <div style="display:flex;gap:8px;margin-bottom:10px;">
+                    <select id="postType" style="flex:1;padding:7px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--s2);color:var(--txt);font-family:inherit;font-size:.78rem;">
+                        <option value="STANDARD">Actualité</option>
+                        <option value="OFFER">Offre</option>
+                        <option value="EVENT">Événement</option>
+                    </select>
+                    <button class="btn-gen" style="font-size:.7rem;padding:6px 12px;background:var(--s2);border:1px solid var(--bdr);color:var(--txt);" onclick="generateSocialContent()">Générer</button>
+                </div>
+                <textarea id="socialContent" placeholder="Rédigez votre post..." style="width:100%;padding:10px;border:1px solid var(--bdr);border-radius:6px;background:var(--s2);color:var(--txt);font-family:inherit;font-size:.8rem;min-height:70px;resize:vertical;box-sizing:border-box;"></textarea>
+                <div style="display:flex;gap:8px;margin-top:10px;">
+                    <button class="btn-gen" style="flex:1;padding:8px;" onclick="publishSocialPost()">Publier</button>
+                    <button class="btn-gen" style="flex:1;padding:8px;background:var(--s2);border:1px solid var(--bdr);color:var(--txt);" onclick="schedulePost()">Programmer</button>
+                    <button style="padding:8px 12px;background:none;border:1px solid var(--bdr);border-radius:6px;color:var(--mut);cursor:pointer;font-size:.75rem;" onclick="document.getElementById('quickCompose').style.display='none'">Annuler</button>
+                </div>
+            </div>
+
+            <button style="width:100%;margin-top:10px;padding:9px;font-size:.75rem;background:none;border:1px dashed var(--bdr);border-radius:8px;color:var(--mut);cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='var(--ind)';this.style.color='var(--ind)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--mut)'" onclick="document.getElementById('quickCompose').style.display='block';document.getElementById('socialContent')?.focus();">Rédiger manuellement</button>
+
+            <div class="post-calendar" id="postCalendar" style="margin-top:20px;"></div>
         </div>
     </div>
     
