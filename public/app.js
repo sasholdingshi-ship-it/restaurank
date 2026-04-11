@@ -134,7 +134,7 @@
 // ============================================================
 const CATEGORIES = [
     {
-        id:'gbp', icon:'<img src="https://www.google.com/s2/favicons?domain=business.google.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Google Business Profile', weight:32, group:'seo',
+        id:'gbp', icon:'', name:'Google Business Profile', weight:32, group:'seo',
         desc:'Facteur n°1 du ranking local (32%). Audit complet de votre fiche Google.',
         items:[
             { id:'gbp_cat_primary', name:'Catégorie principale GBP', factor:'Facteur #1 Local Pack', weight:5,
@@ -194,7 +194,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'reviews', icon:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Avis & E-Réputation', weight:20, group:'seo',
+        id:'reviews', icon:'', name:'Avis & E-Réputation', weight:20, group:'seo',
         desc:'Facteur #2 (20%). Volume, note, fraîcheur, contenu textuel.',
         items:[
             { id:'rev_rating', name:'Note moyenne Google', factor:'Facteur #6 Local Pack', weight:5,
@@ -230,7 +230,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'citations', icon:'<img src="https://www.google.com/s2/favicons?domain=pagesjaunes.fr&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Citations & NAP', weight:13, group:'seo',
+        id:'citations', icon:'', name:'Citations & NAP', weight:13, group:'seo',
         desc:'6% Local Pack, 13% AI Visibility. Cohérence NAP cruciale.',
         items:[
             { id:'cit_nap', name:'Cohérence NAP', factor:'Facteur #15 + IA', weight:5,
@@ -254,7 +254,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'onpage', icon:'<img src="https://www.google.com/s2/favicons?domain=google.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Site Web (On-Page)', weight:15, group:'seo',
+        id:'onpage', icon:'', name:'Site Web (On-Page)', weight:15, group:'seo',
         desc:'15% Local Pack, 33% Local Organic, 24% AI Visibility.',
         items:[
             { id:'op_schema', name:'Schema.org Restaurant', factor:'Signal structuré SEO+GEO', weight:5,
@@ -344,7 +344,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_chatgpt', icon:'<img src="https://www.google.com/s2/favicons?domain=chatgpt.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Visibilité ChatGPT', weight:25, group:'geo',
+        id:'geo_chatgpt', icon:'', name:'Visibilité ChatGPT', weight:25, group:'geo',
         desc:'ChatGPT utilise Yelp (48.73%), Bing, TripAdvisor comme sources.',
         items:[
             { id:'g_chatgpt', name:'Citation par ChatGPT', factor:'Test direct', weight:5,
@@ -368,7 +368,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_perplexity', icon:'<img src="https://www.google.com/s2/favicons?domain=perplexity.ai&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Visibilité Perplexity + Gemini', weight:25, group:'geo',
+        id:'geo_perplexity', icon:'', name:'Visibilité Perplexity + Gemini', weight:25, group:'geo',
         desc:'Perplexity = sources niche 24%. Gemini = site web 52.15%.',
         items:[
             { id:'g_perplexity', name:'Citation par Perplexity', factor:'Sources niche 24%', weight:4,
@@ -398,7 +398,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_signals', icon:'<img src="https://www.google.com/s2/favicons?domain=reddit.com&sz=24" style="width:18px;height:18px;border-radius:3px;vertical-align:middle;">', name:'Signaux GEO & UGC', weight:25, group:'geo',
+        id:'geo_signals', icon:'', name:'Signaux GEO & UGC', weight:25, group:'geo',
         desc:'Signaux sociaux (9% AI Visibility), UGC, mentions, données structurées.',
         items:[
             { id:'g_claude', name:'Visibilité Claude (Anthropic)', factor:'UGC x10 en F&B', weight:3,
