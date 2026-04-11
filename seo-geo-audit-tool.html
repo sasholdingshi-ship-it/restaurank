@@ -11,7 +11,7 @@
 
 <!-- Security shield (shown if iframe hijack or blocked domain) -->
 <div id="_rk_shield">
-    <div style="font-size:3rem;">🛡️</div>
+    <div style="font-size:3rem;"></div>
     <div><strong>RestauRank</strong></div>
     <div style="font-size:.9rem;color:#6e7490;" id="_rk_shield_msg">Accès non autorisé.</div>
 </div>
@@ -22,8 +22,8 @@
     <span class="ub-plan free" id="ubPlan">FREE</span>
     <span class="ub-spacer"></span>
     <span class="ub-email" id="ubEmail"></span>
-    <button class="ub-btn" onclick="showAccountSettings()">⚙️</button>
-    <button class="ub-btn admin" id="ubAdmin" style="display:none;" onclick="showAdminDash()">👑 Admin</button>
+    <button class="ub-btn" onclick="showAccountSettings()"></button>
+    <button class="ub-btn admin" id="ubAdmin" style="display:none;" onclick="showAdminDash()">Admin</button>
     <button class="ub-btn" onclick="authLogout()">Déconnexion</button>
 </div>
 
@@ -53,7 +53,7 @@
         <div class="auth-sub">Inscription sur invitation — entrez votre code d'accès</div>
         <div class="auth-error" id="registerError"></div>
         <div class="auth-hp" aria-hidden="true"><input type="text" name="company" id="regHP" autocomplete="off" tabindex="-1"></div>
-        <div class="auth-field" id="regCodeField"><label>🔑 Code d'accès</label><input type="text" id="regInviteCode" placeholder="Code d'invitation ou code d'accès" style="text-transform:uppercase;letter-spacing:1px;font-weight:600;"></div>
+        <div class="auth-field" id="regCodeField"><label>Code d'accès</label><input type="text" id="regInviteCode" placeholder="Code d'invitation ou code d'accès" style="text-transform:uppercase;letter-spacing:1px;font-weight:600;"></div>
         <div class="auth-field"><label>Nom complet</label><input type="text" id="regName" placeholder="Jean Dupont"></div>
         <div class="auth-field"><label>Email</label><input type="email" id="regEmail" placeholder="vous@email.com"></div>
         <div class="auth-field"><label>Mot de passe</label><input type="password" id="regPassword" placeholder="Minimum 8 caractères" onkeydown="if(event.key==='Enter')authRegister()" oninput="updatePwStrength()"></div>
@@ -111,31 +111,31 @@
 
         <!-- STEP 1: PLAN SELECTION -->
         <div class="ob-panel active" id="obStep1">
-            <h2 style="font-size:1.3rem;margin:0 0 6px;text-align:center;">Bienvenue 🎉</h2>
+            <h2 style="font-size:1.3rem;margin:0 0 6px;text-align:center;">Bienvenue </h2>
             <p style="color:var(--mut);text-align:center;margin:0 0 22px;font-size:.88rem;">Choisissez le plan qui vous convient. Vous pouvez changer à tout moment.</p>
             <div style="display:grid;gap:10px;">
                 <div class="ob-plan-card" onclick="selectOBPlan('free')" data-plan="free">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div><strong style="font-size:1.05rem;">🆓 Free</strong><br><span style="color:var(--mut);font-size:.78rem;">1 restaurant · 1 scan/jour · 3 annuaires</span></div>
+                        <div><strong style="font-size:1.05rem;">Free</strong><br><span style="color:var(--mut);font-size:.78rem;">1 restaurant · 1 scan/jour · 3 annuaires</span></div>
                         <strong style="color:var(--grn);font-size:1.1rem;">0€</strong>
                     </div>
                 </div>
                 <div class="ob-plan-card selected" onclick="selectOBPlan('starter')" data-plan="starter">
                     <div style="position:absolute;top:-8px;right:12px;background:var(--ind);color:#fff;font-size:.65rem;padding:2px 8px;border-radius:4px;font-weight:700;">POPULAIRE</div>
                     <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div><strong style="font-size:1.05rem;">⭐ Starter</strong><br><span style="color:var(--mut);font-size:.78rem;">1 restaurant · 5 scans/jour · 5 annuaires · auto-apply · avis</span></div>
+                        <div><strong style="font-size:1.05rem;">Starter</strong><br><span style="color:var(--mut);font-size:.78rem;">1 restaurant · 5 scans/jour · 5 annuaires · auto-apply · avis</span></div>
                         <strong style="color:var(--cyn);font-size:1.1rem;">29€<span style="font-size:.7rem;font-weight:400;">/mois</span></strong>
                     </div>
                 </div>
                 <div class="ob-plan-card" onclick="selectOBPlan('pro')" data-plan="pro">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div><strong style="font-size:1.05rem;">🚀 Pro</strong><br><span style="color:var(--mut);font-size:.78rem;">3 restaurants · scans illimités · 11 annuaires · 3 membres</span></div>
+                        <div><strong style="font-size:1.05rem;">Pro</strong><br><span style="color:var(--mut);font-size:.78rem;">3 restaurants · scans illimités · 11 annuaires · 3 membres</span></div>
                         <strong style="color:var(--cyn);font-size:1.1rem;">79€<span style="font-size:.7rem;font-weight:400;">/mois</span></strong>
                     </div>
                 </div>
                 <div class="ob-plan-card" onclick="selectOBPlan('premium')" data-plan="premium">
                     <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <div><strong style="font-size:1.05rem;">💎 Premium</strong><br><span style="color:var(--mut);font-size:.78rem;">10 restaurants · tout illimité · 10 membres · support prioritaire</span></div>
+                        <div><strong style="font-size:1.05rem;">Premium</strong><br><span style="color:var(--mut);font-size:.78rem;">10 restaurants · tout illimité · 10 membres · support prioritaire</span></div>
                         <strong style="color:var(--cyn);font-size:1.1rem;">149€<span style="font-size:.7rem;font-weight:400;">/mois</span></strong>
                     </div>
                 </div>
@@ -146,7 +146,7 @@
 
         <!-- STEP 2: RESTAURANT INFO -->
         <div class="ob-panel" id="obStep2">
-            <h2 style="font-size:1.3rem;margin:0 0 6px;text-align:center;">Votre restaurant 🍽️</h2>
+            <h2 style="font-size:1.3rem;margin:0 0 6px;text-align:center;">Votre restaurant </h2>
             <p style="color:var(--mut);text-align:center;margin:0 0 22px;font-size:.88rem;">Entrez juste le nom et la ville — RestauRank fait tout le reste.</p>
             <div class="auth-field"><label>Nom du restaurant</label><input type="text" id="obRestName" placeholder="ex: Yatai Ramen"></div>
             <div class="auth-field"><label>Ville</label><input type="text" id="obRestCity" placeholder="ex: Paris"></div>
@@ -159,7 +159,7 @@
 
         <!-- STEP 3: GOOGLE CONNECTION -->
         <div class="ob-panel" id="obStep3">
-            <h2 style="font-size:1.3rem;margin:0 0 6px;text-align:center;">Google Business Profile 🔗</h2>
+            <h2 style="font-size:1.3rem;margin:0 0 6px;text-align:center;">Google Business Profile </h2>
             <p style="color:var(--mut);text-align:center;margin:0 0 22px;font-size:.88rem;">Connectez Google pour que RestauRank puisse modifier votre fiche automatiquement : description, photos, posts, réponses aux avis.</p>
 
             <div id="obGoogleStatus" style="background:var(--s2);border:1px solid var(--bdr);border-radius:14px;padding:24px;text-align:center;">
@@ -175,27 +175,27 @@
                     Connecter Google Business Profile
                 </button>
                 <div id="obGoogleConnected" style="display:none;margin-top:16px;">
-                    <div style="color:var(--grn);font-weight:700;font-size:1rem;">✅ Google connecté !</div>
+                    <div style="color:var(--grn);font-weight:700;font-size:1rem;">Google connecté !</div>
                     <div id="obGoogleEmail" style="color:var(--mut);font-size:.8rem;margin-top:4px;"></div>
                 </div>
             </div>
 
             <div style="display:flex;gap:10px;margin-top:18px;">
                 <button class="auth-btn" style="flex:.4;background:var(--s3);color:var(--mut);" onclick="obNextStep(2)">← Retour</button>
-                <button class="auth-btn" style="flex:1;" id="obGoogleNext" onclick="obNextStep(4)">🔍 Lancer le scan →</button>
+                <button class="auth-btn" style="flex:1;" id="obGoogleNext" onclick="obNextStep(4)">Lancer le scan →</button>
             </div>
             <div style="text-align:center;margin-top:10px;"><a onclick="obNextStep(4)" style="color:var(--mut);font-size:.78rem;cursor:pointer;text-decoration:underline;">Passer — je connecterai Google plus tard</a></div>
         </div>
 
         <!-- STEP 4: SCANNING (auto-transitions to dashboard) -->
         <div class="ob-panel" id="obStep4">
-            <h2 style="font-size:1.3rem;margin:0 0 6px;text-align:center;">Analyse en cours… ✨</h2>
+            <h2 style="font-size:1.3rem;margin:0 0 6px;text-align:center;">Analyse en cours… </h2>
             <p style="color:var(--mut);text-align:center;margin:0 0 22px;font-size:.88rem;">RestauRank audite votre restaurant automatiquement.</p>
             <div id="obScanProgress" style="background:var(--s2);border:1px solid var(--bdr);border-radius:12px;padding:20px;min-height:180px;">
                 <div id="obScanSteps" style="display:flex;flex-direction:column;gap:8px;"></div>
             </div>
             <div id="obScanDone" style="display:none;text-align:center;margin-top:18px;">
-                <div style="font-size:2rem;margin-bottom:8px;">🎉</div>
+                <div style="font-size:2rem;margin-bottom:8px;"></div>
                 <p style="font-size:1rem;font-weight:600;margin-bottom:6px;">Audit terminé !</p>
                 <p style="color:var(--mut);font-size:.85rem;margin-bottom:16px;">Votre dashboard est prêt avec les scores SEO + GEO et les recommandations personnalisées.</p>
                 <button class="auth-btn" style="width:100%;" onclick="obGoToDashboard()">Voir mon dashboard →</button>
@@ -206,17 +206,17 @@
 
 <!-- ADMIN DASHBOARD -->
 <div class="admin-screen" id="adminDash">
-    <h2 style="margin:0 0 4px;">👑 Dashboard Admin</h2>
+    <h2 style="margin:0 0 4px;">Dashboard Admin</h2>
     <p style="color:var(--mut);font-size:.8rem;margin:0 0 16px;">Gestion des comptes, abonnements et restaurants</p>
     <div style="display:flex;gap:8px;margin-bottom:16px;">
-        <button class="ub-btn" onclick="loadAdminData()" style="padding:6px 14px;">🔄 Actualiser</button>
+        <button class="ub-btn" onclick="loadAdminData()" style="padding:6px 14px;">Actualiser</button>
         <button class="ub-btn" onclick="hideAdminDash()" style="padding:6px 14px;">← Retour</button>
     </div>
     <div class="admin-stats" id="adminStats"></div>
 
     <!-- INVITE CODES MANAGEMENT -->
     <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:16px;margin-bottom:20px;">
-        <h3 style="font-size:.9rem;margin:0 0 12px;">🎟️ Codes d'invitation</h3>
+        <h3 style="font-size:.9rem;margin:0 0 12px;">Codes d'invitation</h3>
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px;">
             <div style="flex:1;min-width:180px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Email (optionnel)</label>
@@ -239,14 +239,14 @@
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Expire (jours)</label>
                 <input type="number" id="invExpDays" value="7" min="1" max="365" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
             </div>
-            <button onclick="createInviteCode()" style="padding:6px 16px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem;white-space:nowrap;">➕ Générer un code</button>
+            <button onclick="createInviteCode()" style="padding:6px 16px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem;white-space:nowrap;">Générer un code</button>
         </div>
         <div id="inviteCodesTable"></div>
     </div>
 
     <!-- SEARCH & FILTER -->
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-        <input type="text" id="adminSearchInput" placeholder="🔍 Rechercher par email, nom, restaurant…" oninput="filterAdminTable()" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:.8rem;">
+        <input type="text" id="adminSearchInput" placeholder="Rechercher par email, nom, restaurant…" oninput="filterAdminTable()" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:.8rem;">
         <select id="adminFilterPlan" onchange="filterAdminTable()" style="padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:.75rem;">
             <option value="">Tous les plans</option>
             <option value="free">Free</option>
@@ -260,10 +260,10 @@
             <option value="active">Actifs</option>
             <option value="inactive">Inactifs</option>
         </select>
-        <button onclick="exportAdminCSV()" style="padding:8px 14px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;cursor:pointer;color:var(--txt);font-size:.75rem;">📥 Export CSV</button>
+        <button onclick="exportAdminCSV()" style="padding:8px 14px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;cursor:pointer;color:var(--txt);font-size:.75rem;">Export CSV</button>
     </div>
 
-    <h3 style="font-size:.9rem;margin:0 0 10px;">👥 Comptes clients</h3>
+    <h3 style="font-size:.9rem;margin:0 0 10px;">Comptes clients</h3>
     <div style="overflow-x:auto;">
         <table class="admin-table" id="adminTable"><thead><tr><th>ID</th><th>Email</th><th>Nom</th><th>Plan</th><th>Restaurants</th><th>Score SEO</th><th>Score GEO</th><th>Dernière connexion</th><th>Statut</th><th>Actions</th></tr></thead><tbody id="adminTableBody"></tbody></table>
     </div>
@@ -285,19 +285,19 @@
     <!-- MODULE SELECTOR -->
     <div class="module-selector" id="moduleSelector">
         <div class="module-card active" data-module="both" onclick="selectModule('both')">
-            <div class="module-icon">🚀</div>
+            <div class="module-icon"></div>
             <div class="module-name">SEO + GEO</div>
             <div class="module-desc">Google + IA (ChatGPT, Gemini, Perplexity, Claude)</div>
             <div class="module-price">Formule complète</div>
         </div>
         <div class="module-card" data-module="seo" onclick="selectModule('seo')">
-            <div class="module-icon">🔍</div>
+            <div class="module-icon"></div>
             <div class="module-name">SEO Local</div>
             <div class="module-desc">Google Search, Maps, Local Pack, avis, annuaires</div>
             <div class="module-price">Module SEO</div>
         </div>
         <div class="module-card" data-module="geo" onclick="selectModule('geo')">
-            <div class="module-icon">🤖</div>
+            <div class="module-icon"></div>
             <div class="module-name">GEO (IA)</div>
             <div class="module-desc">ChatGPT, Perplexity, Gemini, Claude, AI Overviews</div>
             <div class="module-price">Module GEO</div>
@@ -305,22 +305,22 @@
     </div>
 
     <div class="input-group">
-        <div class="input-wrap"><span class="input-icon">🍽️</span><input type="text" id="inName" placeholder="Nom du restaurant (ex: Pizza Roma)"></div>
-        <div class="input-wrap"><span class="input-icon">📍</span><input type="text" id="inCity" placeholder="Ville ou adresse (ex: Paris 11e)"></div>
-        <div class="input-wrap"><span class="input-icon">🌐</span><input type="text" id="inWebsite" placeholder="Site web (optionnel — ex: www.monrestaurant.fr)"></div>
+        <div class="input-wrap"><input type="text" id="inName" placeholder="Nom du restaurant (ex: Pizza Roma)"></div>
+        <div class="input-wrap"><input type="text" id="inCity" placeholder="Ville ou adresse (ex: Paris 11e)"></div>
+        <div class="input-wrap"><input type="text" id="inWebsite" placeholder="Site web (optionnel — ex: www.monrestaurant.fr)"></div>
         <button class="btn-scan" onclick="searchRestaurant()">Rechercher sur Google →</button>
     </div>
     <div class="feature-badges">
-        <div class="feature-badge"><span class="fb-icon">🔍</span> Audit SEO Local</div>
-        <div class="feature-badge"><span class="fb-icon">🤖</span> Score GEO (IA)</div>
-        <div class="feature-badge"><span class="fb-icon">📊</span> 49 critères analysés</div>
-        <div class="feature-badge"><span class="fb-icon">⚡</span> Améliorations auto</div>
-        <div class="feature-badge"><span class="fb-icon">🗺️</span> 12 annuaires</div>
+        <div class="feature-badge">Audit SEO Local</div>
+        <div class="feature-badge">Score GEO (IA)</div>
+        <div class="feature-badge">49 critères analysés</div>
+        <div class="feature-badge">Améliorations auto</div>
+        <div class="feature-badge">12 annuaires</div>
     </div>
     <div class="history-section" id="historySection"></div>
     <div id="groupBtnSection" style="margin-top:16px;z-index:1;position:relative;"></div>
     <div class="legal-footer" style="margin-top:32px;">
-        <a onclick="showScreen('pricing')">💰 Tarifs</a>
+        <a onclick="showScreen('pricing')">Tarifs</a>
         <a onclick="showScreen('cgv')">Conditions Générales</a>
         <a onclick="showScreen('privacy')">Politique de confidentialité</a>
         <a onclick="showScreen('mentions')">Mentions légales</a>
@@ -417,7 +417,7 @@
 </div>
 
 <!-- SAVE INDICATOR -->
-<div class="save-indicator" id="saveIndicator">💾 Sauvegardé</div>
+<div class="save-indicator" id="saveIndicator">Sauvegardé</div>
 
 <!-- CONFIRMATION -->
 <div class="screen" id="confirmation">
@@ -429,17 +429,17 @@
             <div class="confirm-resto-name" id="confirmName">—</div>
             <div id="confirmAPIResult" style="display:none;padding:12px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;margin:8px 0 12px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
-                    <span style="font-size:1.1rem;" id="confirmAPIIcon">📍</span>
+                    <span style="font-size:1.1rem;" id="confirmAPIIcon"></span>
                     <span style="font-weight:700;color:var(--txt);" id="confirmAPIName">—</span>
                 </div>
                 <div style="font-size:.82rem;color:var(--mut);line-height:1.6;" id="confirmAPIDetails">Chargement...</div>
-                <div id="confirmAPIWarning" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(255,150,0,.1);border-radius:8px;font-size:.78rem;color:#f90;">⚠️ Ce n'est pas le bon ? Modifiez votre recherche pour être plus précis (ex: ajoutez le quartier ou l'adresse).</div>
+                <div id="confirmAPIWarning" style="display:none;margin-top:8px;padding:8px 10px;background:rgba(255,150,0,.1);border-radius:8px;font-size:.78rem;color:#f90;"> Ce n'est pas le bon ? Modifiez votre recherche pour être plus précis (ex: ajoutez le quartier ou l'adresse).</div>
             </div>
             <p style="font-size:.85rem;color:var(--mut);margin:4px 0 12px;">Vérifiez sur Google Maps que l'adresse et les photos correspondent à votre établissement :</p>
-            <div style="font-size:.82rem;font-weight:700;color:var(--txt);margin-bottom:8px;">🔍 Vérifier sur les plateformes :</div>
+            <div style="font-size:.82rem;font-weight:700;color:var(--txt);margin-bottom:8px;">Vérifier sur les plateformes :</div>
             <div class="confirm-links" id="confirmLinks"></div>
             <div style="margin-top:16px;padding:14px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;">
-                <div style="font-size:.82rem;font-weight:700;color:var(--org);margin-bottom:6px;">💡 Pourquoi cette étape ?</div>
+                <div style="font-size:.82rem;font-weight:700;color:var(--org);margin-bottom:6px;"> Pourquoi cette étape ?</div>
                 <p style="font-size:.8rem;color:var(--mut);line-height:1.5;">Plusieurs restaurants peuvent avoir des noms similaires. Vérifiez que c'est le bon sur la carte.</p>
             </div>
         </div>
@@ -461,9 +461,9 @@
 <div class="screen" id="dashboard">
     <div class="dash-header">
         <div class="dash-logo">RestauRank</div>
-        <div class="dash-resto" id="dashResto">📍 —</div>
+        <div class="dash-resto" id="dashResto"> —</div>
         <span class="module-badge" id="moduleBadge"></span>
-        <button class="cmd-toggle" onclick="openCmdPanel()">🚀 Connexion annuaires</button>
+        <button class="cmd-toggle" onclick="openCmdPanel()">Connexion annuaires</button>
         <button class="btn-rescan" onclick="goLanding()">← Nouvel audit</button>
     </div>
     <!-- Google Auth Banner -->
@@ -480,7 +480,7 @@
     <!-- GETTING STARTED CHECKLIST -->
     <div class="gs-checklist" id="gsChecklist" style="display:none;margin:0 16px 12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-            <h3 style="font-size:.95rem;margin:0;">🚀 Démarrage rapide</h3>
+            <h3 style="font-size:.95rem;margin:0;">Démarrage rapide</h3>
             <a onclick="dismissGettingStarted()" style="color:var(--mut);font-size:.7rem;cursor:pointer;">Fermer ✕</a>
         </div>
         <div class="gs-item" id="gs_scan" onclick="gsAction('scan')"><div class="gs-check">✓</div><div><strong>Audit initial</strong> — Votre restaurant a été scanné automatiquement</div></div>
@@ -492,7 +492,7 @@
     <!-- ANALYST BRIEFING (inspired by Vyzz) -->
     <div class="analyst-briefing" id="analystBriefing" style="display:none;">
         <div class="ab-header">
-            <div class="ab-icon">📋</div>
+            <div class="ab-icon"></div>
             <div class="ab-title">Rapport d'analyse</div>
             <div class="ab-date" id="abDate"></div>
         </div>
@@ -502,7 +502,7 @@
     <div class="gap-target-row" id="gapTargetRow" style="display:none;"></div>
     <!-- PLATFORM BREAKDOWN (GEO by AI platform) -->
     <div class="platform-breakdown" id="platformBreakdown" style="display:none;">
-        <div class="pb-title">🤖 Visibilité par plateforme IA</div>
+        <div class="pb-title"> Visibilité par plateforme IA</div>
         <div class="pb-grid" id="pbGrid"></div>
     </div>
     <!-- RRF SCORE (ChatGPT citation probability) -->
@@ -522,7 +522,7 @@
     </div>
     <!-- SCORE TREND (history chart) -->
     <div class="score-trend" id="scoreTrend" style="display:none;">
-        <div class="st-title">📈 Évolution des scores</div>
+        <div class="st-title"> Évolution des scores</div>
         <div class="st-chart" id="stChart"></div>
         <div class="st-legend">
             <div class="st-legend-item"><div class="st-legend-dot" style="background:var(--ind)"></div>SEO</div>
@@ -532,16 +532,16 @@
     <!-- TAB BAR -->
     <div class="dash-tabs" id="dashTabs">
         <div class="dash-tab" onclick="goLanding()" style="background:var(--ind);color:#fff;font-weight:700;border-radius:8px;margin:4px 6px 4px 2px;padding:4px 12px;font-size:.72rem;white-space:nowrap;">← Nouvel audit</div>
-        <div class="dash-tab active" onclick="switchDashTab('audit')">🔍 Audit</div>
-        <div class="dash-tab" onclick="switchDashTab('stats')">📊 SEO Stats</div>
-        <div class="dash-tab" onclick="switchDashTab('hub')">🏠 Hub Central</div>
-        <div class="dash-tab" onclick="switchDashTab('reviews')">⭐ Avis</div>
-        <div class="dash-tab" onclick="switchDashTab('social')">📱 Social</div>
-        <div class="dash-tab" onclick="switchDashTab('content')">📝 Contenu</div>
-        <div class="dash-tab" onclick="switchDashTab('dispatch')">🤖 IA Dispatch</div>
-        <div class="dash-tab" onclick="switchDashTab('agent')" style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.15));font-weight:600;">🧠 Agent Auto</div>
-        <div class="dash-tab" onclick="switchDashTab('team')">👥 Équipe</div>
-        <div class="dash-tab" onclick="switchDashTab('settings')">⚙️ Paramètres</div>
+        <div class="dash-tab active" onclick="switchDashTab('audit')">Audit</div>
+        <div class="dash-tab" onclick="switchDashTab('stats')"> SEO Stats</div>
+        <div class="dash-tab" onclick="switchDashTab('hub')"> Hub Central</div>
+        <div class="dash-tab" onclick="switchDashTab('reviews')">Avis</div>
+        <div class="dash-tab" onclick="switchDashTab('social')"> Social</div>
+        <div class="dash-tab" onclick="switchDashTab('content')"> Contenu</div>
+        <div class="dash-tab" onclick="switchDashTab('dispatch')"> IA Dispatch</div>
+        <div class="dash-tab" onclick="switchDashTab('agent')" style="background:linear-gradient(135deg,rgba(99,102,241,.15),rgba(168,85,247,.15));font-weight:600;"> Agent Auto</div>
+        <div class="dash-tab" onclick="switchDashTab('team')">Équipe</div>
+        <div class="dash-tab" onclick="switchDashTab('settings')"> Paramètres</div>
     </div>
     <!-- AUDIT TAB (default, existing content) -->
     <div class="dash-tab-content active" id="tabAudit">
@@ -593,15 +593,15 @@
             <div class="hub-section" style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:10px;">
-                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--ind),var(--cyn));display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📍</div>
+                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--ind),var(--cyn));display:flex;align-items:center;justify-content:center;font-size:1.2rem;"></div>
                         <div>
                             <div style="font-weight:800;font-size:1rem;">Informations centralisées</div>
                             <div style="font-size:.72rem;color:var(--mut);">NAP + Horaires + Description — source unique de vérité</div>
                         </div>
                     </div>
                     <div style="display:flex;gap:8px;">
-                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:linear-gradient(135deg,#1877f2,#0866ff);" onclick="connectMeta()">🔗 Connecter Meta</button>
-                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="scrapeHubData()">🔄 Récupérer auto</button>
+                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:linear-gradient(135deg,#1877f2,#0866ff);" onclick="connectMeta()"> Connecter Meta</button>
+                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="scrapeHubData()">Récupérer auto</button>
                     </div>
                 </div>
                 <div id="metaStatus" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:.72rem;"></div>
@@ -637,57 +637,57 @@
                         <textarea id="hubHours" class="hub-input" style="height:60px;resize:vertical;" placeholder="Lun-Ven: 12h-14h30, 19h-22h30&#10;Sam-Dim: 12h-15h, 19h-23h"></textarea>
                     </div>
                     <div class="hub-field">
-                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🖼️ Logo (URL)</label>
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Logo (URL)</label>
                         <input type="text" id="hubLogo" class="hub-input" placeholder="https://...logo.png">
                     </div>
                     <div class="hub-field">
-                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📘 Page Facebook</label>
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Page Facebook</label>
                         <input type="text" id="hubFacebook" class="hub-input" placeholder="https://facebook.com/...">
                     </div>
                     <div class="hub-field">
-                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🐦 Page X (Twitter)</label>
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Page X (Twitter)</label>
                         <input type="text" id="hubTwitter" class="hub-input" placeholder="https://x.com/...">
                     </div>
                     <div class="hub-field">
-                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📸 Page Instagram</label>
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Page Instagram</label>
                         <input type="text" id="hubInstagram" class="hub-input" placeholder="https://instagram.com/...">
                     </div>
                     <div class="hub-field">
-                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📅 Lien de réservation</label>
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Lien de réservation</label>
                         <input type="text" id="hubReservation" class="hub-input" placeholder="https://thefork.fr/... ou https://...">
                     </div>
                     <div class="hub-field">
-                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🛵 Lien de commande</label>
+                        <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Lien de commande</label>
                         <input type="text" id="hubOrder" class="hub-input" placeholder="https://ubereats.com/... ou https://...">
                     </div>
                 </div>
 
                 <!-- BRANDING SECTION -->
                 <div style="margin-top:16px;border-top:1px solid var(--bdr);padding-top:16px;">
-                    <div style="font-weight:800;font-size:.85rem;margin-bottom:10px;">🎨 Identité visuelle (scrapée automatiquement)</div>
+                    <div style="font-weight:800;font-size:.85rem;margin-bottom:10px;"> Identité visuelle (scrapée automatiquement)</div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
                         <div class="hub-field">
-                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🖼️ Logo (URL)</label>
+                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Logo (URL)</label>
                             <div style="display:flex;gap:8px;align-items:center;">
                                 <input type="text" id="hubLogo2" class="hub-input" style="flex:1;" placeholder="Détecté automatiquement...">
                                 <div id="hubLogoPreview" style="width:40px;height:40px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0;"><span style="font-size:.6rem;color:var(--mut);">Logo</span></div>
                             </div>
                         </div>
                         <div class="hub-field">
-                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">📊 Domain Authority (DA)</label>
+                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Domain Authority (DA)</label>
                             <div style="display:flex;gap:8px;align-items:center;">
                                 <input type="text" id="hubDA" class="hub-input" style="flex:1;" placeholder="Score DA..." readonly>
                                 <div id="hubDABadge" style="padding:4px 10px;border-radius:6px;font-size:.7rem;font-weight:800;background:var(--s2);color:var(--mut);">—</div>
                             </div>
                         </div>
                         <div class="hub-field" style="grid-column:1/-1;">
-                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">🎨 Couleurs du site</label>
+                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Couleurs du site</label>
                             <div id="hubColors" style="display:flex;gap:6px;flex-wrap:wrap;min-height:32px;align-items:center;">
                                 <span style="color:var(--mut);font-size:.7rem;">Pas encore scrapé</span>
                             </div>
                         </div>
                         <div class="hub-field" style="grid-column:1/-1;">
-                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">✏️ Polices du site</label>
+                            <label style="font-size:.7rem;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.5px;"> Polices du site</label>
                             <div id="hubFonts" style="display:flex;gap:6px;flex-wrap:wrap;min-height:28px;align-items:center;">
                                 <span style="color:var(--mut);font-size:.7rem;">Pas encore scrapé</span>
                             </div>
@@ -695,9 +695,9 @@
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-                    <button class="btn-gen" style="background:linear-gradient(135deg,var(--grn),#059669);color:#fff;font-size:.78rem;padding:10px 16px;" onclick="saveHubData()">💾 Sauvegarder</button>
-                    <button class="btn-gen" style="font-size:.78rem;padding:10px 16px;" onclick="pushHubToAll()">🚀 Pousser sur tous les annuaires</button>
-                    <button class="btn-gen" style="font-size:.78rem;padding:10px 16px;" onclick="checkNapConsistency()">🔍 Vérifier cohérence NAP</button>
+                    <button class="btn-gen" style="background:linear-gradient(135deg,var(--grn),#059669);color:#fff;font-size:.78rem;padding:10px 16px;" onclick="saveHubData()">Sauvegarder</button>
+                    <button class="btn-gen" style="font-size:.78rem;padding:10px 16px;" onclick="pushHubToAll()">Pousser sur tous les annuaires</button>
+                    <button class="btn-gen" style="font-size:.78rem;padding:10px 16px;" onclick="checkNapConsistency()">Vérifier cohérence NAP</button>
                 </div>
                 <div id="hubNapConsistency" style="display:none;margin-top:10px;"></div>
             </div>
@@ -706,38 +706,38 @@
             <div class="hub-section" style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                     <div style="display:flex;align-items:center;gap:10px;">
-                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--pnk),var(--org));display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📸</div>
+                        <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--pnk),var(--org));display:flex;align-items:center;justify-content:center;font-size:1.2rem;"></div>
                         <div>
                             <div style="font-weight:800;font-size:1rem;">Gestionnaire de photos</div>
                             <div style="font-size:.72rem;color:var(--mut);">Récupère les photos existantes, publie partout</div>
                         </div>
                     </div>
                     <div style="display:flex;gap:6px;">
-                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="scrapePhotos()">📥 Photos site + GMB</button>
-                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:linear-gradient(135deg,#E1306C,#F77737);" onclick="fetchInstagramPhotos()">📸 Photos Instagram</button>
+                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="scrapePhotos()">Photos site + GMB</button>
+                        <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:linear-gradient(135deg,#E1306C,#F77737);" onclick="fetchInstagramPhotos()"> Photos Instagram</button>
                     </div>
                 </div>
                 <div id="photoStatus" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;font-size:.75rem;"></div>
                 <div class="photo-filters" style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap;">
                     <button class="photo-filter active" onclick="filterPhotos('all')" data-filter="all">Toutes</button>
-                    <button class="photo-filter" onclick="filterPhotos('plat')" data-filter="plat">🍽️ Plats</button>
-                    <button class="photo-filter" onclick="filterPhotos('ambiance')" data-filter="ambiance">🪑 Ambiance</button>
-                    <button class="photo-filter" onclick="filterPhotos('facade')" data-filter="facade">🏠 Façade</button>
-                    <button class="photo-filter" onclick="filterPhotos('equipe')" data-filter="equipe">👨‍🍳 Équipe</button>
-                    <button class="photo-filter" onclick="filterPhotos('terrasse')" data-filter="terrasse">☀️ Terrasse</button>
-                    <button class="photo-filter" onclick="filterPhotos('instagram')" data-filter="instagram" style="background:linear-gradient(135deg,#E1306C,#F77737);color:#fff;">📸 Instagram</button>
+                    <button class="photo-filter" onclick="filterPhotos('plat')" data-filter="plat"> Plats</button>
+                    <button class="photo-filter" onclick="filterPhotos('ambiance')" data-filter="ambiance"> Ambiance</button>
+                    <button class="photo-filter" onclick="filterPhotos('facade')" data-filter="facade"> Façade</button>
+                    <button class="photo-filter" onclick="filterPhotos('equipe')" data-filter="equipe">‍ Équipe</button>
+                    <button class="photo-filter" onclick="filterPhotos('terrasse')" data-filter="terrasse"> Terrasse</button>
+                    <button class="photo-filter" onclick="filterPhotos('instagram')" data-filter="instagram" style="background:linear-gradient(135deg,#E1306C,#F77737);color:#fff;"> Instagram</button>
                 </div>
                 <div class="photo-grid" id="photoGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;max-height:400px;overflow-y:auto;"></div>
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-                    <button class="btn-gen" style="font-size:.78rem;padding:10px 16px;" onclick="selectAllPhotos()">☑️ Tout sélectionner</button>
-                    <button class="btn-gen" style="background:linear-gradient(135deg,var(--cyn),var(--ind));color:#fff;font-size:.78rem;padding:10px 16px;" onclick="publishPhotosAll()">📤 Publier sur tous les annuaires</button>
+                    <button class="btn-gen" style="font-size:.78rem;padding:10px 16px;" onclick="selectAllPhotos()"> Tout sélectionner</button>
+                    <button class="btn-gen" style="background:linear-gradient(135deg,var(--cyn),var(--ind));color:#fff;font-size:.78rem;padding:10px 16px;" onclick="publishPhotosAll()"> Publier sur tous les annuaires</button>
                 </div>
             </div>
 
             <!-- AUDIT RÉEL —résumé rapide -->
             <div class="hub-section" style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;">
-                    <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--grn),var(--cyn));display:flex;align-items:center;justify-content:center;font-size:1.2rem;">✅</div>
+                    <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--grn),var(--cyn));display:flex;align-items:center;justify-content:center;font-size:1.2rem;"></div>
                     <div>
                         <div style="font-weight:800;font-size:1rem;">Données collectées — Sources</div>
                         <div style="font-size:.72rem;color:var(--mut);">D'où viennent les infos actuellement utilisées</div>
@@ -749,7 +749,7 @@
             <!-- SCORE D'UTILISATION GBP -->
             <div class="hub-feature-section">
                 <div class="feature-header" onclick="toggleFeature(this)">
-                    <span class="icon">📊</span>
+                    <span class="icon"></span>
                     <span>Score d'utilisation de la description</span>
                     <span class="toggle">▼</span>
                 </div>
@@ -767,7 +767,7 @@
             <!-- CARACTÉRISTIQUES GBP (83 attributs) -->
             <div class="hub-feature-section">
                 <div class="feature-header" onclick="toggleFeature(this)">
-                    <span class="icon">✨</span>
+                    <span class="icon"></span>
                     <span id="charHeaderText">Caractéristiques (0/83 renseignées)</span>
                     <span class="toggle">▼</span>
                 </div>
@@ -779,7 +779,7 @@
             <!-- HORAIRES EXCEPTIONNELS -->
             <div class="hub-feature-section">
                 <div class="feature-header" onclick="toggleFeature(this)">
-                    <span class="icon">🕐</span>
+                    <span class="icon"></span>
                     <span>Horaires & Jours exceptionnels</span>
                     <span class="toggle">▼</span>
                 </div>
@@ -799,14 +799,14 @@
             <!-- MOTS-CLÉS CIBLES -->
             <div class="hub-feature-section">
                 <div class="feature-header" onclick="toggleFeature(this)">
-                    <span class="icon">🎯</span>
+                    <span class="icon"></span>
                     <span id="keywordHeaderText">Mots-clés cibles (0)</span>
                     <span class="toggle">▼</span>
                 </div>
                 <div class="feature-content">
                     <div style="display:flex;gap:8px;margin-bottom:12px;">
-                        <button class="btn-gen" style="font-size:.75rem;" onclick="editTargetKeywords()">✏️ Modifier</button>
-                        <button class="btn-gen" style="font-size:.75rem;background:var(--s3);" onclick="generateKeywordSuggestions()">💡 Suggestions</button>
+                        <button class="btn-gen" style="font-size:.75rem;" onclick="editTargetKeywords()"> Modifier</button>
+                        <button class="btn-gen" style="font-size:.75rem;background:var(--s3);" onclick="generateKeywordSuggestions()"> Suggestions</button>
                     </div>
                     <table class="keyword-table" id="keywordsTable">
                         <thead>
@@ -841,7 +841,7 @@
                     <div class="stat-label">Réponses</div>
                 </div>
                 <div class="stat-card">
-                    <div class="stat-val" id="sentiment">😊</div>
+                    <div class="stat-val" id="sentiment"></div>
                     <div class="stat-label">Sentiment</div>
                 </div>
             </div>
@@ -850,7 +850,7 @@
             <div id="reviewSemanticAnalysis" style="margin-top:20px;">
                 <div style="padding:16px;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;">
                     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                        <h3 style="font-size:.95rem;color:var(--txt);margin:0;">🔬 Analyse sémantique des avis</h3>
+                        <h3 style="font-size:.95rem;color:var(--txt);margin:0;"> Analyse sémantique des avis</h3>
                         <button class="btn" onclick="runReviewAnalysis()" style="background:var(--ind);border:none;color:#fff;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:.75rem;font-weight:700;" id="btnRunSemantic">⟳ Relancer</button>
                     </div>
                     <div id="semanticResults" style="font-size:.8rem;color:var(--mut);">
@@ -914,15 +914,15 @@
         <div style="padding:20px;max-width:960px;margin:0 auto;width:100%;">
             <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:16px;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <div style="width:38px;height:38px;border-radius:10px;background:#D95B2B;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">📝</div>
+                    <div style="width:38px;height:38px;border-radius:10px;background:#D95B2B;display:flex;align-items:center;justify-content:center;font-size:1.2rem;"></div>
                     <div>
                         <div style="font-weight:800;font-size:1rem;">Article de blog SEO + GEO</div>
                         <div style="font-size:.72rem;color:var(--mut);">1500-2200 mots optimisés pour <strong>Google</strong> (H1/H2/H3, keywords LSI, mots-clés locaux) <strong>ET</strong> pour les IA génératives <strong>(ChatGPT, Perplexity, Gemini, Claude)</strong> via TL;DR + FAQ + format citation-ready. Compatible WordPress, Webflow, Shopify, Wix, Squarespace, Ghost. Publié en zone cachée.</div>
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;">
-                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="generateBlogContent()">🤖 Générer avec Claude AI</button>
-                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:var(--s2);" onclick="loadBlogHistory()">📜 Historique</button>
+                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="generateBlogContent()"> Générer avec Claude AI</button>
+                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:var(--s2);" onclick="loadBlogHistory()"> Historique</button>
                 </div>
                 <input type="text" id="blogTitle" placeholder="Titre de l'article (ex: Les 5 meilleurs ramens de Paris)" style="width:100%;padding:10px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:.85rem;margin-bottom:8px;">
                 <textarea id="blogContent" placeholder="Contenu de l'article (HTML accepté)..." style="width:100%;min-height:260px;padding:12px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-family:inherit;font-size:.82rem;resize:vertical;"></textarea>
@@ -932,21 +932,21 @@
                         <option value="draft">Brouillon</option>
                         <option value="publish" selected>Publier</option>
                     </select>
-                    <button class="btn-gen" style="background:#D95B2B;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="publishBlogPost()">🚀 Publier sur WordPress</button>
+                    <button class="btn-gen" style="background:#D95B2B;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="publishBlogPost()">Publier sur WordPress</button>
                 </div>
                 <div id="blogHistory" style="margin-top:14px;"></div>
             </div>
 
             <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <div style="width:38px;height:38px;border-radius:10px;background:#FF4500;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🤖</div>
+                    <div style="width:38px;height:38px;border-radius:10px;background:#FF4500;display:flex;align-items:center;justify-content:center;font-size:1.2rem;"></div>
                     <div>
                         <div style="font-weight:800;font-size:1rem;">Posts Reddit</div>
                         <div style="font-size:.72rem;color:var(--mut);">Impact GEO fort — Reddit = source n°2 de Perplexity, source majeure de Claude AI</div>
                     </div>
                 </div>
                 <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0;">
-                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="generateRedditPosts()">🤖 Générer 3 posts avec Claude</button>
+                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;" onclick="generateRedditPosts()"> Générer 3 posts avec Claude</button>
                 </div>
                 <div style="display:grid;grid-template-columns:200px 1fr;gap:8px;margin-bottom:8px;">
                     <input type="text" id="redditSubreddit" placeholder="Subreddit (ex: paris)" style="padding:10px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-size:.85rem;">
@@ -955,7 +955,7 @@
                 <textarea id="redditText" placeholder="Corps du post (style naturel Reddit — détails vécus, pas marketing)..." style="width:100%;min-height:180px;padding:12px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:8px;color:var(--txt);font-family:inherit;font-size:.82rem;resize:vertical;"></textarea>
                 <div id="redditStatus" style="display:none;margin:8px 0;padding:8px 12px;border-radius:8px;font-size:.75rem;"></div>
                 <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-                    <button class="btn-gen" style="background:#FF4500;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="publishRedditPost()">🚀 Publier sur Reddit</button>
+                    <button class="btn-gen" style="background:#FF4500;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="publishRedditPost()">Publier sur Reddit</button>
                 </div>
                 <div id="redditHistory" style="margin-top:14px;"></div>
             </div>
@@ -963,12 +963,12 @@
             <!-- SNAPSHOTS / HISTORIQUE DE RESTAURATION -->
             <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-top:16px;">
                 <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
-                    <div style="width:38px;height:38px;border-radius:10px;background:#1B2A4A;display:flex;align-items:center;justify-content:center;font-size:1.2rem;">🛡️</div>
+                    <div style="width:38px;height:38px;border-radius:10px;background:#1B2A4A;display:flex;align-items:center;justify-content:center;font-size:1.2rem;"></div>
                     <div style="flex:1;">
                         <div style="font-weight:800;font-size:1rem;">Historique & Restauration</div>
                         <div style="font-size:.72rem;color:var(--mut);">Toutes les modifications du site sont sauvegardées. Vous pouvez annuler chaque action d'un clic.</div>
                     </div>
-                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:var(--s2);" onclick="loadCMSSnapshots()">🔄 Actualiser</button>
+                    <button class="btn-gen" style="font-size:.75rem;padding:8px 14px;background:var(--s2);" onclick="loadCMSSnapshots()">Actualiser</button>
                 </div>
                 <div id="cmsSnapshotsList" style="margin-top:10px;"></div>
             </div>
@@ -980,7 +980,7 @@
         <div class="dispatch-container">
             <!-- CMS DETECTION PANEL -->
             <div class="auto-panel" id="cmsPanel">
-                <div class="auto-panel-title"><span class="auto-icon">🌐</span> Site web & CMS</div>
+                <div class="auto-panel-title"><span class="auto-icon"></span> Site web & CMS</div>
                 <div id="cmsDetectionResult"></div>
                 <div id="cmsConnectionForm"></div>
             </div>
@@ -989,14 +989,14 @@
             <div class="auto-panel" id="fullAutoPanel" style="border-color:rgba(16,185,129,.35);background:linear-gradient(145deg,rgba(16,185,129,.08),rgba(99,102,241,.08),rgba(6,182,212,.08));position:relative;overflow:hidden;">
                 <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--grn),var(--ind),var(--cyn));opacity:.6;"></div>
                 <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px;">
-                    <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--grn),var(--ind));display:flex;align-items:center;justify-content:center;font-size:1.4rem;">🚀</div>
+                    <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--grn),var(--ind));display:flex;align-items:center;justify-content:center;font-size:1.4rem;"></div>
                     <div>
                         <div style="font-size:1rem;font-weight:900;letter-spacing:-.3px;">Full Autonomie</div>
                         <div style="font-size:.72rem;color:var(--mut);">1 clic = tout est fait. GBP + Site + Annuaires + Social.</div>
                     </div>
                 </div>
                 <button class="auto-btn-full" id="btnAutoAll" onclick="runFullAutonomous()" style="font-size:1.05rem;padding:16px;background:linear-gradient(135deg,#10b981,#6366f1,#06b6d4);background-size:200% 200%;animation:gradShift 3s ease infinite;letter-spacing:.3px;">
-                    ⚡ Lancer l'automatisation complète
+                     Lancer l'automatisation complète
                 </button>
                 <div id="autoProgressSteps" style="margin-top:14px;"></div>
                 <div id="autoProgressBar" style="display:none;margin-top:10px;height:6px;border-radius:3px;background:var(--s2);overflow:hidden;">
@@ -1008,7 +1008,7 @@
             <!-- AI AGENT — DIRECTORY AUTOMATION v3 -->
             <div class="auto-panel" style="border-color:rgba(139,92,246,.25);background:linear-gradient(135deg,rgba(139,92,246,.06),rgba(6,182,212,.04));">
                 <div class="ai-agent-header">
-                    <div class="ai-agent-avatar">🤖</div>
+                    <div class="ai-agent-avatar"></div>
                     <div class="ai-agent-info">
                         <h3>Agent IA — Annuaires</h3>
                         <p>Scan, inscription et réclamation automatiques sur 11 plateformes. Zéro action manuelle.</p>
@@ -1017,9 +1017,9 @@
                 </div>
                 <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
                     <button class="auto-btn-full" style="flex:1;min-width:180px;background:linear-gradient(135deg,#8b5cf6,#06b6d4);font-size:.95rem;padding:14px;" onclick="aiAgentAutoAll()" id="btnAiAgent">
-                        🤖 Lancer l'agent IA sur toutes les plateformes
+                         Lancer l'agent IA sur toutes les plateformes
                     </button>
-                    <button class="auto-btn-full" style="flex:0;min-width:110px;background:linear-gradient(135deg,var(--cyn),var(--ind));" onclick="autoCheckAllPlatforms()" id="btnAutoCheck">🔍 Scanner</button>
+                    <button class="auto-btn-full" style="flex:0;min-width:110px;background:linear-gradient(135deg,var(--cyn),var(--ind));" onclick="autoCheckAllPlatforms()" id="btnAutoCheck">Scanner</button>
                 </div>
                 <div id="dirScanProgress" style="display:none;margin-bottom:10px;padding:8px 12px;border-radius:8px;background:rgba(139,92,246,.1);font-size:.75rem;color:#8b5cf6;"></div>
                 <div id="agentLog" style="display:none;margin-bottom:10px;padding:10px 14px;border-radius:10px;background:rgba(139,92,246,.06);border:1px solid rgba(139,92,246,.15);font-size:.72rem;max-height:120px;overflow-y:auto;font-family:'SF Mono',Monaco,monospace;line-height:1.6;"></div>
@@ -1028,7 +1028,7 @@
 
             <!-- EXECUTION LOG -->
             <div style="margin-top:16px;">
-                <h3 style="font-size:.85rem;font-weight:700;margin-bottom:8px;">📋 Journal d'exécution</h3>
+                <h3 style="font-size:.85rem;font-weight:700;margin-bottom:8px;"> Journal d'exécution</h3>
                 <div class="dispatch-log" id="dispatchLog"></div>
             </div>
         </div>
@@ -1043,7 +1043,7 @@
         <!-- Launch screen -->
         <div id="agentLaunch">
           <div style="text-align:center;padding:30px 0 20px;">
-            <div style="font-size:3rem;margin-bottom:8px;">🧠</div>
+            <div style="font-size:3rem;margin-bottom:8px;"></div>
             <h2 style="margin:0 0 8px;font-size:1.4rem;">Agent Autonome RestauRank</h2>
             <p style="color:var(--t2);margin:0 0 24px;font-size:.9rem;">Entrez le nom du restaurant. L'agent IA fait <strong>tout</strong> : scrape, analyse, génère, applique.</p>
           </div>
@@ -1053,7 +1053,7 @@
           </div>
           <input type="text" id="agentWebsite" placeholder="Site web (optionnel)" style="width:100%;padding:12px 16px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:10px;font-size:.9rem;margin-bottom:16px;box-sizing:border-box;">
           <button onclick="launchAgent()" style="width:100%;padding:16px;background:linear-gradient(135deg,#6366f1,#a855f7);color:#fff;border:none;border-radius:12px;font-size:1.1rem;font-weight:600;cursor:pointer;transition:transform .15s;">
-            🚀 Lancer l'Agent Autonome
+            Lancer l'Agent Autonome
           </button>
           <div id="agentHistory" style="margin-top:24px;"></div>
         </div>
@@ -1061,7 +1061,7 @@
         <!-- Progress screen -->
         <div id="agentProgress" style="display:none;">
           <div style="text-align:center;margin-bottom:20px;">
-            <div style="font-size:2rem;" id="agentStageIcon">🔍</div>
+            <div style="font-size:2rem;" id="agentStageIcon"></div>
             <h3 id="agentStageText" style="margin:8px 0 4px;">Initialisation...</h3>
             <p id="agentStageDetail" style="color:var(--t2);margin:0;font-size:.85rem;"></p>
           </div>
@@ -1077,7 +1077,7 @@
         <!-- Results screen -->
         <div id="agentResults" style="display:none;">
           <div style="text-align:center;margin-bottom:20px;">
-            <div style="font-size:2.5rem;">✅</div>
+            <div style="font-size:2.5rem;"></div>
             <h2 style="margin:8px 0;">Audit terminé</h2>
           </div>
           <!-- Score cards -->
@@ -1085,14 +1085,14 @@
           <!-- Category breakdown -->
           <div id="agentCategories" style="margin-bottom:20px;"></div>
           <!-- Generated content list -->
-          <h3 style="margin-bottom:10px;">📝 Contenu généré par l'IA</h3>
+          <h3 style="margin-bottom:10px;"> Contenu généré par l'IA</h3>
           <div id="agentGenerated" style="margin-bottom:20px;"></div>
           <!-- Manual actions -->
-          <h3 style="margin-bottom:10px;">⚠️ Actions manuelles requises</h3>
+          <h3 style="margin-bottom:10px;"> Actions manuelles requises</h3>
           <div id="agentManual" style="margin-bottom:20px;"></div>
           <!-- Relaunch -->
           <button onclick="document.getElementById('agentLaunch').style.display='';document.getElementById('agentResults').style.display='none';" style="width:100%;padding:14px;background:var(--s2);color:var(--txt);border:1px solid var(--bdr);border-radius:10px;font-size:1rem;cursor:pointer;margin-top:10px;">
-            🔄 Relancer un audit
+            Relancer un audit
           </button>
         </div>
       </div>
@@ -1101,78 +1101,78 @@
     <!-- SETTINGS TAB -->
     <div class="dash-tab-content" id="tabSettings">
         <div class="settings-container">
-            <h2 style="font-size:1rem;font-weight:800;margin-bottom:12px;">⚙️ Paramètres</h2>
+            <h2 style="font-size:1rem;font-weight:800;margin-bottom:12px;"> Paramètres</h2>
             
             <div class="settings-group">
-                <label>🔐 Google Cloud Client ID</label>
+                <label> Google Cloud Client ID</label>
                 <input type="text" id="settingsGoogleClientId" placeholder="YOUR_CLIENT_ID.apps.googleusercontent.com">
                 <small>Obtenez votre Client ID depuis <a href="https://console.cloud.google.com" style="color:var(--ind);">Google Cloud Console</a>. Scopes requis : business.manage</small>
             </div>
             
 
             <div class="settings-group">
-                <label>🏪 Nom du restaurant</label>
+                <label> Nom du restaurant</label>
                 <input type="text" id="settingsRestoName" placeholder="Nom de votre restaurant">
             </div>
 
             <div class="settings-group">
-                <label>📍 Ville</label>
+                <label> Ville</label>
                 <input type="text" id="settingsCity" placeholder="Ville">
             </div>
 
             <div class="settings-group">
-                <label>🍽️ Type de cuisine</label>
+                <label> Type de cuisine</label>
                 <input type="text" id="settingsCuisine" placeholder="Japonais, Français, Italien...">
                 <small>Aide l'IA à personnaliser le contenu</small>
             </div>
 
             <div class="settings-group">
-                <label>⭐ Spécialités</label>
+                <label>Spécialités</label>
                 <input type="text" id="settingsSpecialties" placeholder="Ramen, Sushi, Pizza...">
                 <small>Vos plats signatures — l'IA les mettra en avant</small>
             </div>
 
             <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
-                <button class="btn-dispatch-all" onclick="saveSettings()">💾 Enregistrer les paramètres</button>
-                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;" onclick="bulkGenerateAI().then(r=>{if(r)alert('Contenu IA généré pour toutes les catégories !');else alert('Erreur de génération — contactez le support');})">⚡ Tout générer avec l'IA</button>
+                <button class="btn-dispatch-all" onclick="saveSettings()">Enregistrer les paramètres</button>
+                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,#f59e0b,#d97706);color:#fff;" onclick="bulkGenerateAI().then(r=>{if(r)alert('Contenu IA généré pour toutes les catégories !');else alert('Erreur de génération — contactez le support');})"> Tout générer avec l'IA</button>
             </div>
             <div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">
-                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,var(--cyn),#0891b2);color:#fff;" onclick="exportData()">📤 Exporter les données</button>
-                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,#8b5cf6,var(--ind));color:#fff;" onclick="openBillingPortal()">💳 Gérer mon abonnement</button>
+                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,var(--cyn),#0891b2);color:#fff;" onclick="exportData()"> Exporter les données</button>
+                <button class="btn-dispatch-all" style="background:linear-gradient(135deg,#8b5cf6,var(--ind));color:#fff;" onclick="openBillingPortal()"> Gérer mon abonnement</button>
             </div>
 
             <!-- SOCIAL MEDIA CONNECTIONS -->
             <div style="margin-top:20px;padding:16px;background:linear-gradient(135deg,rgba(236,72,153,.06),rgba(99,102,241,.06));border:1px solid rgba(236,72,153,.2);border-radius:12px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                    <span style="font-size:1.1rem;">📱</span>
+                    <span style="font-size:1.1rem;"></span>
                     <h3 style="font-size:.95rem;font-weight:800;margin:0;">Publication automatique — Réseaux sociaux</h3>
                 </div>
                 <p style="font-size:.75rem;color:var(--mut);margin:0 0 12px;line-height:1.5;">Connectez vos comptes pour que RestauRank publie automatiquement après chaque audit. Le contenu est généré par IA et adapté à chaque plateforme.</p>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;" id="socialConnections">
                     <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
-                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">📸 Instagram</div>
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;"> Instagram</div>
                         <input type="text" id="settingsMetaToken" placeholder="Meta Page Access Token" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
                         <input type="text" id="settingsIgAccountId" placeholder="Instagram Business Account ID" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
                         <a href="https://developers.facebook.com/docs/instagram-api/getting-started" target="_blank" style="font-size:.6rem;color:var(--ind);">Guide de configuration →</a>
                     </div>
                     <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
-                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">📘 Facebook</div>
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;"> Facebook</div>
                         <input type="text" id="settingsFbPageId" placeholder="Facebook Page ID" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
                         <div style="font-size:.6rem;color:var(--mut);margin-top:4px;">Utilise le même Meta Token qu'Instagram</div>
                     </div>
                     <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
-                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">💼 LinkedIn</div>
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;"> LinkedIn</div>
                         <input type="text" id="settingsLinkedinToken" placeholder="LinkedIn Access Token" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
                         <input type="text" id="settingsLinkedinOrgId" placeholder="Organization ID (page entreprise)" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
                         <a href="https://www.linkedin.com/developers/apps" target="_blank" style="font-size:.6rem;color:var(--ind);">Créer une app →</a>
                     </div>
                     <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
-                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">🎵 TikTok</div>
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;"> TikTok</div>
                         <input type="text" id="settingsTiktokToken" placeholder="TikTok Access Token" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
                         <a href="https://developers.tiktok.com" target="_blank" style="font-size:.6rem;color:var(--ind);">Configurer →</a>
                     </div>
                     <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
-                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">🤖 Reddit</div>
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;"> Reddit</div>
                         <input type="text" id="settingsRedditClientId" placeholder="Client ID" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
                         <input type="text" id="settingsRedditSecret" placeholder="Client Secret" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
                         <input type="text" id="settingsRedditUser" placeholder="Username" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;margin-bottom:4px;">
@@ -1180,19 +1180,19 @@
                         <a href="https://www.reddit.com/prefs/apps" target="_blank" style="font-size:.6rem;color:var(--ind);">Créer une app Script →</a>
                     </div>
                     <div style="padding:10px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
-                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">⭐ Yelp</div>
+                        <div style="font-weight:700;font-size:.78rem;margin-bottom:6px;">Yelp</div>
                         <input type="text" id="settingsYelpKey" placeholder="Yelp Fusion API Key" style="width:100%;padding:6px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);font-size:.72rem;box-sizing:border-box;">
                         <a href="https://www.yelp.com/developers/v3/manage_app" target="_blank" style="font-size:.6rem;color:var(--ind);">Créer une app →</a>
                     </div>
                 </div>
-                <button onclick="saveSocialSettings()" style="margin-top:10px;padding:8px 20px;background:linear-gradient(135deg,#ec4899,#6366f1);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.78rem;font-weight:700;">💾 Sauvegarder les connexions sociales</button>
+                <button onclick="saveSocialSettings()" style="margin-top:10px;padding:8px 20px;background:linear-gradient(135deg,#ec4899,#6366f1);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:.78rem;font-weight:700;">Sauvegarder les connexions sociales</button>
                 <div id="socialSaveStatus" style="font-size:.7rem;margin-top:6px;"></div>
             </div>
 
             <!-- AUTOMATED REVIEWS RESPONSE -->
             <div class="review-auto-section" style="margin-top:20px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                    <span style="font-size:1.1rem;">🤖</span>
+                    <span style="font-size:1.1rem;"></span>
                     <h3 style="font-size:.95rem;font-weight:800;margin:0;">Automatisation des réponses aux avis</h3>
                     <span style="margin-left:auto;padding:2px 8px;border-radius:4px;background:rgba(16,185,129,.15);color:var(--grn);font-size:.65rem;font-weight:700;" id="autoBadge">Désactivée</span>
                 </div>
@@ -1207,7 +1207,7 @@
                     </div>
                 </div>
                 <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:10px;padding:12px;margin-top:12px;">
-                    <div style="font-size:.8rem;font-weight:800;color:var(--red);margin-bottom:8px;">🚨 Sujets à risque (bloquent l'automatisation)</div>
+                    <div style="font-size:.8rem;font-weight:800;color:var(--red);margin-bottom:8px;"> Sujets à risque (bloquent l'automatisation)</div>
                     <div style="display:flex;gap:12px;">
                         <label style="display:flex;align-items:center;gap:6px;font-size:.78rem;cursor:pointer;">
                             <input type="checkbox" id="riskHygiene"> Hygiène / Propreté
@@ -1222,33 +1222,33 @@
             <!-- DIRECTORY API KEYS -->
             <div style="margin-top:20px;background:rgba(16,185,129,.05);border:1px solid rgba(16,185,129,.2);border-radius:12px;padding:14px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                    <span style="font-size:1.1rem;">🔗</span>
+                    <span style="font-size:1.1rem;"></span>
                     <h3 style="font-size:.95rem;font-weight:800;margin:0;">Clés API Annuaires</h3>
                     <span style="margin-left:auto;padding:2px 8px;border-radius:4px;background:rgba(16,185,129,.15);color:var(--grn);font-size:.6rem;font-weight:700;">AUTO-CHECK</span>
                 </div>
                 <small style="display:block;color:var(--mut);margin-bottom:12px;">Connectez les APIs pour que RestauRank vérifie automatiquement votre présence sur chaque annuaire. Les clés sont gratuites pour la plupart.</small>
 
                 <div class="settings-group" style="margin-bottom:8px;">
-                    <label style="font-size:.78rem;">⭐ Yelp Fusion API Key</label>
+                    <label style="font-size:.78rem;">Yelp Fusion API Key</label>
                     <input type="password" id="settingsYelpApiKey" placeholder="Votre clé Yelp Fusion...">
                     <small><a href="https://www.yelp.com/developers/v3/manage_app" target="_blank" style="color:var(--ind);">Créer une app Yelp</a> — gratuit, 5000 req/jour. Source #1 de ChatGPT.</small>
                 </div>
 
                 <div class="settings-group" style="margin-bottom:8px;">
-                    <label style="font-size:.78rem;">📍 Foursquare API Key</label>
+                    <label style="font-size:.78rem;"> Foursquare API Key</label>
                     <input type="password" id="settingsFoursquareApiKey" placeholder="fsq3...">
                     <small><a href="https://location.foursquare.com/developer/" target="_blank" style="color:var(--ind);">Créer un projet Foursquare</a> — gratuit. Alimente Apple Maps, Uber, Samsung.</small>
                 </div>
 
                 <div class="settings-group" style="margin-bottom:8px;">
-                    <label style="font-size:.78rem;">🏖️ TripAdvisor Content API Key</label>
+                    <label style="font-size:.78rem;"> TripAdvisor Content API Key</label>
                     <input type="password" id="settingsTripAdvisorApiKey" placeholder="Votre clé TripAdvisor...">
                     <small><a href="https://www.tripadvisor.com/developers" target="_blank" style="color:var(--ind);">Demander l'accès API</a> — gratuit pour usage basique. Source Perplexity.</small>
                 </div>
 
                 <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-                    <button class="btn-dispatch-all" style="background:linear-gradient(135deg,var(--grn),#059669);color:#fff;font-size:.78rem;" onclick="saveDirectoryApiKeys()">💾 Sauvegarder les clés</button>
-                    <button class="btn-dispatch-all" style="background:linear-gradient(135deg,var(--cyn),#0891b2);color:#fff;font-size:.78rem;" onclick="checkAllDirectoriesAPI()">🔍 Vérifier présence sur tous les annuaires</button>
+                    <button class="btn-dispatch-all" style="background:linear-gradient(135deg,var(--grn),#059669);color:#fff;font-size:.78rem;" onclick="saveDirectoryApiKeys()">Sauvegarder les clés</button>
+                    <button class="btn-dispatch-all" style="background:linear-gradient(135deg,var(--cyn),#0891b2);color:#fff;font-size:.78rem;" onclick="checkAllDirectoriesAPI()">Vérifier présence sur tous les annuaires</button>
                 </div>
                 <div id="dirApiCheckResults" style="margin-top:8px;font-size:.75rem;"></div>
             </div>
@@ -1256,7 +1256,7 @@
             <!-- AI ASSISTANT CONFIG -->
             <div class="ai-settings-section" style="margin-top:20px;">
                 <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
-                    <span style="font-size:1.1rem;">🤖</span>
+                    <span style="font-size:1.1rem;"></span>
                     <h3 style="font-size:.95rem;font-weight:800;margin:0;">Votre assistant IA personnalisé</h3>
                 </div>
                 
@@ -1277,7 +1277,7 @@
 
                 <div class="ai-expandable">
                     <div class="ai-expand-btn" onclick="toggleAiSection(this)">
-                        <span>📝 Avis clients</span>
+                        <span> Avis clients</span>
                         <span class="toggle">▶</span>
                     </div>
                     <div class="ai-fields">
@@ -1312,7 +1312,7 @@
 
                 <div class="ai-expandable">
                     <div class="ai-expand-btn" onclick="toggleAiSection(this)">
-                        <span>📱 Google Posts</span>
+                        <span> Google Posts</span>
                         <span class="toggle">▶</span>
                     </div>
                     <div class="ai-fields">
@@ -1335,15 +1335,15 @@
                     </div>
                 </div>
 
-                <button class="btn-dispatch-all" style="width:100%;margin-top:12px;" onclick="saveAiSettings()">💾 Enregistrer les paramètres IA</button>
+                <button class="btn-dispatch-all" style="width:100%;margin-top:12px;" onclick="saveAiSettings()">Enregistrer les paramètres IA</button>
             </div>
 
             <!-- ALGO WATCHDOG -->
             <div class="auto-panel" style="margin-top:20px;border-color:rgba(245,158,11,.3);background:linear-gradient(135deg,rgba(245,158,11,.06),rgba(239,68,68,.04));">
-                <div class="auto-panel-title"><span class="auto-icon">📡</span> Veille algorithmique</div>
+                <div class="auto-panel-title"><span class="auto-icon"></span> Veille algorithmique</div>
                 <p style="font-size:.78rem;color:var(--mut);margin-bottom:10px;">RestauRank surveille les mises à jour Google (core updates, local pack, reviews) et ajuste automatiquement vos priorités d'optimisation.</p>
                 <div id="algoUpdatesPanel" style="margin-bottom:10px;"></div>
-                <button class="auto-btn-full" style="background:linear-gradient(135deg,#f59e0b,#ef4444);" onclick="checkAlgoUpdates()">🔍 Vérifier les dernières mises à jour</button>
+                <button class="auto-btn-full" style="background:linear-gradient(135deg,#f59e0b,#ef4444);" onclick="checkAlgoUpdates()">Vérifier les dernières mises à jour</button>
             </div>
         </div>
     </div>
@@ -1352,9 +1352,9 @@
 <!-- GROUP DASHBOARD (multi-site) -->
 <div class="screen" id="groupDash">
     <div class="group-header">
-        <h1 id="groupTitle">🏢 Mon Groupe <span class="multi-tag">Multi-sites</span></h1>
+        <h1 id="groupTitle"> Mon Groupe <span class="multi-tag">Multi-sites</span></h1>
         <div class="group-header-actions">
-            <button class="cmd-toggle" onclick="openGroupBulkCmd()">🚀 Annuaires en masse</button>
+            <button class="cmd-toggle" onclick="openGroupBulkCmd()">Annuaires en masse</button>
             <button class="btn-rescan" onclick="goLanding()">← Accueil</button>
         </div>
     </div>
@@ -1374,8 +1374,8 @@
     <div class="cmd-card">
         <button class="cmd-close" onclick="closeCmdPanel()">✕</button>
         <div class="cmd-header">
-            <h2>🚀 Centre de commande annuaires <span>AUTO</span></h2>
-            <button class="cmd-launch-all" id="cmdLaunchAll" onclick="launchAllPlatforms()">⚡ Lancer tout séquentiellement</button>
+            <h2>Centre de commande annuaires <span>AUTO</span></h2>
+            <button class="cmd-launch-all" id="cmdLaunchAll" onclick="launchAllPlatforms()"> Lancer tout séquentiellement</button>
         </div>
         <div class="cmd-body">
             <div id="cmdNapBlock"></div>

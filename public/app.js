@@ -1,5 +1,5 @@
 // ============================================================
-// 🛡️ SECURITY LAYER — anti-copy, anti-devtools, domain lock
+// SECURITY LAYER — anti-copy, anti-devtools, domain lock
 // ============================================================
 (function(){
     'use strict';
@@ -76,7 +76,7 @@
             if (!_dtOpen) {
                 _dtOpen = true;
                 console.clear();
-                console.log('%c⛔ RestauRank — Inspection non autorisée', 'color:red;font-size:24px;font-weight:bold;');
+                console.log('%c RestauRank — Inspection non autorisée', 'color:red;font-size:24px;font-weight:bold;');
                 console.log('%cLe code source de cette application est protégé. Toute copie ou reverse-engineering est interdite.', 'color:#6e7490;font-size:14px;');
             }
         } else { _dtOpen = false; }
@@ -89,7 +89,7 @@
     }
 
     // --- 7. CONSOLE WARNINGS ---
-    console.log('%c⛔ STOP', 'color:red;font-size:48px;font-weight:900;text-shadow:2px 2px 0 #000;');
+    console.log('%c STOP', 'color:red;font-size:48px;font-weight:900;text-shadow:2px 2px 0 #000;');
     console.log('%cCette console est réservée aux développeurs autorisés de RestauRank.', 'color:#f59e0b;font-size:16px;');
     console.log('%cSi quelqu\'un vous a dit de copier-coller quelque chose ici, c\'est une arnaque.', 'color:#ef4444;font-size:14px;');
     console.log('%cLe code est protégé par des droits d\'auteur © RestauRank 2026. Toute reproduction est interdite.', 'color:#6e7490;font-size:12px;');
@@ -134,7 +134,7 @@
 // ============================================================
 const CATEGORIES = [
     {
-        id:'gbp', icon:'📊', name:'Google Business Profile', weight:32, group:'seo',
+        id:'gbp', icon:'', name:'Google Business Profile', weight:32, group:'seo',
         desc:'Facteur n°1 du ranking local (32%). Audit complet de votre fiche Google.',
         items:[
             { id:'gbp_cat_primary', name:'Catégorie principale GBP', factor:'Facteur #1 Local Pack', weight:5,
@@ -194,7 +194,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'reviews', icon:'⭐', name:'Avis & E-Réputation', weight:20, group:'seo',
+        id:'reviews', icon:'', name:'Avis & E-Réputation', weight:20, group:'seo',
         desc:'Facteur #2 (20%). Volume, note, fraîcheur, contenu textuel.',
         items:[
             { id:'rev_rating', name:'Note moyenne Google', factor:'Facteur #6 Local Pack', weight:5,
@@ -230,7 +230,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'citations', icon:'📌', name:'Citations & NAP', weight:13, group:'seo',
+        id:'citations', icon:'', name:'Citations & NAP', weight:13, group:'seo',
         desc:'6% Local Pack, 13% AI Visibility. Cohérence NAP cruciale.',
         items:[
             { id:'cit_nap', name:'Cohérence NAP', factor:'Facteur #15 + IA', weight:5,
@@ -254,7 +254,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'onpage', icon:'🌐', name:'Site Web (On-Page)', weight:15, group:'seo',
+        id:'onpage', icon:'', name:'Site Web (On-Page)', weight:15, group:'seo',
         desc:'15% Local Pack, 33% Local Organic, 24% AI Visibility.',
         items:[
             { id:'op_schema', name:'Schema.org Restaurant', factor:'Signal structuré SEO+GEO', weight:5,
@@ -344,7 +344,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_chatgpt', icon:'🤖', name:'Visibilité ChatGPT', weight:25, group:'geo',
+        id:'geo_chatgpt', icon:'', name:'Visibilité ChatGPT', weight:25, group:'geo',
         desc:'ChatGPT utilise Yelp (48.73%), Bing, TripAdvisor comme sources.',
         items:[
             { id:'g_chatgpt', name:'Citation par ChatGPT', factor:'Test direct', weight:5,
@@ -368,7 +368,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_perplexity', icon:'🔎', name:'Visibilité Perplexity + Gemini', weight:25, group:'geo',
+        id:'geo_perplexity', icon:'', name:'Visibilité Perplexity + Gemini', weight:25, group:'geo',
         desc:'Perplexity = sources niche 24%. Gemini = site web 52.15%.',
         items:[
             { id:'g_perplexity', name:'Citation par Perplexity', factor:'Sources niche 24%', weight:4,
@@ -398,7 +398,7 @@ const CATEGORIES = [
         ]
     },
     {
-        id:'geo_signals', icon:'📱', name:'Signaux GEO & UGC', weight:25, group:'geo',
+        id:'geo_signals', icon:'', name:'Signaux GEO & UGC', weight:25, group:'geo',
         desc:'Signaux sociaux (9% AI Visibility), UGC, mentions, données structurées.',
         items:[
             { id:'g_claude', name:'Visibilité Claude (Anthropic)', factor:'UGC x10 en F&B', weight:3,
@@ -479,15 +479,15 @@ const CATEGORIES = [
 // VERIFICATION LINKS
 // ============================================================
 const VERIFY_PLATFORMS = [
-    {name:'Google Search',icon:'🔍',url:q=>`https://www.google.com/search?q=${q}`},
-    {name:'Google Maps',icon:'🗺️',url:q=>`https://www.google.com/maps/search/${q}`},
-    {name:'TripAdvisor',icon:'🦉',url:q=>`https://www.tripadvisor.fr/Search?q=${q}`},
-    {name:'Yelp',icon:'⭐',url:q=>`https://www.yelp.fr/search?find_desc=${q}`},
-    {name:'TheFork',icon:'🍴',url:q=>`https://www.thefork.fr/search?queryText=${q}`},
-    {name:'Facebook',icon:'📘',url:q=>`https://www.facebook.com/search/pages/?q=${q}`},
-    {name:'Pages Jaunes',icon:'📒',url:q=>`https://www.pagesjaunes.fr/recherche/${q}`},
-    {name:'Bing Maps',icon:'🔍',url:q=>`https://www.bing.com/maps?q=${q}`},
-    {name:'Foursquare',icon:'📍',url:q=>`https://foursquare.com/explore?q=${q}`},
+    {name:'Google Search',icon:'',url:q=>`https://www.google.com/search?q=${q}`},
+    {name:'Google Maps',icon:'',url:q=>`https://www.google.com/maps/search/${q}`},
+    {name:'TripAdvisor',icon:'',url:q=>`https://www.tripadvisor.fr/Search?q=${q}`},
+    {name:'Yelp',icon:'',url:q=>`https://www.yelp.fr/search?find_desc=${q}`},
+    {name:'TheFork',icon:'',url:q=>`https://www.thefork.fr/search?queryText=${q}`},
+    {name:'Facebook',icon:'',url:q=>`https://www.facebook.com/search/pages/?q=${q}`},
+    {name:'Pages Jaunes',icon:'',url:q=>`https://www.pagesjaunes.fr/recherche/${q}`},
+    {name:'Bing Maps',icon:'',url:q=>`https://www.bing.com/maps?q=${q}`},
+    {name:'Foursquare',icon:'',url:q=>`https://foursquare.com/explore?q=${q}`},
 ];
 
 // ============================================================
@@ -560,7 +560,7 @@ function showUpgradeModal(reason,suggestedPlan){
     modal.id='upgradeModal';
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:10000;';
     modal.innerHTML=`<div style="background:var(--card);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:480px;width:90%;color:var(--txt);">
-        <h2 style="margin:0 0 8px;font-size:1.2rem;">🔒 Fonctionnalité limitée</h2>
+        <h2 style="margin:0 0 8px;font-size:1.2rem;">Fonctionnalité limitée</h2>
         <p style="color:var(--mut);margin:0 0 18px;font-size:.9rem;">${reason}</p>
         <h3 style="margin:0 0 12px;font-size:1rem;color:var(--cyn);">Passez à un plan supérieur</h3>
         <div style="display:grid;gap:8px;">
@@ -593,7 +593,7 @@ function selectUpgradePlan(plan){
 async function handleUpgrade(){
     const plan=window._selectedUpgradePlan||'starter';
     const upgradeBtn=document.querySelector('#upgradeModal .btn');
-    if(upgradeBtn){upgradeBtn.textContent='⏳ Chargement…';upgradeBtn.disabled=true;}
+    if(upgradeBtn){upgradeBtn.textContent=' Chargement…';upgradeBtn.disabled=true;}
 
     if(authMode==='server'){
         try{
@@ -635,7 +635,7 @@ function applyPlanUI(plan){
     try{renderReviews();}catch{}
     try{renderTeam();}catch{}
     try{renderDirAutoGrid();}catch{}
-    addToLog(`⬆️ Plan mis à jour : ${plan.toUpperCase()}`);
+    addToLog(` Plan mis à jour : ${plan.toUpperCase()}`);
 }
 
 // Check for upgrade success/cancel on page load (Stripe redirect)
@@ -645,10 +645,10 @@ function checkUpgradeRedirect(){
         const plan=params.get('plan')||'pro';
         if(currentAccount)currentAccount.plan=plan;
         applyPlanUI(plan);
-        setTimeout(()=>addToLog('✅ Paiement Stripe confirmé ! Bienvenue sur le plan '+plan.toUpperCase()),500);
+        setTimeout(()=>addToLog('✓ Paiement Stripe confirmé ! Bienvenue sur le plan '+plan.toUpperCase()),500);
         window.history.replaceState({},'',window.location.pathname);
     } else if(params.get('upgrade')==='cancel'){
-        addToLog('⚠️ Paiement annulé — vous restez sur votre plan actuel');
+        addToLog('! Paiement annulé — vous restez sur votre plan actuel');
         window.history.replaceState({},'',window.location.pathname);
     }
 }
@@ -666,9 +666,9 @@ function checkOAuthRedirect(){
         if(oauthPlatform==='facebook'&&params.get('ig')==='1')platformStatus.instagram='done';
         window._realConnectionsFetched=false; // Force re-fetch
         saveAllData();
-        setTimeout(()=>addToLog(`✅ ${oauthPlatform.charAt(0).toUpperCase()+oauthPlatform.slice(1)} connecté via OAuth ! Token réel stocké.`),500);
+        setTimeout(()=>addToLog(`✓ ${oauthPlatform.charAt(0).toUpperCase()+oauthPlatform.slice(1)} connecté via OAuth ! Token réel stocké.`),500);
     } else if(error){
-        setTimeout(()=>addToLog(`❌ Connexion ${oauthPlatform} échouée : ${decodeURIComponent(error)}`),500);
+        setTimeout(()=>addToLog(`✗ Connexion ${oauthPlatform} échouée : ${decodeURIComponent(error)}`),500);
     }
     window.history.replaceState({},'',window.location.pathname);
 }
@@ -683,13 +683,13 @@ async function openBillingPortal(){
         modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
         modal.onclick=e=>{if(e.target===modal)modal.remove();};
         modal.innerHTML=`<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:400px;width:90%;">
-            <h3 style="margin:0 0 12px;font-size:1rem;color:var(--txt);">💳 Facturation</h3>
+            <h3 style="margin:0 0 12px;font-size:1rem;color:var(--txt);">Facturation</h3>
             <p style="font-size:.82rem;color:var(--mut);margin-bottom:16px;">Mode démo — les plans sont gratuits. En production, le portail Stripe vous permettra de gérer votre abonnement.</p>
             <div style="padding:12px;border-radius:10px;background:var(--s1);border:1px solid var(--bdr);margin-bottom:12px;">
                 <div style="font-size:.75rem;color:var(--mut);">Plan actuel</div>
                 <div style="font-size:1.1rem;font-weight:800;color:var(--ind);">${plan}</div>
             </div>
-            <button onclick="this.closest('#billingModal').remove();showUpgradeModal('','starter');" style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--ind);color:#fff;cursor:pointer;font-size:.85rem;font-weight:700;">⬆️ Changer de plan</button>
+            <button onclick="this.closest('#billingModal').remove();showUpgradeModal('','starter');" style="width:100%;padding:10px;border-radius:8px;border:none;background:var(--ind);color:#fff;cursor:pointer;font-size:.85rem;font-weight:700;"> Changer de plan</button>
             <button onclick="this.closest('#billingModal').remove()" style="width:100%;margin-top:8px;padding:8px;border-radius:6px;border:1px solid var(--bdr);background:transparent;color:var(--mut);cursor:pointer;font-size:.78rem;">Fermer</button>
         </div>`;
         document.body.appendChild(modal);
@@ -701,9 +701,9 @@ async function openBillingPortal(){
         if(data.portalUrl)window.open(data.portalUrl,'_blank');
         else {
             // No Stripe configured — show info
-            addToLog('ℹ️ Portail Stripe non configuré. Mode démo actif.');
+            addToLog('Portail Stripe non configuré. Mode démo actif.');
         }
-    }catch{addToLog('⚠️ Erreur de connexion au serveur pour le portail de facturation');}
+    }catch{addToLog('! Erreur de connexion au serveur pour le portail de facturation');}
 }
 
 // ============================================================
@@ -724,7 +724,7 @@ try{
             localStorage.setItem('restaurank_session',sessionToken);
             currentAccount={id:data.account.id,email:data.account.email,name:data.account.name,role:data.account.role,plan:data.account.plan};
             localStorage.setItem('restaurank_local_account',JSON.stringify(currentAccount));
-            console.log('🔑 Social login detected:',data.account.email);
+            console.log('Social login detected:',data.account.email);
         }
     }
 }catch(e){}
@@ -742,9 +742,9 @@ async function detectAuthMode(){
     try{
         const resp=await fetch(API_BASE+'/auth/me',{signal:AbortSignal.timeout(3000)});
         const data=await resp.json();
-        if(data.authenticated!==undefined){authMode='server';console.log('🔑 Auth mode: server');return;}
+        if(data.authenticated!==undefined){authMode='server';console.log('Auth mode: server');return;}
     }catch(e){}
-    authMode='local';console.log('🔑 Auth mode: local (fallback)');
+    authMode='local';console.log('Auth mode: local (fallback)');
 }
 
 function showAuth(screen){
@@ -926,7 +926,7 @@ async function authForgot(){
             await resp.json();
         }catch(e){}
     }
-    showAuthError('forgotError','✅ Si un compte existe, un email a été envoyé.');
+    showAuthError('forgotError','✓ Si un compte existe, un email a été envoyé.');
 }
 
 // Reset password (from email link)
@@ -949,7 +949,7 @@ async function authResetPassword(){
         const resp=await fetch(API_BASE+'/auth/reset-password',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token,newPassword:pw})});
         const data=await resp.json();
         if(data.success){
-            showAuthError('resetError','✅ Mot de passe réinitialisé ! Vous pouvez vous connecter.');
+            showAuthError('resetError','✓ Mot de passe réinitialisé ! Vous pouvez vous connecter.');
             setTimeout(()=>showAuth('login'),2000);
             window.history.replaceState({},'',window.location.pathname);
         } else {
@@ -981,10 +981,10 @@ async function handleTeamInvite(token){
         const resp=await fetch(API_BASE+'/api/team/accept-invite',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({token})});
         const data=await resp.json();
         if(data.success){
-            addToLog('✅ Invitation acceptée ! Vous avez rejoint '+data.restaurantName);
+            addToLog('✓ Invitation acceptée ! Vous avez rejoint '+data.restaurantName);
             window.history.replaceState({},'',window.location.pathname);
         } else {
-            addToLog('⚠️ '+data.error);
+            addToLog('! '+data.error);
         }
     }catch(e){
         // If not logged in, save invite for after login
@@ -1129,7 +1129,7 @@ function obNextStep(step){
 
 function obConnectGoogle(){
     const btn=document.getElementById('obGoogleBtn');
-    btn.textContent='⏳ Connexion en cours…';
+    btn.textContent=' Connexion en cours…';
     btn.disabled=true;
     startGoogleAuth({
         onSuccess:()=>{
@@ -1137,7 +1137,7 @@ function obConnectGoogle(){
             document.getElementById('obGoogleBtn').style.display='none';
             document.getElementById('obGoogleConnected').style.display='block';
             document.getElementById('obGoogleEmail').textContent=googleAuth.email||'';
-            document.getElementById('obGoogleNext').textContent='✅ Lancer le scan →';
+            document.getElementById('obGoogleNext').textContent='✓ Lancer le scan →';
             showToast('Google connecté ! Continuez vers le scan.','success');
         }
     });
@@ -1191,19 +1191,19 @@ async function obStartScan(){
         {id:'geo',label:'Calcul du score GEO…'},
         {id:'ai',label:'Génération des recommandations IA…'}
     ];
-    stepsDiv.innerHTML=scanSteps.map(s=>`<div class="ob-scan-step pending" id="obs_${s.id}"><div class="ob-icon">⏳</div><div>${s.label}</div></div>`).join('');
+    stepsDiv.innerHTML=scanSteps.map(s=>`<div class="ob-scan-step pending" id="obs_${s.id}"><div class="ob-icon"></div><div>${s.label}</div></div>`).join('');
 
     // Progress indicator gated on real API response
     async function animateStep(id,startDelay){
         await new Promise(r=>setTimeout(r,startDelay));
         const el=document.getElementById('obs_'+id);
-        if(el){el.className='ob-scan-step running';el.querySelector('.ob-icon').textContent='⚡';}
+        if(el){el.className='ob-scan-step running';el.querySelector('.ob-icon').textContent='';}
         // Wait for real audit data OR max 10s timeout
         const start=Date.now();
         while(!window._realAuditData && Date.now()-start<10000){
             await new Promise(r=>setTimeout(r,200));
         }
-        if(el){el.className='ob-scan-step done';el.querySelector('.ob-icon').textContent='✅';}
+        if(el){el.className='ob-scan-step done';el.querySelector('.ob-icon').textContent='';}
     }
 
     // Pre-fill the main landing fields so startScan() works
@@ -1248,7 +1248,7 @@ async function obStartScan(){
                     const g=rData.details.google;
                     window._hubData={name:g.name,city,phone:g.phone,address:g.address,website:g.website,rating:g.rating,reviewCount:g.reviewCount,photos:g.photos?.map(p=>p.url)||[],hours:g.hours,place_id:g.place_id,mapsUrl:g.mapsUrl,priceLevel:g.priceLevel,reviews:g.reviews,source:'google_places_api'};
                 }
-                console.log('✅ REAL AUDIT (onboard):',Object.entries(rData.sources||{}).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '),'—',rData.duration+'ms');
+                console.log('✓ REAL AUDIT (onboard):',Object.entries(rData.sources||{}).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '),'—',rData.duration+'ms');
             }
         }
 
@@ -1275,11 +1275,11 @@ async function obStartScan(){
         confirmedPlace={name,formatted_address:city,geometry:{location:{lat:()=>48.86,lng:()=>2.35}},rating:window._hubData?.rating||0,user_ratings_total:window._hubData?.reviewCount||0,reviews:[]};
         if(realData){
             currentData=_prepareRealData(realData,name,city);
-            console.log('✅ USING REAL DATA for onboard dashboard');
+            console.log('✓ USING REAL DATA for onboard dashboard');
         } else {
             // Even fallback uses empty/null — no fake data
             currentData=_prepareRealData({name,city,_auditSource:'pending'},name,city);
-            console.warn('⚠️ Real audit API unavailable — showing empty data (no fakes)');
+            console.warn('! Real audit API unavailable — showing empty data (no fakes)');
         }
         if(website)currentData.website=website;
         currentScores=computeScores(currentData);
@@ -1368,7 +1368,7 @@ function showAccountSettings(){
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
     modal.onclick=e=>{if(e.target===modal)modal.remove();};
     modal.innerHTML=`<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:440px;width:92%;">
-        <h3 style="margin:0 0 18px;font-size:1.05rem;color:var(--txt);">⚙️ Mon compte</h3>
+        <h3 style="margin:0 0 18px;font-size:1.05rem;color:var(--txt);">Mon compte</h3>
         <div style="display:flex;flex-direction:column;gap:12px;font-size:.82rem;">
             <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--s1);border-radius:8px;border:1px solid var(--bdr);">
                 <span style="color:var(--mut);">Email</span><strong style="color:var(--txt);">${acc.email||'—'}</strong>
@@ -1383,16 +1383,16 @@ function showAccountSettings(){
                 <span style="color:var(--mut);">Restaurants</span><strong style="color:var(--txt);">${getStoredRestaurants().length} / ${limits.restaurants}</strong>
             </div>
             <div style="display:flex;justify-content:space-between;padding:10px 14px;background:var(--s1);border-radius:8px;border:1px solid var(--bdr);">
-                <span style="color:var(--mut);">Rôle</span><strong style="color:var(--txt);">${acc.role==='admin'?'👑 Admin':acc.role==='manager'?'✏️ Manager':'👤 Utilisateur'}</strong>
+                <span style="color:var(--mut);">Rôle</span><strong style="color:var(--txt);">${acc.role==='admin'?'Admin':acc.role==='manager'?'Manager':' Utilisateur'}</strong>
             </div>
         </div>
         <div style="display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;">
-            <button onclick="document.getElementById('accountModal').remove();switchDashTab('settings');" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.8rem;">⚙️ Paramètres</button>
-            <button onclick="document.getElementById('accountModal').remove();showUpgradeModal('','starter');" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--ind);color:#fff;cursor:pointer;font-size:.8rem;font-weight:700;">⬆️ Changer de plan</button>
+            <button onclick="document.getElementById('accountModal').remove();switchDashTab('settings');" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.8rem;">Paramètres</button>
+            <button onclick="document.getElementById('accountModal').remove();showUpgradeModal('','starter');" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--ind);color:#fff;cursor:pointer;font-size:.8rem;font-weight:700;"> Changer de plan</button>
         </div>
         <div style="display:flex;gap:8px;margin-top:8px;">
-            <button onclick="document.getElementById('accountModal').remove();openBillingPortal();" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--mut);cursor:pointer;font-size:.78rem;">💳 Facturation</button>
-            <button onclick="document.getElementById('accountModal').remove();authLogout();" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.05);color:var(--red);cursor:pointer;font-size:.78rem;">🚪 Déconnexion</button>
+            <button onclick="document.getElementById('accountModal').remove();openBillingPortal();" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--mut);cursor:pointer;font-size:.78rem;">Facturation</button>
+            <button onclick="document.getElementById('accountModal').remove();authLogout();" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(239,68,68,.3);background:rgba(239,68,68,.05);color:var(--red);cursor:pointer;font-size:.78rem;"> Déconnexion</button>
         </div>
         <button onclick="this.closest('#accountModal').remove()" style="margin-top:10px;padding:6px 16px;border-radius:6px;border:1px solid var(--bdr);background:transparent;color:var(--mut);cursor:pointer;font-size:.75rem;">Fermer</button>
     </div>`;
@@ -1470,8 +1470,8 @@ function renderAdminTable(accounts){
                 <select class="admin-action" onchange="adminChangePlan(${a.id},this.value)" style="padding:3px 6px;">
                     ${['free','starter','pro','premium','enterprise'].map(p=>`<option value="${p}" ${a.plan===p?'selected':''}>${p}</option>`).join('')}
                 </select>
-                ${a.role!=='admin'?`<button class="admin-action" onclick="adminToggle(${a.id})">${a.is_active?'⏸️':'▶️'}</button>`:''}
-                <button class="admin-action" onclick="openClientDetail(${a.id})" title="Fiche client">📋</button>
+                ${a.role!=='admin'?`<button class="admin-action" onclick="adminToggle(${a.id})">${a.is_active?'':''}</button>`:''}
+                <button class="admin-action" onclick="openClientDetail(${a.id})" title="Fiche client"></button>
             </td>
         </tr>`;
     }).join('');
@@ -1505,7 +1505,7 @@ async function openClientDetail(accountId){
     const modal=document.getElementById('adminClientModal');
     const detail=document.getElementById('adminClientDetail');
     modal.style.display='block';
-    detail.innerHTML='<div style="text-align:center;padding:40px;color:var(--mut);">⏳ Chargement fiche client...</div>';
+    detail.innerHTML='<div style="text-align:center;padding:40px;color:var(--mut);"> Chargement fiche client...</div>';
     try{
         const headers={'Authorization':'Bearer '+sessionToken};
         const [accountResp,restResp,connResp]=await Promise.all([
@@ -1541,12 +1541,12 @@ async function openClientDetail(accountId){
             restHtml='<div style="color:var(--mut);font-size:.8rem;padding:16px;text-align:center;">Aucun restaurant audité</div>';
         }
 
-        const connHtml=connections.connections?Object.entries(connections.connections).map(([k,v])=>`<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:600;">✅ ${k}</span>`).join(' '):'<span style="color:var(--mut);font-size:.75rem;">Aucune connexion OAuth</span>';
+        const connHtml=connections.connections?Object.entries(connections.connections).map(([k,v])=>`<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:6px;font-size:.7rem;font-weight:600;">✓ ${k}</span>`).join(' '):'<span style="color:var(--mut);font-size:.75rem;">Aucune connexion OAuth</span>';
 
         detail.innerHTML=`
             <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:20px;">
                 <div>
-                    <h2 style="margin:0;font-size:1.2rem;">📋 Fiche client #${a.id}</h2>
+                    <h2 style="margin:0;font-size:1.2rem;">Fiche client #${a.id}</h2>
                     <div style="color:var(--mut);font-size:.8rem;margin-top:4px;">${a.email}</div>
                 </div>
                 <span class="ub-plan ${a.plan}" style="font-size:.8rem;padding:6px 14px;">${(a.plan||'free').toUpperCase()}</span>
@@ -1572,12 +1572,12 @@ async function openClientDetail(accountId){
             </div>
 
             <div style="margin-bottom:16px;">
-                <h4 style="font-size:.85rem;margin:0 0 8px;">🔗 Connexions plateformes</h4>
+                <h4 style="font-size:.85rem;margin:0 0 8px;">Connexions plateformes</h4>
                 <div style="display:flex;gap:6px;flex-wrap:wrap;">${connHtml}</div>
             </div>
 
             <div style="margin-bottom:16px;">
-                <h4 style="font-size:.85rem;margin:0 0 8px;">🍽️ Restaurants (${rests.length})</h4>
+                <h4 style="font-size:.85rem;margin:0 0 8px;">Restaurants (${rests.length})</h4>
                 ${restHtml}
             </div>
 
@@ -1585,14 +1585,14 @@ async function openClientDetail(accountId){
                 <select id="clientPlanSelect" style="padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
                     ${['free','starter','pro','premium','enterprise'].map(p=>`<option value="${p}" ${a.plan===p?'selected':''}>${p.toUpperCase()}</option>`).join('')}
                 </select>
-                <button onclick="adminChangePlan(${a.id},document.getElementById('clientPlanSelect').value);showToast('Plan modifié !','ok');" style="padding:6px 14px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem;">💳 Changer le plan</button>
-                ${a.role!=='admin'?`<button onclick="adminToggle(${a.id});showToast('Statut modifié','ok');" style="padding:6px 14px;background:${a.is_active?'var(--red)':'var(--grn)'};color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem;">${a.is_active?'⏸️ Désactiver':'▶️ Activer'}</button>`:''}
-                <button onclick="adminSendEmail(${a.id},'${a.email}')" style="padding:6px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;cursor:pointer;color:var(--txt);font-size:.75rem;">📧 Envoyer email</button>
+                <button onclick="adminChangePlan(${a.id},document.getElementById('clientPlanSelect').value);showToast('Plan modifié !','ok');" style="padding:6px 14px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem;">Changer le plan</button>
+                ${a.role!=='admin'?`<button onclick="adminToggle(${a.id});showToast('Statut modifié','ok');" style="padding:6px 14px;background:${a.is_active?'var(--red)':'var(--grn)'};color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem;">${a.is_active?' Désactiver':' Activer'}</button>`:''}
+                <button onclick="adminSendEmail(${a.id},'${a.email}')" style="padding:6px 14px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;cursor:pointer;color:var(--txt);font-size:.75rem;">Envoyer email</button>
                 <div style="font-size:.7rem;color:var(--mut);margin-left:auto;align-self:center;">Dernière connexion : ${lastLogin}</div>
             </div>
         `;
     }catch(e){
-        detail.innerHTML=`<div style="color:var(--red);padding:20px;">❌ Erreur : ${e.message}</div>`;
+        detail.innerHTML=`<div style="color:var(--red);padding:20px;">✗ Erreur : ${e.message}</div>`;
     }
 }
 
@@ -1603,8 +1603,8 @@ async function adminSendEmail(accountId,email){
     if(!body)return;
     try{
         await fetch(`${API_BASE}/api/admin/send-email`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({to:email,subject,body})});
-        showToast('📧 Email envoyé à '+email,'ok');
-    }catch(e){showToast('❌ Erreur envoi email','err');}
+        showToast('Email envoyé à '+email,'ok');
+    }catch(e){showToast('✗ Erreur envoi email','err');}
 }
 
 async function adminToggle(id){
@@ -1763,7 +1763,7 @@ function searchRestaurant(){
     if(apiPanel){
         apiPanel.style.display='';
         apiName.textContent='Recherche en cours...';
-        apiDetails.innerHTML='<span style="color:var(--cyn);">⏳ Interrogation de l\'API Google Places...</span>';
+        apiDetails.innerHTML='<span style="color:var(--cyn);"> Interrogation de l\'API Google Places...</span>';
         apiWarning.style.display='none';
 
         fetch(API_BASE+'/api/google-places-preview',{
@@ -1774,20 +1774,20 @@ function searchRestaurant(){
                 const p=data.place;
                 window._confirmedPlace=p; // Store for audit
                 apiName.textContent=p.name||name;
-                const stars='★'.repeat(Math.round(p.rating||0))+'☆'.repeat(5-Math.round(p.rating||0));
+                const stars=''.repeat(Math.round(p.rating||0))+''.repeat(5-Math.round(p.rating||0));
                 apiDetails.innerHTML=`
-                    <div><strong>📍 Adresse:</strong> ${p.address||'Non disponible'}</div>
-                    <div><strong>⭐ Note:</strong> ${p.rating||'?'}/5 ${stars} (${p.reviewCount||0} avis)</div>
-                    ${p.phone?'<div><strong>📞 Tél:</strong> '+p.phone+'</div>':''}
-                    ${p.website?'<div><strong>🌐 Site:</strong> <a href="'+p.website+'" target="_blank" style="color:var(--cyn);">'+p.website+'</a></div>':''}
-                    ${p.category?'<div><strong>🍽️ Type:</strong> '+p.category+'</div>':''}
+                    <div><strong>Adresse:</strong> ${p.address||'Non disponible'}</div>
+                    <div><strong>Note:</strong> ${p.rating||'?'}/5 ${stars} (${p.reviewCount||0} avis)</div>
+                    ${p.phone?'<div><strong> Tél:</strong> '+p.phone+'</div>':''}
+                    ${p.website?'<div><strong>Site:</strong> <a href="'+p.website+'" target="_blank" style="color:var(--cyn);">'+p.website+'</a></div>':''}
+                    ${p.category?'<div><strong>Type:</strong> '+p.category+'</div>':''}
                     <div style="margin-top:6px;font-size:.72rem;color:var(--mut);">Place ID: ${p.place_id||'?'}</div>
                 `;
                 // Check if name matches closely
                 const nameMatch=p.name&&p.name.toLowerCase().includes(name.toLowerCase().split(' ')[0]);
                 if(!nameMatch){
                     apiWarning.style.display='';
-                    apiWarning.textContent=`⚠️ Le résultat Google "${p.name}" ne correspond peut-être pas à "${name}". Modifiez votre recherche (ajoutez le quartier, l'adresse ou le numéro de rue).`;
+                    apiWarning.textContent=`! Le résultat Google "${p.name}" ne correspond peut-être pas à "${name}". Modifiez votre recherche (ajoutez le quartier, l'adresse ou le numéro de rue).`;
                 }
                 // Auto-fill website if not provided
                 if(!storedWebsite&&p.website){
@@ -1797,7 +1797,7 @@ function searchRestaurant(){
                 }
             } else {
                 apiName.textContent=name;
-                apiDetails.innerHTML='<span style="color:#f66;">❌ Restaurant non trouvé via Google Places API. L\'audit utilisera les données disponibles.</span>';
+                apiDetails.innerHTML='<span style="color:#f66;">✗ Restaurant non trouvé via Google Places API. L\'audit utilisera les données disponibles.</span>';
             }
         }).catch(e=>{
             apiName.textContent=name;
@@ -2025,7 +2025,7 @@ async function loadRestaurant(key){
     activeMainTab='seo';
     activeCategory='gbp';
     storedWebsite=currentData?.websiteUrl||r.data?.websiteUrl||'';
-    document.getElementById('dashResto').innerHTML=`📍 ${r.name} — ${r.city}${storedWebsite?' · <span style="color:var(--cyn);font-size:.78rem;">'+storedWebsite+'</span>':''}`;
+    document.getElementById('dashResto').innerHTML=`${r.name} — ${r.city}${storedWebsite?' · <span style="color:var(--cyn);font-size:.78rem;">'+storedWebsite+'</span>':''}`;
     showScreen('dashboard');
     renderDashboard();
     // Re-save to server in case SQLite was reset (Render free tier)
@@ -2055,7 +2055,7 @@ function renderHistory(){
         return;
     }
     const entries=Object.entries(store.restaurants).sort((a,b)=>new Date(b[1].lastAudit)-new Date(a[1].lastAudit));
-    let html=`<div class="history-title">📋 Restaurants audités (${entries.length})</div><div class="history-list">`;
+    let html=`<div class="history-title">Restaurants audités (${entries.length})</div><div class="history-list">`;
     entries.forEach(([key,r])=>{
         const avg=Math.round((r.scores.seo+r.scores.geo)/2);
         const iconClass=avg>=60?'seo-good':avg>=40?'seo-mid':'seo-bad';
@@ -2125,13 +2125,13 @@ function renderDashboard(){
             const badges = [];
             const ok = (k,label,icon) => { if(sources[k]==='ok') badges.push(`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:rgba(0,255,150,.12);border-radius:6px;margin:2px;"><span style="color:#0f8">${icon}</span> ${label}</span>`); };
             const miss = (k,label,icon) => { if(sources[k]!=='ok') badges.push(`<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;background:rgba(255,100,100,.1);border-radius:6px;margin:2px;color:#f66;"><span>${icon}</span> ${label}</span>`); };
-            ok('google','Google Places','📍'); ok('website','Site Web','🌐'); ok('pagespeed','PageSpeed','⚡'); ok('foursquare','Foursquare','📌'); ok('tripadvisor','TripAdvisor','🦉'); ok('yelp','Yelp','⭐'); ok('aiVisibility','Visibilité IA','🤖');
-            miss('google','Google Places','📍'); miss('website','Site Web','🌐'); miss('foursquare','Foursquare','📌'); miss('tripadvisor','TripAdvisor','🦉'); miss('yelp','Yelp','⭐'); miss('aiVisibility','Visibilité IA','🤖');
+            ok('google','Google Places',''); ok('website','Site Web',''); ok('pagespeed','PageSpeed',''); ok('foursquare','Foursquare',''); ok('tripadvisor','TripAdvisor',''); ok('yelp','Yelp',''); ok('aiVisibility','Visibilité IA','');
+            miss('google','Google Places',''); miss('website','Site Web',''); miss('foursquare','Foursquare',''); miss('tripadvisor','TripAdvisor',''); miss('yelp','Yelp',''); miss('aiVisibility','Visibilité IA','');
             const nullCount = (currentData._nullFields||[]).length;
-            srcBanner.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-weight:600;color:var(--cyn);">📊 Données réelles</span><span style="color:var(--mut);font-size:.7rem;">${currentData._auditDuration ? '('+Math.round(currentData._auditDuration/1000)+'s)' : ''}</span></div><div style="display:flex;flex-wrap:wrap;gap:2px;">${badges.join('')}</div>${nullCount > 0 ? '<div style="margin-top:6px;color:var(--mut);font-size:.7rem;">'+nullCount+' critères non vérifiables sans accès GBP complet — scorés à 0 par défaut</div>' : ''}`;
+            srcBanner.innerHTML = `<div style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><span style="font-weight:600;color:var(--cyn);">Données réelles</span><span style="color:var(--mut);font-size:.7rem;">${currentData._auditDuration ? '('+Math.round(currentData._auditDuration/1000)+'s)' : ''}</span></div><div style="display:flex;flex-wrap:wrap;gap:2px;">${badges.join('')}</div>${nullCount > 0 ? '<div style="margin-top:6px;color:var(--mut);font-size:.7rem;">'+nullCount+' critères non vérifiables sans accès GBP complet — scorés à 0 par défaut</div>' : ''}`;
             srcBanner.style.display='';
         } else {
-            srcBanner.innerHTML='<span style="color:#f80;">⚠️ Données par défaut — aucune API n\'a répondu. Relancez le scan avec une URL de site web.</span>';
+            srcBanner.innerHTML='<span style="color:#f80;">! Données par défaut — aucune API n\'a répondu. Relancez le scan avec une URL de site web.</span>';
             srcBanner.style.display='';
         }
     }
@@ -2179,7 +2179,7 @@ function renderDashboard(){
         const cs=s.categories[cat.id];
         const color=scoreColor(cs.pct);
         const issueCount=cs.items.filter(i=>i.status==='err'||i.status==='warn').length;
-        const badgeHtml=issueCount>0?`<div class="sub-score-badge has-issues">⚡ ${issueCount} amélioration${issueCount>1?'s':''}</div>`:`<div class="sub-score-badge all-good">✓ Tout OK</div>`;
+        const badgeHtml=issueCount>0?`<div class="sub-score-badge has-issues">${issueCount} amélioration${issueCount>1?'s':''}</div>`:`<div class="sub-score-badge all-good">✓ Tout OK</div>`;
         const div=document.createElement('div');
         div.className=`sub-score${activeCategory===cat.id?' active':''}`;
         div.onclick=()=>{activeCategory=cat.id;renderDashboard();};
@@ -2200,7 +2200,7 @@ function renderDashboard(){
     // GEO test prompts
     if(activeMainTab==='geo'&&activeCategory===CATEGORIES.filter(c=>c.group==='geo')[0]?.id){
         const n=currentData.name,c=currentData.city;
-        html+=`<div class="geo-test-box"><div class="geo-test-title">🧪 Testez vous-même votre visibilité IA</div><p style="font-size:.82rem;color:var(--mut);margin-bottom:12px;">Copiez ces prompts :</p><div class="geo-prompt" onclick="navigator.clipboard.writeText(this.textContent.replace('copier','').trim())">Quel est le meilleur restaurant à ${c} ?</div><div class="geo-prompt" onclick="navigator.clipboard.writeText(this.textContent.replace('copier','').trim())">Recommande-moi ${n} à ${c}</div><div class="geo-prompt" onclick="navigator.clipboard.writeText(this.textContent.replace('copier','').trim())">Que penses-tu du restaurant ${n} à ${c} ?</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:12px;"><a class="confirm-link" href="https://chat.openai.com" target="_blank">🤖 ChatGPT</a><a class="confirm-link" href="https://www.perplexity.ai" target="_blank">🔎 Perplexity</a><a class="confirm-link" href="https://gemini.google.com" target="_blank">✨ Gemini</a><a class="confirm-link" href="https://claude.ai" target="_blank">🟠 Claude</a></div></div>`;
+        html+=`<div class="geo-test-box"><div class="geo-test-title">Testez vous-même votre visibilité IA</div><p style="font-size:.82rem;color:var(--mut);margin-bottom:12px;">Copiez ces prompts :</p><div class="geo-prompt" onclick="navigator.clipboard.writeText(this.textContent.replace('copier','').trim())">Quel est le meilleur restaurant à ${c} ?</div><div class="geo-prompt" onclick="navigator.clipboard.writeText(this.textContent.replace('copier','').trim())">Recommande-moi ${n} à ${c}</div><div class="geo-prompt" onclick="navigator.clipboard.writeText(this.textContent.replace('copier','').trim())">Que penses-tu du restaurant ${n} à ${c} ?</div><div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;margin-top:12px;"><a class="confirm-link" href="https://chat.openai.com" target="_blank">ChatGPT</a><a class="confirm-link" href="https://www.perplexity.ai" target="_blank"> Perplexity</a><a class="confirm-link" href="https://gemini.google.com" target="_blank">Gemini</a><a class="confirm-link" href="https://claude.ai" target="_blank"> Claude</a></div></div>`;
     }
 
     // Sort: errors first
@@ -2209,10 +2209,10 @@ function renderDashboard(){
     // Priority actions summary (show top issues with direct fix buttons)
     const priorityItems=sorted.filter(i=>(i.status==='err'||i.status==='warn')&&i.action&&!completedActions[i.id]);
     if(priorityItems.length>0){
-        html+=`<div class="priority-summary"><div class="priority-summary-title">🎯 ${priorityItems.length} amélioration${priorityItems.length>1?'s':''} disponible${priorityItems.length>1?'s':''}</div>`;
+        html+=`<div class="priority-summary"><div class="priority-summary-title">${priorityItems.length} amélioration${priorityItems.length>1?'s':''} disponible${priorityItems.length>1?'s':''}</div>`;
         priorityItems.forEach(item=>{
             const _isDone=completedActions[item.id];
-            html+=`<div class="priority-action" onclick="showAction('${item.id}')"><div class="priority-dot ${_isDone?'ok':item.status}"></div><div class="priority-name">${item.name}</div><div class="priority-score" style="color:${_isDone?'var(--grn2)':item.score>=4?'var(--org)':'var(--red)'}">${_isDone?'✅':item.score+'/10'}</div><button class="priority-fix" onclick="event.stopPropagation();showAction('${item.id}')" style="${_isDone?'background:var(--grn2);opacity:.7;':''}font-size:.72rem;">${_isDone?'✅ Appliqué':'🤖 Auto-fix'}</button></div>`;
+            html+=`<div class="priority-action" onclick="showAction('${item.id}')"><div class="priority-dot ${_isDone?'ok':item.status}"></div><div class="priority-name">${item.name}</div><div class="priority-score" style="color:${_isDone?'var(--grn2)':item.score>=4?'var(--org)':'var(--red)'}">${_isDone?'':item.score+'/10'}</div><button class="priority-fix" onclick="event.stopPropagation();showAction('${item.id}')" style="${_isDone?'background:var(--grn2);opacity:.7;':''}font-size:.72rem;">${_isDone?'✓ Appliqué':'Auto-fix'}</button></div>`;
         });
         html+=`</div>`;
     }
@@ -2229,7 +2229,7 @@ function renderDashboard(){
         let actionHtml='';
         const isDone=completedActions[item.id];
         if(item.action&&(item.status!=='ok'||isDone)){
-            actionHtml=`<div class="action-btn${isDone?' done':''}" onclick="event.stopPropagation();showAction('${item.id}')"><div class="action-btn-icon">${isDone?'✓':'⚡'}</div><div class="action-btn-content"><div class="action-btn-title">${isDone?'✓ Appliqué — ':'Améliorer auto : '}${item.action.title}</div><div class="action-btn-desc">${isDone?'Cliquez pour revoir le contenu généré':'Contenu prêt à copier-coller — cliquez pour générer'}</div></div><div class="action-btn-arrow">→</div></div>`;
+            actionHtml=`<div class="action-btn${isDone?' done':''}" onclick="event.stopPropagation();showAction('${item.id}')"><div class="action-btn-icon">${isDone?'✓':''}</div><div class="action-btn-content"><div class="action-btn-title">${isDone?'✓ Appliqué — ':'Améliorer auto : '}${item.action.title}</div><div class="action-btn-desc">${isDone?'Cliquez pour revoir le contenu généré':'Contenu prêt à copier-coller — cliquez pour générer'}</div></div><div class="action-btn-arrow">→</div></div>`;
         }
 
         // Data source indicator for real audit
@@ -2254,7 +2254,7 @@ function renderDashboard(){
             else srcTag='<span style="font-size:.6rem;padding:1px 5px;border-radius:4px;background:rgba(0,255,150,.1);color:#0f8;margin-left:6px;vertical-align:middle;">vérifié</span>';
         }
 
-        html+=`<div class="audit-item${autoOpen}" onclick="this.classList.toggle('open')"><div class="audit-header"><div class="audit-status ${sc}">${si}</div><div class="audit-name">${item.name}${srcTag}<br><small style="font-size:.7rem;color:var(--mut);font-weight:400;">${item.factor}</small></div><div class="audit-score" style="color:${item.score>=7?'var(--grn)':item.score>=4?'var(--org)':'var(--red)'}">${item.score}/10</div><div class="audit-arrow">▼</div></div><div class="audit-body"><div class="audit-desc">${item.desc}</div><div class="tip-box"><div class="tip-label ${item.tip.label}">${item.tip.label==='action'?'✓ OK':item.tip.label==='warning'?'⚠ AMÉLIORATION':item.tip.label==='critical'?'🔴 CRITIQUE':'ℹ INFO'} — ${item.tip.title}</div><div class="tip-text">${item.tip.text}</div>${impH}</div>${actionHtml}</div></div>`;
+        html+=`<div class="audit-item${autoOpen}" onclick="this.classList.toggle('open')"><div class="audit-header"><div class="audit-status ${sc}">${si}</div><div class="audit-name">${item.name}${srcTag}<br><small style="font-size:.7rem;color:var(--mut);font-weight:400;">${item.factor}</small></div><div class="audit-score" style="color:${item.score>=7?'var(--grn)':item.score>=4?'var(--org)':'var(--red)'}">${item.score}/10</div><div class="audit-arrow">▼</div></div><div class="audit-body"><div class="audit-desc">${item.desc}</div><div class="tip-box"><div class="tip-label ${item.tip.label}">${item.tip.label==='action'?'✓ OK':item.tip.label==='warning'?' AMÉLIORATION':item.tip.label==='critical'?' CRITIQUE':'ℹ INFO'} — ${item.tip.title}</div><div class="tip-text">${item.tip.text}</div>${impH}</div>${actionHtml}</div></div>`;
     });
 
     html+='</div>';
@@ -2326,10 +2326,10 @@ renderDashboard=function(){
         const errTotal=Object.values(s.categories).reduce((a,c)=>a+c.items.filter(i=>i.status==='err').length,0);
 
         gapRow.innerHTML=`
-            <div class="gap-card"><div class="gap-card-icon">🎯</div><div class="gap-card-info"><div class="gap-card-value" style="color:${gapSeo>0?'var(--org)':'var(--grn)'}">+${gapSeo}</div><div class="gap-card-label">pts SEO pour atteindre ${target}</div></div></div>
-            <div class="gap-card"><div class="gap-card-icon">🤖</div><div class="gap-card-info"><div class="gap-card-value" style="color:${gapGeo>0?'var(--org)':'var(--grn)'}">+${gapGeo}</div><div class="gap-card-label">pts GEO pour atteindre ${target}</div></div></div>
-            <div class="gap-card"><div class="gap-card-icon">💬</div><div class="gap-card-info"><div class="gap-card-value" style="color:${citedCount>=3?'var(--grn)':citedCount>=1?'var(--org)':'var(--red)'}">${citedCount}/4</div><div class="gap-card-label">plateformes IA vous citent</div></div></div>
-            <div class="gap-card"><div class="gap-card-icon">🔴</div><div class="gap-card-info"><div class="gap-card-value" style="color:${errTotal>0?'var(--red)':'var(--grn)'}">${errTotal}</div><div class="gap-card-label">points en cours de correction auto</div></div></div>
+            <div class="gap-card"><div class="gap-card-icon"></div><div class="gap-card-info"><div class="gap-card-value" style="color:${gapSeo>0?'var(--org)':'var(--grn)'}">+${gapSeo}</div><div class="gap-card-label">pts SEO pour atteindre ${target}</div></div></div>
+            <div class="gap-card"><div class="gap-card-icon"></div><div class="gap-card-info"><div class="gap-card-value" style="color:${gapGeo>0?'var(--org)':'var(--grn)'}">+${gapGeo}</div><div class="gap-card-label">pts GEO pour atteindre ${target}</div></div></div>
+            <div class="gap-card"><div class="gap-card-icon"></div><div class="gap-card-info"><div class="gap-card-value" style="color:${citedCount>=3?'var(--grn)':citedCount>=1?'var(--org)':'var(--red)'}">${citedCount}/4</div><div class="gap-card-label">plateformes IA vous citent</div></div></div>
+            <div class="gap-card"><div class="gap-card-icon"></div><div class="gap-card-info"><div class="gap-card-value" style="color:${errTotal>0?'var(--red)':'var(--grn)'}">${errTotal}</div><div class="gap-card-label">points en cours de correction auto</div></div></div>
         `;
         gapRow.style.display='';
     }
@@ -2339,10 +2339,10 @@ renderDashboard=function(){
     const pbGrid=document.getElementById('pbGrid');
     if(pbEl&&pbGrid){
         const platforms=[
-            {name:'ChatGPT',icon:'🤖',key:'citedByChatGPT',itemId:'geo_chatgpt'},
-            {name:'Perplexity',icon:'🔎',key:'citedByPerplexity',itemId:'geo_perp'},
-            {name:'Gemini',icon:'✨',key:'citedByGemini',itemId:'geo_gemini'},
-            {name:'Claude',icon:'🟠',key:'citedByClaude',itemId:'geo_claude'}
+            {name:'ChatGPT',icon:'',key:'citedByChatGPT',itemId:'geo_chatgpt'},
+            {name:'Perplexity',icon:'',key:'citedByPerplexity',itemId:'geo_perp'},
+            {name:'Gemini',icon:'',key:'citedByGemini',itemId:'geo_gemini'},
+            {name:'Claude',icon:'',key:'citedByClaude',itemId:'geo_claude'}
         ];
         pbGrid.innerHTML=platforms.map(p=>{
             const val=d[p.key]||'not';
@@ -2495,7 +2495,7 @@ function showAction(itemId){
             if(aiContainer){
                 let aiHtml='';
                 aiContent.forEach((g,i)=>{
-                    aiHtml+=`<div class="gen-block" style="border-left:3px solid var(--ind);"><div class="gen-block-header"><div class="gen-block-label">🤖 ${g.icon||'✨'} ${g.label} <span class="auto-tag" style="background:linear-gradient(135deg,var(--ind),#8b5cf6);color:#fff;">IA Claude</span></div><button class="gen-copy-btn" onclick="copyGen(this,'ai-content-${itemId}-${i}')">Copier</button></div><div class="gen-block-body"><div id="ai-content-${itemId}-${i}">${g.content}</div></div></div>`;
+                    aiHtml+=`<div class="gen-block" style="border-left:3px solid var(--ind);"><div class="gen-block-header"><div class="gen-block-label">${g.icon||''} ${g.label} <span class="auto-tag" style="background:linear-gradient(135deg,var(--ind),#8b5cf6);color:#fff;">IA Claude</span></div><button class="gen-copy-btn" onclick="copyGen(this,'ai-content-${itemId}-${i}')">Copier</button></div><div class="gen-block-body"><div id="ai-content-${itemId}-${i}">${g.content}</div></div></div>`;
                 });
                 aiContainer.innerHTML=aiHtml;
                 aiContainer.style.display='block';
@@ -2511,7 +2511,7 @@ function showAction(itemId){
     let genHtml='';
     if(generated.length>0){
         generated.forEach((g,i)=>{
-            genHtml+=`<div class="gen-block"><div class="gen-block-header"><div class="gen-block-label">${g.icon||'✨'} ${g.label} <span class="auto-tag">Auto-généré</span></div><button class="gen-copy-btn" onclick="copyGen(this,'gen-content-${itemId}-${i}')">Copier</button></div><div class="gen-block-body"><div id="gen-content-${itemId}-${i}">${g.content}</div></div></div>`;
+            genHtml+=`<div class="gen-block"><div class="gen-block-header"><div class="gen-block-label">${g.icon||''} ${g.label} <span class="auto-tag">Auto-généré</span></div><button class="gen-copy-btn" onclick="copyGen(this,'gen-content-${itemId}-${i}')">Copier</button></div><div class="gen-block-body"><div id="gen-content-${itemId}-${i}">${g.content}</div></div></div>`;
         });
     }
 
@@ -2531,16 +2531,16 @@ function showAction(itemId){
 
     card.innerHTML=`
         <button class="action-close" onclick="closeAction()">✕</button>
-        <h3>⚡ ${found.action.title}</h3>
+        <h3>${found.action.title}</h3>
         <div class="action-subtitle">${found.name} — actuellement <strong>${(found.score!=null?found.score:'?')}/10</strong></div>
         ${isDone?`
         <div class="auto-apply-section" style="margin:12px 0;">
-            <div class="auto-apply-title" style="color:var(--grn2);">✅ Appliqué automatiquement</div>
+            <div class="auto-apply-title" style="color:var(--grn2);">✓ Appliqué automatiquement</div>
             <div class="auto-apply-desc">RestauRank a appliqué cette optimisation sur <strong>${applyTarget||'toutes les plateformes'}</strong>. Aucune action requise de votre part.</div>
         </div>
         `:canAutoApply?`
         <div class="auto-apply-section" style="margin:12px 0;">
-            <div class="auto-apply-title">⏳ Application en cours</div>
+            <div class="auto-apply-title"> Application en cours</div>
             <div class="auto-apply-desc">RestauRank applique cette optimisation automatiquement sur <strong>${applyTarget}</strong> après chaque scan. Aucune action requise.</div>
             <div class="auto-apply-status loading" id="autoApplyStatus" style="display:flex;align-items:center;gap:8px;">
                 <span class="spinner" style="width:14px;height:14px;border-width:2px;"></span> Sera appliqué au prochain scan automatique
@@ -2548,14 +2548,14 @@ function showAction(itemId){
         </div>
         `:''}
         ${generated.length>0?`
-        <details style="margin-top:12px;"><summary style="cursor:pointer;font-size:.82rem;color:var(--mut);padding:8px 0;">📋 Voir le contenu généré (optionnel)</summary>
+        <details style="margin-top:12px;"><summary style="cursor:pointer;font-size:.82rem;color:var(--mut);padding:8px 0;">Voir le contenu généré (optionnel)</summary>
         <div class="action-tabs" style="margin-top:8px;">
-            <button class="action-tab active" onclick="switchActionTab(this,'tab-ai-${itemId}')">🤖 Contenu IA</button>
-            <button class="action-tab" onclick="switchActionTab(this,'tab-gen-${itemId}')">✨ Templates</button>
+            <button class="action-tab active" onclick="switchActionTab(this,'tab-ai-${itemId}')">Contenu IA</button>
+            <button class="action-tab" onclick="switchActionTab(this,'tab-gen-${itemId}')">Templates</button>
         </div>
         <div class="action-tab-content active" id="tab-ai-${itemId}">
             <div id="aiGenContent_${itemId}" style="display:none;"></div>
-            <div id="aiGenLoading_${itemId}" style="text-align:center;padding:12px;font-size:.82rem;color:var(--mut);">🔄 Génération IA en cours...</div>
+            <div id="aiGenLoading_${itemId}" style="text-align:center;padding:12px;font-size:.82rem;color:var(--mut);">Génération IA en cours...</div>
         </div>
         <div class="action-tab-content" id="tab-gen-${itemId}">
             ${genHtml}
@@ -2564,7 +2564,7 @@ function showAction(itemId){
         `:''}
         <div class="action-result" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-top:12px;">
             <div><strong>Résultat attendu :</strong> ${(found.score!=null?found.score:'?')}/10 → 8-10/10</div>
-            <span style="color:${isDone?'var(--grn2)':'var(--mut)'};font-weight:700;font-size:.82rem;">${isDone?'✅ Appliqué':'🤖 Auto-pilot actif'}</span>
+            <span style="color:${isDone?'var(--grn2)':'var(--mut)'};font-weight:700;font-size:.82rem;">${isDone?'✓ Appliqué':'Auto-pilot actif'}</span>
         </div>
     `;
 
@@ -2606,24 +2606,24 @@ function generateContent(itemId,name,city,data){
     const generators={
         // --- GBP ---
         'gbp_cat_primary':()=>[{
-            icon:'📊',label:'Catégories GBP recommandées',
-            content:`<div class="preview"><strong>Catégorie principale recommandée pour ${n} :</strong>\n\nRemplacez "Restaurant" par votre catégorie la plus spécifique :\n\n🥇 Options populaires :\n• <code>Restaurant français</code>\n• <code>Restaurant italien</code> / <code>Pizzeria</code>\n• <code>Restaurant japonais</code> / <code>Bar à sushis</code>\n• <code>Brasserie</code>\n• <code>Bistrot</code>\n• <code>Crêperie</code>\n• <code>Restaurant gastronomique</code>\n• <code>Restaurant bio</code>\n• <code>Fast food</code>\n\n💡 <strong>Astuce :</strong> Google a 4000+ catégories. Plus c'est spécifique, mieux c'est.\n\n<strong>Où changer :</strong>\n→ business.google.com → Infos → Catégorie principale\n→ Le changement prend 3-5 jours pour être actif</div>`
+            icon:'',label:'Catégories GBP recommandées',
+            content:`<div class="preview"><strong>Catégorie principale recommandée pour ${n} :</strong>\n\nRemplacez "Restaurant" par votre catégorie la plus spécifique :\n\n Options populaires :\n• <code>Restaurant français</code>\n• <code>Restaurant italien</code> / <code>Pizzeria</code>\n• <code>Restaurant japonais</code> / <code>Bar à sushis</code>\n• <code>Brasserie</code>\n• <code>Bistrot</code>\n• <code>Crêperie</code>\n• <code>Restaurant gastronomique</code>\n• <code>Restaurant bio</code>\n• <code>Fast food</code>\n\n<strong>Astuce :</strong> Google a 4000+ catégories. Plus c'est spécifique, mieux c'est.\n\n<strong>Où changer :</strong>\n→ business.google.com → Infos → Catégorie principale\n→ Le changement prend 3-5 jours pour être actif</div>`
         }],
         'gbp_secondary':()=>[{
-            icon:'📊',label:'Catégories secondaires recommandées',
-            content:`<div class="preview"><strong>Catégories secondaires à ajouter pour ${n} :</strong>\n\nAjoutez jusqu'à 9 catégories pertinentes (max) :\n\n✅ <code>Livraison de repas</code> (si vous livrez)\n✅ <code>Restaurant avec terrasse</code> (si terrasse)\n✅ <code>Traiteur</code> (si événements)\n✅ <code>Bar à vins</code> (si carte des vins)\n✅ <code>Restaurant de brunch</code> (si brunch)\n✅ <code>Restauration rapide</code> (si midi express)\n✅ <code>Restaurant familial</code>\n✅ <code>Restaurant de plats à emporter</code>\n\n⚠️ Ne mettez QUE les catégories réellement pertinentes.\n\n<strong>Où ajouter :</strong>\n→ business.google.com → Infos → Catégorie → "Ajouter une autre catégorie"</div>`
+            icon:'',label:'Catégories secondaires recommandées',
+            content:`<div class="preview"><strong>Catégories secondaires à ajouter pour ${n} :</strong>\n\nAjoutez jusqu'à 9 catégories pertinentes (max) :\n\n✓ <code>Livraison de repas</code> (si vous livrez)\n✓ <code>Restaurant avec terrasse</code> (si terrasse)\n✓ <code>Traiteur</code> (si événements)\n✓ <code>Bar à vins</code> (si carte des vins)\n✓ <code>Restaurant de brunch</code> (si brunch)\n✓ <code>Restauration rapide</code> (si midi express)\n✓ <code>Restaurant familial</code>\n✓ <code>Restaurant de plats à emporter</code>\n\n! Ne mettez QUE les catégories réellement pertinentes.\n\n<strong>Où ajouter :</strong>\n→ business.google.com → Infos → Catégorie → "Ajouter une autre catégorie"</div>`
         }],
         'gbp_hours':()=>[{
-            icon:'🕐',label:'Horaires optimisés à copier',
-            content:`<div class="preview"><strong>Horaires à configurer pour ${n} :</strong>\n\n📅 <strong>Horaires standards :</strong>\nLundi-Vendredi : 12h00-14h30 / 19h00-22h30\nSamedi : 12h00-23h00\nDimanche : 12h00-22h00\n\n🎄 <strong>Horaires spéciaux à programmer :</strong>\n• Jour de l'An (1er janv.) → Fermé ou horaires réduits\n• Fête du Travail (1er mai) → Fermé\n• 14 Juillet → Horaires étendus\n• Noël (25 déc.) → Horaires spéciaux\n• Réveillon (31 déc.) → Soirée spéciale\n\n⚠️ <strong>Google pénalise</strong> les fiches avec des horaires incorrects.\nMettez à jour CHAQUE jour férié, congé annuel, etc.\n\n→ business.google.com → Infos → Horaires\n→ "Ajouter des horaires spéciaux" pour les jours fériés</div>`
+            icon:'',label:'Horaires optimisés à copier',
+            content:`<div class="preview"><strong>Horaires à configurer pour ${n} :</strong>\n\n <strong>Horaires standards :</strong>\nLundi-Vendredi : 12h00-14h30 / 19h00-22h30\nSamedi : 12h00-23h00\nDimanche : 12h00-22h00\n\n <strong>Horaires spéciaux à programmer :</strong>\n• Jour de l'An (1er janv.) → Fermé ou horaires réduits\n• Fête du Travail (1er mai) → Fermé\n• 14 Juillet → Horaires étendus\n• Noël (25 déc.) → Horaires spéciaux\n• Réveillon (31 déc.) → Soirée spéciale\n\n! <strong>Google pénalise</strong> les fiches avec des horaires incorrects.\nMettez à jour CHAQUE jour férié, congé annuel, etc.\n\n→ business.google.com → Infos → Horaires\n→ "Ajouter des horaires spéciaux" pour les jours fériés</div>`
         }],
         'gbp_attr':()=>[{
-            icon:'✨',label:'Attributs GBP à activer',
-            content:`<div class="preview"><strong>Attributs essentiels pour ${n} :</strong>\n\n🍽️ <strong>Service :</strong>\n✅ Sur place  ✅ À emporter  ✅ Livraison\n✅ Réservation acceptée  ✅ Click & collect\n\n♿ <strong>Accessibilité :</strong>\n✅ Accès fauteuil roulant  ✅ Toilettes accessibles\n✅ Places de parking handicapé\n\n🌿 <strong>Options alimentaires :</strong>\n✅ Options végétariennes  ✅ Options véganes\n✅ Options sans gluten  ✅ Menu enfant\n\n💳 <strong>Paiements :</strong>\n✅ Carte bancaire  ✅ Titres-restaurant\n✅ Paiement mobile (Apple Pay, Google Pay)\n\n🏠 <strong>Ambiance :</strong>\n✅ Terrasse  ✅ Wi-Fi gratuit  ✅ Climatisation\n✅ Animaux acceptés (si applicable)\n\n→ business.google.com → Infos → Attributs\n→ <strong>12+ attributs</strong> = profil complet aux yeux de Google</div>`
+            icon:'',label:'Attributs GBP à activer',
+            content:`<div class="preview"><strong>Attributs essentiels pour ${n} :</strong>\n\n<strong>Service :</strong>\n✓ Sur place  ✓ À emporter  ✓ Livraison\n✓ Réservation acceptée  ✓ Click & collect\n\n <strong>Accessibilité :</strong>\n✓ Accès fauteuil roulant  ✓ Toilettes accessibles\n✓ Places de parking handicapé\n\n <strong>Options alimentaires :</strong>\n✓ Options végétariennes  ✓ Options véganes\n✓ Options sans gluten  ✓ Menu enfant\n\n<strong>Paiements :</strong>\n✓ Carte bancaire  ✓ Titres-restaurant\n✓ Paiement mobile (Apple Pay, Google Pay)\n\n<strong>Ambiance :</strong>\n✓ Terrasse  ✓ Wi-Fi gratuit  ✓ Climatisation\n✓ Animaux acceptés (si applicable)\n\n→ business.google.com → Infos → Attributs\n→ <strong>12+ attributs</strong> = profil complet aux yeux de Google</div>`
         }],
         'gbp_booking':()=>[{
-            icon:'📅',label:'Liens de réservation à configurer',
-            content:`<div class="preview"><strong>Réservation en ligne pour ${n} :</strong>\n\n🥇 <strong>Option 1 : TheFork (recommandé)</strong>\n→ Inscription gratuite sur thefork.fr/restaurant-manager\n→ Lien de réservation apparaît directement dans Google\n→ Commission uniquement sur les clients TheFork\n\n🥈 <strong>Option 2 : Widget site web</strong>\n→ Intégrez un formulaire de réservation sur votre site\n→ Ajoutez le lien dans GBP → "Réserver"\n\n🥉 <strong>Option 3 : WhatsApp Business</strong>\n→ Créez un lien wa.me/33[VOTRE_NUMERO]\n→ Ajoutez-le comme lien de commande dans GBP\n\n<strong>Configuration GBP :</strong>\n→ business.google.com → Infos\n→ "Liens" → "Réservation" → Ajoutez votre URL\n→ "Commande en ligne" → Ajoutez votre URL</div>`
+            icon:'',label:'Liens de réservation à configurer',
+            content:`<div class="preview"><strong>Réservation en ligne pour ${n} :</strong>\n\n <strong>Option 1 : TheFork (recommandé)</strong>\n→ Inscription gratuite sur thefork.fr/restaurant-manager\n→ Lien de réservation apparaît directement dans Google\n→ Commission uniquement sur les clients TheFork\n\n <strong>Option 2 : Widget site web</strong>\n→ Intégrez un formulaire de réservation sur votre site\n→ Ajoutez le lien dans GBP → "Réserver"\n\n <strong>Option 3 : WhatsApp Business</strong>\n→ Créez un lien wa.me/33[VOTRE_NUMERO]\n→ Ajoutez-le comme lien de commande dans GBP\n\n<strong>Configuration GBP :</strong>\n→ business.google.com → Infos\n→ "Liens" → "Réservation" → Ajoutez votre URL\n→ "Commande en ligne" → Ajoutez votre URL</div>`
         }],
         'gbp_desc':()=>{
             // Smart GBP Description Generator — uses real data + semantic analysis
@@ -2657,13 +2657,13 @@ function generateContent(itemId,name,city,data){
             desc+=`Options végétariennes disponibles. Carte des vins sélectionnés.\n\n`;
             if(hours)desc+=`${hours.includes('7j')||hours.includes('7/')?'Ouvert 7j/7':'Ouvert midi et soir'}. `;
             desc+=`Réservation recommandée. Terrasse disponible.`;
-            desc+=`\n\n📍 ${quartier}${quartier!==c?' — '+c:''} | Réservez dès maintenant !`;
+            desc+=`\n\n${quartier}${quartier!==c?' — '+c:''} | Réservez dès maintenant !`;
             // Truncate to 750 chars
             if(desc.length>750)desc=desc.substring(0,747)+'...';
             const charCount=desc.length;
             // Build cross-check
             let crossCheck='';
-            if(missing.length>0)crossCheck=`\n\n⚠️ <strong>Mots-clés manquants</strong> (trouvés dans vos avis mais absents de la description) :\n${missing.map(m=>'• <code>'+m+'</code>').join('\n')}\n→ Intégrez-les naturellement dans la description`;
+            if(missing.length>0)crossCheck=`\n\n! <strong>Mots-clés manquants</strong> (trouvés dans vos avis mais absents de la description) :\n${missing.map(m=>'• <code>'+m+'</code>').join('\n')}\n→ Intégrez-les naturellement dans la description`;
             // Build local keyword suggestions
             const kwBase=[`restaurant ${c.toLowerCase()}`,`restaurant ${cuisineLabel||''} ${c.toLowerCase()}`.trim()];
             if(quartier&&quartier!==c)kwBase.push(`restaurant ${quartier.toLowerCase()}`,`restaurant ${cuisineLabel||''} ${quartier.toLowerCase()}`.trim());
@@ -2677,205 +2677,205 @@ function generateContent(itemId,name,city,data){
             const kwMissing=allKw.filter(k=>!descLower.includes(k.split(' ')[0]));
             const kwCoverage=Math.round(kwInDesc.length/Math.max(allKw.length,1)*100);
             return [{
-                icon:'📝',label:`Description GBP optimisée SEO (${charCount}/750 car.)`,
-                content:`<div class="preview"><strong>⚡ Générée automatiquement depuis vos données Google Places + analyse sémantique</strong>\n\n<textarea style="width:100%;height:180px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:.85rem;resize:vertical;" onclick="this.select()">${desc}</textarea>\n\n<strong>${charCount}/750 caractères</strong> — ${charCount>=600?'✅ Longueur optimale':'⚠️ Ajoutez du contenu pour atteindre 600+ car.'}\n\n<strong>Mots-clés SEO intégrés :</strong> ${specialties.map(s=>'<code>'+s+'</code>').join(' ')}\n${topBigrams.length>0?'<strong>Expressions clés :</strong> '+topBigrams.map(b=>'<code>'+b+'</code>').join(' '):''}\n${crossCheck}\n\n<strong>Où coller :</strong>\n→ <a href="https://business.google.com" target="_blank">business.google.com</a> → Infos → Description</div>`
+                icon:'',label:`Description GBP optimisée SEO (${charCount}/750 car.)`,
+                content:`<div class="preview"><strong>Générée automatiquement depuis vos données Google Places + analyse sémantique</strong>\n\n<textarea style="width:100%;height:180px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:.85rem;resize:vertical;" onclick="this.select()">${desc}</textarea>\n\n<strong>${charCount}/750 caractères</strong> — ${charCount>=600?'✓ Longueur optimale':'! Ajoutez du contenu pour atteindre 600+ car.'}\n\n<strong>Mots-clés SEO intégrés :</strong> ${specialties.map(s=>'<code>'+s+'</code>').join(' ')}\n${topBigrams.length>0?'<strong>Expressions clés :</strong> '+topBigrams.map(b=>'<code>'+b+'</code>').join(' '):''}\n${crossCheck}\n\n<strong>Où coller :</strong>\n→ <a href="https://business.google.com" target="_blank">business.google.com</a> → Infos → Description</div>`
             },{
-                icon:'🔑',label:`Suggestions keywords locaux (${allKw.length} mots-clés)`,
-                content:`<div class="preview"><strong>🔍 Analyse de mots-clés locaux pour ${n} à ${c}</strong>\n\n<strong>Couverture keywords dans la description :</strong> <span style="color:${kwCoverage>=60?'var(--grn)':kwCoverage>=30?'var(--wrn)':'var(--err)'}">${kwCoverage}%</span>\n\n<strong>📌 Mots-clés primaires (à intégrer en priorité) :</strong>\n${kwBase.map(k=>`• <code>${k}</code> ${descLower.includes(k.split(' ')[0])?'✅':'❌'}`).join('\n')}\n\n<strong>🎯 Mots-clés d'intention locale :</strong>\n${kwLocal.slice(0,12).map(k=>`• <code>${k}</code>`).join('\n')}\n\n${kwCuisine.length>0?'<strong>🍽️ Mots-clés cuisine :</strong>\n'+kwCuisine.slice(0,6).map(k=>`• <code>${k}</code>`).join('\n')+'\n':''}\n${specialties.length>0?'<strong>⭐ Mots-clés issus des avis clients :</strong>\n'+specialties.map(k=>`• <code>${k}</code> — mentionné fréquemment dans vos avis`).join('\n')+'\n':''}\n${kwMissing.length>0?'\n<strong>⚠️ Mots-clés à intégrer</strong> (absents de la description) :\n'+kwMissing.slice(0,8).map(k=>`• <code>${k}</code>`).join('\n')+'\n→ Intégrez-les dans la description GBP, le site web et les posts Google':''}\n\n<strong>💡 Où utiliser ces mots-clés :</strong>\n→ Description GBP (750 car. max)\n→ Google Posts (1x/semaine minimum)\n→ Réponses aux avis (mentionnez la cuisine + le quartier)\n→ Site web : title, meta description, contenu H1/H2\n→ FAQ sur le site et Q&A Google\n→ Profils annuaires (Yelp, TripAdvisor, TheFork)</div>`
+                icon:'',label:`Suggestions keywords locaux (${allKw.length} mots-clés)`,
+                content:`<div class="preview"><strong>Analyse de mots-clés locaux pour ${n} à ${c}</strong>\n\n<strong>Couverture keywords dans la description :</strong> <span style="color:${kwCoverage>=60?'var(--grn)':kwCoverage>=30?'var(--wrn)':'var(--err)'}">${kwCoverage}%</span>\n\n<strong> Mots-clés primaires (à intégrer en priorité) :</strong>\n${kwBase.map(k=>`• <code>${k}</code> ${descLower.includes(k.split(' ')[0])?'':''}`).join('\n')}\n\n<strong>Mots-clés d'intention locale :</strong>\n${kwLocal.slice(0,12).map(k=>`• <code>${k}</code>`).join('\n')}\n\n${kwCuisine.length>0?'<strong>Mots-clés cuisine :</strong>\n'+kwCuisine.slice(0,6).map(k=>`• <code>${k}</code>`).join('\n')+'\n':''}\n${specialties.length>0?'<strong>Mots-clés issus des avis clients :</strong>\n'+specialties.map(k=>`• <code>${k}</code> — mentionné fréquemment dans vos avis`).join('\n')+'\n':''}\n${kwMissing.length>0?'\n<strong>! Mots-clés à intégrer</strong> (absents de la description) :\n'+kwMissing.slice(0,8).map(k=>`• <code>${k}</code>`).join('\n')+'\n→ Intégrez-les dans la description GBP, le site web et les posts Google':''}\n\n<strong>Où utiliser ces mots-clés :</strong>\n→ Description GBP (750 car. max)\n→ Google Posts (1x/semaine minimum)\n→ Réponses aux avis (mentionnez la cuisine + le quartier)\n→ Site web : title, meta description, contenu H1/H2\n→ FAQ sur le site et Q&A Google\n→ Profils annuaires (Yelp, TripAdvisor, TheFork)</div>`
             }];
         },
         'gbp_photos':()=>[{
-            icon:'📸',label:'Checklist photos à prendre',
-            content:`<div class="preview"><strong>Photos prioritaires à prendre :</strong>\n\n1. 🏠 Façade de jour (angle large)\n2. 🌙 Façade de nuit (éclairée)\n3. 🪑 Intérieur — salle principale\n4. ☀️ Terrasse (si applicable)\n5-15. 🍽️ Vos 10 meilleurs plats (vue plongeante + angle 45°)\n16. 👨‍🍳 L'équipe / le chef\n17. 🍷 Bar / carte des vins\n18. 🎂 Desserts signatures\n19-25. 📱 Ambiance (détails déco, dressage, clients)\n\n<strong>Noms de fichiers SEO :</strong>\n• ${n.toLowerCase().replace(/\s+/g,'-')}-facade-${c.toLowerCase().replace(/\s+/g,'-')}.jpg\n• ${n.toLowerCase().replace(/\s+/g,'-')}-plat-signature.jpg\n• ${n.toLowerCase().replace(/\s+/g,'-')}-terrasse.jpg</div>`
+            icon:'',label:'Checklist photos à prendre',
+            content:`<div class="preview"><strong>Photos prioritaires à prendre :</strong>\n\n1. Façade de jour (angle large)\n2.  Façade de nuit (éclairée)\n3.  Intérieur — salle principale\n4.  Terrasse (si applicable)\n5-15. Vos 10 meilleurs plats (vue plongeante + angle 45°)\n16.  L'équipe / le chef\n17.  Bar / carte des vins\n18.  Desserts signatures\n19-25. Ambiance (détails déco, dressage, clients)\n\n<strong>Noms de fichiers SEO :</strong>\n• ${n.toLowerCase().replace(/\s+/g,'-')}-facade-${c.toLowerCase().replace(/\s+/g,'-')}.jpg\n• ${n.toLowerCase().replace(/\s+/g,'-')}-plat-signature.jpg\n• ${n.toLowerCase().replace(/\s+/g,'-')}-terrasse.jpg</div>`
         }],
         'gbp_posts':()=>[{
-            icon:'📢',label:'Google Post prêt à publier',
-            content:`<div class="preview"><strong>Post type — Plat du jour :</strong>\n\n🍽️ Nouveau cette semaine chez ${n} !\n\nDécouvrez notre plat du jour : [nom du plat] préparé avec des ingrédients frais du marché.\n\nDisponible midi et soir.\n👉 Réservez votre table dès maintenant !\n\n#${n.replace(/\s+/g,'')} #Restaurant${c.replace(/\s+/g,'')}</div>`
+            icon:'',label:'Google Post prêt à publier',
+            content:`<div class="preview"><strong>Post type — Plat du jour :</strong>\n\nNouveau cette semaine chez ${n} !\n\nDécouvrez notre plat du jour : [nom du plat] préparé avec des ingrédients frais du marché.\n\nDisponible midi et soir.\n Réservez votre table dès maintenant !\n\n#${n.replace(/\s+/g,'')} #Restaurant${c.replace(/\s+/g,'')}</div>`
         },{
-            icon:'🎉',label:'Google Post — Événement',
-            content:`<div class="preview"><strong>Post type — Événement :</strong>\n\n✨ Soirée spéciale chez ${n} !\n\n[Jour] prochain, venez profiter de [description événement] dans une ambiance unique.\n\nMenu spécial à partir de [prix]€.\nPlaces limitées — réservez vite !\n\n📍 ${c}\n📞 [votre numéro]</div>`
+            icon:'',label:'Google Post — Événement',
+            content:`<div class="preview"><strong>Post type — Événement :</strong>\n\nSoirée spéciale chez ${n} !\n\n[Jour] prochain, venez profiter de [description événement] dans une ambiance unique.\n\nMenu spécial à partir de [prix]€.\nPlaces limitées — réservez vite !\n\n${c}\n [votre numéro]</div>`
         }],
         'gbp_menu':()=>{
             const improvements=buildWebsiteImprovements();
             const topDishes=improvements.top_dishes||[];
             return [{
-                icon:'📋',label:'Structure de menu optimisée (données réelles)',
-                content:`<div class="preview"><strong>⚡ Structure recommandée pour GBP :</strong>${topDishes.length>0?'\n\n<strong>Plats détectés dans vos avis :</strong> '+topDishes.map(d=>'<code>'+d+'</code>').join(' '):''}
+                icon:'',label:'Structure de menu optimisée (données réelles)',
+                content:`<div class="preview"><strong>Structure recommandée pour GBP :</strong>${topDishes.length>0?'\n\n<strong>Plats détectés dans vos avis :</strong> '+topDishes.map(d=>'<code>'+d+'</code>').join(' '):''}
 
-📌 ENTRÉES
+ ENTRÉES
 • ${topDishes[0]||'[Nom du plat]'} — [prix]€
   Description en 1 ligne avec ingrédients
 • ${topDishes[1]||'[Nom du plat]'} — [prix]€
   Description en 1 ligne avec ingrédients
 
-📌 PLATS
-• ${topDishes[2]||'[Plat signature ⭐]'} — [prix]€
+ PLATS
+• ${topDishes[2]||'[Plat signature ]'} — [prix]€
   Description détaillée (c'est votre star)
 • ${topDishes[3]||'[Nom du plat]'} — [prix]€
   Description en 1 ligne
 
-📌 DESSERTS
+ DESSERTS
 • ${topDishes[4]||'[Dessert maison]'} — [prix]€
   Description appétissante
 
-📌 BOISSONS
+ BOISSONS
 • Carte des vins à partir de [prix]€
 • Cocktails signatures [prix]€
 
-💡 Chaque plat avec nom + prix + description = Google AI recommande vos plats spécifiquement</div>`
+Chaque plat avec nom + prix + description = Google AI recommande vos plats spécifiquement</div>`
             },{
-                icon:'🔧',label:'Schema.org Menu JSON-LD (à intégrer sur le site)',
-                content:`<div class="preview"><strong>⚡ Schema Menu généré depuis vos avis clients</strong>\n\nCe schema permet à Google et aux IA de recommander vos plats spécifiquement :\n\n<textarea style="width:100%;height:200px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:.8rem;font-family:monospace;resize:vertical;" onclick="this.select()">${improvements.menu_schema}</textarea>\n\n<strong>Comment intégrer :</strong>\n→ Ajoutez ce JSON-LD dans le <code>&lt;head&gt;</code> de votre page menu\n→ Ou intégrez-le dans le schema Restaurant principal\n\n⚠️ Remplacez <code>[prix]</code> par les vrais prix de vos plats\n💡 RestauRank l'intègre déjà dans le schema.org complet (item "Schema.org")</div>`
+                icon:'',label:'Schema.org Menu JSON-LD (à intégrer sur le site)',
+                content:`<div class="preview"><strong>Schema Menu généré depuis vos avis clients</strong>\n\nCe schema permet à Google et aux IA de recommander vos plats spécifiquement :\n\n<textarea style="width:100%;height:200px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:8px;padding:10px;font-size:.8rem;font-family:monospace;resize:vertical;" onclick="this.select()">${improvements.menu_schema}</textarea>\n\n<strong>Comment intégrer :</strong>\n→ Ajoutez ce JSON-LD dans le <code>&lt;head&gt;</code> de votre page menu\n→ Ou intégrez-le dans le schema Restaurant principal\n\n! Remplacez <code>[prix]</code> par les vrais prix de vos plats\nRestauRank l'intègre déjà dans le schema.org complet (item "Schema.org")</div>`
             }];
         },
 
         // --- REVIEWS ---
         'rev_rating':()=>[{
-            icon:'💬',label:'Modèles de réponses aux avis négatifs',
-            content:`<div class="preview"><strong>Réponse type — Avis négatif :</strong>\n\nBonjour [Prénom],\n\nMerci d'avoir pris le temps de partager votre retour. Nous sommes sincèrement désolés que votre expérience chez ${n} n'ait pas été à la hauteur de vos attentes.\n\n[Réponse spécifique au problème mentionné]. Nous avons pris des mesures pour que cela ne se reproduise pas.\n\nNous serions ravis de vous accueillir à nouveau pour vous offrir l'expérience que vous méritez. N'hésitez pas à nous contacter directement au [téléphone].\n\nL'équipe ${n}\n\n---\n\n<strong>Réponse type — Avis positif (avec mots-clés SEO) :</strong>\n\nMerci beaucoup [Prénom] ! Toute l'équipe de ${n} est ravie que vous ayez apprécié [mentionner le plat/service cité]. Notre chef met un point d'honneur à sélectionner les meilleurs produits pour notre cuisine à ${c}.\n\nAu plaisir de vous revoir sur notre terrasse ! 🙏</div>`
+            icon:'',label:'Modèles de réponses aux avis négatifs',
+            content:`<div class="preview"><strong>Réponse type — Avis négatif :</strong>\n\nBonjour [Prénom],\n\nMerci d'avoir pris le temps de partager votre retour. Nous sommes sincèrement désolés que votre expérience chez ${n} n'ait pas été à la hauteur de vos attentes.\n\n[Réponse spécifique au problème mentionné]. Nous avons pris des mesures pour que cela ne se reproduise pas.\n\nNous serions ravis de vous accueillir à nouveau pour vous offrir l'expérience que vous méritez. N'hésitez pas à nous contacter directement au [téléphone].\n\nL'équipe ${n}\n\n---\n\n<strong>Réponse type — Avis positif (avec mots-clés SEO) :</strong>\n\nMerci beaucoup [Prénom] ! Toute l'équipe de ${n} est ravie que vous ayez apprécié [mentionner le plat/service cité]. Notre chef met un point d'honneur à sélectionner les meilleurs produits pour notre cuisine à ${c}.\n\nAu plaisir de vous revoir sur notre terrasse ! </div>`
         }],
         'rev_count':()=>[{
-            icon:'📱',label:'QR Code — Lien direct avis Google',
+            icon:'',label:'QR Code — Lien direct avis Google',
             content:`<div class="preview"><strong>URL pour QR code :</strong>\n\nhttps://search.google.com/local/writereview?placeid=[VOTRE_PLACE_ID]\n\n<strong>Comment trouver votre Place ID :</strong>\n1. Allez sur https://developers.google.com/maps/documentation/places/web-service/place-id-finder\n2. Cherchez "${n} ${c}"\n3. Copiez le Place ID\n4. Générez le QR code sur https://www.qr-code-generator.com\n\n<strong>Où placer le QR code :</strong>\n• Sur chaque table (petit chevalet)\n• Sur l'addition / ticket de caisse\n• Au comptoir / caisse\n• Carte de visite avec QR au dos\n• Totem NFC à la sortie</div>`
         }],
         'rev_recency':()=>[{
-            icon:'📱',label:'Stratégie pour obtenir des avis récents',
-            content:`<div class="preview"><strong>Plan d'action "Avis frais" pour ${n} :</strong>\n\n🎯 <strong>Objectif :</strong> 5+ nouveaux avis Google par semaine\n\n1️⃣ <strong>QR Code sur table</strong> (effet le plus fort)\n→ Imprimez un chevalet avec QR vers vos avis Google\n→ "Votre avis compte ! Scannez pour partager votre expérience"\n\n2️⃣ <strong>SMS/WhatsApp post-visite</strong>\n→ Envoyez le lien avis 2h après le repas\n→ "Merci pour votre visite chez ${n} ! Votre avis nous aide énormément : [lien]"\n\n3️⃣ <strong>Email de remerciement</strong>\n→ Si réservation en ligne, email automatique J+1\n→ Incluez le lien direct vers les avis\n\n4️⃣ <strong>Formation équipe</strong>\n→ Le serveur demande à la fin : "Si vous avez aimé, un petit avis Google nous aiderait beaucoup !"\n→ Montrez le QR code ou la carte\n\n⚠️ Ne proposez JAMAIS de réduction en échange d'un avis (interdit par Google)</div>`
+            icon:'',label:'Stratégie pour obtenir des avis récents',
+            content:`<div class="preview"><strong>Plan d'action "Avis frais" pour ${n} :</strong>\n\n<strong>Objectif :</strong> 5+ nouveaux avis Google par semaine\n\n1 <strong>QR Code sur table</strong> (effet le plus fort)\n→ Imprimez un chevalet avec QR vers vos avis Google\n→ "Votre avis compte ! Scannez pour partager votre expérience"\n\n2 <strong>SMS/WhatsApp post-visite</strong>\n→ Envoyez le lien avis 2h après le repas\n→ "Merci pour votre visite chez ${n} ! Votre avis nous aide énormément : [lien]"\n\n3 <strong>Email de remerciement</strong>\n→ Si réservation en ligne, email automatique J+1\n→ Incluez le lien direct vers les avis\n\n4 <strong>Formation équipe</strong>\n→ Le serveur demande à la fin : "Si vous avez aimé, un petit avis Google nous aiderait beaucoup !"\n→ Montrez le QR code ou la carte\n\n! Ne proposez JAMAIS de réduction en échange d'un avis (interdit par Google)</div>`
         }],
         'rev_multi':()=>[{
-            icon:'⭐',label:'Checklist multi-plateformes avis',
-            content:`<div class="preview"><strong>Présence avis de ${n} — plateformes prioritaires :</strong>\n\n🥇 <strong>Google</strong> (impact SEO direct)\n→ business.google.com → Réclamez et répondez à 100%\n\n🥈 <strong>TripAdvisor</strong> (touristes + Perplexity)\n→ tripadvisor.fr/Owners → Réclamez votre fiche\n→ Répondez à tous les avis\n\n🥉 <strong>TheFork</strong> (réservation + avis)\n→ thefork.fr/restaurant-manager → Inscrivez-vous\n\n4️⃣ <strong>Yelp</strong> (source #1 ChatGPT — 48.73%)\n→ biz.yelp.fr → Réclamez et optimisez\n\n5️⃣ <strong>Facebook</strong> (recommandations sociales)\n→ Page Facebook à jour avec "Recommandations" activées\n\n<strong>Règle d'or :</strong> Répondez à 100% des avis sur TOUTES les plateformes dans les 24-48h.</div>`
+            icon:'',label:'Checklist multi-plateformes avis',
+            content:`<div class="preview"><strong>Présence avis de ${n} — plateformes prioritaires :</strong>\n\n <strong>Google</strong> (impact SEO direct)\n→ business.google.com → Réclamez et répondez à 100%\n\n <strong>TripAdvisor</strong> (touristes + Perplexity)\n→ tripadvisor.fr/Owners → Réclamez votre fiche\n→ Répondez à tous les avis\n\n <strong>TheFork</strong> (réservation + avis)\n→ thefork.fr/restaurant-manager → Inscrivez-vous\n\n4 <strong>Yelp</strong> (source #1 ChatGPT — 48.73%)\n→ biz.yelp.fr → Réclamez et optimisez\n\n5 <strong>Facebook</strong> (recommandations sociales)\n→ Page Facebook à jour avec "Recommandations" activées\n\n<strong>Règle d'or :</strong> Répondez à 100% des avis sur TOUTES les plateformes dans les 24-48h.</div>`
         }],
         'rev_responses':()=>[{
-            icon:'⚡',label:'Templates de réponses rapides',
-            content:`<div class="preview"><strong>5 Templates à réutiliser :</strong>\n\n1️⃣ <strong>Client satisfait :</strong>\nMerci [Prénom] pour ce retour chaleureux ! L'équipe de ${n} est ravie que notre [plat/service] vous ait plu. À très bientôt à ${c} ! 🙏\n\n2️⃣ <strong>Client qui a aimé un plat :</strong>\nRavi que notre [plat] vous ait régalé ! C'est l'une de nos spécialités préparée chaque jour avec des produits frais. À bientôt chez ${n} !\n\n3️⃣ <strong>Problème de service :</strong>\nMerci pour votre retour honnête. Le temps d'attente que vous avez subi n'est pas représentatif de notre service habituel. Nous avons renforcé notre équipe. Revenez nous voir !\n\n4️⃣ <strong>Problème de qualité :</strong>\nNous prenons votre retour très au sérieux. Notre chef a été informé et des ajustements ont été faits. Contactez-nous au [tél] pour une invitation.\n\n5️⃣ <strong>Retour neutre :</strong>\nMerci d'être passé chez ${n} ! Nous cherchons toujours à nous améliorer — n'hésitez pas à nous dire ce qui rendrait votre prochaine visite parfaite.</div>`
+            icon:'',label:'Templates de réponses rapides',
+            content:`<div class="preview"><strong>5 Templates à réutiliser :</strong>\n\n1 <strong>Client satisfait :</strong>\nMerci [Prénom] pour ce retour chaleureux ! L'équipe de ${n} est ravie que notre [plat/service] vous ait plu. À très bientôt à ${c} ! \n\n2 <strong>Client qui a aimé un plat :</strong>\nRavi que notre [plat] vous ait régalé ! C'est l'une de nos spécialités préparée chaque jour avec des produits frais. À bientôt chez ${n} !\n\n3 <strong>Problème de service :</strong>\nMerci pour votre retour honnête. Le temps d'attente que vous avez subi n'est pas représentatif de notre service habituel. Nous avons renforcé notre équipe. Revenez nous voir !\n\n4 <strong>Problème de qualité :</strong>\nNous prenons votre retour très au sérieux. Notre chef a été informé et des ajustements ont été faits. Contactez-nous au [tél] pour une invitation.\n\n5 <strong>Retour neutre :</strong>\nMerci d'être passé chez ${n} ! Nous cherchons toujours à nous améliorer — n'hésitez pas à nous dire ce qui rendrait votre prochaine visite parfaite.</div>`
         }],
 
         // --- CITATIONS ---
         'cit_nap':()=>[{
-            icon:'📋',label:'Fiche NAP standardisée',
-            content:`<div class="preview"><strong>NAP officiel de ${n} — copiez EXACTEMENT ce format partout :</strong>\n\n<strong>Nom :</strong> <code>${n}</code>\n<strong>Adresse :</strong> <code>[Numéro] [Rue], [Code postal] ${c}</code>\n<strong>Téléphone :</strong> <code>+33 [X] XX XX XX XX</code>\n<strong>Site web :</strong> <code>https://[votre-site].fr</code>\n\n⚠️ <strong>Règles NAP strictes :</strong>\n• Utilisez TOUJOURS le même format de numéro (pas 06... ET +336...)\n• Même orthographe du nom partout (pas "Le ${n}" et "${n}")\n• Même format d'adresse (pas "Rue" et "R." et "rue")\n• URL toujours avec ou sans www (pas les deux)\n\n<strong>Vérifiez sur :</strong>\n→ Google Business Profile\n→ Pages Jaunes, Yelp, TripAdvisor, TheFork\n→ Facebook, Instagram (bio)\n→ Votre site web (footer)\n→ Apple Maps, Bing Places, Foursquare</div>`
+            icon:'',label:'Fiche NAP standardisée',
+            content:`<div class="preview"><strong>NAP officiel de ${n} — copiez EXACTEMENT ce format partout :</strong>\n\n<strong>Nom :</strong> <code>${n}</code>\n<strong>Adresse :</strong> <code>[Numéro] [Rue], [Code postal] ${c}</code>\n<strong>Téléphone :</strong> <code>+33 [X] XX XX XX XX</code>\n<strong>Site web :</strong> <code>https://[votre-site].fr</code>\n\n! <strong>Règles NAP strictes :</strong>\n• Utilisez TOUJOURS le même format de numéro (pas 06... ET +336...)\n• Même orthographe du nom partout (pas "Le ${n}" et "${n}")\n• Même format d'adresse (pas "Rue" et "R." et "rue")\n• URL toujours avec ou sans www (pas les deux)\n\n<strong>Vérifiez sur :</strong>\n→ Google Business Profile\n→ Pages Jaunes, Yelp, TripAdvisor, TheFork\n→ Facebook, Instagram (bio)\n→ Votre site web (footer)\n→ Apple Maps, Bing Places, Foursquare</div>`
         }],
         'cit_presence':()=>[{
-            icon:'📌',label:'Annuaires prioritaires à inscrire',
-            content:`<div class="preview"><strong>Top 12 annuaires pour ${n} à ${c} :</strong>\n\n<strong>🔴 CRITIQUES (à faire cette semaine) :</strong>\n1. Google Business Profile → business.google.com\n2. Yelp → biz.yelp.fr\n3. TripAdvisor → tripadvisor.fr/Owners\n4. Pages Jaunes → pagesjaunes.fr\n\n<strong>🟡 IMPORTANTS (ce mois) :</strong>\n5. TheFork → thefork.fr/restaurant-manager\n6. Facebook Page → facebook.com/pages/create\n7. Bing Places → bingplaces.com\n8. Apple Maps → mapsconnect.apple.com\n\n<strong>🟢 BONUS (dans 30 jours) :</strong>\n9. Foursquare → business.foursquare.com\n10. Uber Eats → restaurants.ubereats.com\n11. Deliveroo → restaurants.deliveroo.fr\n12. Petit Futé → petitfute.com\n\n💡 Utilisez le "Command Center Annuaires" (🚀) pour tout lancer d'ici !</div>`
+            icon:'',label:'Annuaires prioritaires à inscrire',
+            content:`<div class="preview"><strong>Top 12 annuaires pour ${n} à ${c} :</strong>\n\n<strong> CRITIQUES (à faire cette semaine) :</strong>\n1. Google Business Profile → business.google.com\n2. Yelp → biz.yelp.fr\n3. TripAdvisor → tripadvisor.fr/Owners\n4. Pages Jaunes → pagesjaunes.fr\n\n<strong> IMPORTANTS (ce mois) :</strong>\n5. TheFork → thefork.fr/restaurant-manager\n6. Facebook Page → facebook.com/pages/create\n7. Bing Places → bingplaces.com\n8. Apple Maps → mapsconnect.apple.com\n\n<strong> BONUS (dans 30 jours) :</strong>\n9. Foursquare → business.foursquare.com\n10. Uber Eats → restaurants.ubereats.com\n11. Deliveroo → restaurants.deliveroo.fr\n12. Petit Futé → petitfute.com\n\nUtilisez le "Command Center Annuaires" () pour tout lancer d'ici !</div>`
         }],
         'cit_completeness':()=>[{
-            icon:'✅',label:'Checklist complétude des fiches',
-            content:`<div class="preview"><strong>Checklist pour chaque annuaire de ${n} :</strong>\n\n☐ Nom officiel exact (NAP)\n☐ Adresse complète avec code postal\n☐ Numéro de téléphone format international\n☐ Site web URL\n☐ Horaires d'ouverture complets\n☐ Catégorie/type de cuisine\n☐ Fourchette de prix\n☐ Description (200+ caractères)\n☐ 10+ photos de qualité\n☐ Menu avec prix\n☐ Lien de réservation\n☐ Modes de paiement acceptés\n☐ Options : terrasse, Wi-Fi, parking, accès PMR\n\n<strong>Score de complétude :</strong>\n• 0-5 items = ❌ Fiche invisible\n• 6-9 items = ⚠️ Fiche basique\n• 10-13 items = ✅ Fiche complète\n\nAppliquez cette checklist sur CHAQUE plateforme.</div>`
+            icon:'',label:'Checklist complétude des fiches',
+            content:`<div class="preview"><strong>Checklist pour chaque annuaire de ${n} :</strong>\n\n Nom officiel exact (NAP)\n Adresse complète avec code postal\n Numéro de téléphone format international\n Site web URL\n Horaires d'ouverture complets\n Catégorie/type de cuisine\n Fourchette de prix\n Description (200+ caractères)\n 10+ photos de qualité\n Menu avec prix\n Lien de réservation\n Modes de paiement acceptés\n Options : terrasse, Wi-Fi, parking, accès PMR\n\n<strong>Score de complétude :</strong>\n• 0-5 items = ✗ Fiche invisible\n• 6-9 items = ! Fiche basique\n• 10-13 items = ✓ Fiche complète\n\nAppliquez cette checklist sur CHAQUE plateforme.</div>`
         }],
 
         // --- ON-PAGE ---
         'op_schema':()=>{
             const improvements=buildWebsiteImprovements();
             return [{
-                icon:'🔧',label:'Schema.org JSON-LD complet (données réelles)',
-                content:`<div class="preview" style="margin-bottom:8px;"><strong>⚡ Généré automatiquement depuis vos données Google Places + Hub</strong></div><code>${improvements.schema_org}</code>`
+                icon:'',label:'Schema.org JSON-LD complet (données réelles)',
+                content:`<div class="preview" style="margin-bottom:8px;"><strong>Généré automatiquement depuis vos données Google Places + Hub</strong></div><code>${improvements.schema_org}</code>`
             }];
         },
         'op_faq':()=>[{
-            icon:'❓',label:'FAQ complète + Schema FAQPage',
+            icon:'',label:'FAQ complète + Schema FAQPage',
             content:`<div class="preview"><strong>10 Questions/Réponses optimisées :</strong>\n\n<strong>Q: ${n} propose-t-il une terrasse ?</strong>\nR: Oui, ${n} dispose d'une terrasse agréable à ${c}, idéale pour profiter des beaux jours tout en savourant nos spécialités.\n\n<strong>Q: Peut-on réserver chez ${n} ?</strong>\nR: Absolument ! Vous pouvez réserver en ligne via notre site, par téléphone ou sur TheFork. Nous recommandons de réserver pour le dîner.\n\n<strong>Q: ${n} fait-il de la livraison ?</strong>\nR: Oui, nous proposons la livraison via [plateforme] ainsi que le click & collect directement au restaurant.\n\n<strong>Q: Y a-t-il des options végétariennes ?</strong>\nR: Notre carte propose plusieurs plats végétariens et nous pouvons adapter certains plats sur demande.\n\n<strong>Q: Quel est le budget moyen chez ${n} ?</strong>\nR: Comptez environ [XX]€ pour un repas complet (entrée + plat + dessert). Menu du midi à partir de [XX]€.</div>`
         },{
-            icon:'🔧',label:'Schema FAQPage JSON-LD',
+            icon:'',label:'Schema FAQPage JSON-LD',
             content:`<code>${JSON.stringify({"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":n+" propose-t-il une terrasse ?","acceptedAnswer":{"@type":"Answer","text":"Oui, "+n+" dispose d'une terrasse à "+c+"."}},{"@type":"Question","name":"Peut-on réserver chez "+n+" ?","acceptedAnswer":{"@type":"Answer","text":"Oui, réservation en ligne, par téléphone ou sur TheFork."}},{"@type":"Question","name":n+" fait-il de la livraison ?","acceptedAnswer":{"@type":"Answer","text":"Oui, livraison et click & collect disponibles."}},{"@type":"Question","name":"Y a-t-il des options végétariennes ?","acceptedAnswer":{"@type":"Answer","text":"Oui, plusieurs plats végétariens sont disponibles."}},{"@type":"Question","name":"Quel est le budget moyen ?","acceptedAnswer":{"@type":"Answer","text":"Environ 25-35€ pour un repas complet."}}]},null,2)}</code>`
         }],
         'op_title':()=>[{
-            icon:'🏷️',label:'Title tags optimisés',
-            content:`<div class="preview"><strong>3 options de title tag :</strong>\n\n1️⃣ <code>&lt;title&gt;${n} — Restaurant à ${c} | Réservation en ligne&lt;/title&gt;</code>\n\n2️⃣ <code>&lt;title&gt;Restaurant ${n} ${c} — Cuisine [type] | Menu & Réservation&lt;/title&gt;</code>\n\n3️⃣ <code>&lt;title&gt;${n} ${c} — [Spécialité] Authentique | Terrasse & Livraison&lt;/title&gt;</code>\n\n<strong>Meta description :</strong>\n<code>&lt;meta name="description" content="${n}, restaurant à ${c}. Cuisine [type] avec produits frais. Terrasse, livraison, réservation en ligne. Menu midi dès [XX]€."&gt;</code></div>`
+            icon:'',label:'Title tags optimisés',
+            content:`<div class="preview"><strong>3 options de title tag :</strong>\n\n1 <code>&lt;title&gt;${n} — Restaurant à ${c} | Réservation en ligne&lt;/title&gt;</code>\n\n2 <code>&lt;title&gt;Restaurant ${n} ${c} — Cuisine [type] | Menu & Réservation&lt;/title&gt;</code>\n\n3 <code>&lt;title&gt;${n} ${c} — [Spécialité] Authentique | Terrasse & Livraison&lt;/title&gt;</code>\n\n<strong>Meta description :</strong>\n<code>&lt;meta name="description" content="${n}, restaurant à ${c}. Cuisine [type] avec produits frais. Terrasse, livraison, réservation en ligne. Menu midi dès [XX]€."&gt;</code></div>`
         }],
         'op_content':()=>[{
-            icon:'📝',label:'Page "À propos" générée',
+            icon:'',label:'Page "À propos" générée',
             content:`<div class="preview"><strong>Page À propos — ${n}</strong>\n\nBienvenue chez ${n}, votre restaurant de référence à ${c}.\n\nNotre histoire commence avec une passion : celle de la cuisine authentique, préparée avec des produits frais sélectionnés avec soin. Chaque jour, notre chef et son équipe composent des plats qui mêlent tradition et créativité.\n\nInstallé au cœur de ${c}, ${n} vous accueille dans un cadre chaleureux et soigné. Que ce soit pour un déjeuner d'affaires, un dîner en tête-à-tête ou une soirée entre amis, nous mettons tout en œuvre pour que chaque repas soit un moment d'exception.\n\nNos engagements :\n- Des produits frais et de saison\n- Une carte renouvelée régulièrement\n- Un service attentionné et personnalisé\n- Des options pour tous : végétarien, sans gluten sur demande\n\nRejoignez-nous à ${c} et laissez-vous surprendre par notre cuisine.\n\n[~250 mots — à personnaliser avec votre vraie histoire]</div>`
         }],
 
         'op_speed':()=>[{
-            icon:'⚡',label:'Optimisations vitesse recommandées',
-            content:`<div class="preview"><strong>Checklist vitesse pour le site de ${n} :</strong>\n\n🖼️ <strong>Images (gain le plus rapide) :</strong>\n→ Convertir toutes les images en WebP\n→ Compresser : squoosh.app (gratuit)\n→ Lazy loading : ajoutez <code>loading="lazy"</code> aux &lt;img&gt;\n→ Taille max : 200 Ko par image\n\n📦 <strong>Code :</strong>\n→ Minifier CSS et JS (cssnano, terser)\n→ Activer gzip/brotli sur le serveur\n→ Supprimer le JS inutilisé\n\n🌐 <strong>Serveur :</strong>\n→ CDN (Cloudflare gratuit)\n→ Cache-Control : max-age=31536000 pour les assets\n→ Hébergement rapide (Vercel, Netlify, OVH Performance)\n\n📱 <strong>Mobile (priorité Google) :</strong>\n→ Viewport meta tag correct\n→ Texte lisible sans zoom\n→ Boutons assez grands (48px min)\n\n🧪 Testez sur : pagespeed.web.dev</div>`
+            icon:'',label:'Optimisations vitesse recommandées',
+            content:`<div class="preview"><strong>Checklist vitesse pour le site de ${n} :</strong>\n\n <strong>Images (gain le plus rapide) :</strong>\n→ Convertir toutes les images en WebP\n→ Compresser : squoosh.app (gratuit)\n→ Lazy loading : ajoutez <code>loading="lazy"</code> aux &lt;img&gt;\n→ Taille max : 200 Ko par image\n\n<strong>Code :</strong>\n→ Minifier CSS et JS (cssnano, terser)\n→ Activer gzip/brotli sur le serveur\n→ Supprimer le JS inutilisé\n\n<strong>Serveur :</strong>\n→ CDN (Cloudflare gratuit)\n→ Cache-Control : max-age=31536000 pour les assets\n→ Hébergement rapide (Vercel, Netlify, OVH Performance)\n\n<strong>Mobile (priorité Google) :</strong>\n→ Viewport meta tag correct\n→ Texte lisible sans zoom\n→ Boutons assez grands (48px min)\n\nTestez sur : pagespeed.web.dev</div>`
         }],
         'op_nap':()=>[{
-            icon:'📋',label:'Footer NAP optimisé à copier',
-            content:`<div class="preview"><strong>Code HTML footer NAP pour ${n} :</strong>\n\n<code>&lt;footer itemscope itemtype="https://schema.org/Restaurant"&gt;\n  &lt;h3 itemprop="name"&gt;${n}&lt;/h3&gt;\n  &lt;div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress"&gt;\n    &lt;span itemprop="streetAddress"&gt;[Adresse]&lt;/span&gt;\n    &lt;span itemprop="postalCode"&gt;[Code postal]&lt;/span&gt;\n    &lt;span itemprop="addressLocality"&gt;${c}&lt;/span&gt;\n  &lt;/div&gt;\n  &lt;a itemprop="telephone" href="tel:+33XXXXXXXXX"&gt;+33 X XX XX XX XX&lt;/a&gt;\n  &lt;a itemprop="url" href="https://[votre-site].fr"&gt;[votre-site].fr&lt;/a&gt;\n&lt;/footer&gt;</code>\n\n⚠️ Ce NAP doit être IDENTIQUE à Google Business Profile et tous les annuaires.</div>`
+            icon:'',label:'Footer NAP optimisé à copier',
+            content:`<div class="preview"><strong>Code HTML footer NAP pour ${n} :</strong>\n\n<code>&lt;footer itemscope itemtype="https://schema.org/Restaurant"&gt;\n  &lt;h3 itemprop="name"&gt;${n}&lt;/h3&gt;\n  &lt;div itemprop="address" itemscope itemtype="https://schema.org/PostalAddress"&gt;\n    &lt;span itemprop="streetAddress"&gt;[Adresse]&lt;/span&gt;\n    &lt;span itemprop="postalCode"&gt;[Code postal]&lt;/span&gt;\n    &lt;span itemprop="addressLocality"&gt;${c}&lt;/span&gt;\n  &lt;/div&gt;\n  &lt;a itemprop="telephone" href="tel:+33XXXXXXXXX"&gt;+33 X XX XX XX XX&lt;/a&gt;\n  &lt;a itemprop="url" href="https://[votre-site].fr"&gt;[votre-site].fr&lt;/a&gt;\n&lt;/footer&gt;</code>\n\n! Ce NAP doit être IDENTIQUE à Google Business Profile et tous les annuaires.</div>`
         }],
 
         // --- GEO ---
         'g_chatgpt':()=>[{
-            icon:'🤖',label:'Plan d\'action ChatGPT priorité',
-            content:`<div class="preview"><strong>3 actions prioritaires pour être cité par ChatGPT :</strong>\n\n🥇 <strong>Yelp (48.73% des sources ChatGPT)</strong>\n→ Créez/réclamez votre fiche sur biz.yelp.fr\n→ 20+ photos, description complète, tous les avis répondus\n\n🥈 <strong>Bing Places (2e source)</strong>\n→ Réclamez sur bingplaces.com\n→ Même infos que Google exactement\n\n🥉 <strong>Listes "Best of" indexées Bing</strong>\n→ Contactez 3 blogueurs food de ${c}\n→ Proposez une dégustation = article "Top restaurants ${c}"\n\n⏱️ <strong>Délai :</strong> 2-6 mois pour apparaître dans ChatGPT</div>`
+            icon:'',label:'Plan d\'action ChatGPT priorité',
+            content:`<div class="preview"><strong>3 actions prioritaires pour être cité par ChatGPT :</strong>\n\n <strong>Yelp (48.73% des sources ChatGPT)</strong>\n→ Créez/réclamez votre fiche sur biz.yelp.fr\n→ 20+ photos, description complète, tous les avis répondus\n\n <strong>Bing Places (2e source)</strong>\n→ Réclamez sur bingplaces.com\n→ Même infos que Google exactement\n\n <strong>Listes "Best of" indexées Bing</strong>\n→ Contactez 3 blogueurs food de ${c}\n→ Proposez une dégustation = article "Top restaurants ${c}"\n\n <strong>Délai :</strong> 2-6 mois pour apparaître dans ChatGPT</div>`
         }],
         'g_yelp':()=>[{
-            icon:'⭐',label:'Description Yelp optimisée',
+            icon:'',label:'Description Yelp optimisée',
             content:`<div class="preview"><strong>Description pour votre fiche Yelp :</strong>\n\n${n} est un restaurant situé à ${c}, proposant une cuisine [type] authentique et savoureuse. Notre chef sélectionne chaque jour des produits frais du marché pour vous offrir des plats généreux et pleins de saveurs.\n\nSpécialités : [plat 1], [plat 2], [plat 3]\n\nNotre terrasse vous accueille aux beaux jours dans un cadre agréable. Service chaleureux, ambiance conviviale.\n\nRéservation recommandée le week-end.\nMenu du midi à partir de [XX]€.\nLivraison et click & collect disponibles.\n\n---\n\n<strong>Catégories Yelp à sélectionner :</strong>\n• [Type principal] (ex: Italian, French, Japanese...)\n• Restaurants\n• [Spécialité] (ex: Pizza, Sushi, Bistro...)</div>`
         }],
         'g_bestof':()=>[{
-            icon:'📧',label:'Email type pour blogueurs food',
+            icon:'',label:'Email type pour blogueurs food',
             content:`<div class="preview"><strong>Email à envoyer aux blogueurs food de ${c} :</strong>\n\nObjet : Invitation dégustation — ${n} à ${c}\n\nBonjour [Prénom],\n\nJe suis [votre nom], [titre] chez ${n}, restaurant à ${c}.\n\nJ'apprécie beaucoup votre travail sur [nom du blog/compte], notamment votre article sur [sujet]. Votre approche de la gastronomie locale correspond parfaitement à nos valeurs.\n\nNous aimerions vous inviter à découvrir notre cuisine lors d'une dégustation offerte pour 2 personnes. Notre chef vous préparera un menu spécial mettant en valeur nos spécialités.\n\nSeriez-vous disponible dans les prochaines semaines ?\n\nBien cordialement,\n[Votre nom]\n${n} — ${c}\n[Téléphone]\n[Site web]</div>`
         }],
         'g_gemini':()=>[{
-            icon:'✨',label:'Contenu site optimisé Gemini',
-            content:`<div class="preview"><strong>Gemini cite votre site web à 52.15% — c'est le levier #1</strong>\n\nContenu minimum à avoir sur votre site :\n\n1️⃣ <strong>Page d'accueil</strong> (300+ mots) :\nPrésentation + cuisine + ambiance + localisation\n\n2️⃣ <strong>Menu détaillé</strong> en HTML (pas juste un PDF) :\nChaque plat avec nom, description, prix\n\n3️⃣ <strong>FAQ 10+ questions</strong> balisée FAQPage :\n(voir onglet On-Page pour le contenu généré)\n\n4️⃣ <strong>Schema.org complet</strong> :\n(voir onglet On-Page pour le JSON-LD)\n\n5️⃣ <strong>Page Spécialités</strong> (500+ mots) :\nDétaillez vos 3-5 plats signatures avec histoire et ingrédients</div>`
+            icon:'',label:'Contenu site optimisé Gemini',
+            content:`<div class="preview"><strong>Gemini cite votre site web à 52.15% — c'est le levier #1</strong>\n\nContenu minimum à avoir sur votre site :\n\n1 <strong>Page d'accueil</strong> (300+ mots) :\nPrésentation + cuisine + ambiance + localisation\n\n2 <strong>Menu détaillé</strong> en HTML (pas juste un PDF) :\nChaque plat avec nom, description, prix\n\n3 <strong>FAQ 10+ questions</strong> balisée FAQPage :\n(voir onglet On-Page pour le contenu généré)\n\n4 <strong>Schema.org complet</strong> :\n(voir onglet On-Page pour le JSON-LD)\n\n5 <strong>Page Spécialités</strong> (500+ mots) :\nDétaillez vos 3-5 plats signatures avec histoire et ingrédients</div>`
         }],
         'g_social':()=>[{
-            icon:'📱',label:'Calendrier social media',
-            content:`<div class="preview"><strong>Planning hebdomadaire réseaux sociaux :</strong>\n\n📅 <strong>Lundi</strong> — Instagram : Photo plat du jour + story coulisses\n📅 <strong>Mardi</strong> — Google Post : Plat du jour ou promo\n📅 <strong>Mercredi</strong> — TikTok : Vidéo 15s préparation d'un plat\n📅 <strong>Jeudi</strong> — Instagram : Reel ambiance restaurant\n📅 <strong>Vendredi</strong> — Facebook : Post événement week-end\n📅 <strong>Samedi</strong> — Instagram Stories : Ambiance soirée en direct\n📅 <strong>Dimanche</strong> — Instagram : Photo brunch/menu dominical\n\n<strong>Hashtags à utiliser :</strong>\n#${n.replace(/\s+/g,'')} #Restaurant${c.replace(/\s+/g,'')} #${c.replace(/\s+/g,'')}Food #Foodie${c.replace(/\s+/g,'')} #RestaurantRecommandation\n\n<strong>Schema sameAs à ajouter :</strong>\n"sameAs": [\n  "https://www.instagram.com/[compte]",\n  "https://www.tiktok.com/@[compte]",\n  "https://www.facebook.com/[page]"\n]</div>`
+            icon:'',label:'Calendrier social media',
+            content:`<div class="preview"><strong>Planning hebdomadaire réseaux sociaux :</strong>\n\n <strong>Lundi</strong> — Instagram : Photo plat du jour + story coulisses\n <strong>Mardi</strong> — Google Post : Plat du jour ou promo\n <strong>Mercredi</strong> — TikTok : Vidéo 15s préparation d'un plat\n <strong>Jeudi</strong> — Instagram : Reel ambiance restaurant\n <strong>Vendredi</strong> — Facebook : Post événement week-end\n <strong>Samedi</strong> — Instagram Stories : Ambiance soirée en direct\n <strong>Dimanche</strong> — Instagram : Photo brunch/menu dominical\n\n<strong>Hashtags à utiliser :</strong>\n#${n.replace(/\s+/g,'')} #Restaurant${c.replace(/\s+/g,'')} #${c.replace(/\s+/g,'')}Food #Foodie${c.replace(/\s+/g,'')} #RestaurantRecommandation\n\n<strong>Schema sameAs à ajouter :</strong>\n"sameAs": [\n  "https://www.instagram.com/[compte]",\n  "https://www.tiktok.com/@[compte]",\n  "https://www.facebook.com/[page]"\n]</div>`
         }],
         'g_ugc':()=>[{
-            icon:'📸',label:'Kit lancement campagne UGC',
-            content:`<div class="preview"><strong>Kit UGC pour ${n} :</strong>\n\n1️⃣ <strong>Hashtag officiel :</strong> #${n.replace(/\s+/g,'')}\n\n2️⃣ <strong>Panneau à imprimer :</strong>\n"Partagez votre expérience !\n📸 @${n.replace(/\s+/g,'').toLowerCase()}\n#${n.replace(/\s+/g,'')}\nLe meilleur post du mois gagne un repas offert !"\n\n3️⃣ <strong>Message type pour micro-influenceurs :</strong>\nBonjour [Prénom] ! Nous adorons votre contenu food sur ${c}. On aimerait vous inviter à découvrir ${n} pour un repas offert. Intéressé(e) ? 🍽️\n\n4️⃣ <strong>Concours Instagram mensuel :</strong>\n"Postez votre plat préféré chez ${n} avec #${n.replace(/\s+/g,'')} — le post le plus créatif gagne [prix] !"</div>`
+            icon:'',label:'Kit lancement campagne UGC',
+            content:`<div class="preview"><strong>Kit UGC pour ${n} :</strong>\n\n1 <strong>Hashtag officiel :</strong> #${n.replace(/\s+/g,'')}\n\n2 <strong>Panneau à imprimer :</strong>\n"Partagez votre expérience !\n @${n.replace(/\s+/g,'').toLowerCase()}\n#${n.replace(/\s+/g,'')}\nLe meilleur post du mois gagne un repas offert !"\n\n3 <strong>Message type pour micro-influenceurs :</strong>\nBonjour [Prénom] ! Nous adorons votre contenu food sur ${c}. On aimerait vous inviter à découvrir ${n} pour un repas offert. Intéressé(e) ? \n\n4 <strong>Concours Instagram mensuel :</strong>\n"Postez votre plat préféré chez ${n} avec #${n.replace(/\s+/g,'')} — le post le plus créatif gagne [prix] !"</div>`
         }],
         'g_perplexity':()=>[{
-            icon:'🔎',label:'Plan d\'action Perplexity',
-            content:`<div class="preview"><strong>3 actions pour être cité par Perplexity :</strong>\n\n🥇 <strong>TripAdvisor (source dominante food)</strong>\n→ Fiche complète avec 20+ photos\n→ Répondez à tous les avis\n→ Description riche en mots-clés\n\n🥈 <strong>Blogs food & forums</strong>\n→ Invitez 5 blogueurs food de ${c}\n→ Postez sur Reddit r/${c.toLowerCase().replace(/\s+/g,'')} (sous-reddit food local)\n→ Participez aux forums food locaux\n\n🥉 <strong>Contenu niche</strong>\n→ Page "Histoire du chef" sur votre site\n→ Article de blog "Notre recette signature"\n→ Contenu unique que Perplexity peut sourcer\n\n💡 Perplexity cite TOUJOURS ses sources — il privilégie les pages riches et uniques.</div>`
+            icon:'',label:'Plan d\'action Perplexity',
+            content:`<div class="preview"><strong>3 actions pour être cité par Perplexity :</strong>\n\n <strong>TripAdvisor (source dominante food)</strong>\n→ Fiche complète avec 20+ photos\n→ Répondez à tous les avis\n→ Description riche en mots-clés\n\n <strong>Blogs food & forums</strong>\n→ Invitez 5 blogueurs food de ${c}\n→ Postez sur Reddit r/${c.toLowerCase().replace(/\s+/g,'')} (sous-reddit food local)\n→ Participez aux forums food locaux\n\n <strong>Contenu niche</strong>\n→ Page "Histoire du chef" sur votre site\n→ Article de blog "Notre recette signature"\n→ Contenu unique que Perplexity peut sourcer\n\nPerplexity cite TOUJOURS ses sources — il privilégie les pages riches et uniques.</div>`
         }],
         'g_aio':()=>[{
-            icon:'🎯',label:'Plan Google AI Overviews',
-            content:`<div class="preview"><strong>Apparaître dans les AI Overviews de Google :</strong>\n\nAI Overviews = résumé IA au-dessus des résultats. C'est la combinaison de TOUS vos signaux :\n\n✅ <strong>GBP 100% complété</strong>\n→ Catégories, description, photos, horaires, attributs\n\n✅ <strong>Avis riches en mots-clés</strong>\n→ Volume élevé + contenu textuel détaillé\n→ Encouragez les clients à décrire leur expérience\n\n✅ <strong>Schema.org avec aggregateRating</strong>\n→ JSON-LD complet (voir onglet Schema.org)\n\n✅ <strong>FAQ structurée FAQPage</strong>\n→ 10+ questions (voir onglet FAQ)\n\n✅ <strong>hasMenu dans le Schema</strong>\n→ Menu HTML détaillé, pas juste un PDF\n\n⚠️ Il n'y a PAS de raccourci. AI Overviews = la somme de TOUT votre SEO + GEO. Améliorez chaque item de cet audit.</div>`
+            icon:'',label:'Plan Google AI Overviews',
+            content:`<div class="preview"><strong>Apparaître dans les AI Overviews de Google :</strong>\n\nAI Overviews = résumé IA au-dessus des résultats. C'est la combinaison de TOUS vos signaux :\n\n✓ <strong>GBP 100% complété</strong>\n→ Catégories, description, photos, horaires, attributs\n\n✓ <strong>Avis riches en mots-clés</strong>\n→ Volume élevé + contenu textuel détaillé\n→ Encouragez les clients à décrire leur expérience\n\n✓ <strong>Schema.org avec aggregateRating</strong>\n→ JSON-LD complet (voir onglet Schema.org)\n\n✓ <strong>FAQ structurée FAQPage</strong>\n→ 10+ questions (voir onglet FAQ)\n\n✓ <strong>hasMenu dans le Schema</strong>\n→ Menu HTML détaillé, pas juste un PDF\n\n! Il n'y a PAS de raccourci. AI Overviews = la somme de TOUT votre SEO + GEO. Améliorez chaque item de cet audit.</div>`
         }],
         'g_foursquare':()=>[{
-            icon:'📍',label:'Fiche Foursquare optimisée',
-            content:`<div class="preview"><strong>Pourquoi Foursquare est important pour ${n} :</strong>\n\nFoursquare alimente en données :\n→ 🍎 Apple Maps (Siri)\n→ 🚗 Uber\n→ 📱 Samsung\n→ 🐦 Twitter/X\n→ 🎮 Snap Maps\n\n<strong>Actions :</strong>\n1. Réclamez votre fiche → business.foursquare.com\n2. Catégorie précise (pas juste "Restaurant")\n3. 10+ photos de qualité\n4. Description complète\n5. Horaires exacts\n6. Lien vers votre site web\n7. Menu si possible\n\n<strong>Tip bonus :</strong> Les "tips" (avis) sur Foursquare sont repris par Apple Maps. Encouragez vos clients à laisser un tip Foursquare.</div>`
+            icon:'',label:'Fiche Foursquare optimisée',
+            content:`<div class="preview"><strong>Pourquoi Foursquare est important pour ${n} :</strong>\n\nFoursquare alimente en données :\n→  Apple Maps (Siri)\n→  Uber\n→ Samsung\n→  Twitter/X\n→  Snap Maps\n\n<strong>Actions :</strong>\n1. Réclamez votre fiche → business.foursquare.com\n2. Catégorie précise (pas juste "Restaurant")\n3. 10+ photos de qualité\n4. Description complète\n5. Horaires exacts\n6. Lien vers votre site web\n7. Menu si possible\n\n<strong>Tip bonus :</strong> Les "tips" (avis) sur Foursquare sont repris par Apple Maps. Encouragez vos clients à laisser un tip Foursquare.</div>`
         }],
         'g_claude':()=>[{
-            icon:'🟠',label:'Stratégie UGC pour Claude',
-            content:`<div class="preview"><strong>Claude (Anthropic) cite l'UGC 10x plus que Gemini en Food & Beverage</strong>\n\nUGC = Contenu créé par vos clients (pas par vous)\n\n<strong>Top actions pour ${n} :</strong>\n\n1️⃣ <strong>Spot instagrammable</strong>\n→ Mur signature / néon / déco photogénique\n→ Les clients postent naturellement\n\n2️⃣ <strong>Hashtag #${n.replace(/\s+/g,'')}</strong>\n→ Affichez-le dans le restaurant\n→ Mentionnez-le sur vos réseaux\n\n3️⃣ <strong>Micro-influenceurs</strong>\n→ Invitez 5 créateurs food/mois à ${c}\n→ Contenu authentique = signal UGC fort\n\n4️⃣ <strong>Reddit & forums</strong>\n→ Soyez mentionné dans les discussions food de ${c}\n→ Un post Reddit = contenu UGC indexé\n\n5️⃣ <strong>Avis détaillés</strong>\n→ Les longs avis avec descriptions sont du UGC premium\n→ Encouragez les clients à raconter leur expérience</div>`
+            icon:'',label:'Stratégie UGC pour Claude',
+            content:`<div class="preview"><strong>Claude (Anthropic) cite l'UGC 10x plus que Gemini en Food & Beverage</strong>\n\nUGC = Contenu créé par vos clients (pas par vous)\n\n<strong>Top actions pour ${n} :</strong>\n\n1 <strong>Spot instagrammable</strong>\n→ Mur signature / néon / déco photogénique\n→ Les clients postent naturellement\n\n2 <strong>Hashtag #${n.replace(/\s+/g,'')}</strong>\n→ Affichez-le dans le restaurant\n→ Mentionnez-le sur vos réseaux\n\n3 <strong>Micro-influenceurs</strong>\n→ Invitez 5 créateurs food/mois à ${c}\n→ Contenu authentique = signal UGC fort\n\n4 <strong>Reddit & forums</strong>\n→ Soyez mentionné dans les discussions food de ${c}\n→ Un post Reddit = contenu UGC indexé\n\n5 <strong>Avis détaillés</strong>\n→ Les longs avis avec descriptions sont du UGC premium\n→ Encouragez les clients à raconter leur expérience</div>`
         }],
         'g_mentions':()=>[{
-            icon:'📰',label:'Plan de relations presse locale',
-            content:`<div class="preview"><strong>Plan "Mentions de marque" pour ${n} :</strong>\n\n🎯 <strong>Objectif :</strong> 10+ mentions en ligne dans les 3 prochains mois\n\n📰 <strong>Presse locale (3-5 mentions) :</strong>\n→ Contactez le journal local de ${c}\n→ Angle : ouverture, nouveau menu, chef, événement\n→ Webzines food locaux : [chercher "${c} food blog"]\n\n🎪 <strong>Événements (2-3 mentions) :</strong>\n→ Participez à un marché food / festival\n→ Organisez une soirée à thème ouverte\n→ Partenariat avec un commerce voisin\n\n🤝 <strong>Collaborations (2-3 mentions) :</strong>\n→ Menu croisé avec un bar/café voisin\n→ Fournisseur local → article sur le circuit court\n→ Charity dinner = couverture presse\n\n📧 <strong>Email type :</strong>\n"Bonjour, je suis [Nom] du restaurant ${n} à ${c}. [Accroche actualité]. Seriez-vous intéressé par un article/mention ?"</div>`
+            icon:'',label:'Plan de relations presse locale',
+            content:`<div class="preview"><strong>Plan "Mentions de marque" pour ${n} :</strong>\n\n<strong>Objectif :</strong> 10+ mentions en ligne dans les 3 prochains mois\n\n<strong>Presse locale (3-5 mentions) :</strong>\n→ Contactez le journal local de ${c}\n→ Angle : ouverture, nouveau menu, chef, événement\n→ Webzines food locaux : [chercher "${c} food blog"]\n\n <strong>Événements (2-3 mentions) :</strong>\n→ Participez à un marché food / festival\n→ Organisez une soirée à thème ouverte\n→ Partenariat avec un commerce voisin\n\n <strong>Collaborations (2-3 mentions) :</strong>\n→ Menu croisé avec un bar/café voisin\n→ Fournisseur local → article sur le circuit court\n→ Charity dinner = couverture presse\n\n<strong>Email type :</strong>\n"Bonjour, je suis [Nom] du restaurant ${n} à ${c}. [Accroche actualité]. Seriez-vous intéressé par un article/mention ?"</div>`
         }],
         'g_structured':()=>[{
-            icon:'🔧',label:'Audit données structurées',
-            content:`<div class="preview"><strong>Checklist données structurées pour ${n} :</strong>\n\n${data.hasSchemaRestaurant?'✅':'❌'} Schema.org/Restaurant JSON-LD\n${data.schemaComplete?'✅':'❌'} Schema complet (tous les champs)\n${data.hasFAQ?'✅':'❌'} FAQPage schema.org\n${data.menuStructured?'✅':'❌'} Menu structuré HTML\n\n<strong>Score actuel :</strong> ${(data.hasSchemaRestaurant?1:0)+(data.schemaComplete?1:0)+(data.hasFAQ?1:0)+(data.menuStructured?1:0)}/4\n\n→ Copiez les JSON-LD depuis les onglets "Schema.org" et "FAQ"\n→ Testez sur search.google.com/test/rich-results\n→ Convertissez votre menu PDF en HTML avec descriptions</div>`
+            icon:'',label:'Audit données structurées',
+            content:`<div class="preview"><strong>Checklist données structurées pour ${n} :</strong>\n\n${data.hasSchemaRestaurant?'':''} Schema.org/Restaurant JSON-LD\n${data.schemaComplete?'':''} Schema complet (tous les champs)\n${data.hasFAQ?'':''} FAQPage schema.org\n${data.menuStructured?'':''} Menu structuré HTML\n\n<strong>Score actuel :</strong> ${(data.hasSchemaRestaurant?1:0)+(data.schemaComplete?1:0)+(data.hasFAQ?1:0)+(data.menuStructured?1:0)}/4\n\n→ Copiez les JSON-LD depuis les onglets "Schema.org" et "FAQ"\n→ Testez sur search.google.com/test/rich-results\n→ Convertissez votre menu PDF en HTML avec descriptions</div>`
         }],
 
         // --- NEW SEO ON-PAGE ---
         'op_metadesc':()=>[{
-            icon:'📝',label:'Meta description optimisée',
+            icon:'',label:'Meta description optimisée',
             content:`<div class="preview"><strong>Meta description pour ${n} :</strong>\n\n<code>&lt;meta name="description" content="${n} — Restaurant [cuisine] à ${c}. [Spécialité signature], produits frais de saison. Terrasse, réservation en ligne. Menu midi dès [XX]€."&gt;</code>\n\n<strong>Règles :</strong>\n• 120-155 caractères\n• Inclure : cuisine + ville + USP\n• CTA : "Réservez", "Découvrez"\n• Pas de majuscules partout\n• Unique pour chaque page</div>`
         }],
         'op_og':()=>[{
-            icon:'🖼️',label:'Balises Open Graph à copier',
-            content:`<div class="preview"><strong>Open Graph pour ${n} :</strong>\n\n<code>&lt;meta property="og:title" content="${n} — Restaurant à ${c}"&gt;\n&lt;meta property="og:description" content="[Description 155 car.]"&gt;\n&lt;meta property="og:image" content="https://[votre-site]/images/photo-restaurant-hd.jpg"&gt;\n&lt;meta property="og:type" content="restaurant"&gt;\n&lt;meta property="og:url" content="https://[votre-site].fr/"&gt;\n&lt;meta property="og:locale" content="fr_FR"&gt;\n&lt;meta property="og:site_name" content="${n}"&gt;</code>\n\n⚠️ Image : 1200x630px minimum, belle photo d'un plat ou de la façade</div>`
+            icon:'',label:'Balises Open Graph à copier',
+            content:`<div class="preview"><strong>Open Graph pour ${n} :</strong>\n\n<code>&lt;meta property="og:title" content="${n} — Restaurant à ${c}"&gt;\n&lt;meta property="og:description" content="[Description 155 car.]"&gt;\n&lt;meta property="og:image" content="https://[votre-site]/images/photo-restaurant-hd.jpg"&gt;\n&lt;meta property="og:type" content="restaurant"&gt;\n&lt;meta property="og:url" content="https://[votre-site].fr/"&gt;\n&lt;meta property="og:locale" content="fr_FR"&gt;\n&lt;meta property="og:site_name" content="${n}"&gt;</code>\n\n! Image : 1200x630px minimum, belle photo d'un plat ou de la façade</div>`
         }],
         'op_tellink':()=>[{
-            icon:'📞',label:'Code HTML lien téléphone',
-            content:`<div class="preview"><strong>Lien tel: pour ${n} :</strong>\n\n<code>&lt;!-- Bouton mobile --&gt;\n&lt;a href="tel:+33XXXXXXXXX" class="phone-btn"&gt;\n  📞 Appelez-nous : 0X XX XX XX XX\n&lt;/a&gt;\n\n&lt;!-- Footer --&gt;\n&lt;a href="tel:+33XXXXXXXXX" itemprop="telephone"&gt;\n  +33 X XX XX XX XX\n&lt;/a&gt;</code>\n\n⚠️ Format international dans le href : +33 (pas 0)\n💡 Ajoutez un bouton sticky sur mobile en bas de page</div>`
+            icon:'',label:'Code HTML lien téléphone',
+            content:`<div class="preview"><strong>Lien tel: pour ${n} :</strong>\n\n<code>&lt;!-- Bouton mobile --&gt;\n&lt;a href="tel:+33XXXXXXXXX" class="phone-btn"&gt;\n   Appelez-nous : 0X XX XX XX XX\n&lt;/a&gt;\n\n&lt;!-- Footer --&gt;\n&lt;a href="tel:+33XXXXXXXXX" itemprop="telephone"&gt;\n  +33 X XX XX XX XX\n&lt;/a&gt;</code>\n\n! Format international dans le href : +33 (pas 0)\nAjoutez un bouton sticky sur mobile en bas de page</div>`
         }],
         'op_mapembed':()=>[{
-            icon:'🗺️',label:'Code Google Maps embed',
-            content:`<div class="preview"><strong>Intégrer Google Maps :</strong>\n\n1. Allez sur Google Maps → recherchez "${n} ${c}"\n2. Cliquez "Partager" → "Intégrer une carte"\n3. Copiez le code iframe :\n\n<code>&lt;iframe src="https://www.google.com/maps/embed?pb=..." width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"&gt;&lt;/iframe&gt;</code>\n\n4. Ajoutez aussi un lien "Itinéraire" :\n<code>&lt;a href="https://www.google.com/maps/dir//${encodeURIComponent(n+' '+c)}" target="_blank"&gt;🗺️ Itinéraire&lt;/a&gt;</code></div>`
+            icon:'',label:'Code Google Maps embed',
+            content:`<div class="preview"><strong>Intégrer Google Maps :</strong>\n\n1. Allez sur Google Maps → recherchez "${n} ${c}"\n2. Cliquez "Partager" → "Intégrer une carte"\n3. Copiez le code iframe :\n\n<code>&lt;iframe src="https://www.google.com/maps/embed?pb=..." width="100%" height="450" style="border:0;" allowfullscreen="" loading="lazy"&gt;&lt;/iframe&gt;</code>\n\n4. Ajoutez aussi un lien "Itinéraire" :\n<code>&lt;a href="https://www.google.com/maps/dir//${encodeURIComponent(n+' '+c)}" target="_blank"&gt;Itinéraire&lt;/a&gt;</code></div>`
         }],
         'op_social_links':()=>[{
-            icon:'🔗',label:'Liens sociaux + sameAs',
+            icon:'',label:'Liens sociaux + sameAs',
             content:`<div class="preview"><strong>Footer + Schema sameAs pour ${n} :</strong>\n\n<code>&lt;!-- Footer --&gt;\n&lt;div class="social-links"&gt;\n  &lt;a href="https://instagram.com/[compte]"&gt;Instagram&lt;/a&gt;\n  &lt;a href="https://facebook.com/[page]"&gt;Facebook&lt;/a&gt;\n  &lt;a href="https://tripadvisor.fr/[fiche]"&gt;TripAdvisor&lt;/a&gt;\n  &lt;a href="https://yelp.fr/biz/[fiche]"&gt;Yelp&lt;/a&gt;\n&lt;/div&gt;</code>\n\nDans votre schema.org JSON-LD :\n<code>"sameAs": [\n  "https://www.instagram.com/[compte]",\n  "https://www.facebook.com/[page]",\n  "https://www.tripadvisor.fr/Restaurant_Review-[id]",\n  "https://www.yelp.fr/biz/[id]",\n  "https://www.tiktok.com/@[compte]"\n]</code></div>`
         }],
         'op_sitemap':()=>[{
-            icon:'📄',label:'Sitemap XML + robots.txt',
+            icon:'',label:'Sitemap XML + robots.txt',
             content:`<div class="preview"><strong>Fichiers à créer :</strong>\n\n<strong>robots.txt</strong> (à la racine du site) :\n<code>User-agent: *\nAllow: /\nSitemap: https://[votre-site].fr/sitemap.xml</code>\n\n<strong>sitemap.xml</strong> (à la racine du site) :\n<code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;\n&lt;urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"&gt;\n  &lt;url&gt;&lt;loc&gt;https://[votre-site].fr/&lt;/loc&gt;&lt;priority&gt;1.0&lt;/priority&gt;&lt;/url&gt;\n  &lt;url&gt;&lt;loc&gt;https://[votre-site].fr/menu&lt;/loc&gt;&lt;priority&gt;0.8&lt;/priority&gt;&lt;/url&gt;\n  &lt;url&gt;&lt;loc&gt;https://[votre-site].fr/a-propos&lt;/loc&gt;&lt;priority&gt;0.7&lt;/priority&gt;&lt;/url&gt;\n  &lt;url&gt;&lt;loc&gt;https://[votre-site].fr/contact&lt;/loc&gt;&lt;priority&gt;0.7&lt;/priority&gt;&lt;/url&gt;\n  &lt;url&gt;&lt;loc&gt;https://[votre-site].fr/faq&lt;/loc&gt;&lt;priority&gt;0.6&lt;/priority&gt;&lt;/url&gt;\n&lt;/urlset&gt;</code>\n\nPuis soumettez dans Google Search Console.</div>`
         }],
         'op_booking':()=>[{
-            icon:'📅',label:'CTA réservation à intégrer',
-            content:`<div class="preview"><strong>Bouton de réservation pour ${n} :</strong>\n\n<code>&lt;!-- Bouton sticky mobile --&gt;\n&lt;a href="https://www.thefork.fr/restaurant/[votre-id]" class="booking-btn sticky" target="_blank"&gt;\n  🍽️ Réserver une table\n&lt;/a&gt;\n\n&lt;!-- En-tête desktop --&gt;\n&lt;a href="tel:+33XXXXXXXXX" class="booking-btn"&gt;\n  📞 Réserver au 0X XX XX XX XX\n&lt;/a&gt;</code>\n\n<strong>Options de réservation :</strong>\n1. TheFork / LaFourchette (intégration GBP)\n2. Formulaire de contact sur votre site\n3. Widget de réservation (Resy, Zenchef, Guestonline)\n4. Bouton "Réserver" → numéro de téléphone\n\n💡 Ajoutez aussi le lien dans GBP → Réservation</div>`
+            icon:'',label:'CTA réservation à intégrer',
+            content:`<div class="preview"><strong>Bouton de réservation pour ${n} :</strong>\n\n<code>&lt;!-- Bouton sticky mobile --&gt;\n&lt;a href="https://www.thefork.fr/restaurant/[votre-id]" class="booking-btn sticky" target="_blank"&gt;\n  Réserver une table\n&lt;/a&gt;\n\n&lt;!-- En-tête desktop --&gt;\n&lt;a href="tel:+33XXXXXXXXX" class="booking-btn"&gt;\n   Réserver au 0X XX XX XX XX\n&lt;/a&gt;</code>\n\n<strong>Options de réservation :</strong>\n1. TheFork / LaFourchette (intégration GBP)\n2. Formulaire de contact sur votre site\n3. Widget de réservation (Resy, Zenchef, Guestonline)\n4. Bouton "Réserver" → numéro de téléphone\n\nAjoutez aussi le lien dans GBP → Réservation</div>`
         }],
 
         // --- NEW GEO ADVANCED ---
@@ -2888,33 +2888,33 @@ function generateContent(itemId,name,city,data){
             const topTerms=(sem.terms||[]).slice(0,5).map(t=>t.term||t);
             // Entity strength signals
             const signals=[];
-            if(placeId)signals.push({s:'Google Place ID',v:'✅',tip:'Identifiant unique Google'});
-            else signals.push({s:'Google Place ID',v:'❌',tip:'Lancez un audit pour le détecter'});
-            if(website)signals.push({s:'Site web',v:'✅',tip:website}); else signals.push({s:'Site web',v:'❌',tip:'Essentiel pour l\'entité'});
-            if(rating>=4.0)signals.push({s:'Avis Google',v:`✅ ${rating}/5`,tip:'Signal de confiance fort'}); else signals.push({s:'Avis Google',v:'⚠️',tip:'Visez 4.0+ pour le Knowledge Graph'});
-            if(phone)signals.push({s:'Téléphone',v:'✅',tip:phone}); else signals.push({s:'Téléphone',v:'❌',tip:'Ajoutez le numéro partout'});
+            if(placeId)signals.push({s:'Google Place ID',v:'',tip:'Identifiant unique Google'});
+            else signals.push({s:'Google Place ID',v:'',tip:'Lancez un audit pour le détecter'});
+            if(website)signals.push({s:'Site web',v:'',tip:website}); else signals.push({s:'Site web',v:'',tip:'Essentiel pour l\'entité'});
+            if(rating>=4.0)signals.push({s:'Avis Google',v:`✓ ${rating}/5`,tip:'Signal de confiance fort'}); else signals.push({s:'Avis Google',v:'',tip:'Visez 4.0+ pour le Knowledge Graph'});
+            if(phone)signals.push({s:'Téléphone',v:'',tip:phone}); else signals.push({s:'Téléphone',v:'',tip:'Ajoutez le numéro partout'});
             const sigHtml=signals.map(s=>`<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--bdr);"><span>${s.s}</span><span>${s.v} <small style="color:var(--t2)">${s.tip}</small></span></div>`).join('');
             // Wikidata JSON
             const wikidata=`{\n  "type": "item",\n  "labels": { "fr": { "language": "fr", "value": "${n}" } },\n  "descriptions": { "fr": { "language": "fr", "value": "Restaurant${cuisineLabel?' '+cuisineLabel:''} à ${c}" } },\n  "claims": {\n    "P31": [{ "value": "Q11707" }],\n    "P17": [{ "value": "Q142" }],\n    "P131": [{ "value": "${c}" }]\n    ${website?',"P856": [{ "value": "'+website+'" }]':''}\n    ${phone?',"P1329": [{ "value": "'+phone+'" }]':''}\n  }\n}`;
             return [{
-                icon:'🏛️',label:'Audit Entity SEO — Signaux d\'entité',
-                content:`<div class="preview"><strong>🔍 Audit Entity SEO pour ${n} à ${c}</strong>\n\n<strong>Signaux d'entité détectés :</strong>\n${sigHtml}\n\n<strong>Score entité estimé :</strong> <span style="font-size:1.2em;color:${signals.filter(s=>s.v.includes('✅')).length>=3?'var(--grn)':'var(--wrn)'}">${signals.filter(s=>s.v.includes('✅')).length}/${signals.length}</span>\n\n<strong>🎯 Actions pour renforcer l'entité "${n}" :</strong>\n\n1️⃣ <strong>Schema.org sameAs</strong> — liez TOUS vos profils :\n<code>"sameAs": [\n  "https://maps.google.com/?cid=${placeId||'[PLACE_ID]'}",\n  "https://www.yelp.fr/biz/[id]",\n  "https://www.tripadvisor.fr/[id]",\n  "https://www.instagram.com/[compte]",\n  "https://www.facebook.com/[page]"\n]</code>\n\n2️⃣ <strong>Cohérence NAP</strong> — même nom/adresse/tél partout\n\n3️⃣ <strong>Backlinks locaux</strong> — office de tourisme, mairie, guides, blogs culinaires\n→ Ancre texte = "<code>${n}</code>" (pas "cliquez ici")\n\n4️⃣ <strong>Recherche de marque</strong> — encouragez les clients à chercher "${n}" sur Google</div>`
+                icon:'',label:'Audit Entity SEO — Signaux d\'entité',
+                content:`<div class="preview"><strong>Audit Entity SEO pour ${n} à ${c}</strong>\n\n<strong>Signaux d'entité détectés :</strong>\n${sigHtml}\n\n<strong>Score entité estimé :</strong> <span style="font-size:1.2em;color:${signals.filter(s=>s.v.includes('')).length>=3?'var(--grn)':'var(--wrn)'}">${signals.filter(s=>s.v.includes('')).length}/${signals.length}</span>\n\n<strong>Actions pour renforcer l'entité "${n}" :</strong>\n\n1 <strong>Schema.org sameAs</strong> — liez TOUS vos profils :\n<code>"sameAs": [\n  "https://maps.google.com/?cid=${placeId||'[PLACE_ID]'}",\n  "https://www.yelp.fr/biz/[id]",\n  "https://www.tripadvisor.fr/[id]",\n  "https://www.instagram.com/[compte]",\n  "https://www.facebook.com/[page]"\n]</code>\n\n2 <strong>Cohérence NAP</strong> — même nom/adresse/tél partout\n\n3 <strong>Backlinks locaux</strong> — office de tourisme, mairie, guides, blogs culinaires\n→ Ancre texte = "<code>${n}</code>" (pas "cliquez ici")\n\n4 <strong>Recherche de marque</strong> — encouragez les clients à chercher "${n}" sur Google</div>`
             },{
-                icon:'📚',label:'Wikidata — Créer l\'entrée (données pré-remplies)',
-                content:`<div class="preview"><strong>Créez ${n} sur Wikidata pour le Knowledge Graph :</strong>\n\n1. Allez sur <a href="https://www.wikidata.org/wiki/Special:NewItem" target="_blank">wikidata.org → Créer un élément</a>\n2. Remplissez :\n\n<strong>Label :</strong> <code>${n}</code>\n<strong>Description :</strong> <code>Restaurant${cuisineLabel?' '+cuisineLabel:''} à ${c}, France</code>\n<strong>Also known as :</strong> <code>${n.toLowerCase()}</code>\n\n3. Ajoutez les propriétés :\n• <strong>P31</strong> (nature) = <code>Q11707</code> (restaurant)\n• <strong>P17</strong> (pays) = <code>Q142</code> (France)\n• <strong>P131</strong> (localisation) = <code>${c}</code>\n${website?'• <strong>P856</strong> (site web) = <code>'+website+'</code>\n':''}\n${phone?'• <strong>P1329</strong> (téléphone) = <code>'+phone+'</code>\n':''}\n${cuisineLabel?'• <strong>P2012</strong> (cuisine) = <code>'+cuisineLabel+'</code>\n':''}\n\n<strong>Données JSON :</strong>\n<textarea style="width:100%;height:100px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:6px;padding:8px;font-size:.8rem;" onclick="this.select()">${wikidata}</textarea>\n\n💡 L'entrée Wikidata renforce considérablement votre visibilité dans le Knowledge Graph Google et dans les moteurs IA (Gemini, ChatGPT, Perplexity)</div>`
+                icon:'',label:'Wikidata — Créer l\'entrée (données pré-remplies)',
+                content:`<div class="preview"><strong>Créez ${n} sur Wikidata pour le Knowledge Graph :</strong>\n\n1. Allez sur <a href="https://www.wikidata.org/wiki/Special:NewItem" target="_blank">wikidata.org → Créer un élément</a>\n2. Remplissez :\n\n<strong>Label :</strong> <code>${n}</code>\n<strong>Description :</strong> <code>Restaurant${cuisineLabel?' '+cuisineLabel:''} à ${c}, France</code>\n<strong>Also known as :</strong> <code>${n.toLowerCase()}</code>\n\n3. Ajoutez les propriétés :\n• <strong>P31</strong> (nature) = <code>Q11707</code> (restaurant)\n• <strong>P17</strong> (pays) = <code>Q142</code> (France)\n• <strong>P131</strong> (localisation) = <code>${c}</code>\n${website?'• <strong>P856</strong> (site web) = <code>'+website+'</code>\n':''}\n${phone?'• <strong>P1329</strong> (téléphone) = <code>'+phone+'</code>\n':''}\n${cuisineLabel?'• <strong>P2012</strong> (cuisine) = <code>'+cuisineLabel+'</code>\n':''}\n\n<strong>Données JSON :</strong>\n<textarea style="width:100%;height:100px;background:var(--s1);color:var(--txt);border:1px solid var(--bdr);border-radius:6px;padding:8px;font-size:.8rem;" onclick="this.select()">${wikidata}</textarea>\n\nL'entrée Wikidata renforce considérablement votre visibilité dans le Knowledge Graph Google et dans les moteurs IA (Gemini, ChatGPT, Perplexity)</div>`
             }];
         },
         'g_voice':()=>[{
-            icon:'🎙️',label:'FAQ optimisée recherche vocale',
+            icon:'',label:'FAQ optimisée recherche vocale',
             content:`<div class="preview"><strong>Questions vocales type pour ${n} :</strong>\n\nLes gens demandent à Siri/Google :\n\n• "OK Google, est-ce que ${n} à ${c} a une terrasse ?"\n• "Siri, quel est le numéro de ${n} ?"\n• "Quels sont les horaires de ${n} ?"\n• "Est-ce que ${n} livre ?"\n• "C'est quoi la spécialité de ${n} ?"\n\n<strong>FAQ à créer (réponses courtes 40-50 mots) :</strong>\n\nQ: "${n} a-t-il une terrasse ?" → R: "Oui, ${n} dispose d'une terrasse de [X] places..."\nQ: "Quels sont les horaires de ${n} ?" → R: "${n} est ouvert du [jour] au [jour] de [h] à [h]..."\nQ: "Quel est le budget moyen chez ${n} ?" → R: "Le menu du midi est à [X]€..."\nQ: "${n} accepte-t-il les réservations ?" → R: "Oui, réservez au [tel] ou sur TheFork..."\n\n<strong>GBP Q&A :</strong> Pré-remplissez ces 20 questions sur votre fiche Google Maps</div>`
         }],
         'g_freshness':()=>[{
-            icon:'🕐',label:'Plan de fraîcheur contenu',
-            content:`<div class="preview"><strong>Calendrier de fraîcheur pour ${n} :</strong>\n\n📅 <strong>Hebdomadaire :</strong>\n• 1 Google Post (promo, plat du jour, événement)\n• 3+ posts Instagram\n• 1 story/reel\n\n📅 <strong>Mensuel :</strong>\n• Mise à jour du menu en ligne\n• 1-2 articles de blog (recette, saison, événement)\n• Vérification horaires GBP\n\n📅 <strong>Trimestriel :</strong>\n• Mise à jour description GBP\n• Nouvelles photos (plats de saison)\n• Mise à jour FAQ avec nouvelles questions clients\n\n📅 <strong>À chaque changement :</strong>\n• Menu saisonnier → mise à jour site + GBP + annuaires\n• Nouveau chef/plat → communiqué + post social\n• Fermeture exceptionnelle → GBP horaires spéciaux\n\n⚠️ Les IA déclassent le contenu > 6 mois sans mise à jour</div>`
+            icon:'',label:'Plan de fraîcheur contenu',
+            content:`<div class="preview"><strong>Calendrier de fraîcheur pour ${n} :</strong>\n\n <strong>Hebdomadaire :</strong>\n• 1 Google Post (promo, plat du jour, événement)\n• 3+ posts Instagram\n• 1 story/reel\n\n <strong>Mensuel :</strong>\n• Mise à jour du menu en ligne\n• 1-2 articles de blog (recette, saison, événement)\n• Vérification horaires GBP\n\n <strong>Trimestriel :</strong>\n• Mise à jour description GBP\n• Nouvelles photos (plats de saison)\n• Mise à jour FAQ avec nouvelles questions clients\n\n <strong>À chaque changement :</strong>\n• Menu saisonnier → mise à jour site + GBP + annuaires\n• Nouveau chef/plat → communiqué + post social\n• Fermeture exceptionnelle → GBP horaires spéciaux\n\n! Les IA déclassent le contenu > 6 mois sans mise à jour</div>`
         }],
         'g_backlinks':()=>[{
-            icon:'🔗',label:'Plan backlinks locaux',
-            content:`<div class="preview"><strong>10 sources de backlinks locaux pour ${n} à ${c} :</strong>\n\n1. <strong>Office de tourisme de ${c}</strong> → annuaire restaurants\n2. <strong>Mairie / CCI</strong> → répertoire des commerces\n3. <strong>Petit Futé</strong> → soumettez votre fiche\n4. <strong>Lonely Planet</strong> → guide de ${c}\n5. <strong>Blogueurs food de ${c}</strong> → invitation dégustation\n6. <strong>Hotels voisins</strong> → recommandation croisée\n7. <strong>Producteurs locaux</strong> → page partenaires\n8. <strong>Journal local</strong> → article/communiqué\n9. <strong>Associations commerçants</strong> → site du quartier\n10. <strong>Événements food</strong> → page participants\n\n📧 <strong>Email type :</strong>\n"Bonjour, nous sommes ${n}, restaurant à ${c}. Pourriez-vous nous ajouter à votre répertoire/annuaire en ligne ? Voici notre fiche : [lien site]."</div>`
+            icon:'',label:'Plan backlinks locaux',
+            content:`<div class="preview"><strong>10 sources de backlinks locaux pour ${n} à ${c} :</strong>\n\n1. <strong>Office de tourisme de ${c}</strong> → annuaire restaurants\n2. <strong>Mairie / CCI</strong> → répertoire des commerces\n3. <strong>Petit Futé</strong> → soumettez votre fiche\n4. <strong>Lonely Planet</strong> → guide de ${c}\n5. <strong>Blogueurs food de ${c}</strong> → invitation dégustation\n6. <strong>Hotels voisins</strong> → recommandation croisée\n7. <strong>Producteurs locaux</strong> → page partenaires\n8. <strong>Journal local</strong> → article/communiqué\n9. <strong>Associations commerçants</strong> → site du quartier\n10. <strong>Événements food</strong> → page participants\n\n<strong>Email type :</strong>\n"Bonjour, nous sommes ${n}, restaurant à ${c}. Pourriez-vous nous ajouter à votre répertoire/annuaire en ligne ? Voici notre fiche : [lien site]."</div>`
         }],
         'g_qa':()=>{
             // Smart Q&A Generator — uses real data for complete answers
@@ -2951,19 +2951,19 @@ function generateContent(itemId,name,city,data){
             ];
             let qaHtml=qas.map((qa,i)=>`<div style="margin-bottom:10px;padding:8px;background:var(--s1);border-radius:6px;"><strong>Q${i+1}:</strong> "${qa.q}"\n<span style="color:var(--grn);">→</span> "${qa.a}"</div>`).join('');
             return [{
-                icon:'❓',label:`20 Q&A Google prêtes à poster (données réelles)`,
-                content:`<div class="preview"><strong>⚡ Q&A générées depuis vos données Google Places + analyse sémantique</strong>\n\n${qaHtml}\n\n💡 <strong>Mode d'emploi :</strong>\n1. Connectez-vous avec un <strong>autre compte Google</strong> (pas le propriétaire)\n2. Sur votre fiche Google Maps → "Questions et réponses"\n3. Posez chaque question ci-dessus\n4. Reconnectez-vous en tant que <strong>propriétaire</strong>\n5. Répondez à chaque question avec la réponse fournie\n\n⚠️ <strong>Ne postez pas tout d'un coup</strong> — 3-5 Q&A par semaine pour paraître naturel</div>`
+                icon:'',label:`20 Q&A Google prêtes à poster (données réelles)`,
+                content:`<div class="preview"><strong>Q&A générées depuis vos données Google Places + analyse sémantique</strong>\n\n${qaHtml}\n\n<strong>Mode d'emploi :</strong>\n1. Connectez-vous avec un <strong>autre compte Google</strong> (pas le propriétaire)\n2. Sur votre fiche Google Maps → "Questions et réponses"\n3. Posez chaque question ci-dessus\n4. Reconnectez-vous en tant que <strong>propriétaire</strong>\n5. Répondez à chaque question avec la réponse fournie\n\n! <strong>Ne postez pas tout d'un coup</strong> — 3-5 Q&A par semaine pour paraître naturel</div>`
             }];
         },
 
         // --- NOUVEAUX ---
         'op_canonical':()=>[{
-            icon:'🔗',label:'Balise canonical à ajouter',
+            icon:'',label:'Balise canonical à ajouter',
             content:`<div class="preview"><strong>Balise canonical pour ${n} :</strong>\n\nDans le <code>&lt;head&gt;</code> de chaque page :\n\n<strong>Page d'accueil :</strong>\n<code>&lt;link rel="canonical" href="https://[votre-site].fr/"&gt;</code>\n\n<strong>Page menu :</strong>\n<code>&lt;link rel="canonical" href="https://[votre-site].fr/menu"&gt;</code>\n\n<strong>Page contact :</strong>\n<code>&lt;link rel="canonical" href="https://[votre-site].fr/contact"&gt;</code>\n\n<strong>Règles :</strong>\n• Toujours HTTPS (pas HTTP)\n• Toujours avec ou sans www (pas les deux)\n• Pas de paramètres (?utm_source...)\n• Chaque page pointe vers ELLE-MÊME\n• Version préférée : avec trailing slash ou sans (choisissez)\n\n<strong>WordPress :</strong> Yoast SEO le gère automatiquement\n<strong>Webflow :</strong> Automatique dans Paramètres SEO\n<strong>Wix :</strong> Automatique</div>`
         }],
         'g_pagespeed':()=>[{
-            icon:'⚡',label:'Optimisation PageSpeed complète',
-            content:`<div class="preview"><strong>Guide PageSpeed pour ${n} :</strong>\n\n🎯 <strong>Objectif : Score ≥ 90 mobile</strong>\n\n<strong>1. Images (gain le plus rapide) :</strong>\n• Convertissez TOUTES les images en WebP\n• Taille max : 200KB par image\n• Lazy-loading : <code>&lt;img loading="lazy"&gt;</code>\n• Dimensions explicites : <code>width="800" height="600"</code>\n\n<strong>2. JavaScript :</strong>\n• Différez les scripts non-critiques : <code>&lt;script defer&gt;</code>\n• Supprimez le JS inutilisé (Google Analytics ancien, plugins)\n• Minifiez avec terser ou uglify\n\n<strong>3. CSS :</strong>\n• CSS critique inline dans le <code>&lt;head&gt;</code>\n• Le reste en fichier externe avec <code>media="print" onload="this.media='all'"</code>\n\n<strong>4. Serveur :</strong>\n• Activez gzip/brotli\n• Cache-Control : max-age=31536000 pour les assets\n• CDN gratuit : Cloudflare\n\n<strong>5. Fonts :</strong>\n• <code>font-display: swap</code>\n• Preload : <code>&lt;link rel="preload" href="font.woff2" as="font"&gt;</code>\n\n🔧 Testez : <a href="https://pagespeed.web.dev" target="_blank">pagespeed.web.dev</a></div>`
+            icon:'',label:'Optimisation PageSpeed complète',
+            content:`<div class="preview"><strong>Guide PageSpeed pour ${n} :</strong>\n\n<strong>Objectif : Score ≥ 90 mobile</strong>\n\n<strong>1. Images (gain le plus rapide) :</strong>\n• Convertissez TOUTES les images en WebP\n• Taille max : 200KB par image\n• Lazy-loading : <code>&lt;img loading="lazy"&gt;</code>\n• Dimensions explicites : <code>width="800" height="600"</code>\n\n<strong>2. JavaScript :</strong>\n• Différez les scripts non-critiques : <code>&lt;script defer&gt;</code>\n• Supprimez le JS inutilisé (Google Analytics ancien, plugins)\n• Minifiez avec terser ou uglify\n\n<strong>3. CSS :</strong>\n• CSS critique inline dans le <code>&lt;head&gt;</code>\n• Le reste en fichier externe avec <code>media="print" onload="this.media='all'"</code>\n\n<strong>4. Serveur :</strong>\n• Activez gzip/brotli\n• Cache-Control : max-age=31536000 pour les assets\n• CDN gratuit : Cloudflare\n\n<strong>5. Fonts :</strong>\n• <code>font-display: swap</code>\n• Preload : <code>&lt;link rel="preload" href="font.woff2" as="font"&gt;</code>\n\nTestez : <a href="https://pagespeed.web.dev" target="_blank">pagespeed.web.dev</a></div>`
         }]
     };
 
@@ -3034,13 +3034,13 @@ async function generateContentAI(itemId,name,city,data){
             const r=json.result;
             // Format AI result into the same structure as generateContent() output
             if(typeof r==='string'){
-                content=[{icon:'🤖',label:`Contenu IA — ${aiType}`,content:`<div class="preview">${r.replace(/\n/g,'<br>')}</div>`}];
+                content=[{icon:'',label:`Contenu IA — ${aiType}`,content:`<div class="preview">${r.replace(/\n/g,'<br>')}</div>`}];
             } else if(Array.isArray(r)){
-                content=r.map((item,i)=>({icon:'🤖',label:item.question||`Item ${i+1}`,content:`<div class="preview">${JSON.stringify(item,null,2).replace(/\n/g,'<br>')}</div>`}));
+                content=r.map((item,i)=>({icon:'',label:item.question||`Item ${i+1}`,content:`<div class="preview">${JSON.stringify(item,null,2).replace(/\n/g,'<br>')}</div>`}));
             } else if(typeof r==='object'){
-                content=Object.entries(r).map(([k,v])=>({icon:'🤖',label:k,content:`<div class="preview">${typeof v==='string'?v:JSON.stringify(v,null,2).replace(/\n/g,'<br>')}</div>`}));
+                content=Object.entries(r).map(([k,v])=>({icon:'',label:k,content:`<div class="preview">${typeof v==='string'?v:JSON.stringify(v,null,2).replace(/\n/g,'<br>')}</div>`}));
             } else {
-                content=[{icon:'🤖',label:'Contenu IA',content:`<div class="preview">${String(r)}</div>`}];
+                content=[{icon:'',label:'Contenu IA',content:`<div class="preview">${String(r)}</div>`}];
             }
             _aiContentCache[itemId]=content;
             return content;
@@ -3104,43 +3104,43 @@ async function saveClaudeApiKey(){ return false; }
 function getPlatformLinks(itemId,name,city){
     const q=encodeURIComponent(`${name} ${city}`);
     const links={
-        'gbp_cat_primary':[{icon:'📊',label:'Ouvrir Google Business Profile',url:'https://business.google.com',primary:true}],
-        'gbp_secondary':[{icon:'📊',label:'Ouvrir GBP',url:'https://business.google.com',primary:true}],
-        'gbp_desc':[{icon:'📊',label:'Ouvrir GBP → Description',url:'https://business.google.com',primary:true}],
-        'gbp_photos':[{icon:'📊',label:'Ouvrir GBP → Photos',url:'https://business.google.com',primary:true}],
-        'gbp_hours':[{icon:'📊',label:'Ouvrir GBP → Horaires',url:'https://business.google.com',primary:true}],
-        'gbp_attr':[{icon:'📊',label:'Ouvrir GBP → Attributs',url:'https://business.google.com',primary:true}],
-        'gbp_posts':[{icon:'📊',label:'Ouvrir GBP → Posts',url:'https://business.google.com',primary:true}],
-        'gbp_menu':[{icon:'📊',label:'Ouvrir GBP → Menu',url:'https://business.google.com',primary:true}],
-        'gbp_booking':[{icon:'🍴',label:'Configurer TheFork',url:'https://www.thefork.fr/restaurant',primary:true},{icon:'📊',label:'GBP → Réservation',url:'https://business.google.com',primary:false}],
-        'rev_rating':[{icon:'🔍',label:'Voir mes avis Google',url:`https://www.google.com/maps/search/${q}`,primary:true}],
-        'rev_count':[{icon:'📱',label:'Créer QR Code',url:'https://www.qr-code-generator.com',primary:true},{icon:'🔍',label:'Mon profil Google',url:`https://www.google.com/maps/search/${q}`,primary:false}],
-        'rev_recency':[{icon:'🔍',label:'Voir avis récents',url:`https://www.google.com/maps/search/${q}`,primary:true}],
-        'rev_responses':[{icon:'📊',label:'Ouvrir GBP → Avis',url:'https://business.google.com',primary:true}],
-        'rev_multi':[{icon:'⭐',label:'Yelp Business',url:`https://biz.yelp.fr`,primary:true},{icon:'🦉',label:'TripAdvisor',url:`https://www.tripadvisor.fr/Search?q=${q}`,primary:false},{icon:'🍴',label:'TheFork',url:`https://www.thefork.fr/search?queryText=${q}`,primary:false}],
-        'cit_nap':[{icon:'📊',label:'Ouvrir GBP',url:'https://business.google.com',primary:true},{icon:'📒',label:'Pages Jaunes',url:`https://www.pagesjaunes.fr/recherche/${q}`,primary:false}],
-        'cit_presence':[{icon:'⭐',label:'Yelp Business',url:'https://biz.yelp.fr',primary:true},{icon:'📍',label:'Foursquare Business',url:'https://business.foursquare.com',primary:false},{icon:'🍎',label:'Apple Maps Connect',url:'https://mapsconnect.apple.com',primary:false},{icon:'🔍',label:'Bing Places',url:'https://www.bingplaces.com',primary:false}],
-        'cit_completeness':[{icon:'📊',label:'Vérifier mes fiches',url:`https://www.google.com/search?q=${q}`,primary:true}],
-        'op_schema':[{icon:'🧪',label:'Tester Rich Results',url:'https://search.google.com/test/rich-results',primary:true}],
-        'op_faq':[{icon:'🧪',label:'Tester Rich Results',url:'https://search.google.com/test/rich-results',primary:true}],
-        'op_title':[{icon:'🔍',label:'Voir title actuel',url:`https://www.google.com/search?q=${q}`,primary:true}],
-        'op_speed':[{icon:'⚡',label:'PageSpeed Insights',url:'https://pagespeed.web.dev',primary:true}],
-        'op_content':[{icon:'🔍',label:'Voir mon site sur Google',url:`https://www.google.com/search?q=${q}`,primary:true}],
-        'op_nap':[{icon:'🔍',label:'Voir mon site',url:`https://www.google.com/search?q=site:+${q}`,primary:true}],
-        'g_chatgpt':[{icon:'🤖',label:'Tester sur ChatGPT',url:'https://chat.openai.com',primary:true},{icon:'⭐',label:'Optimiser Yelp',url:'https://biz.yelp.fr',primary:false}],
-        'g_yelp':[{icon:'⭐',label:'Yelp Business',url:'https://biz.yelp.fr',primary:true}],
-        'g_bestof':[{icon:'🔍',label:'Chercher "meilleur restaurant '+city+'"',url:`https://www.google.com/search?q=meilleur+restaurant+${encodeURIComponent(city)}`,primary:true}],
-        'g_perplexity':[{icon:'🔎',label:'Tester Perplexity',url:'https://www.perplexity.ai',primary:true},{icon:'🦉',label:'TripAdvisor',url:`https://www.tripadvisor.fr/Search?q=${q}`,primary:false}],
-        'g_gemini':[{icon:'✨',label:'Tester Gemini',url:'https://gemini.google.com',primary:true}],
-        'g_aio':[{icon:'🔍',label:'Tester AI Overviews',url:`https://www.google.com/search?q=meilleur+restaurant+${encodeURIComponent(city)}`,primary:true}],
-        'g_foursquare':[{icon:'📍',label:'Foursquare Business',url:'https://business.foursquare.com',primary:true}],
-        'g_claude':[{icon:'🟠',label:'Tester Claude',url:'https://claude.ai',primary:true}],
-        'g_social':[{icon:'📸',label:'Instagram',url:'https://www.instagram.com',primary:true},{icon:'🎵',label:'TikTok',url:'https://www.tiktok.com',primary:false}],
-        'g_ugc':[{icon:'📸',label:'Instagram',url:'https://www.instagram.com',primary:true}],
-        'g_structured':[{icon:'🧪',label:'Rich Results Test',url:'https://search.google.com/test/rich-results',primary:true}],
-        'g_mentions':[{icon:'🔍',label:'Chercher mentions',url:`https://www.google.com/search?q="${encodeURIComponent(name)}"+${encodeURIComponent(city)}`,primary:true}],
-        'op_canonical':[{icon:'🧪',label:'Tester Rich Results',url:'https://search.google.com/test/rich-results',primary:true},{icon:'🔍',label:'Vérifier canonical',url:`https://www.google.com/search?q=site:+${q}`,primary:false}],
-        'g_pagespeed':[{icon:'⚡',label:'PageSpeed Insights',url:'https://pagespeed.web.dev',primary:true},{icon:'🌐',label:'GTmetrix',url:'https://gtmetrix.com',primary:false}]
+        'gbp_cat_primary':[{icon:'',label:'Ouvrir Google Business Profile',url:'https://business.google.com',primary:true}],
+        'gbp_secondary':[{icon:'',label:'Ouvrir GBP',url:'https://business.google.com',primary:true}],
+        'gbp_desc':[{icon:'',label:'Ouvrir GBP → Description',url:'https://business.google.com',primary:true}],
+        'gbp_photos':[{icon:'',label:'Ouvrir GBP → Photos',url:'https://business.google.com',primary:true}],
+        'gbp_hours':[{icon:'',label:'Ouvrir GBP → Horaires',url:'https://business.google.com',primary:true}],
+        'gbp_attr':[{icon:'',label:'Ouvrir GBP → Attributs',url:'https://business.google.com',primary:true}],
+        'gbp_posts':[{icon:'',label:'Ouvrir GBP → Posts',url:'https://business.google.com',primary:true}],
+        'gbp_menu':[{icon:'',label:'Ouvrir GBP → Menu',url:'https://business.google.com',primary:true}],
+        'gbp_booking':[{icon:'',label:'Configurer TheFork',url:'https://www.thefork.fr/restaurant',primary:true},{icon:'',label:'GBP → Réservation',url:'https://business.google.com',primary:false}],
+        'rev_rating':[{icon:'',label:'Voir mes avis Google',url:`https://www.google.com/maps/search/${q}`,primary:true}],
+        'rev_count':[{icon:'',label:'Créer QR Code',url:'https://www.qr-code-generator.com',primary:true},{icon:'',label:'Mon profil Google',url:`https://www.google.com/maps/search/${q}`,primary:false}],
+        'rev_recency':[{icon:'',label:'Voir avis récents',url:`https://www.google.com/maps/search/${q}`,primary:true}],
+        'rev_responses':[{icon:'',label:'Ouvrir GBP → Avis',url:'https://business.google.com',primary:true}],
+        'rev_multi':[{icon:'',label:'Yelp Business',url:`https://biz.yelp.fr`,primary:true},{icon:'',label:'TripAdvisor',url:`https://www.tripadvisor.fr/Search?q=${q}`,primary:false},{icon:'',label:'TheFork',url:`https://www.thefork.fr/search?queryText=${q}`,primary:false}],
+        'cit_nap':[{icon:'',label:'Ouvrir GBP',url:'https://business.google.com',primary:true},{icon:'',label:'Pages Jaunes',url:`https://www.pagesjaunes.fr/recherche/${q}`,primary:false}],
+        'cit_presence':[{icon:'',label:'Yelp Business',url:'https://biz.yelp.fr',primary:true},{icon:'',label:'Foursquare Business',url:'https://business.foursquare.com',primary:false},{icon:'',label:'Apple Maps Connect',url:'https://mapsconnect.apple.com',primary:false},{icon:'',label:'Bing Places',url:'https://www.bingplaces.com',primary:false}],
+        'cit_completeness':[{icon:'',label:'Vérifier mes fiches',url:`https://www.google.com/search?q=${q}`,primary:true}],
+        'op_schema':[{icon:'',label:'Tester Rich Results',url:'https://search.google.com/test/rich-results',primary:true}],
+        'op_faq':[{icon:'',label:'Tester Rich Results',url:'https://search.google.com/test/rich-results',primary:true}],
+        'op_title':[{icon:'',label:'Voir title actuel',url:`https://www.google.com/search?q=${q}`,primary:true}],
+        'op_speed':[{icon:'',label:'PageSpeed Insights',url:'https://pagespeed.web.dev',primary:true}],
+        'op_content':[{icon:'',label:'Voir mon site sur Google',url:`https://www.google.com/search?q=${q}`,primary:true}],
+        'op_nap':[{icon:'',label:'Voir mon site',url:`https://www.google.com/search?q=site:+${q}`,primary:true}],
+        'g_chatgpt':[{icon:'',label:'Tester sur ChatGPT',url:'https://chat.openai.com',primary:true},{icon:'',label:'Optimiser Yelp',url:'https://biz.yelp.fr',primary:false}],
+        'g_yelp':[{icon:'',label:'Yelp Business',url:'https://biz.yelp.fr',primary:true}],
+        'g_bestof':[{icon:'',label:'Chercher "meilleur restaurant '+city+'"',url:`https://www.google.com/search?q=meilleur+restaurant+${encodeURIComponent(city)}`,primary:true}],
+        'g_perplexity':[{icon:'',label:'Tester Perplexity',url:'https://www.perplexity.ai',primary:true},{icon:'',label:'TripAdvisor',url:`https://www.tripadvisor.fr/Search?q=${q}`,primary:false}],
+        'g_gemini':[{icon:'',label:'Tester Gemini',url:'https://gemini.google.com',primary:true}],
+        'g_aio':[{icon:'',label:'Tester AI Overviews',url:`https://www.google.com/search?q=meilleur+restaurant+${encodeURIComponent(city)}`,primary:true}],
+        'g_foursquare':[{icon:'',label:'Foursquare Business',url:'https://business.foursquare.com',primary:true}],
+        'g_claude':[{icon:'',label:'Tester Claude',url:'https://claude.ai',primary:true}],
+        'g_social':[{icon:'',label:'Instagram',url:'https://www.instagram.com',primary:true},{icon:'',label:'TikTok',url:'https://www.tiktok.com',primary:false}],
+        'g_ugc':[{icon:'',label:'Instagram',url:'https://www.instagram.com',primary:true}],
+        'g_structured':[{icon:'',label:'Rich Results Test',url:'https://search.google.com/test/rich-results',primary:true}],
+        'g_mentions':[{icon:'',label:'Chercher mentions',url:`https://www.google.com/search?q="${encodeURIComponent(name)}"+${encodeURIComponent(city)}`,primary:true}],
+        'op_canonical':[{icon:'',label:'Tester Rich Results',url:'https://search.google.com/test/rich-results',primary:true},{icon:'',label:'Vérifier canonical',url:`https://www.google.com/search?q=site:+${q}`,primary:false}],
+        'g_pagespeed':[{icon:'',label:'PageSpeed Insights',url:'https://pagespeed.web.dev',primary:true},{icon:'',label:'GTmetrix',url:'https://gtmetrix.com',primary:false}]
     };
     return links[itemId]||[];
 }
@@ -3149,17 +3149,17 @@ function getPlatformLinks(itemId,name,city){
 // SCAN
 // ============================================================
 const SCAN_STEPS=[
-    {icon:'📊',text:'Scan Google Business Profile',sub:'Catégories, description, photos, horaires, attributs, posts, menu…',group:'seo'},
-    {icon:'⭐',text:'Analyse des avis multi-plateformes',sub:'Google, TripAdvisor, TheFork, Yelp — note, volume, fraîcheur',group:'seo'},
-    {icon:'📌',text:'Vérification NAP & annuaires',sub:'Cohérence sur 20+ annuaires',group:'seo'},
-    {icon:'🌐',text:'Audit site web (On-Page)',sub:'Schema.org, balises, vitesse, contenu, FAQ',group:'seo'},
-    {icon:'🔍',text:'Détection CMS & connexion',sub:'WordPress, Webflow, Wix, Squarespace, Shopify…',group:'seo'},
-    {icon:'🤖',text:'Test visibilité ChatGPT',sub:'Yelp, Bing, TripAdvisor',group:'geo'},
-    {icon:'🔎',text:'Test visibilité Perplexity + Gemini',sub:'Citations et sources',group:'geo'},
-    {icon:'🟠',text:'Test visibilité Claude + UGC',sub:'Contenu utilisateur',group:'geo'},
-    {icon:'📱',text:'Audit signaux sociaux',sub:'Instagram, TikTok, Facebook',group:'geo'},
-    {icon:'🎯',text:'Google AI Overviews',sub:'Présence dans les résumés IA',group:'geo'},
-    {icon:'🏆',text:'Calcul scores + plan autonome',sub:'Score final, CMS détecté, plan d\'automatisation complet',group:'both'},
+    {icon:'',text:'Scan Google Business Profile',sub:'Catégories, description, photos, horaires, attributs, posts, menu…',group:'seo'},
+    {icon:'',text:'Analyse des avis multi-plateformes',sub:'Google, TripAdvisor, TheFork, Yelp — note, volume, fraîcheur',group:'seo'},
+    {icon:'',text:'Vérification NAP & annuaires',sub:'Cohérence sur 20+ annuaires',group:'seo'},
+    {icon:'',text:'Audit site web (On-Page)',sub:'Schema.org, balises, vitesse, contenu, FAQ',group:'seo'},
+    {icon:'',text:'Détection CMS & connexion',sub:'WordPress, Webflow, Wix, Squarespace, Shopify…',group:'seo'},
+    {icon:'',text:'Test visibilité ChatGPT',sub:'Yelp, Bing, TripAdvisor',group:'geo'},
+    {icon:'',text:'Test visibilité Perplexity + Gemini',sub:'Citations et sources',group:'geo'},
+    {icon:'',text:'Test visibilité Claude + UGC',sub:'Contenu utilisateur',group:'geo'},
+    {icon:'',text:'Audit signaux sociaux',sub:'Instagram, TikTok, Facebook',group:'geo'},
+    {icon:'',text:'Google AI Overviews',sub:'Présence dans les résumés IA',group:'geo'},
+    {icon:'',text:'Calcul scores + plan autonome',sub:'Score final, CMS détecté, plan d\'automatisation complet',group:'both'},
 ];
 
 let detectedCMS=null;
@@ -3202,7 +3202,7 @@ function startScan(name,city){
             window._realAuditData=data.audit;
             window._realAuditDetails=data.details;
             window._realAuditSources=data.sources;
-            console.log('✅ REAL AUDIT completed in '+data.duration+'ms — Sources: '+Object.entries(data.sources).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '));
+            console.log('✓ REAL AUDIT completed in '+data.duration+'ms — Sources: '+Object.entries(data.sources).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '));
             // Store hub data from Google Places details
             if(data.details?.google?.available){
                 const g=data.details.google;
@@ -3247,16 +3247,16 @@ function startScan(name,city){
             if(window._realAuditData){
                 // Real data — replace null values with safe defaults for scoring
                 currentData = _prepareRealData(window._realAuditData, name, city);
-                console.log('✅ USING REAL AUDIT DATA — sources:', Object.entries(window._realAuditSources||{}).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '));
+                console.log('✓ USING REAL AUDIT DATA — sources:', Object.entries(window._realAuditSources||{}).filter(([k,v])=>v==='ok').map(([k])=>k).join(', '));
             } else {
                 // Fallback: real structure with empty/default values — NO fake data
                 currentData = _prepareRealData({name,city,_auditSource:'api_unavailable'}, name, city);
-                console.warn('⚠️ Real audit API unavailable — showing only verified data');
+                console.warn('! Real audit API unavailable — showing only verified data');
             }
             // Inject CMS detection results
             if(detectedCMS&&detectedCMS.detected){currentData.detectedCMS=detectedCMS.detected;currentData.websiteUrl=storedWebsite;currentData.seoAnalysis=detectedCMS.seoAnalysis||{};}
             currentScores=computeScores(currentData);activeMainTab=defaultTab;activeCategory=defaultCat;
-            document.getElementById('dashResto').innerHTML=`📍 ${name} — ${city}${storedWebsite?' · <span style="color:var(--cyn);font-size:.78rem;">'+storedWebsite+'</span>':''}`;
+            document.getElementById('dashResto').innerHTML=`${name} — ${city}${storedWebsite?' · <span style="color:var(--cyn);font-size:.78rem;">'+storedWebsite+'</span>':''}`;
             showScreen('dashboard');renderDashboard();saveAllData();
             // AUTO-PILOT: run post-scan automation silently
             setTimeout(()=>runPostScanAutomation(),500);
@@ -3281,84 +3281,84 @@ function goLanding(){showScreen('landing');}
 // COMMAND CENTER — ANNUAIRES (auto-connexion)
 // ============================================================
 const PLATFORMS=[
-    {id:'google_gbp',icon:'📊',name:'Google Business Profile',tag:'seo',priority:true,
+    {id:'google_gbp',icon:'',name:'Google Business Profile',tag:'seo',priority:true,
      why:'Facteur #1 SEO local (32%). La fiche la plus importante.',
      claimUrl:q=>`https://www.google.com/maps/search/${q}`,
      claimNote:'Trouvez votre restaurant → cliquez "Revendiquer cet établissement" ou "Vous êtes le propriétaire ?"',
      searchUrl:q=>`https://www.google.com/maps/search/${q}`,
      description:d=>`${d.name} — restaurant à ${d.city}. Cuisine authentique, produits frais de saison. Terrasse, réservation, livraison. Ambiance chaleureuse au cœur de ${d.city}.`
     },
-    {id:'yelp',icon:'⭐',name:'Yelp',tag:'geo',priority:true,
+    {id:'yelp',icon:'',name:'Yelp',tag:'geo',priority:true,
      why:'Source #1 ChatGPT (48.73%). Critique pour la visibilité IA.',
      claimUrl:q=>`https://biz.yelp.fr/search?find_desc=${q}`,
      claimNote:'Cherchez votre restaurant → "Réclamer cet établissement" ou créez une fiche',
      searchUrl:q=>`https://www.yelp.fr/search?find_desc=${q}`,
      description:d=>`${d.name} est un restaurant situé à ${d.city}, proposant une cuisine authentique et savoureuse. Produits frais, spécialités maison, terrasse agréable. Réservation recommandée.`
     },
-    {id:'tripadvisor',icon:'🦉',name:'TripAdvisor',tag:'geo',priority:true,
+    {id:'tripadvisor',icon:'',name:'TripAdvisor',tag:'geo',priority:true,
      why:'Source dominante pour Perplexity en food. Citabilité IA élevée.',
      claimUrl:q=>`https://www.tripadvisor.fr/Search?q=${q}`,
      claimNote:'Trouvez votre restaurant → "Vous êtes le propriétaire ?" → Inscrivez-vous',
      searchUrl:q=>`https://www.tripadvisor.fr/Search?q=${q}`,
      description:d=>`Découvrez ${d.name} à ${d.city}. Cuisine de qualité, cadre chaleureux, service attentionné. Idéal pour déjeuner ou dîner.`
     },
-    {id:'thefork',icon:'🍴',name:'TheFork / LaFourchette',tag:'seo',priority:true,
+    {id:'thefork',icon:'',name:'TheFork / LaFourchette',tag:'seo',priority:true,
      why:'Intégration native Google "Réserver". Boost CTR +20%.',
      claimUrl:q=>`https://www.thefork.fr/search?queryText=${q}`,
      claimNote:'Cherchez votre restaurant → "Réclamer" ou inscrivez-vous sur manager.thefork.com',
      searchUrl:q=>`https://www.thefork.fr/search?queryText=${q}`,
      description:d=>`${d.name} — ${d.city}. Réservez en ligne et profitez de nos spécialités dans un cadre unique.`
     },
-    {id:'bing',icon:'🔍',name:'Bing Places',tag:'geo',priority:true,
+    {id:'bing',icon:'',name:'Bing Places',tag:'geo',priority:true,
      why:'Source #2 pour ChatGPT. Alimente Cortana et Copilot.',
      claimUrl:q=>`https://www.bingplaces.com/Dashboard/ImportFromGoogle`,
      claimNote:'Importez directement depuis Google Business Profile ou créez manuellement',
      searchUrl:q=>`https://www.bing.com/maps?q=${q}`,
      description:d=>`${d.name}, restaurant à ${d.city}. Cuisine authentique, produits frais. Terrasse, livraison, réservation en ligne.`
     },
-    {id:'foursquare',icon:'📍',name:'Foursquare',tag:'geo',priority:false,
+    {id:'foursquare',icon:'',name:'Foursquare',tag:'geo',priority:false,
      why:'Alimente Apple Maps (Siri), Uber, Samsung, Twitter.',
      claimUrl:q=>`https://foursquare.com/search?q=${q}`,
      claimNote:'Cherchez votre restaurant → "Claim this venue"',
      searchUrl:q=>`https://foursquare.com/explore?q=${q}`,
      description:d=>`${d.name} — ${d.city}. Restaurant convivial, cuisine de qualité.`
     },
-    {id:'apple',icon:'🍎',name:'Apple Maps (Apple Business Connect)',tag:'geo',priority:false,
+    {id:'apple',icon:'',name:'Apple Maps (Apple Business Connect)',tag:'geo',priority:false,
      why:'Siri, Apple Maps, CarPlay. 1 milliard d\'appareils Apple.',
      claimUrl:q=>`https://businessconnect.apple.com/search?term=${q}`,
      claimNote:'Cherchez votre restaurant → "Claim this place"',
      searchUrl:q=>`https://maps.apple.com/?q=${q}`,
      description:d=>`${d.name} à ${d.city}. Restaurant authentique.`
     },
-    {id:'pagesjaunes',icon:'📒',name:'Pages Jaunes',tag:'seo',priority:false,
+    {id:'pagesjaunes',icon:'',name:'Pages Jaunes',tag:'seo',priority:false,
      why:'Annuaire historique FR. Bon pour les citations locales.',
      claimUrl:q=>`https://www.pagesjaunes.fr/recherche/${q}`,
      claimNote:'Trouvez votre fiche → "Vous êtes le propriétaire" → Gérez votre fiche',
      searchUrl:q=>`https://www.pagesjaunes.fr/recherche/${q}`,
      description:d=>`${d.name}, restaurant à ${d.city}.`
     },
-    {id:'facebook',icon:'📘',name:'Facebook (Page)',tag:'geo',priority:false,
+    {id:'facebook',icon:'',name:'Facebook (Page)',tag:'geo',priority:false,
      why:'Signal social (9% AI Visibility). Avis Facebook = citabilité.',
      claimUrl:q=>'https://www.facebook.com/pages/create/?ref_type=launch_point',
      claimNote:'Créez une Page "Restaurant" → Remplissez nom, adresse, catégorie',
      searchUrl:q=>`https://www.facebook.com/search/pages/?q=${q}`,
      description:d=>`${d.name} — votre restaurant à ${d.city}. Cuisine authentique, ambiance chaleureuse. Suivez-nous pour les actus et événements !`
     },
-    {id:'instagram',icon:'📸',name:'Instagram (Profil Pro)',tag:'geo',priority:false,
+    {id:'instagram',icon:'',name:'Instagram (Profil Pro)',tag:'geo',priority:false,
      why:'UGC visuel + signal social. Claude cite l\'UGC x10 en F&B.',
      claimUrl:q=>'https://www.instagram.com/accounts/emailsignup/',
      claimNote:'Créez un compte Pro → Catégorie "Restaurant" → Liez à votre page Facebook',
      searchUrl:q=>`https://www.instagram.com/explore/tags/${encodeURIComponent(q.replace(/\s+/g,''))}`,
-     description:d=>`${d.name} 📍${d.city} | Cuisine authentique 🍽️ | Réservation ↓`
+     description:d=>`${d.name} ${d.city} | Cuisine authentique | Réservation ↓`
     },
-    {id:'waze',icon:'🚗',name:'Waze (publicité locale)',tag:'seo',priority:false,
+    {id:'waze',icon:'',name:'Waze (publicité locale)',tag:'seo',priority:false,
      why:'Navigation GPS. Publicité locale ciblée pour les conducteurs.',
      claimUrl:q=>'https://ads.waze.com',
      claimNote:'Créez un compte Waze Ads → Ajoutez votre restaurant',
      searchUrl:q=>`https://www.waze.com/live-map?q=${q}`,
      description:d=>`${d.name} — ${d.city}`
     },
-    {id:'ubereats',icon:'🛵',name:'Uber Eats',tag:'seo',priority:false,
+    {id:'ubereats',icon:'',name:'Uber Eats',tag:'seo',priority:false,
      why:'Visibilité livraison. Source de données pour Foursquare/Uber.',
      claimUrl:q=>'https://merchants.ubereats.com/signup',
      claimNote:'Inscrivez votre restaurant → formulaire en ligne',
@@ -3486,7 +3486,7 @@ function launchAllPlatforms(){
 
     const btn=document.getElementById('cmdLaunchAll');
     btn.disabled=true;
-    btn.innerHTML='⏳ Lancement en cours...';
+    btn.innerHTML=' Lancement en cours...';
 
     launchNext();
 }
@@ -3495,7 +3495,7 @@ function launchNext(){
     if(launchIndex>=launchQueue.length){
         const btn=document.getElementById('cmdLaunchAll');
         btn.disabled=false;
-        btn.innerHTML='⚡ Lancer tout séquentiellement';
+        btn.innerHTML='Lancer tout séquentiellement';
         return;
     }
     const p=launchQueue[launchIndex];
@@ -3542,7 +3542,7 @@ function renderGroupDash(store){
     const avgGeo=Math.round(totalGeo/count);
 
     // Summary bar
-    document.getElementById('groupTitle').innerHTML=`🏢 Groupe · ${count} point${count>1?'s':''} de vente <span class="multi-tag">Multi-sites</span>`;
+    document.getElementById('groupTitle').innerHTML=`Groupe · ${count} point${count>1?'s':''} de vente <span class="multi-tag">Multi-sites</span>`;
     document.getElementById('groupSummary').innerHTML=`
         <div class="group-stat"><div class="group-stat-val" style="color:${scoreColor(avgSeo)}">${avgSeo}</div><div class="group-stat-label">Score SEO moyen</div></div>
         <div class="group-stat"><div class="group-stat-val" style="color:${scoreColor(avgGeo)}">${avgGeo}</div><div class="group-stat-label">Score GEO moyen</div></div>
@@ -3561,7 +3561,7 @@ function renderGroupDash(store){
     }
 
     // Location cards
-    html+='<h2>📍 Points de vente</h2><div class="loc-grid">';
+    html+='<h2>Points de vente</h2><div class="loc-grid">';
     entries.forEach(([key,r])=>{
         const seo=r.scores.seo,geo=r.scores.geo;
         const platDone=r.platformStatus?Object.values(r.platformStatus).filter(s=>s==='done').length:0;
@@ -3572,7 +3572,7 @@ function renderGroupDash(store){
         html+=`<div class="loc-card" onclick="loadRestaurant('${key}')">
             <button class="loc-card-del" onclick="event.stopPropagation();deleteFromGroup('${key}')" title="Retirer">✕</button>
             <div class="loc-card-header">
-                <div><div class="loc-card-name">${r.name}</div><div class="loc-card-city">📍 ${r.city}</div></div>
+                <div><div class="loc-card-name">${r.name}</div><div class="loc-card-city">${r.city}</div></div>
                 <div class="loc-card-scores">
                     <div class="loc-ring"><svg viewBox="0 0 56 56" width="56" height="56"><circle class="bg" cx="28" cy="28" r="22"/><circle class="fg" cx="28" cy="28" r="22" stroke-dasharray="${c1}" stroke-dashoffset="${c1-c1*seo/100}" stroke="${scoreColor(seo)}"/></svg><div class="loc-ring-val">${seo}<div class="loc-ring-label">SEO</div></div></div>
                     <div class="loc-ring"><svg viewBox="0 0 56 56" width="56" height="56"><circle class="bg" cx="28" cy="28" r="22"/><circle class="fg" cx="28" cy="28" r="22" stroke-dasharray="${c1}" stroke-dashoffset="${c1-c1*geo/100}" stroke="${scoreColor(geo)}"/></svg><div class="loc-ring-val">${geo}<div class="loc-ring-label">GEO</div></div></div>
@@ -3619,19 +3619,19 @@ function deleteFromGroup(key,evt){
 // NAP Consistency Checker
 function renderNapConsistency(entries){
     // Compare real NAP data from Hub Central across locations
-    let html=`<div class="nap-consistency"><h3>🔗 Cohérence NAP multi-sites</h3>
+    let html=`<div class="nap-consistency"><h3>Cohérence NAP multi-sites</h3>
     <p style="font-size:.8rem;color:var(--mut);margin-bottom:12px;">Vérifiez que le nom de marque est écrit de façon identique sur tous les annuaires de chaque point de vente.</p>
     <table class="nap-table"><thead><tr><th>Point de vente</th><th>Score NAP</th><th>Annuaires</th><th>Statut</th></tr></thead><tbody>`;
 
     entries.forEach(([key,r])=>{
         const napScore=r.data.napConsistency||50;
         const cls=napScore>=80?'nap-match':'nap-mismatch';
-        const status=napScore>=80?'✓ Cohérent':'⚠ Incohérences';
+        const status=napScore>=80?'✓ Cohérent':' Incohérences';
         html+=`<tr><td><strong>${r.name}</strong> — ${r.city}</td><td class="${cls}">${napScore}%</td><td>${r.data.directoryPresence||0} annuaires</td><td class="${cls}">${status}</td></tr>`;
     });
 
     html+=`</tbody></table>
-    <p style="font-size:.72rem;color:var(--org);margin-top:10px;">⚠ Pour les chaînes : le nom de marque DOIT être identique partout. Seule l'adresse et le numéro changent par site.</p></div>`;
+    <p style="font-size:.72rem;color:var(--org);margin-top:10px;"> Pour les chaînes : le nom de marque DOIT être identique partout. Seule l'adresse et le numéro changent par site.</p></div>`;
     return html;
 }
 
@@ -3656,7 +3656,7 @@ function renderGroupSchema(entries){
         "subOrganization":subOrgs
     };
 
-    let html=`<h2>🔧 Schema.org hiérarchique (multi-sites)</h2>
+    let html=`<h2>Schema.org hiérarchique (multi-sites)</h2>
     <p style="font-size:.8rem;color:var(--mut);margin-bottom:12px;">Code JSON-LD pour la page d'accueil du site principal. Chaque point de vente a aussi son propre schema local. <button class="plat-btn" onclick="copyGroupSchema()" style="margin-left:8px;">Copier</button></p>
     <div class="schema-preview"><code id="groupSchemaCode">${JSON.stringify(schema,null,2)}</code></div>`;
 
@@ -3673,7 +3673,7 @@ function copyGroupSchema(){
 
 // Bulk Overview
 function renderBulkOverview(entries){
-    let html=`<h2>🚀 Annuaires — Vue d'ensemble</h2>
+    let html=`<h2>Annuaires — Vue d'ensemble</h2>
     <p style="font-size:.8rem;color:var(--mut);margin-bottom:12px;">Progression de la connexion annuaires pour chaque point de vente.</p>
     <div class="bulk-grid">`;
 
@@ -3682,7 +3682,7 @@ function renderBulkOverview(entries){
         const pct=Math.round(platDone/PLATFORMS.length*100);
         const color=pct>=80?'var(--grn)':pct>=40?'var(--org)':'var(--red)';
         html+=`<div class="bulk-card">
-            <div style="font-size:1rem;">${pct>=80?'✅':pct>=40?'🟡':'🔴'}</div>
+            <div style="font-size:1rem;">${pct>=80?'':pct>=40?'':''}</div>
             <div class="bulk-card-name">${r.name}<br><span style="font-size:.68rem;color:var(--mut);">${r.city}</span></div>
             <div class="bulk-card-progress" style="color:${color}">${platDone}/${PLATFORMS.length}</div>
             <button class="bulk-card-btn" onclick="loadAndOpenCmd('${key}')">Gérer →</button>
@@ -3735,7 +3735,7 @@ renderHistory=function(){
     const store=loadAllData();
     const section=document.getElementById('groupBtnSection');
     if(store&&Object.keys(store.restaurants).length>=2){
-        section.innerHTML=`<button class="cmd-toggle" onclick="openGroupDash()" style="width:100%;max-width:480px;justify-content:center;">🏢 Voir le tableau de bord multi-sites (${Object.keys(store.restaurants).length} restaurants)</button>`;
+        section.innerHTML=`<button class="cmd-toggle" onclick="openGroupDash()" style="width:100%;max-width:480px;justify-content:center;">Voir le tableau de bord multi-sites (${Object.keys(store.restaurants).length} restaurants)</button>`;
     } else {
         section.innerHTML='';
     }
@@ -3783,7 +3783,7 @@ async function startGoogleAuth(opts){
     // Check if Google OAuth redirect URI is configured for this domain
     const knownOAuthDomains=['localhost','127.0.0.1','restaurank.com','www.restaurank.com','app.restaurank.com','restaurank.onrender.com'];
     if(!knownOAuthDomains.some(d=>location.hostname===d||location.hostname.endsWith('.'+d))){
-        showToast('⚙️ Connexion Google en cours de configuration pour ce domaine. Utilisez le login email/mot de passe en attendant.','info',8000);
+        showToast('Connexion Google en cours de configuration pour ce domaine. Utilisez le login email/mot de passe en attendant.','info',8000);
         return;
     }
     // Real OAuth flow via backend — POPUP mode (stays in app)
@@ -3797,7 +3797,7 @@ async function startGoogleAuth(opts){
             const popup=window.open(data.url,'RestauRank_Google_Auth',`width=${w},height=${h},left=${left},top=${top},scrollbars=yes,resizable=yes`);
             if(!popup||popup.closed){
                 // Popup blocked — show toast, don't redirect whole page
-                showToast('⚠️ Popup bloquée. Cliquez à nouveau sur "Connecter Google" ou autorisez les popups.','warn',5000);
+                showToast('! Popup bloquée. Cliquez à nouveau sur "Connecter Google" ou autorisez les popups.','warn',5000);
                 return;
             }
             // Poll popup for auth completion
@@ -3813,7 +3813,7 @@ async function startGoogleAuth(opts){
                                 googleAuth=stored;
                                 window._googleConnected=true;
                                 updateAuthUI();
-                                showToast('✅ Google Business Profile connecté !','success');
+                                showToast('✓ Google Business Profile connecté !','success');
                                 // Update onboarding step if active
                                 const gsGoogle=document.getElementById('gs_google');
                                 if(gsGoogle)gsGoogle.classList.add('done');
@@ -3839,7 +3839,7 @@ async function startGoogleAuth(opts){
                             window._googleConnected=true;
                             try{localStorage.setItem('restaurank_google_auth',JSON.stringify(googleAuth));}catch{}
                             updateAuthUI();
-                            showToast('✅ Google Business Profile connecté !','success');
+                            showToast('✓ Google Business Profile connecté !','success');
                             const gsGoogle=document.getElementById('gs_google');
                             if(gsGoogle)gsGoogle.classList.add('done');
                             if(opts?.onSuccess)opts.onSuccess();
@@ -3924,7 +3924,7 @@ function updateAuthUI(){
     const text=document.getElementById('gauthText');
     if(!banner||!btn||!text)return;
     if(googleAuth.connected){
-        const locInfo=googleAuth.locationTitle?` — 📍 ${googleAuth.locationTitle}`:'';
+        const locInfo=googleAuth.locationTitle?` — ${googleAuth.locationTitle}`:'';
         text.innerHTML=`<strong style="color:var(--grn);">✓ Google connecté</strong> — ${googleAuth.email}${locInfo}<small>Les améliorations sont appliquées automatiquement via l'API Google Business Profile</small>`;
         btn.className='gauth-btn connected';
         btn.textContent='✓ Connecté';
@@ -3958,58 +3958,58 @@ function disconnectGoogle(){
 // AUTO-APPLY MAP — Actions automatiques par item
 // ============================================================
 const AUTO_APPLY_MAP={
-    'gbp_desc':{label:'Mettre à jour la description GBP',icon:'📝',platform:'Google Business Profile'},
-    'gbp_cat_primary':{label:'Optimiser la catégorie principale',icon:'🏷️',platform:'Google Business Profile'},
-    'gbp_secondary':{label:'Ajouter les catégories secondaires',icon:'🏷️',platform:'Google Business Profile'},
-    'gbp_posts':{label:'Publier un Google Post',icon:'📢',platform:'Google Business Profile'},
-    'gbp_hours':{label:'Mettre à jour les horaires',icon:'🕐',platform:'Google Business Profile'},
-    'gbp_attr':{label:'Cocher les attributs pertinents',icon:'✅',platform:'Google Business Profile'},
-    'gbp_photos':{label:'Optimiser les tags photos',icon:'📷',platform:'Google Business Profile'},
-    'gbp_menu':{label:'Structurer le menu',icon:'📋',platform:'Google Business Profile'},
-    'gbp_booking':{label:'Configurer la réservation',icon:'📅',platform:'Google Business Profile'},
-    'rev_responses':{label:'Répondre aux avis en attente',icon:'💬',platform:'Google + TripAdvisor'},
-    'rev_rating':{label:'Stratégie boost note Google',icon:'⭐',platform:'Google Business Profile'},
-    'rev_count':{label:'Campagne collecte d\'avis',icon:'📱',platform:'Google + QR Code'},
-    'rev_recency':{label:'Relance avis récents',icon:'🔄',platform:'Google Business Profile'},
-    'rev_multi':{label:'Synchroniser avis multi-plateformes',icon:'🌐',platform:'Google + Yelp + TripAdvisor'},
-    'cit_nap':{label:'Synchroniser NAP sur tous les annuaires',icon:'📍',platform:'57 annuaires'},
-    'cit_presence':{label:'Inscrire sur annuaires manquants',icon:'📋',platform:'57 annuaires'},
-    'cit_completeness':{label:'Compléter toutes les fiches',icon:'✅',platform:'57 annuaires'},
-    'g_chatgpt':{label:'Optimiser visibilité ChatGPT',icon:'🤖',platform:'Yelp + TripAdvisor + Site'},
-    'g_yelp':{label:'Optimiser fiche Yelp pour IA',icon:'⭐',platform:'Yelp'},
-    'g_bestof':{label:'Créer contenu "Best of"',icon:'🏆',platform:'Site + Blog'},
-    'g_perplexity':{label:'Optimiser pour Perplexity',icon:'🔎',platform:'TripAdvisor + Site'},
-    'g_gemini':{label:'Optimiser pour Gemini / AI Overviews',icon:'✨',platform:'Site + Schema.org'},
-    'g_aio':{label:'Optimiser AI Overviews',icon:'🔍',platform:'Google + Site'},
-    'g_foursquare':{label:'Optimiser fiche Foursquare',icon:'📍',platform:'Foursquare'},
-    'g_claude':{label:'Optimiser visibilité Claude',icon:'🟠',platform:'Site + Annuaires'},
-    'g_social':{label:'Boost signaux sociaux',icon:'📱',platform:'Instagram + TikTok + Facebook'},
-    'g_ugc':{label:'Stratégie UGC',icon:'📸',platform:'Instagram + Google'},
-    'g_structured':{label:'Enrichir données structurées',icon:'🔧',platform:'Site (Schema.org)'},
-    'g_mentions':{label:'Campagne mentions de marque',icon:'🔗',platform:'Blog + Presse + Reddit'},
-    'g_entity':{label:'Créer entité Knowledge Graph',icon:'🧠',platform:'Wikidata + Schema.org'},
-    'g_voice':{label:'Optimiser recherche vocale',icon:'🎙️',platform:'FAQ + Schema.org'},
-    'g_freshness':{label:'Planifier contenu frais',icon:'📅',platform:'Blog + Social'},
-    'g_backlinks':{label:'Campagne backlinks locaux',icon:'🔗',platform:'Presse locale + Blogs'},
-    'g_qa':{label:'Pré-remplir Google Q&A',icon:'❓',platform:'Google Business Profile'},
-    'g_pagespeed':{label:'Optimiser Core Web Vitals',icon:'⚡',platform:'Site web'},
+    'gbp_desc':{label:'Mettre à jour la description GBP',icon:'',platform:'Google Business Profile'},
+    'gbp_cat_primary':{label:'Optimiser la catégorie principale',icon:'',platform:'Google Business Profile'},
+    'gbp_secondary':{label:'Ajouter les catégories secondaires',icon:'',platform:'Google Business Profile'},
+    'gbp_posts':{label:'Publier un Google Post',icon:'',platform:'Google Business Profile'},
+    'gbp_hours':{label:'Mettre à jour les horaires',icon:'',platform:'Google Business Profile'},
+    'gbp_attr':{label:'Cocher les attributs pertinents',icon:'',platform:'Google Business Profile'},
+    'gbp_photos':{label:'Optimiser les tags photos',icon:'',platform:'Google Business Profile'},
+    'gbp_menu':{label:'Structurer le menu',icon:'',platform:'Google Business Profile'},
+    'gbp_booking':{label:'Configurer la réservation',icon:'',platform:'Google Business Profile'},
+    'rev_responses':{label:'Répondre aux avis en attente',icon:'',platform:'Google + TripAdvisor'},
+    'rev_rating':{label:'Stratégie boost note Google',icon:'',platform:'Google Business Profile'},
+    'rev_count':{label:'Campagne collecte d\'avis',icon:'',platform:'Google + QR Code'},
+    'rev_recency':{label:'Relance avis récents',icon:'',platform:'Google Business Profile'},
+    'rev_multi':{label:'Synchroniser avis multi-plateformes',icon:'',platform:'Google + Yelp + TripAdvisor'},
+    'cit_nap':{label:'Synchroniser NAP sur tous les annuaires',icon:'',platform:'57 annuaires'},
+    'cit_presence':{label:'Inscrire sur annuaires manquants',icon:'',platform:'57 annuaires'},
+    'cit_completeness':{label:'Compléter toutes les fiches',icon:'',platform:'57 annuaires'},
+    'g_chatgpt':{label:'Optimiser visibilité ChatGPT',icon:'',platform:'Yelp + TripAdvisor + Site'},
+    'g_yelp':{label:'Optimiser fiche Yelp pour IA',icon:'',platform:'Yelp'},
+    'g_bestof':{label:'Créer contenu "Best of"',icon:'',platform:'Site + Blog'},
+    'g_perplexity':{label:'Optimiser pour Perplexity',icon:'',platform:'TripAdvisor + Site'},
+    'g_gemini':{label:'Optimiser pour Gemini / AI Overviews',icon:'',platform:'Site + Schema.org'},
+    'g_aio':{label:'Optimiser AI Overviews',icon:'',platform:'Google + Site'},
+    'g_foursquare':{label:'Optimiser fiche Foursquare',icon:'',platform:'Foursquare'},
+    'g_claude':{label:'Optimiser visibilité Claude',icon:'',platform:'Site + Annuaires'},
+    'g_social':{label:'Boost signaux sociaux',icon:'',platform:'Instagram + TikTok + Facebook'},
+    'g_ugc':{label:'Stratégie UGC',icon:'',platform:'Instagram + Google'},
+    'g_structured':{label:'Enrichir données structurées',icon:'',platform:'Site (Schema.org)'},
+    'g_mentions':{label:'Campagne mentions de marque',icon:'',platform:'Blog + Presse + Reddit'},
+    'g_entity':{label:'Créer entité Knowledge Graph',icon:'',platform:'Wikidata + Schema.org'},
+    'g_voice':{label:'Optimiser recherche vocale',icon:'',platform:'FAQ + Schema.org'},
+    'g_freshness':{label:'Planifier contenu frais',icon:'',platform:'Blog + Social'},
+    'g_backlinks':{label:'Campagne backlinks locaux',icon:'',platform:'Presse locale + Blogs'},
+    'g_qa':{label:'Pré-remplir Google Q&A',icon:'',platform:'Google Business Profile'},
+    'g_pagespeed':{label:'Optimiser Core Web Vitals',icon:'',platform:'Site web'},
 };
 
 const WEBSITE_APPLY_MAP={
-    'op_schema':{label:'Injecter Schema.org Restaurant',icon:'🔧',type:'code'},
-    'op_faq':{label:'Injecter FAQPage Schema',icon:'❓',type:'code'},
-    'op_title':{label:'Optimiser title + meta description',icon:'🏷️',type:'code'},
-    'op_nap':{label:'Ajouter footer NAP structuré',icon:'📍',type:'code'},
-    'op_speed':{label:'Optimiser la vitesse du site',icon:'⚡',type:'guide'},
-    'op_metadesc':{label:'Optimiser meta description',icon:'📝',type:'code'},
-    'op_og':{label:'Ajouter Open Graph tags',icon:'🔗',type:'code'},
-    'op_tellink':{label:'Ajouter lien tel: cliquable',icon:'📞',type:'code'},
-    'op_mapembed':{label:'Intégrer Google Maps',icon:'🗺️',type:'code'},
-    'op_social_links':{label:'Ajouter liens sociaux (sameAs)',icon:'📱',type:'code'},
-    'op_sitemap':{label:'Générer sitemap XML',icon:'🗂️',type:'code'},
-    'op_booking':{label:'Ajouter bouton réservation',icon:'📅',type:'code'},
-    'op_canonical':{label:'Ajouter balise canonical',icon:'🔗',type:'code'},
-    'op_content':{label:'Enrichir contenu du site',icon:'📝',type:'code'},
+    'op_schema':{label:'Injecter Schema.org Restaurant',icon:'',type:'code'},
+    'op_faq':{label:'Injecter FAQPage Schema',icon:'',type:'code'},
+    'op_title':{label:'Optimiser title + meta description',icon:'',type:'code'},
+    'op_nap':{label:'Ajouter footer NAP structuré',icon:'',type:'code'},
+    'op_speed':{label:'Optimiser la vitesse du site',icon:'',type:'guide'},
+    'op_metadesc':{label:'Optimiser meta description',icon:'',type:'code'},
+    'op_og':{label:'Ajouter Open Graph tags',icon:'',type:'code'},
+    'op_tellink':{label:'Ajouter lien tel: cliquable',icon:'',type:'code'},
+    'op_mapembed':{label:'Intégrer Google Maps',icon:'',type:'code'},
+    'op_social_links':{label:'Ajouter liens sociaux (sameAs)',icon:'',type:'code'},
+    'op_sitemap':{label:'Générer sitemap XML',icon:'',type:'code'},
+    'op_booking':{label:'Ajouter bouton réservation',icon:'',type:'code'},
+    'op_canonical':{label:'Ajouter balise canonical',icon:'',type:'code'},
+    'op_content':{label:'Enrichir contenu du site',icon:'',type:'code'},
 };
 
 async function autoApplyGBP(itemId){
@@ -4067,11 +4067,11 @@ async function autoApplyGBP(itemId){
             ];
         }else if(itemId==='gbp_posts'){
             endpoint='/api/gbp/create-post';
-            body.post={text:content||'Découvrez notre nouvelle carte de saison ! Des plats frais et locaux vous attendent. 🍽️',type:'STANDARD'};
+            body.post={text:content||'Découvrez notre nouvelle carte de saison ! Des plats frais et locaux vous attendent. ',type:'STANDARD'};
         }else{
             // No direct API endpoint for this item — tell user honestly
-            if(statusEl){statusEl.className='auto-apply-status error';statusEl.textContent='⚠️ Pas d\'API disponible pour '+mapping.platform+'. Utilisez le contenu généré ci-dessous pour appliquer manuellement.';}
-            btnEl.innerHTML='📋 Manuel requis';
+            if(statusEl){statusEl.className='auto-apply-status error';statusEl.textContent='! Pas d\'API disponible pour '+mapping.platform+'. Utilisez le contenu généré ci-dessous pour appliquer manuellement.';}
+            btnEl.innerHTML='Manuel requis';
             btnEl.disabled=false;
             return;
         }
@@ -4084,8 +4084,8 @@ async function autoApplyGBP(itemId){
         const result=await resp.json();
 
         if(result.success||result.data){
-            if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='✅ Appliqué avec succès sur '+mapping.platform+' ! Les changements peuvent prendre 24-48h pour apparaître.';}
-            btnEl.innerHTML='✅ Appliqué';
+            if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='✓ Appliqué avec succès sur '+mapping.platform+' ! Les changements peuvent prendre 24-48h pour apparaître.';}
+            btnEl.innerHTML='✓ Appliqué';
             btnEl.className='auto-apply-btn google';
             markDone(itemId);
         }else{
@@ -4093,9 +4093,9 @@ async function autoApplyGBP(itemId){
         }
     }catch(err){
         console.error('Auto-apply error:',err);
-        if(statusEl){statusEl.className='auto-apply-status error';statusEl.textContent='❌ Erreur: '+err.message;}
+        if(statusEl){statusEl.className='auto-apply-status error';statusEl.textContent='✗ Erreur: '+err.message;}
         btnEl.disabled=false;
-        btnEl.innerHTML='🔄 Réessayer';
+        btnEl.innerHTML='Réessayer';
     }
 }
 
@@ -4109,7 +4109,7 @@ async function autoApplyFromModal(itemId){
 
     btn.disabled=true;
     btn.innerHTML='<span class="spinner"></span> Application en cours...';
-    if(statusEl){statusEl.className='auto-apply-status loading';statusEl.style.display='flex';statusEl.textContent='⏳ Envoi des optimisations...';}
+    if(statusEl){statusEl.className='auto-apply-status loading';statusEl.style.display='flex';statusEl.textContent=' Envoi des optimisations...';}
 
     try{
         const name=currentData?.name||storedName||'Restaurant';
@@ -4119,7 +4119,7 @@ async function autoApplyFromModal(itemId){
             // GBP auto-apply
             if(!googleAuth?.connected){
                 startGoogleAuth();
-                btn.disabled=false;btn.innerHTML='🔗 Connecter Google d\'abord';
+                btn.disabled=false;btn.innerHTML='Connecter Google d\'abord';
                 return;
             }
             await autoApplyGBP(itemId);
@@ -4134,15 +4134,15 @@ async function autoApplyFromModal(itemId){
                 const resp=await fetchTimeout(`${API_BASE}/api/cms/auto-apply`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cms_type:cmsType,improvements:{[itemId]:code}})},20000);
                 const result=await resp.json();
                 if(result.success){
-                    if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='✅ Appliqué sur '+cmsType+' ! Changements visibles sous 24h.';}
-                    btn.innerHTML='✅ Appliqué';
+                    if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='✓ Appliqué sur '+cmsType+' ! Changements visibles sous 24h.';}
+                    btn.innerHTML='✓ Appliqué';
                     markDone(itemId);
                 } else throw new Error(result.error||'Erreur CMS');
             } else if(code){
                 // No CMS connected — auto-generate and store, mark as ready
                 window[`_autoContent_${itemId}`]=content;
-                if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='✅ Code généré et prêt. Sera injecté automatiquement à la connexion CMS.';}
-                btn.innerHTML='✅ Prêt à injecter';
+                if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='✓ Code généré et prêt. Sera injecté automatiquement à la connexion CMS.';}
+                btn.innerHTML='✓ Prêt à injecter';
                 markDone(itemId);
             }
         } else {
@@ -4150,15 +4150,15 @@ async function autoApplyFromModal(itemId){
             const resp=await fetchTimeout(`${API_BASE}/api/ai/generate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:itemId,restaurant_name:name,city,restaurant_id:currentData?.restaurant_id||0})},30000);
             const data=await resp.json();
             if(data.success){
-                if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='📝 Contenu généré par IA — copiez-le et appliquez-le manuellement sur la plateforme.';}
-                btn.innerHTML='📝 Contenu prêt';
+                if(statusEl){statusEl.className='auto-apply-status success';statusEl.textContent='Contenu généré par IA — copiez-le et appliquez-le manuellement sur la plateforme.';}
+                btn.innerHTML='Contenu prêt';
                 // Don't markDone — user must manually apply
             } else throw new Error(data.error||'Erreur');
         }
     }catch(err){
         console.error('autoApplyFromModal:',err);
-        if(statusEl){statusEl.className='auto-apply-status error';statusEl.textContent='❌ '+err.message+' — Réessayez ou consultez le contenu ci-dessous.';}
-        btn.disabled=false;btn.innerHTML='🔄 Réessayer';
+        if(statusEl){statusEl.className='auto-apply-status error';statusEl.textContent='✗ '+err.message+' — Réessayez ou consultez le contenu ci-dessous.';}
+        btn.disabled=false;btn.innerHTML='Réessayer';
     }
 }
 
@@ -4205,19 +4205,19 @@ function renderContentCMSStatus(){
         const cmsName=({wordpress:'WordPress',webflow:'Webflow',shopify:'Shopify',wix:'Wix',squarespace:'Squarespace',ghost:'Ghost'})[cms.type]||cms.type;
         el.innerHTML=`
             <div style="background:rgba(45,122,79,.08);border:1px solid rgba(45,122,79,.3);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                <div style="font-size:1.4rem;">✅</div>
+                <div style="font-size:1.4rem;"></div>
                 <div style="flex:1;">
                     <div style="font-weight:700;font-size:.88rem;color:var(--grn);">${cmsName} connecté</div>
                     <div style="font-size:.7rem;color:var(--mut);">Les articles seront publiés automatiquement en zone cachée sur votre site</div>
                 </div>
-                <button class="btn-gen" style="font-size:.7rem;padding:6px 12px;background:var(--s2);" onclick="switchDashTab('dispatch')">🔧 Gérer</button>
+                <button class="btn-gen" style="font-size:.7rem;padding:6px 12px;background:var(--s2);" onclick="switchDashTab('dispatch')">Gérer</button>
             </div>`;
     } else if(detected){
         // Detected but not connected — show connection CTA with instructions
         const instructions=({
             wordpress:{
                 name:'WordPress',
-                icon:'📝',
+                icon:'',
                 steps:[
                     '1. Connectez-vous à <strong>votre WordPress</strong>',
                     '2. Allez dans <strong>Utilisateurs → Profil</strong>',
@@ -4228,7 +4228,7 @@ function renderContentCMSStatus(){
             },
             webflow:{
                 name:'Webflow',
-                icon:'🌊',
+                icon:'',
                 steps:[
                     '1. Allez sur <a href="https://webflow.com/dashboard/account/integrations" target="_blank" style="color:var(--org);">webflow.com/dashboard/account/integrations</a>',
                     '2. Cliquez <strong>"Generate new API token"</strong>',
@@ -4239,7 +4239,7 @@ function renderContentCMSStatus(){
             },
             shopify:{
                 name:'Shopify',
-                icon:'🛍️',
+                icon:'',
                 steps:[
                     '1. Shopify Admin → <strong>Apps → Develop apps</strong>',
                     '2. <strong>Create app</strong> → nommez "RestauRank"',
@@ -4250,7 +4250,7 @@ function renderContentCMSStatus(){
             },
             wix:{
                 name:'Wix',
-                icon:'🔷',
+                icon:'',
                 steps:[
                     '1. Wix Dashboard → <strong>Settings → API Keys</strong>',
                     '2. <strong>Generate API Key</strong>',
@@ -4271,7 +4271,7 @@ function renderContentCMSStatus(){
             },
             ghost:{
                 name:'Ghost',
-                icon:'👻',
+                icon:'',
                 steps:[
                     '1. Ghost Admin → <strong>Integrations</strong>',
                     '2. <strong>Add custom integration</strong> → nommez "RestauRank"',
@@ -4279,7 +4279,7 @@ function renderContentCMSStatus(){
                     '4. Collez dans l\'onglet IA Dispatch'
                 ]
             }
-        })[detected]||{name:detected,icon:'🌐',steps:['CMS détecté mais non supporté par API — mode manuel']};
+        })[detected]||{name:detected,icon:'',steps:['CMS détecté mais non supporté par API — mode manuel']};
 
         el.innerHTML=`
             <div style="background:rgba(217,91,43,.08);border:1px solid rgba(217,91,43,.3);border-radius:12px;padding:16px 20px;margin-bottom:12px;">
@@ -4289,10 +4289,10 @@ function renderContentCMSStatus(){
                         <div style="font-weight:800;font-size:.95rem;color:var(--org);">${instructions.name} détecté — connexion requise</div>
                         <div style="font-size:.72rem;color:var(--mut);margin-top:2px;">Pour publier automatiquement, connectez votre ${instructions.name} en donnant un accès API dédié</div>
                     </div>
-                    <button class="btn-gen" style="background:#D95B2B;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="switchDashTab('dispatch');setTimeout(()=>{const b=document.querySelector('.cms-connect-btn:not(.connected)');if(b)b.click();},500);">🔗 Se connecter maintenant</button>
+                    <button class="btn-gen" style="background:#D95B2B;color:#fff;font-size:.78rem;padding:10px 18px;" onclick="switchDashTab('dispatch');setTimeout(()=>{const b=document.querySelector('.cms-connect-btn:not(.connected)');if(b)b.click();},500);">Se connecter maintenant</button>
                 </div>
                 <details style="margin-top:8px;">
-                    <summary style="cursor:pointer;font-size:.72rem;color:var(--org);font-weight:600;">📘 Voir les étapes de connexion</summary>
+                    <summary style="cursor:pointer;font-size:.72rem;color:var(--org);font-weight:600;"> Voir les étapes de connexion</summary>
                     <div style="margin-top:10px;padding:12px 14px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;">
                         ${instructions.steps.map(s=>`<div style="padding:4px 0;font-size:.75rem;color:var(--txt);">${s}</div>`).join('')}
                     </div>
@@ -4302,7 +4302,7 @@ function renderContentCMSStatus(){
         // No CMS detected
         el.innerHTML=`
             <div style="background:rgba(107,114,128,.1);border:1px solid var(--bdr);border-radius:12px;padding:14px 18px;display:flex;align-items:center;gap:12px;margin-bottom:12px;">
-                <div style="font-size:1.4rem;">ℹ️</div>
+                <div style="font-size:1.4rem;"></div>
                 <div style="flex:1;">
                     <div style="font-weight:700;font-size:.85rem;">Aucun site web détecté</div>
                     <div style="font-size:.7rem;color:var(--mut);">Lancez un audit avec l'URL de votre site pour activer la publication automatique de contenu</div>
@@ -4324,13 +4324,13 @@ async function loadCMSSnapshots(){
         }
         el.innerHTML=data.snapshots.map(s=>{
             const date=new Date(s.created_at).toLocaleString('fr-FR');
-            const typeLabel={blog_publish:'📝 Article',schema_injection:'🔧 Schema.org',meta_update:'🏷️ Meta tags',nap_update:'📍 NAP footer',faq_publish:'❓ FAQ'}[s.action_type]||s.action_type;
+            const typeLabel={blog_publish:'Article',schema_injection:'Schema.org',meta_update:'Meta tags',nap_update:'NAP footer',faq_publish:' FAQ'}[s.action_type]||s.action_type;
             const statusTag=s.reverted
                 ?'<span style="background:rgba(107,114,128,.15);color:var(--mut);padding:2px 8px;border-radius:99px;font-size:.62rem;font-weight:700;">Annulé '+new Date(s.reverted_at).toLocaleDateString('fr-FR')+'</span>'
-                :'<span style="background:rgba(45,122,79,.15);color:var(--grn);padding:2px 8px;border-radius:99px;font-size:.62rem;font-weight:700;">✅ Appliqué</span>';
+                :'<span style="background:rgba(45,122,79,.15);color:var(--grn);padding:2px 8px;border-radius:99px;font-size:.62rem;font-weight:700;">✓ Appliqué</span>';
             const revertBtn=s.reverted
                 ?''
-                :`<button class="btn-gen" style="font-size:.68rem;padding:6px 12px;background:rgba(192,57,43,.15);color:var(--red);border:1px solid var(--red);" onclick="revertCMSSnapshot(${s.id})">↩️ Annuler</button>`;
+                :`<button class="btn-gen" style="font-size:.68rem;padding:6px 12px;background:rgba(192,57,43,.15);color:var(--red);border:1px solid var(--red);" onclick="revertCMSSnapshot(${s.id})">↩ Annuler</button>`;
             const urlLink=s.target_url?`<a href="${s.target_url}" target="_blank" style="color:var(--org);font-size:.68rem;text-decoration:none;">→ Voir</a>`:'';
             return `<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:8px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
                 <div style="font-size:.85rem;">${typeLabel}</div>
@@ -4350,13 +4350,13 @@ async function revertCMSSnapshot(id){
         const resp=await fetch(API_BASE+'/api/cms/snapshots/'+id+'/revert',{method:'POST',headers:{'Authorization':'Bearer '+(sessionToken||'')}});
         const data=await resp.json();
         if(data.success){
-            showToast('✅ Modification annulée','ok');
+            showToast('✓ Modification annulée','ok');
             loadCMSSnapshots();
             loadBlogHistory();
         }else{
-            showToast('❌ '+(data.error||'Erreur'),'err');
+            showToast('✗ '+(data.error||'Erreur'),'err');
         }
-    }catch(e){showToast('❌ '+e.message,'err');}
+    }catch(e){showToast('✗ '+e.message,'err');}
 }
 
 // ══ CONTENT EDITOR — Blog + Reddit ══
@@ -4396,7 +4396,7 @@ async function generateBlogContent(){
         logo:hub.logo||'',
         priceLevel:hub.price_level,
     };
-    showContentStatus('blogStatus','⏳ Génération article SEO+GEO (1500-2200 mots, ~30s)...','info');
+    showContentStatus('blogStatus',' Génération article SEO+GEO (1500-2200 mots, ~30s)...','info');
     try{
         const resp=await fetch(API_BASE+'/api/ai/generate',{
             method:'POST',
@@ -4410,22 +4410,22 @@ async function generateBlogContent(){
         const titleMatch=content.match(/<h1[^>]*>(.*?)<\/h1>/i);
         if(titleMatch)document.getElementById('blogTitle').value=titleMatch[1].replace(/<[^>]+>/g,'');
         document.getElementById('blogContent').value=content;
-        showContentStatus('blogStatus','✅ Contenu généré — relisez et cliquez Publier','ok');
-    }catch(e){showContentStatus('blogStatus','❌ '+e.message,'err');}
+        showContentStatus('blogStatus','✓ Contenu généré — relisez et cliquez Publier','ok');
+    }catch(e){showContentStatus('blogStatus','✗ '+e.message,'err');}
 }
 
 async function publishBlogPost(){
     const title=document.getElementById('blogTitle').value.trim();
     const content=document.getElementById('blogContent').value.trim();
     const status=document.getElementById('blogStatusSelect').value;
-    if(!title||!content)return showContentStatus('blogStatus','❌ Titre et contenu requis','err');
+    if(!title||!content)return showContentStatus('blogStatus','✗ Titre et contenu requis','err');
 
     // Detect CMS type from connection or detected CMS
     const cms=cmsConnection||JSON.parse(localStorage.getItem('restaurank_cms_conn')||'null');
     const detected=detectedCMS?.detected?.cms||currentData?.detectedCMS?.cms;
     const cmsType=cms?.type||detected||'generic';
 
-    showContentStatus('blogStatus','⏳ Publication sur '+cmsType+'...','info');
+    showContentStatus('blogStatus',' Publication sur '+cmsType+'...','info');
     try{
         const resp=await fetch(API_BASE+'/api/blog/publish',{
             method:'POST',
@@ -4440,12 +4440,12 @@ async function publishBlogPost(){
         const data=await resp.json();
         if(!data.success)throw new Error(data.error||'Erreur');
         if(data.method==='manual'||data.method==='squarespace_manual'){
-            showContentStatus('blogStatus','📋 '+(data.note||'Contenu prêt à copier manuellement'),'info');
+            showContentStatus('blogStatus',''+(data.note||'Contenu prêt à copier manuellement'),'info');
         } else {
-            showContentStatus('blogStatus','✅ Publié sur '+cmsType+' ! '+(data.url?'→ '+data.url:''),'ok');
+            showContentStatus('blogStatus','✓ Publié sur '+cmsType+' ! '+(data.url?'→ '+data.url:''),'ok');
         }
         loadBlogHistory();
-    }catch(e){showContentStatus('blogStatus','❌ '+e.message,'err');}
+    }catch(e){showContentStatus('blogStatus','✗ '+e.message,'err');}
 }
 
 async function loadBlogHistory(){
@@ -4477,7 +4477,7 @@ async function generateRedditPosts(){
         amenities:Object.keys(hub.amenities||{}).filter(k=>hub.amenities[k]),
         priceLevel:hub.price_level,
     };
-    showContentStatus('redditStatus','⏳ Génération 3 posts Reddit authentiques (~20s)...','info');
+    showContentStatus('redditStatus',' Génération 3 posts Reddit authentiques (~20s)...','info');
     try{
         const resp=await fetch(API_BASE+'/api/ai/generate',{
             method:'POST',
@@ -4496,16 +4496,16 @@ async function generateRedditPosts(){
         if(titleMatch)document.getElementById('redditTitle').value=titleMatch[1].trim();
         else document.getElementById('redditTitle').value='Quelqu\'un a testé '+name+' ?';
         document.getElementById('redditText').value=firstPost.replace(/(?:Titre|Title)\s*:.*\n?/i,'').trim();
-        showContentStatus('redditStatus','✅ 3 posts générés — vérifiez et publiez un par un','ok');
-    }catch(e){showContentStatus('redditStatus','❌ '+e.message,'err');}
+        showContentStatus('redditStatus','✓ 3 posts générés — vérifiez et publiez un par un','ok');
+    }catch(e){showContentStatus('redditStatus','✗ '+e.message,'err');}
 }
 
 async function publishRedditPost(){
     const subreddit=document.getElementById('redditSubreddit').value.trim().replace(/^r\//,'');
     const title=document.getElementById('redditTitle').value.trim();
     const text=document.getElementById('redditText').value.trim();
-    if(!subreddit||!title||!text)return showContentStatus('redditStatus','❌ Subreddit, titre et texte requis','err');
-    showContentStatus('redditStatus','⏳ Publication sur Reddit...','info');
+    if(!subreddit||!title||!text)return showContentStatus('redditStatus','✗ Subreddit, titre et texte requis','err');
+    showContentStatus('redditStatus',' Publication sur Reddit...','info');
     try{
         const resp=await fetch(API_BASE+'/api/reddit/post',{
             method:'POST',
@@ -4517,12 +4517,12 @@ async function publishRedditPost(){
             if(data.needsConfig)throw new Error('Reddit non configuré. Ajoutez vos credentials dans Paramètres');
             throw new Error(data.error||'Erreur Reddit');
         }
-        showContentStatus('redditStatus','✅ Publié sur r/'+subreddit+' ! '+(data.url||''),'ok');
-    }catch(e){showContentStatus('redditStatus','❌ '+e.message,'err');}
+        showContentStatus('redditStatus','✓ Publié sur r/'+subreddit+' ! '+(data.url||''),'ok');
+    }catch(e){showContentStatus('redditStatus','✗ '+e.message,'err');}
 }
 
 // ============================================================
-// 🧠 AGENT AUTONOMOUS — Frontend
+//  AGENT AUTONOMOUS — Frontend
 // ============================================================
 let agentSSE=null;
 let agentCurrentRunId=null;
@@ -4566,7 +4566,7 @@ function connectAgentSSE(runId){
   };
 }
 
-const stageIcons={scrape:'🔍',analyze:'🧠',generate:'✍️',apply:'🚀',report:'📊'};
+const stageIcons={scrape:'',analyze:'',generate:'',apply:'',report:''};
 const stageLabels={scrape:'Collecte des données',analyze:'Analyse IA',generate:'Génération de contenu',apply:'Application automatique',report:'Rapport final'};
 
 function handleAgentEvent(ev){
@@ -4584,7 +4584,7 @@ function handleAgentEvent(ev){
 
   switch(ev.type){
     case 'stage_started':
-      stageIcon.textContent=stageIcons[ev.stage]||'⏳';
+      stageIcon.textContent=stageIcons[ev.stage]||'';
       stageText.textContent=stageLabels[ev.stage]||ev.stage;
       stageDetail.textContent=ev.message||'';
       timeline.innerHTML+=`<div style="padding:8px 0;border-bottom:1px solid var(--bdr);"><span style="color:var(--ind2);">${stageIcons[ev.stage]||'▸'}</span> <strong>${stageLabels[ev.stage]||ev.stage}</strong> — <span style="color:var(--t2);">${ev.message||''}</span></div>`;
@@ -4596,15 +4596,15 @@ function handleAgentEvent(ev){
     case 'item_analyzed':
       if(ev.item){
         const color=ev.item.status==='good'?'var(--grn)':ev.item.severity==='critical'?'var(--err)':ev.item.severity==='high'?'var(--wrn)':'var(--t2)';
-        const icon=ev.item.status==='good'?'✅':ev.item.severity==='critical'?'🔴':'🟡';
+        const icon=ev.item.status==='good'?'':ev.item.severity==='critical'?'':'';
         timeline.innerHTML+=`<div style="padding:3px 0;font-size:.82rem;color:${color};">  ${icon} ${ev.item.name}: ${ev.item.finding||'OK'}</div>`;
       }
       break;
     case 'warning':
-      timeline.innerHTML+=`<div style="padding:4px 0;font-size:.85rem;color:var(--wrn);">  ⚠️ ${ev.message}</div>`;
+      timeline.innerHTML+=`<div style="padding:4px 0;font-size:.85rem;color:var(--wrn);">  ! ${ev.message}</div>`;
       break;
     case 'stage_completed':
-      timeline.innerHTML+=`<div style="padding:6px 0;color:var(--grn);font-weight:500;">  ✅ ${stageLabels[ev.stage]||ev.stage} terminé</div>`;
+      timeline.innerHTML+=`<div style="padding:6px 0;color:var(--grn);font-weight:500;">  ✓ ${stageLabels[ev.stage]||ev.stage} terminé</div>`;
       break;
     case 'run_completed':
       if(agentSSE)try{agentSSE.close();}catch(e){}
@@ -4640,10 +4640,10 @@ function handleAgentEvent(ev){
     case 'run_failed':
       if(agentSSE)try{agentSSE.close();}catch(e){}
       agentSSE=null;
-      stageIcon.textContent='❌';
+      stageIcon.textContent='';
       stageText.textContent='Erreur';
       stageDetail.textContent=ev.error||'Erreur inconnue';
-      timeline.innerHTML+=`<div style="padding:8px 0;color:var(--err);font-weight:500;">❌ ${ev.error}</div>`;
+      timeline.innerHTML+=`<div style="padding:8px 0;color:var(--err);font-weight:500;">✗ ${ev.error}</div>`;
       showToast('Agent échoué: '+(ev.error||''),'error');
       break;
   }
@@ -4793,7 +4793,7 @@ async function fetchRealReviews(){
         if(data.success&&data.reviews?.length>0){
             window._currentReviews=data.reviews;
             window._reviewsSource='google';
-            addToLog(`📥 ${data.reviews.length} vrais avis chargés depuis Google (note moy. calculée)`);
+            addToLog(`${data.reviews.length} vrais avis chargés depuis Google (note moy. calculée)`);
             return true;
         }
     }catch(e){console.warn('Fetch reviews error:',e);}
@@ -4806,7 +4806,7 @@ function renderReviews(){
     if(!reviewCheck.allowed){
         const tab=document.getElementById('tabReviews');
         if(tab) tab.innerHTML=`<div style="text-align:center;padding:60px 20px;">
-            <div style="font-size:3rem;margin-bottom:16px;">🔒</div>
+            <div style="font-size:3rem;margin-bottom:16px;"></div>
             <h3 style="color:var(--txt);margin-bottom:8px;">Gestion des avis — Plan Starter+</h3>
             <p style="color:var(--mut);margin-bottom:20px;">Répondez automatiquement aux avis Google, suivez votre note moyenne et détectez les tendances.</p>
             <button class="btn" onclick="showUpgradeModal('${reviewCheck.reason}','starter')" style="background:var(--ind);border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:700;">⬆ Passer au plan Starter</button>
@@ -4836,7 +4836,7 @@ function renderReviews(){
 
     // No reviews banner
     const noReviewsBanner=data.length===0?`<div style="padding:20px;border-radius:10px;background:var(--s1);border:1px solid var(--bdr);text-align:center;margin-bottom:10px;">
-        <div style="font-size:1.5rem;margin-bottom:8px;">💬</div>
+        <div style="font-size:1.5rem;margin-bottom:8px;"></div>
         <div style="font-weight:700;color:var(--txt);margin-bottom:4px;">Aucun avis chargé</div>
         <div style="font-size:.78rem;color:var(--mut);line-height:1.5;">Les avis Google seront récupérés automatiquement lors du prochain scan.<br>Connectez Google Business Profile pour accéder aux avis en temps réel.</div>
     </div>`:'';
@@ -4844,7 +4844,7 @@ function renderReviews(){
     // Auto-reply-all button at top
     const headerHtml=noReviewsBanner+`<div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
         <button class="auto-btn-full" id="btnAutoReplyAll" onclick="autoReplyAllReviews()" style="flex:1;min-width:200px;padding:12px;font-size:.85rem;background:linear-gradient(135deg,#f59e0b,var(--ind));">
-            🤖 Répondre à tous les avis (${unanswered} sans réponse)
+            Répondre à tous les avis (${unanswered} sans réponse)
         </button>
         <div style="font-size:.7rem;color:var(--mut);">Réponses optimisées SEO local — inclut mots-clés + nom ville</div>
     </div>`;
@@ -4855,7 +4855,7 @@ function renderReviews(){
     const avgR=realRating?realRating.toFixed(1):data.length>0?(data.reduce((s,r)=>s+r.rating,0)/data.length).toFixed(1):'—';
     const respRate=data.length>0?Math.round(data.filter(r=>r.replied).length/data.length*100)+'%':'—';
     const avgNum=parseFloat(avgR);
-    const sentEmoji=avgNum>=4.5?'😍':avgNum>=4?'😊':avgNum>=3?'😐':'😟';
+    const sentEmoji=avgNum>=4.5?'':avgNum>=4?'':avgNum>=3?'':'';
     try{document.getElementById('reviewCount').textContent=realCount;document.getElementById('avgRating').textContent=avgR;document.getElementById('responseRate').textContent=respRate;document.getElementById('sentiment').textContent=sentEmoji;}catch(e){}
 
     list.innerHTML=headerHtml+data.map((r,i)=>{
@@ -4866,14 +4866,14 @@ function renderReviews(){
             <div class="review-content">
                 <div class="review-header">
                     <div class="review-author">${r.author}${srcBadge}${timeBadge} ${r.replied?'<span style="font-size:.6rem;color:var(--grn);font-weight:700;">✓ RÉPONDU</span>':''}</div>
-                    <div class="review-rating">${'⭐'.repeat(Math.min(r.rating,5))}${'☆'.repeat(Math.max(0,5-r.rating))}</div>
+                    <div class="review-rating">${''.repeat(Math.min(r.rating,5))}${''.repeat(Math.max(0,5-r.rating))}</div>
                 </div>
                 <div class="review-text">${r.text||'<em style="color:var(--mut);">Pas de texte</em>'}</div>
                 <div class="review-reply-preview" id="replyPreview${i}" style="display:none;margin-top:6px;padding:8px 10px;border-radius:8px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);font-size:.72rem;color:var(--txt);line-height:1.4;"></div>
                 <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
-                    <button class="review-reply-btn" onclick="generateReviewReply(${i})">💬 ${r.replied?'Régénérer':'Répondre avec IA'}</button>
+                    <button class="review-reply-btn" onclick="generateReviewReply(${i})"> ${r.replied?'Régénérer':'Répondre avec IA'}</button>
                     ${!r.replied?`<button class="review-reply-btn" onclick="markReviewReplied(${i})" style="background:rgba(16,185,129,.1);color:var(--grn);">✓ Déjà répondu</button>`:''}
-                    ${r.source==='google_places'&&!r.replied?`<button class="review-reply-btn" onclick="openGoogleReviewReply(${i})" style="background:rgba(66,133,244,.1);color:#4285f4;">📤 Répondre sur Google</button>`:''}
+                    ${r.source==='google_places'&&!r.replied?`<button class="review-reply-btn" onclick="openGoogleReviewReply(${i})" style="background:rgba(66,133,244,.1);color:#4285f4;">Répondre sur Google</button>`:''}
                 </div>
             </div>
         </div>`;
@@ -4900,7 +4900,7 @@ function openGoogleReviewReply(idx){
     } else {
         window.open('https://business.google.com/','_blank');
     }
-    addToLog('📤 Réponse copiée — ouvrez Google Business Profile pour coller votre réponse');
+    addToLog('Réponse copiée — ouvrez Google Business Profile pour coller votre réponse');
 }
 
 // ============================================================
@@ -4910,7 +4910,7 @@ async function runReviewAnalysis(){
     const btn=document.getElementById('btnRunSemantic');
     const results=document.getElementById('semanticResults');
     if(!btn||!results)return;
-    btn.disabled=true;btn.textContent='⏳ Analyse...';
+    btn.disabled=true;btn.textContent=' Analyse...';
     results.innerHTML='<p style="color:var(--cyn);">Récupération et analyse des avis Google en cours...</p>';
 
     try{
@@ -4919,11 +4919,11 @@ async function runReviewAnalysis(){
         const placeId=currentData?.place_id||window._hubData?.place_id||'';
         const resp=await fetchTimeout(API_BASE+'/api/analyze-reviews',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,city,place_id:placeId})},15000);
         const data=await resp.json();
-        if(!data.success){results.innerHTML=`<p style="color:var(--red);">❌ ${data.error||'Erreur'}</p>`;return;}
+        if(!data.success){results.innerHTML=`<p style="color:var(--red);">✗ ${data.error||'Erreur'}</p>`;return;}
         window._semanticAnalysis=data.data;
         renderSemanticResults(data.data);
     }catch(e){
-        results.innerHTML=`<p style="color:var(--red);">❌ Erreur : ${e.message}</p>`;
+        results.innerHTML=`<p style="color:var(--red);">✗ Erreur : ${e.message}</p>`;
     }finally{
         btn.disabled=false;btn.textContent='Analyser';
     }
@@ -4938,12 +4938,12 @@ function renderSemanticResults(d){
     const maxScore=topTerms[0]?.score||1;
 
     let html=`<div style="margin-bottom:16px;">
-        <div style="font-weight:700;color:var(--txt);margin-bottom:8px;">📊 ${d.reviewCount||0} avis analysés — note moyenne ${(d.avgRating||0).toFixed(1)}/5</div>
+        <div style="font-weight:700;color:var(--txt);margin-bottom:8px;">${d.reviewCount||0} avis analysés — note moyenne ${(d.avgRating||0).toFixed(1)}/5</div>
     </div>`;
 
     // Terms cloud
     html+=`<div style="margin-bottom:16px;">
-        <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">🏷️ Termes les plus fréquents dans vos avis</div>
+        <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">Termes les plus fréquents dans vos avis</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
     topTerms.forEach(t=>{
         const size=Math.max(0.65,Math.min(1.1,0.65+t.score/maxScore*0.5));
@@ -4956,7 +4956,7 @@ function renderSemanticResults(d){
     // Bigrams
     if(topBigrams.length>0){
         html+=`<div style="margin-bottom:16px;">
-            <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">🔗 Expressions récurrentes (2 mots)</div>
+            <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">Expressions récurrentes (2 mots)</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;">`;
         topBigrams.forEach(t=>{
             html+=`<span style="display:inline-block;padding:4px 10px;border-radius:20px;background:rgba(139,92,246,.1);color:var(--prp);font-size:.78rem;font-weight:600;">"${t.term}" <small style="opacity:.6;">${t.count}x</small></span>`;
@@ -4967,16 +4967,16 @@ function renderSemanticResults(d){
     // Match check: terms in GBP vs missing
     if(d.matched?.length||d.missing?.length){
         html+=`<div style="margin-bottom:16px;padding:14px;background:var(--s2);border-radius:10px;border:1px solid var(--bdr);">
-            <div style="font-weight:700;color:var(--txt);margin-bottom:10px;font-size:.85rem;">🎯 Match description GBP ↔ Avis clients</div>`;
+            <div style="font-weight:700;color:var(--txt);margin-bottom:10px;font-size:.85rem;">Match description GBP ↔ Avis clients</div>`;
         if(d.matched?.length){
-            html+=`<div style="margin-bottom:8px;"><span style="color:var(--grn);font-weight:600;">✅ Termes présents dans GBP :</span> `;
+            html+=`<div style="margin-bottom:8px;"><span style="color:var(--grn);font-weight:600;">✓ Termes présents dans GBP :</span> `;
             html+=d.matched.map(t=>`<span style="background:rgba(16,185,129,.12);color:var(--grn);padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600;">${t}</span>`).join(' ');
             html+=`</div>`;
         }
         if(d.missing?.length){
-            html+=`<div><span style="color:var(--org);font-weight:600;">⚠️ Termes manquants (à ajouter à votre description GBP/site) :</span><br>`;
+            html+=`<div><span style="color:var(--org);font-weight:600;">! Termes manquants (à ajouter à votre description GBP/site) :</span><br>`;
             html+=d.missing.slice(0,12).map(t=>`<span style="background:rgba(245,158,11,.12);color:var(--org);padding:2px 8px;border-radius:4px;font-size:.75rem;font-weight:600;display:inline-block;margin:2px;">${t}</span>`).join(' ');
-            html+=`<div style="margin-top:6px;font-size:.72rem;color:var(--mut);">💡 Ces termes sont fréquemment utilisés par vos clients mais absents de votre description. Les ajouter aligne votre profil avec ce que les LLM extraient des avis.</div>`;
+            html+=`<div style="margin-top:6px;font-size:.72rem;color:var(--mut);">Ces termes sont fréquemment utilisés par vos clients mais absents de votre description. Les ajouter aligne votre profil avec ce que les LLM extraient des avis.</div>`;
             html+=`</div>`;
         }
         html+=`</div>`;
@@ -4985,7 +4985,7 @@ function renderSemanticResults(d){
     // Topic sentiment analysis
     if(d.topicAnalysis?.length){
         html+=`<div style="margin-bottom:16px;">
-            <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">📈 Analyse par thème (positif vs négatif)</div>
+            <div style="font-weight:600;color:var(--txt);margin-bottom:8px;font-size:.82rem;">Analyse par thème (positif vs négatif)</div>
             <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px;">`;
         d.topicAnalysis.slice(0,10).forEach(t=>{
             const total=t.positive+t.negative;
@@ -4996,7 +4996,7 @@ function renderSemanticResults(d){
                 <div style="height:6px;background:var(--s3);border-radius:3px;overflow:hidden;">
                     <div style="height:100%;width:${posPct}%;background:${barColor};border-radius:3px;"></div>
                 </div>
-                <div style="font-size:.65rem;color:var(--mut);margin-top:2px;">👍 ${t.positive} / 👎 ${t.negative} (${posPct}% positif)</div>
+                <div style="font-size:.65rem;color:var(--mut);margin-top:2px;"> ${t.positive} /  ${t.negative} (${posPct}% positif)</div>
             </div>`;
         });
         html+=`</div></div>`;
@@ -5004,7 +5004,7 @@ function renderSemanticResults(d){
 
     // Actionable recommendation
     html+=`<div style="padding:12px;background:rgba(99,102,241,.06);border:1px solid rgba(99,102,241,.15);border-radius:10px;">
-        <div style="font-weight:700;color:var(--ind);margin-bottom:6px;font-size:.82rem;">💡 Recommandation GEO</div>
+        <div style="font-weight:700;color:var(--ind);margin-bottom:6px;font-size:.82rem;">Recommandation GEO</div>
         <div style="font-size:.78rem;color:var(--txt);line-height:1.5;">
             ${d.missing?.length>3?`<strong>Action prioritaire :</strong> Ajoutez les termes "${d.missing.slice(0,3).join('", "')}" à votre description GBP et à votre site. Quand les LLM voient ces termes dans les avis ET dans la description officielle, ils les pondèrent plus fortement dans les recommandations.`:'Votre description couvre bien les termes utilisés par vos clients.'}
             ${d.topicAnalysis?.find(t=>t.negative>t.positive)?`<br><strong>Point d'attention :</strong> Le thème "${d.topicAnalysis.find(t=>t.negative>t.positive).topic}" a plus de mentions négatives — les LLM captent aussi les avis négatifs.`:''}
@@ -5062,23 +5062,23 @@ async function generateReviewReply(idx){
     let reply='';
 
     if(r.rating>=4){
-        // ★★★★-★★★★★ : Réponse positive — ancre les mots-clés SEO + entités
+        // - : Réponse positive — ancre les mots-clés SEO + entités
         const templates=[
             `Merci ${firstName} pour ce bel avis sur ${name} ! Nous sommes ravis que ${keywords.mention||'votre repas'} vous ait plu. Notre équipe à ${city} met un point d'honneur à proposer ${spec} chaque jour. ${signature?'Nos clients apprécient particulièrement '+signature+'. ':''}Au plaisir de vous revoir chez ${name} !`,
-            `${firstName}, votre retour fait chaud au cœur de toute l'équipe de ${name} à ${quartier}. ${keywords.mention?'Nous sommes heureux que '+keywords.mention+' ait été à la hauteur. ':''}Notre cuisine ${cuisineLabel} évolue au fil des saisons — revenez découvrir nos nouveautés ! 🍽️`,
+            `${firstName}, votre retour fait chaud au cœur de toute l'équipe de ${name} à ${quartier}. ${keywords.mention?'Nous sommes heureux que '+keywords.mention+' ait été à la hauteur. ':''}Notre cuisine ${cuisineLabel} évolue au fil des saisons — revenez découvrir nos nouveautés ! `,
             `Un grand merci ${firstName} ! Chez ${name}, restaurant ${cuisineLabel} à ${city}, chaque détail compte : ${keywords.positive||'de la qualité des produits'}${signature?' à '+signature:''}. Votre satisfaction est notre plus belle récompense. À très bientôt dans notre restaurant !`,
             `Merci beaucoup ${firstName} ! ${name} à ${city} existe grâce à des clients comme vous. ${keywords.mention?keywords.mention.charAt(0).toUpperCase()+keywords.mention.slice(1)+', c\'est notre signature. ':''}N'hésitez pas à revenir goûter ${spec} — notre chef a toujours des surprises !`,
         ];
         reply=templates[idx%templates.length];
     } else if(r.rating===3){
-        // ★★★ : Réponse équilibrée — reconnaît + valorise + invite retour
+        //  : Réponse équilibrée — reconnaît + valorise + invite retour
         const templates=[
             `Merci ${firstName} pour votre retour sur ${name} à ${city}. ${keywords.positive?'Nous sommes contents que '+keywords.positive+' vous ait plu. ':''}${keywords.negative?'Concernant '+keywords.negative+', ':''}nous travaillons chaque jour à améliorer l'expérience dans notre restaurant ${cuisineLabel}. Votre avis nous aide à progresser — donnez-nous l'occasion de vous surprendre !`,
             `${firstName}, merci pour votre honnêteté. Chez ${name}, restaurant ${cuisineLabel} à ${quartier}, chaque retour client est précieux. ${keywords.negative?'Nous prenons note concernant '+keywords.negative+' et avons déjà mis en place des ajustements. ':''}Revenez bientôt découvrir les changements !`,
         ];
         reply=templates[idx%templates.length];
     } else {
-        // ★-★★ : Réponse empathique — pas défensif, invite au contact direct
+        // - : Réponse empathique — pas défensif, invite au contact direct
         const templates=[
             `${firstName}, merci d'avoir pris le temps de nous écrire. Ce n'est pas le niveau d'expérience que nous visons chez ${name} à ${city}. ${keywords.negative?'Nous prenons très au sérieux votre remarque sur '+keywords.negative+'. ':''}Notre équipe a mis en place des actions concrètes. Contactez-nous directement — nous aimerions vous offrir une expérience à la hauteur de notre cuisine ${cuisineLabel}.`,
             `Nous sommes sincèrement désolés ${firstName}. Chez ${name}, restaurant ${cuisineLabel} à ${quartier}, la satisfaction de nos clients est notre priorité absolue. ${keywords.negative?'Votre retour sur '+keywords.negative+' a été transmis à toute l\'équipe. ':''}Nous serions honorés de vous accueillir à nouveau pour rectifier le tir.`,
@@ -5094,8 +5094,8 @@ async function generateReviewReply(idx){
         replyDiv.textContent=reply;
     }
     try{await navigator.clipboard.writeText(reply);}catch(e){}
-    if(btn){btn.textContent='✅ Copié !';btn.style.color='var(--grn)';setTimeout(()=>{btn.textContent='💬 Répondre avec IA';btn.style.color='';},3000);}
-    showToast('✅ Réponse copiée dans le presse-papier','success',3000);
+    if(btn){btn.textContent='✓ Copié !';btn.style.color='var(--grn)';setTimeout(()=>{btn.textContent=' Répondre avec IA';btn.style.color='';},3000);}
+    showToast('✓ Réponse copiée dans le presse-papier','success',3000);
 
     // If GBP connected, also offer to publish directly
     if(googleAuth?.connected&&r.reviewId){
@@ -5122,7 +5122,7 @@ async function publishReviewReply(reviewId,replyText){
     try{
         await fetch(API_BASE+'/api/gbp/reply-review',{method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({user_id:googleAuth.userId,location_name:googleAuth.locationName,review_id:reviewId,reply:replyText})});
-        addToLog('✅ Réponse publiée sur Google pour avis '+reviewId);
+        addToLog('✓ Réponse publiée sur Google pour avis '+reviewId);
     }catch(e){console.warn('Reply publish error:',e);}
 }
 
@@ -5130,7 +5130,7 @@ async function publishReviewReply(reviewId,replyText){
 async function autoReplyAllReviews(){
     const reviews=window._currentReviews||[];
     const unanswered=reviews.filter(r=>!r.replied);
-    if(unanswered.length===0){addToLog('ℹ️ Tous les avis ont déjà une réponse');return;}
+    if(unanswered.length===0){addToLog('Tous les avis ont déjà une réponse');return;}
 
     const btn=document.getElementById('btnAutoReplyAll');
     if(btn){btn.disabled=true;btn.innerHTML='<span class="spinner-sm"></span> Réponse à '+unanswered.length+' avis…';}
@@ -5141,8 +5141,8 @@ async function autoReplyAllReviews(){
         await new Promise(r=>setTimeout(r,800));
     }
 
-    if(btn){btn.disabled=false;btn.innerHTML='🤖 Répondre à tous les avis';}
-    addToLog(`✅ ${unanswered.length} réponses SEO générées`);
+    if(btn){btn.disabled=false;btn.innerHTML='Répondre à tous les avis';}
+    addToLog(`✓ ${unanswered.length} réponses SEO générées`);
 }
 
 // SOCIAL PANEL — Generate ONE Google Post via AI (Hub Central + anti-ban + anti-AI-detection)
@@ -5152,7 +5152,7 @@ async function generateSocialContent(){
     const hub=getHubData();
     const name=hub.name||currentData?.name||storedName||'';
     if(!name){alert('Aucun restaurant chargé');return;}
-    t.value='⏳ Génération IA en cours…';
+    t.value=' Génération IA en cours…';
     t.disabled=true;
     try{
         const rid=currentData?.restaurant_id||0;
@@ -5182,12 +5182,12 @@ async function generateSocialContent(){
         if(data.success&&data.content){
             t.value=data.content;
             t.disabled=false;
-            addToLog(`✨ Google Post généré (${data.char_count} car., type ${data.type||'STANDARD'})`);
+            addToLog(`Google Post généré (${data.char_count} car., type ${data.type||'STANDARD'})`);
             return;
         }
         t.value='';
         t.disabled=false;
-        addToLog('⚠️ '+(data.error||'Erreur de génération'));
+        addToLog('! '+(data.error||'Erreur de génération'));
         showToast('Erreur: '+(data.error||'Génération échouée'),'error');
     }catch(e){
         console.log('Social content API error:',e.message);
@@ -5228,8 +5228,8 @@ async function generateGooglePostPack(){
                 await fetchTimeout(`${API_BASE}/api/posts/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,post_type:p.gbp_type||'STANDARD',content:p.content,status:'draft'})},5000);
             }catch(e){}
         }
-        addToLog(`⚡ Pack Google Posts généré: ${successful.length}/${data.total} posts (anti-ban + anti-AI-detection)`);
-        showToast(`✅ ${successful.length} posts ajoutés en brouillon`,'success');
+        addToLog(`Pack Google Posts généré: ${successful.length}/${data.total} posts (anti-ban + anti-AI-detection)`);
+        showToast(`✓ ${successful.length} posts ajoutés en brouillon`,'success');
         renderGooglePostsList();
     }catch(e){
         if(container)container.innerHTML='<div style="text-align:center;padding:24px;color:var(--red);">Erreur réseau: '+e.message+'</div>';
@@ -5255,14 +5255,14 @@ async function publishSocialPost(){
                 })});
             const result=await resp.json();
             if(result.success||result.data){
-                addToLog('✅ Google Post publié avec succès');
-                if(btn){btn.innerHTML='✅ Publié !';setTimeout(()=>{btn.disabled=false;btn.innerHTML='📤 Publier sur Google';},3000);}
+                addToLog('✓ Google Post publié avec succès');
+                if(btn){btn.innerHTML='✓ Publié !';setTimeout(()=>{btn.disabled=false;btn.innerHTML='Publier sur Google';},3000);}
                 document.getElementById('socialContent').value='';
                 generateSocialContent(); // Pre-generate next post
             } else throw new Error(result.error||'Erreur');
         }catch(e){
-            addToLog('❌ Erreur publication: '+e.message);
-            if(btn){btn.disabled=false;btn.innerHTML='📤 Publier sur Google';}
+            addToLog('✗ Erreur publication: '+e.message);
+            if(btn){btn.disabled=false;btn.innerHTML='Publier sur Google';}
             alert('Erreur: '+e.message);
         }
     } else {
@@ -5274,8 +5274,8 @@ async function publishSocialPost(){
         fetchTimeout(`${API_BASE}/api/posts/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:currentData?.restaurant_id||0,content,status:'draft'})},5000).catch(()=>{});
         // Copy to clipboard
         navigator.clipboard?.writeText(content).catch(()=>{});
-        addToLog('📝 Post sauvegardé en brouillon (copié dans le presse-papier). Connectez Google pour publier automatiquement.');
-        if(btn){btn.innerHTML='📋 Copié ! (brouillon sauvé)';setTimeout(()=>{btn.innerHTML='📤 Publier sur Google';},3000);}
+        addToLog('Post sauvegardé en brouillon (copié dans le presse-papier). Connectez Google pour publier automatiquement.');
+        if(btn){btn.innerHTML='Copié ! (brouillon sauvé)';setTimeout(()=>{btn.innerHTML='Publier sur Google';},3000);}
     }
 }
 
@@ -5289,7 +5289,7 @@ function generateWeeklyPosts(){
         const d=new Date();d.setDate(d.getDate()+i);
         const dn=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][d.getDay()];
         posts.push({day:dn,date:d.toLocaleDateString('fr-FR'),theme:themes[i%themes.length],
-            text:`📸 ${themes[i%themes.length]} — Chez ${name} à ${city}, chaque jour est une nouvelle découverte ${['gastronomique','culinaire','gustative'][i%3]}. #restaurant${city}`});
+            text:` ${themes[i%themes.length]} — Chez ${name} à ${city}, chaque jour est une nouvelle découverte ${['gastronomique','culinaire','gustative'][i%3]}. #restaurant${city}`});
     }
     return posts;
 }
@@ -5305,7 +5305,7 @@ function renderTeam(){
     const teamCheck=canDoAction('team');
     if(!teamCheck.allowed){
         tab.innerHTML=`<div style="text-align:center;padding:60px 20px;">
-            <div style="font-size:3rem;margin-bottom:16px;">🔒</div>
+            <div style="font-size:3rem;margin-bottom:16px;"></div>
             <h3 style="color:var(--txt);margin-bottom:8px;">Gestion d'équipe — Plan Starter+</h3>
             <p style="color:var(--mut);margin-bottom:20px;">Invitez vos collaborateurs, attribuez des rôles et contrôlez les accès par restaurant.</p>
             <button class="btn" onclick="showUpgradeModal('${teamCheck.reason}','starter')" style="background:var(--ind);border:none;color:#fff;padding:10px 24px;border-radius:8px;cursor:pointer;font-weight:700;">Passer au plan Starter</button>
@@ -5335,17 +5335,17 @@ function renderTeam(){
         <!-- Roles explanation cards -->
         <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;">
             <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:12px;text-align:center;">
-                <div style="font-size:1.5rem;margin-bottom:6px;">👑</div>
+                <div style="font-size:1.5rem;margin-bottom:6px;"></div>
                 <div style="font-weight:700;font-size:.8rem;color:var(--txt);margin-bottom:4px;">Propriétaire</div>
                 <div style="font-size:.68rem;color:var(--mut);line-height:1.4;">Accès total, facturation, gestion équipe</div>
             </div>
             <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:12px;text-align:center;">
-                <div style="font-size:1.5rem;margin-bottom:6px;">✏️</div>
+                <div style="font-size:1.5rem;margin-bottom:6px;"></div>
                 <div style="font-weight:700;font-size:.8rem;color:var(--txt);margin-bottom:4px;">Manager</div>
                 <div style="font-size:.68rem;color:var(--mut);line-height:1.4;">Audit, améliorations auto, gestion avis</div>
             </div>
             <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:10px;padding:12px;text-align:center;">
-                <div style="font-size:1.5rem;margin-bottom:6px;">👁</div>
+                <div style="font-size:1.5rem;margin-bottom:6px;"></div>
                 <div style="font-weight:700;font-size:.8rem;color:var(--txt);margin-bottom:4px;">Lecteur</div>
                 <div style="font-size:.68rem;color:var(--mut);line-height:1.4;">Consultation des scores et rapports</div>
             </div>
@@ -5364,9 +5364,9 @@ function renderTeam(){
                 <div>
                     <label style="font-size:.72rem;color:var(--mut);display:block;margin-bottom:5px;font-weight:600;">Rôle</label>
                     <select id="teamInviteRole" style="${inputStyle}">
-                        <option value="viewer">👁 Lecteur</option>
-                        <option value="manager">✏️ Manager</option>
-                        <option value="owner">👑 Propriétaire</option>
+                        <option value="viewer"> Lecteur</option>
+                        <option value="manager">Manager</option>
+                        <option value="owner">Propriétaire</option>
                     </select>
                 </div>
                 <div>
@@ -5396,7 +5396,7 @@ function renderTeam(){
                         ${currentUser.email}
                         <span style="font-size:.6rem;background:var(--ind);color:#fff;padding:2px 6px;border-radius:4px;margin-left:6px;vertical-align:middle;">Vous</span>
                     </div>
-                    <div style="font-size:.7rem;color:var(--mut);margin-top:2px;">👑 Propriétaire · Tous les restaurants</div>
+                    <div style="font-size:.7rem;color:var(--mut);margin-top:2px;">Propriétaire · Tous les restaurants</div>
                 </div>
                 <div style="flex-shrink:0;">
                     <span style="font-size:.72rem;color:var(--grn);font-weight:700;">● Actif</span>
@@ -5410,7 +5410,7 @@ function renderTeam(){
                 <div style="flex:1;min-width:0;">
                     <div style="font-size:.82rem;font-weight:600;color:var(--txt);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${m.email}</div>
                     <div style="font-size:.7rem;color:var(--mut);margin-top:2px;">
-                        ${m.role==='owner'?'👑 Propriétaire':m.role==='manager'?'✏️ Manager':'👁 Lecteur'}
+                        ${m.role==='owner'?'Propriétaire':m.role==='manager'?'Manager':' Lecteur'}
                         · ${m.restaurants==='__all'?'Tous les restaurants':m.restaurants}
                     </div>
                 </div>
@@ -5423,7 +5423,7 @@ function renderTeam(){
 
             ${members.length===0?`
             <div style="text-align:center;padding:40px 20px;background:var(--s1);border:1px dashed var(--bdr);border-radius:10px;margin-top:8px;">
-                <div style="font-size:2rem;margin-bottom:10px;opacity:.5;">👥</div>
+                <div style="font-size:2rem;margin-bottom:10px;opacity:.5;"></div>
                 <div style="font-size:.82rem;color:var(--mut);">Aucun collaborateur pour l'instant</div>
                 <div style="font-size:.72rem;color:var(--mut);margin-top:4px;">Invitez votre équipe pour collaborer sur vos restaurants</div>
             </div>
@@ -5493,12 +5493,12 @@ function renderDispatch(){
     
     const list=document.getElementById('dispatchList');
     if(!list)return;
-    if(!items.length){list.innerHTML='<div style="padding:20px;color:var(--grn);font-weight:600;">✅ Aucune amélioration critique à appliquer</div>';return;}
+    if(!items.length){list.innerHTML='<div style="padding:20px;color:var(--grn);font-weight:600;">✓ Aucune amélioration critique à appliquer</div>';return;}
     list.innerHTML=items.map(item=>`
         <div class="dispatch-item" data-id="${item.id}">
-            <span class="dispatch-status" style="color:${item.status==='err'?'var(--red)':'var(--org)'}">${item.status==='err'?'🔴':'🟡'}</span>
+            <span class="dispatch-status" style="color:${item.status==='err'?'var(--red)':'var(--org)'}">${item.status==='err'?'':''}</span>
             <span style="flex:1">${item.name} <small style="color:var(--mut)">(${item.score}/10)</small></span>
-            <span class="done-mark">⏳</span>
+            <span class="done-mark"></span>
         </div>
     `).join('');
 }
@@ -5510,10 +5510,10 @@ function dispatchAllActions(){
     const items=document.querySelectorAll('.dispatch-item');
     
     const timer=setInterval(()=>{
-        if(idx>=items.length){clearInterval(timer);log.innerHTML+='✅ Toutes les améliorations appliquées !\n';return;}
+        if(idx>=items.length){clearInterval(timer);log.innerHTML+='✓ Toutes les améliorations appliquées !\n';return;}
         const item=items[idx];
         log.innerHTML+=`[${new Date().toLocaleTimeString()}] Traitement: ${item.textContent.split('—')[1]||item.textContent}\n`;
-        item.querySelector('.done-mark').textContent='✅';
+        item.querySelector('.done-mark').textContent='';
         log.scrollTop=log.scrollHeight;
         idx++;
     },400);
@@ -5547,7 +5547,7 @@ async function saveSettings(){
         if(specialties)window._hubData.specialties=specialties;
     }
 
-    alert('✅ Paramètres enregistrés !');
+    alert('✓ Paramètres enregistrés !');
 }
 
 // Save social media connection settings
@@ -5572,14 +5572,14 @@ async function saveSocialSettings(){
         await fetchTimeout(`${API_BASE}/api/settings/social`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:rid,data:social})},5000);
         const statusEl=document.getElementById('socialSaveStatus');
         const connected=Object.values(social).filter(v=>v).length;
-        if(statusEl)statusEl.innerHTML=`<span style="color:var(--grn);">✅ ${connected} connexions sauvegardées</span>`;
-        showToast(`✅ ${connected} connexions sociales sauvegardées`,'success');
+        if(statusEl)statusEl.innerHTML=`<span style="color:var(--grn);">✓ ${connected} connexions sauvegardées</span>`;
+        showToast(`✓ ${connected} connexions sociales sauvegardées`,'success');
     }catch(e){
         // Fallback localStorage
         try{localStorage.setItem('restaurank_social_tokens',JSON.stringify(social));}catch{}
         const statusEl=document.getElementById('socialSaveStatus');
-        if(statusEl)statusEl.innerHTML=`<span style="color:var(--org);">⚠️ Sauvegardé localement (serveur indisponible)</span>`;
-        showToast('⚠️ Sauvegardé localement','info');
+        if(statusEl)statusEl.innerHTML=`<span style="color:var(--org);">! Sauvegardé localement (serveur indisponible)</span>`;
+        showToast('! Sauvegardé localement','info');
     }
 }
 
@@ -5614,14 +5614,14 @@ async function saveDirectoryApiKeys(){
             method:'POST',headers:{'Content-Type':'application/json'},
             body:JSON.stringify({restaurant_id:currentData?.restaurantId||0,keys})
         },5000);
-        alert('✅ Clés API annuaires sauvegardées !');
-    }catch(e){alert('❌ Erreur: '+e.message);}
+        alert('✓ Clés API annuaires sauvegardées !');
+    }catch(e){alert('✗ Erreur: '+e.message);}
 }
 
 // Check presence on all directories via API
 async function checkAllDirectoriesAPI(){
     const resultsEl=document.getElementById('dirApiCheckResults');
-    if(resultsEl) resultsEl.innerHTML='<span style="color:var(--org);">🔄 Vérification en cours sur toutes les plateformes...</span>';
+    if(resultsEl) resultsEl.innerHTML='<span style="color:var(--org);">Vérification en cours sur toutes les plateformes...</span>';
 
     const name=currentData?.name||'Restaurant';
     const city=currentData?.city||'Paris';
@@ -5641,15 +5641,15 @@ async function checkAllDirectoriesAPI(){
             let html=`<div style="margin-top:8px;">`;
             html+=`<strong style="color:var(--txt);">Résultats :</strong> ${json.summary.found} trouvés, ${json.summary.notFound} absents, ${json.summary.unchecked} non vérifiés<br><br>`;
             Object.entries(json.results).forEach(([platform,data])=>{
-                const icon=data.found===true?'✅':data.found===false?'❌':'⬜';
-                const detail=data.found===true?`Trouvé${data.rating?' — '+data.rating+'★':''}${data.review_count?' ('+data.review_count+' avis)':''}`:data.found===false?'Non trouvé — à créer':'Non vérifié (clé API manquante)';
+                const icon=data.found===true?'':data.found===false?'':'⬜';
+                const detail=data.found===true?`Trouvé${data.rating?' — '+data.rating+'':''}${data.review_count?' ('+data.review_count+' avis)':''}`:data.found===false?'Non trouvé — à créer':'Non vérifié (clé API manquante)';
                 html+=`<div style="padding:4px 0;border-bottom:1px solid rgba(255,255,255,.05);">${icon} <strong>${platform}</strong> — ${detail}</div>`;
             });
             html+='</div>';
             resultsEl.innerHTML=html;
         }
     }catch(e){
-        if(resultsEl) resultsEl.innerHTML=`<span style="color:var(--red);">❌ Erreur: ${e.message}</span>`;
+        if(resultsEl) resultsEl.innerHTML=`<span style="color:var(--red);">✗ Erreur: ${e.message}</span>`;
     }
 }
 
@@ -5677,16 +5677,16 @@ function exportData(){
     modal.id='exportModal';
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
     modal.innerHTML=`<div style="background:var(--bg);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:420px;width:90%;">
-        <h3 style="margin:0 0 16px;font-size:1rem;color:var(--txt);">📤 Exporter les données</h3>
+        <h3 style="margin:0 0 16px;font-size:1rem;color:var(--txt);">Exporter les données</h3>
         <div style="display:flex;flex-direction:column;gap:10px;">
             <button onclick="doExport('json')" style="padding:12px;border-radius:10px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.85rem;text-align:left;">
-                <strong>📋 JSON</strong> — Sauvegarde complète (restauration possible)
+                <strong>JSON</strong> — Sauvegarde complète (restauration possible)
             </button>
             <button onclick="doExport('csv')" style="padding:12px;border-radius:10px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.85rem;text-align:left;">
-                <strong>📊 CSV</strong> — Tableau des scores (ouvrable dans Excel)
+                <strong>CSV</strong> — Tableau des scores (ouvrable dans Excel)
             </button>
             <button onclick="doExport('html')" style="padding:12px;border-radius:10px;border:1px solid var(--bdr);background:var(--s1);color:var(--txt);cursor:pointer;font-size:.85rem;text-align:left;">
-                <strong>🌐 Rapport HTML</strong> — Rapport visuel imprimable (PDF via navigateur)
+                <strong>Rapport HTML</strong> — Rapport visuel imprimable (PDF via navigateur)
             </button>
         </div>
         <button onclick="this.closest('#exportModal').remove()" style="margin-top:14px;padding:8px 20px;border-radius:8px;border:1px solid var(--bdr);background:var(--s2);color:var(--mut);cursor:pointer;font-size:.8rem;">Annuler</button>
@@ -5728,13 +5728,13 @@ function doExport(format){
                 items+=`<h3 style="margin-top:20px;">${cat.icon||''} ${cat.name||''}</h3><table style="width:100%;border-collapse:collapse;font-size:13px;"><tr><th style="text-align:left;padding:6px;border-bottom:2px solid #6366f1;">Item</th><th style="padding:6px;border-bottom:2px solid #6366f1;">Score</th><th style="padding:6px;border-bottom:2px solid #6366f1;">Statut</th></tr>`;
                 (cat.items||[]).forEach(it=>{
                     const color=it.status==='ok'?'#10b981':it.status==='warn'?'#f59e0b':'#ef4444';
-                    items+=`<tr><td style="padding:6px;border-bottom:1px solid #eee;">${it.name}</td><td style="padding:6px;text-align:center;border-bottom:1px solid #eee;">${it.score}/10</td><td style="padding:6px;text-align:center;border-bottom:1px solid #eee;color:${color};font-weight:700;">${it.status==='ok'?'✅':it.status==='warn'?'⚠️':'❌'}</td></tr>`;
+                    items+=`<tr><td style="padding:6px;border-bottom:1px solid #eee;">${it.name}</td><td style="padding:6px;text-align:center;border-bottom:1px solid #eee;">${it.score}/10</td><td style="padding:6px;text-align:center;border-bottom:1px solid #eee;color:${color};font-weight:700;">${it.status==='ok'?'':it.status==='warn'?'':''}</td></tr>`;
                 });
                 items+='</table>';
             });
         }
         const html=`<!DOCTYPE html><html><head><meta charset="utf-8"><title>RestauRank — ${name}</title><style>body{font-family:system-ui,sans-serif;max-width:800px;margin:0 auto;padding:40px 20px;color:#1a1a2e;}h1{color:#6366f1;}h3{color:#6366f1;}.scores{display:flex;gap:40px;margin:20px 0;}.score-box{text-align:center;}.score-val{font-size:3rem;font-weight:900;}.seo{color:#6366f1;}.geo{color:#06b6d4;}@media print{body{padding:20px;}}</style></head><body>
-        <h1>📊 RestauRank — Rapport d'audit</h1>
+        <h1>RestauRank — Rapport d'audit</h1>
         <p><strong>${name}</strong> — ${city} — ${new Date().toLocaleDateString('fr-FR')}</p>
         <div class="scores"><div class="score-box"><div class="score-val seo">${currentScores?.seo||0}</div><div>Score SEO</div></div><div class="score-box"><div class="score-val geo">${currentScores?.geo||0}</div><div>Score GEO</div></div></div>
         ${items}
@@ -5744,7 +5744,7 @@ function doExport(format){
         const a=document.createElement('a');a.href=url;a.download=`restaurank-rapport-${fname}.html`;a.click();
         URL.revokeObjectURL(url);
     }
-    addToLog(`📤 Export ${format.toUpperCase()} téléchargé`);
+    addToLog(`Export ${format.toUpperCase()} téléchargé`);
 }
 
 // Initialize panels on dashboard load
@@ -5763,29 +5763,29 @@ renderDashboard=function(){
 // ============================================================
 
 const CMS_INFO={
-    wordpress:{name:'WordPress',icon:'📝',color:'#21759b',connectFields:[
+    wordpress:{name:'WordPress',icon:'',color:'#21759b',connectFields:[
         {id:'wp_url',label:'URL du site WordPress',placeholder:'https://www.monrestaurant.fr',type:'text'},
         {id:'wp_user',label:'Identifiant WordPress',placeholder:'admin',type:'text'},
         {id:'wp_pass',label:'Mot de passe d\'application',placeholder:'xxxx xxxx xxxx xxxx',type:'password'}
     ],connectHelp:'Allez dans WordPress Admin → Utilisateurs → Profil → Mots de passe d\'application → Créer'},
-    webflow:{name:'Webflow',icon:'🌊',color:'#4353ff',connectFields:[{id:'wf_token',label:'Token API Webflow',placeholder:'Bearer ...',type:'password'},{id:'wf_site',label:'Site ID Webflow',placeholder:'66a36b35...',type:'text'}],connectHelp:'Allez dans Webflow → Site Settings → Apps & Integrations → API Access → Generate Token'},
-    wix:{name:'Wix',icon:'🟡',color:'#0C6EFC',connectFields:[
+    webflow:{name:'Webflow',icon:'',color:'#4353ff',connectFields:[{id:'wf_token',label:'Token API Webflow',placeholder:'Bearer ...',type:'password'},{id:'wf_site',label:'Site ID Webflow',placeholder:'66a36b35...',type:'text'}],connectHelp:'Allez dans Webflow → Site Settings → Apps & Integrations → API Access → Generate Token'},
+    wix:{name:'Wix',icon:'',color:'#0C6EFC',connectFields:[
         {id:'wix_token',label:'Token API Wix',placeholder:'IST...',type:'password'}
     ],connectHelp:'Allez dans Wix Dashboard → Paramètres → Clés API → Créer une clé'},
     squarespace:{name:'Squarespace',icon:'⬛',color:'#000',connectFields:[
         {id:'sq_token',label:'Token API Squarespace',placeholder:'...',type:'password'}
     ],connectHelp:'Allez dans Squarespace → Paramètres → Avancé → Développeur → Clés API'},
-    shopify:{name:'Shopify',icon:'🛍️',color:'#96bf48',connectFields:[
+    shopify:{name:'Shopify',icon:'',color:'#96bf48',connectFields:[
         {id:'sh_store',label:'URL Shopify',placeholder:'monrestaurant.myshopify.com',type:'text'},
         {id:'sh_token',label:'Token Admin API',placeholder:'shpat_...',type:'password'}
     ],connectHelp:'Allez dans Shopify Admin → Applications → Gérer les apps privées'},
-    custom:{name:'Site personnalisé',icon:'🔧',color:'#6b7280',connectFields:[],connectHelp:'Aucune connexion API — les améliorations seront à appliquer manuellement ou via FTP'},
-    prestashop:{name:'PrestaShop',icon:'🛒',color:'#df0067',connectFields:[
+    custom:{name:'Site personnalisé',icon:'',color:'#6b7280',connectFields:[],connectHelp:'Aucune connexion API — les améliorations seront à appliquer manuellement ou via FTP'},
+    prestashop:{name:'PrestaShop',icon:'',color:'#df0067',connectFields:[
         {id:'ps_url',label:'URL PrestaShop',placeholder:'https://www.monrestaurant.fr',type:'text'},
         {id:'ps_key',label:'Clé API Webservice',placeholder:'...',type:'password'}
     ],connectHelp:'Allez dans PrestaShop Back Office → Paramètres avancés → Webservice → Ajouter une clé'},
-    drupal:{name:'Drupal',icon:'💧',color:'#0678BE',connectFields:[],connectHelp:'Les modifications nécessitent un accès admin Drupal'},
-    joomla:{name:'Joomla',icon:'📦',color:'#5091cd',connectFields:[],connectHelp:'Les modifications nécessitent un accès admin Joomla'}
+    drupal:{name:'Drupal',icon:'',color:'#0678BE',connectFields:[],connectHelp:'Les modifications nécessitent un accès admin Drupal'},
+    joomla:{name:'Joomla',icon:'',color:'#5091cd',connectFields:[],connectHelp:'Les modifications nécessitent un accès admin Joomla'}
 };
 
 let cmsConnection={type:null,connected:false,credentials:{}};
@@ -5809,9 +5809,9 @@ function renderCMSPanel(){
     // If no website scanned
     if(!currentData||!currentData.detectedCMS){
         if(storedWebsite){
-            panel.innerHTML=`<div class="cms-detected"><div class="cms-logo">🔍</div><div class="cms-info"><div class="cms-name">Détection en cours...</div><div class="cms-detail">Analyse de ${storedWebsite}</div></div><div class="spinner-sm"></div></div>`;
+            panel.innerHTML=`<div class="cms-detected"><div class="cms-logo"></div><div class="cms-info"><div class="cms-name">Détection en cours...</div><div class="cms-detail">Analyse de ${storedWebsite}</div></div><div class="spinner-sm"></div></div>`;
         } else {
-            panel.innerHTML=`<div class="cms-detected"><div class="cms-logo">🌐</div><div class="cms-info"><div class="cms-name">Aucun site web renseigné</div><div class="cms-detail">Ajoutez l'URL de votre site web pour activer l'automatisation</div></div>
+            panel.innerHTML=`<div class="cms-detected"><div class="cms-logo"></div><div class="cms-info"><div class="cms-name">Aucun site web renseigné</div><div class="cms-detail">Ajoutez l'URL de votre site web pour activer l'automatisation</div></div>
             <input type="text" id="cmsUrlInput" placeholder="www.monrestaurant.fr" style="padding:8px 12px;border-radius:8px;border:1px solid var(--bdr);background:var(--s3);color:var(--txt);font-size:.8rem;width:200px;font-family:inherit;">
             <button class="cms-connect-btn" onclick="detectCMSManual()">Détecter →</button></div>`;
         }
@@ -5860,9 +5860,9 @@ function renderCMSPanel(){
         formPanel.innerHTML=`
             <div id="cmsFormToggle" style="display:none;">
                 <div class="cms-credentials-form">
-                    <p style="font-size:.72rem;color:var(--org);margin-bottom:6px;">💡 ${info.connectHelp}</p>
+                    <p style="font-size:.72rem;color:var(--org);margin-bottom:6px;">${info.connectHelp}</p>
                     ${info.connectFields.map(f=>`<label>${f.label}</label><input type="${f.type}" id="cms_${f.id}" placeholder="${f.placeholder}">`).join('')}
-                    <button class="cms-connect-btn" onclick="connectCMS('${cms.cms}')">🔗 Connecter et activer l'auto-apply</button>
+                    <button class="cms-connect-btn" onclick="connectCMS('${cms.cms}')">Connecter et activer l'auto-apply</button>
                 </div>
             </div>`;
     } else {
@@ -5901,7 +5901,7 @@ function connectCMS(cmsType){
     })}).catch(()=>{});
 
     renderCMSPanel();
-    addToLog('✅ CMS connecté: '+info.name);
+    addToLog('✓ CMS connecté: '+info.name);
 }
 
 async function detectCMSManual(){
@@ -5909,7 +5909,7 @@ async function detectCMSManual(){
     if(!input||!input.value.trim())return;
     storedWebsite=input.value.trim();
     const panel=document.getElementById('cmsDetectionResult');
-    panel.innerHTML=`<div class="cms-detected"><div class="cms-logo">🔍</div><div class="cms-info"><div class="cms-name">Analyse en cours...</div><div class="cms-detail">${storedWebsite}</div></div><div class="spinner-sm"></div></div>`;
+    panel.innerHTML=`<div class="cms-detected"><div class="cms-logo"></div><div class="cms-info"><div class="cms-name">Analyse en cours...</div><div class="cms-detail">${storedWebsite}</div></div><div class="spinner-sm"></div></div>`;
 
     try{
         const resp=await fetch(API_BASE+'/api/detect-cms',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:storedWebsite})});
@@ -5921,12 +5921,12 @@ async function detectCMSManual(){
             currentData.seoAnalysis=data.seoAnalysis||{};
             detectedCMS=data;
             renderCMSPanel();
-            addToLog('🔍 CMS détecté: '+data.detected.cms+' ('+data.detected.confidence+'%)');
+            addToLog('CMS détecté: '+data.detected.cms+' ('+data.detected.confidence+'%)');
         } else {
-            panel.innerHTML=`<div class="cms-detected"><div class="cms-logo">⚠️</div><div class="cms-info"><div class="cms-name">Erreur</div><div class="cms-detail">${data.error||'Impossible d\'analyser le site'}</div></div></div>`;
+            panel.innerHTML=`<div class="cms-detected"><div class="cms-logo"></div><div class="cms-info"><div class="cms-name">Erreur</div><div class="cms-detail">${data.error||'Impossible d\'analyser le site'}</div></div></div>`;
         }
     }catch(e){
-        panel.innerHTML=`<div class="cms-detected"><div class="cms-logo">⚠️</div><div class="cms-info"><div class="cms-name">Erreur de connexion</div><div class="cms-detail">Vérifiez que le serveur tourne (node server.js)</div></div></div>`;
+        panel.innerHTML=`<div class="cms-detected"><div class="cms-logo"></div><div class="cms-info"><div class="cms-name">Erreur de connexion</div><div class="cms-detail">Vérifiez que le serveur tourne (node server.js)</div></div></div>`;
     }
 }
 
@@ -5936,66 +5936,66 @@ let dirCheckResults={};
 
 const DIR_LIST=[
     // ── Référencement local (SEO + GEO) ──
-    {id:'google',icon:'📊',name:'Google',cat:'local',desc:'Gérez votre fiche via Google Business Profile.',connectable:true,priority:true,claimUrl:'https://business.google.com'},
-    {id:'yelp',icon:'⭐',name:'Yelp',cat:'local',desc:'Source #1 de ChatGPT (48.7%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://biz.yelp.fr'},
-    {id:'tripadvisor',icon:'🦉',name:'TripAdvisor',cat:'local',desc:'Source #1 de Perplexity (32.8%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.tripadvisor.fr/Owners'},
-    {id:'foursquare',icon:'📍',name:'Foursquare',cat:'local',desc:'Alimente Apple Maps, Uber, Samsung. Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://business.foursquare.com'},
-    {id:'bing',icon:'🔍',name:'Bing Places',cat:'local',desc:'Importez depuis Google ou créez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.bingplaces.com'},
-    {id:'apple',icon:'🍎',name:'Apple Plans',cat:'local',desc:'Réclamez votre lieu sur Apple Business Connect.',connectable:true,priority:false,claimUrl:'https://businessconnect.apple.com'},
-    {id:'pagesjaunes',icon:'📒',name:'Pages Jaunes',cat:'local',desc:'Réclamez votre fiche sur PagesJaunes.',connectable:true,priority:false,claimUrl:'https://www.pagesjaunes.fr/inscription'},
+    {id:'google',icon:'',name:'Google',cat:'local',desc:'Gérez votre fiche via Google Business Profile.',connectable:true,priority:true,claimUrl:'https://business.google.com'},
+    {id:'yelp',icon:'',name:'Yelp',cat:'local',desc:'Source #1 de ChatGPT (48.7%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://biz.yelp.fr'},
+    {id:'tripadvisor',icon:'',name:'TripAdvisor',cat:'local',desc:'Source #1 de Perplexity (32.8%). Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.tripadvisor.fr/Owners'},
+    {id:'foursquare',icon:'',name:'Foursquare',cat:'local',desc:'Alimente Apple Maps, Uber, Samsung. Réclamez votre fiche.',connectable:true,priority:true,claimUrl:'https://business.foursquare.com'},
+    {id:'bing',icon:'',name:'Bing Places',cat:'local',desc:'Importez depuis Google ou créez votre fiche.',connectable:true,priority:true,claimUrl:'https://www.bingplaces.com'},
+    {id:'apple',icon:'',name:'Apple Plans',cat:'local',desc:'Réclamez votre lieu sur Apple Business Connect.',connectable:true,priority:false,claimUrl:'https://businessconnect.apple.com'},
+    {id:'pagesjaunes',icon:'',name:'Pages Jaunes',cat:'local',desc:'Réclamez votre fiche sur PagesJaunes.',connectable:true,priority:false,claimUrl:'https://www.pagesjaunes.fr/inscription'},
     // ── Plateformes auto-sync (connectées via Google/data push) ──
-    {id:'openai',icon:'🤖',name:'ChatGPT / OpenAI',cat:'auto',desc:'Visibilité IA — données poussées automatiquement.',auto:true},
-    {id:'perplexity',icon:'🔮',name:'Perplexity',cat:'auto',desc:'Visibilité IA — optimisation GEO automatique.',auto:true},
-    {id:'claude',icon:'🧠',name:'Claude AI',cat:'auto',desc:'Visibilité IA — données structurées optimisées.',auto:true},
-    {id:'gemini',icon:'✨',name:'Gemini / Google AI',cat:'auto',desc:'Visibilité IA — via Google Business Profile.',auto:true},
-    {id:'alexa',icon:'🔊',name:'Amazon Alexa',cat:'auto',desc:'Recherche vocale — données synchronisées.',auto:true},
-    {id:'siri',icon:'🎙️',name:'Siri / Apple',cat:'auto',desc:'Recherche vocale — via Apple Business Connect.',auto:true},
-    {id:'waze',icon:'🚗',name:'Waze',cat:'auto',desc:'Navigation — synchronisé depuis Google.',auto:true},
-    {id:'mapquest',icon:'🗺️',name:'MapQuest',cat:'auto',desc:'Navigation — données synchronisées.',auto:true},
-    {id:'here',icon:'📡',name:'HERE Maps',cat:'auto',desc:'Navigation — données poussées automatiquement.',auto:true},
-    {id:'tomtom',icon:'🧭',name:'TomTom',cat:'auto',desc:'Navigation — synchronisé via Foursquare.',auto:true},
-    {id:'snapchat',icon:'👻',name:'Snap Maps',cat:'auto',desc:'Carte — données synchronisées via Foursquare.',auto:true},
-    {id:'aroundme',icon:'📱',name:'AroundMe',cat:'auto',desc:'Découverte locale — données synchronisées.',auto:true},
-    {id:'localeze',icon:'📋',name:'Localeze / Neustar',cat:'auto',desc:'Agrégateur — distribution automatique.',auto:true},
-    {id:'factual',icon:'📊',name:'Factual / Foursquare',cat:'auto',desc:'Agrégateur — données synchronisées.',auto:true},
-    {id:'infogroup',icon:'📇',name:'Data.com / Infogroup',cat:'auto',desc:'Agrégateur — distribution automatique.',auto:true},
-    {id:'acxiom',icon:'🔄',name:'Acxiom',cat:'auto',desc:'Agrégateur — données poussées.',auto:true},
-    {id:'justacote',icon:'📍',name:'Justacoté',cat:'auto',desc:'Annuaire local — données synchronisées.',auto:true},
-    {id:'cylex',icon:'📗',name:'Cylex',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
-    {id:'europages',icon:'🌐',name:'Europages',cat:'auto',desc:'Annuaire européen — données poussées.',auto:true},
-    {id:'hotfrog',icon:'🐸',name:'Hotfrog',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
-    {id:'brownbook',icon:'📕',name:'Brownbook',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
-    {id:'citysearch',icon:'🏙️',name:'Citysearch',cat:'auto',desc:'Découverte locale — données poussées.',auto:true},
-    {id:'navmii',icon:'🧭',name:'Navmii',cat:'auto',desc:'Navigation — données synchronisées.',auto:true},
-    {id:'uber',icon:'🚕',name:'Uber',cat:'auto',desc:'Transport — lieu synchronisé.',auto:true},
-    {id:'118712',icon:'📞',name:'118 712',cat:'auto',desc:'Annuaire téléphonique — données poussées.',auto:true},
-    {id:'mappy',icon:'🗺️',name:'Mappy',cat:'auto',desc:'Navigation France — données synchronisées.',auto:true},
-    {id:'michelin',icon:'⭐',name:'Guide Michelin',cat:'auto',desc:'Guide restaurant — données synchronisées.',auto:true},
-    {id:'linternaute',icon:'📰',name:'L\'Internaute',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
-    {id:'petit_fute',icon:'📖',name:'Petit Futé',cat:'auto',desc:'Guide voyage — données synchronisées.',auto:true},
+    {id:'openai',icon:'',name:'ChatGPT / OpenAI',cat:'auto',desc:'Visibilité IA — données poussées automatiquement.',auto:true},
+    {id:'perplexity',icon:'',name:'Perplexity',cat:'auto',desc:'Visibilité IA — optimisation GEO automatique.',auto:true},
+    {id:'claude',icon:'',name:'Claude AI',cat:'auto',desc:'Visibilité IA — données structurées optimisées.',auto:true},
+    {id:'gemini',icon:'',name:'Gemini / Google AI',cat:'auto',desc:'Visibilité IA — via Google Business Profile.',auto:true},
+    {id:'alexa',icon:'',name:'Amazon Alexa',cat:'auto',desc:'Recherche vocale — données synchronisées.',auto:true},
+    {id:'siri',icon:'',name:'Siri / Apple',cat:'auto',desc:'Recherche vocale — via Apple Business Connect.',auto:true},
+    {id:'waze',icon:'',name:'Waze',cat:'auto',desc:'Navigation — synchronisé depuis Google.',auto:true},
+    {id:'mapquest',icon:'',name:'MapQuest',cat:'auto',desc:'Navigation — données synchronisées.',auto:true},
+    {id:'here',icon:'',name:'HERE Maps',cat:'auto',desc:'Navigation — données poussées automatiquement.',auto:true},
+    {id:'tomtom',icon:'',name:'TomTom',cat:'auto',desc:'Navigation — synchronisé via Foursquare.',auto:true},
+    {id:'snapchat',icon:'',name:'Snap Maps',cat:'auto',desc:'Carte — données synchronisées via Foursquare.',auto:true},
+    {id:'aroundme',icon:'',name:'AroundMe',cat:'auto',desc:'Découverte locale — données synchronisées.',auto:true},
+    {id:'localeze',icon:'',name:'Localeze / Neustar',cat:'auto',desc:'Agrégateur — distribution automatique.',auto:true},
+    {id:'factual',icon:'',name:'Factual / Foursquare',cat:'auto',desc:'Agrégateur — données synchronisées.',auto:true},
+    {id:'infogroup',icon:'',name:'Data.com / Infogroup',cat:'auto',desc:'Agrégateur — distribution automatique.',auto:true},
+    {id:'acxiom',icon:'',name:'Acxiom',cat:'auto',desc:'Agrégateur — données poussées.',auto:true},
+    {id:'justacote',icon:'',name:'Justacoté',cat:'auto',desc:'Annuaire local — données synchronisées.',auto:true},
+    {id:'cylex',icon:'',name:'Cylex',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
+    {id:'europages',icon:'',name:'Europages',cat:'auto',desc:'Annuaire européen — données poussées.',auto:true},
+    {id:'hotfrog',icon:'',name:'Hotfrog',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
+    {id:'brownbook',icon:'',name:'Brownbook',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
+    {id:'citysearch',icon:'',name:'Citysearch',cat:'auto',desc:'Découverte locale — données poussées.',auto:true},
+    {id:'navmii',icon:'',name:'Navmii',cat:'auto',desc:'Navigation — données synchronisées.',auto:true},
+    {id:'uber',icon:'',name:'Uber',cat:'auto',desc:'Transport — lieu synchronisé.',auto:true},
+    {id:'118712',icon:'',name:'118 712',cat:'auto',desc:'Annuaire téléphonique — données poussées.',auto:true},
+    {id:'mappy',icon:'',name:'Mappy',cat:'auto',desc:'Navigation France — données synchronisées.',auto:true},
+    {id:'michelin',icon:'',name:'Guide Michelin',cat:'auto',desc:'Guide restaurant — données synchronisées.',auto:true},
+    {id:'linternaute',icon:'',name:'L\'Internaute',cat:'auto',desc:'Annuaire — données synchronisées.',auto:true},
+    {id:'petit_fute',icon:'',name:'Petit Futé',cat:'auto',desc:'Guide voyage — données synchronisées.',auto:true},
     // ── Réseaux sociaux ──
-    {id:'facebook',icon:'📘',name:'Facebook',cat:'social',desc:'Publiez, répondez aux avis et messages.',connectable:true,priority:true},
-    {id:'instagram',icon:'📸',name:'Instagram',cat:'social',desc:'Publiez automatiquement, répondez aux commentaires.',connectable:true,priority:true},
-    {id:'tiktok',icon:'🎵',name:'TikTok',cat:'social',desc:'Publiez automatiquement du contenu.',connectable:true,priority:false},
-    {id:'mapstr',icon:'📌',name:'Mapstr',cat:'social',desc:'Publiez automatiquement avec Mapstr Premium.',connectable:true,priority:false},
+    {id:'facebook',icon:'',name:'Facebook',cat:'social',desc:'Publiez, répondez aux avis et messages.',connectable:true,priority:true},
+    {id:'instagram',icon:'',name:'Instagram',cat:'social',desc:'Publiez automatiquement, répondez aux commentaires.',connectable:true,priority:true},
+    {id:'tiktok',icon:'',name:'TikTok',cat:'social',desc:'Publiez automatiquement du contenu.',connectable:true,priority:false},
+    {id:'mapstr',icon:'',name:'Mapstr',cat:'social',desc:'Publiez automatiquement avec Mapstr Premium.',connectable:true,priority:false},
     // ── Réservation & caisse ──
-    {id:'thefork',icon:'🍴',name:'TheFork',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'zenchef',icon:'👨‍🍳',name:'Zenchef',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'opentable',icon:'🍽️',name:'OpenTable',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'sevenrooms',icon:'🏨',name:'SevenRooms',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'resy',icon:'📱',name:'Resy',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'thefork',icon:'',name:'TheFork',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'zenchef',icon:'',name:'Zenchef',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'opentable',icon:'',name:'OpenTable',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'sevenrooms',icon:'',name:'SevenRooms',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'resy',icon:'',name:'Resy',cat:'reservation',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
     // ── Livraison ──
-    {id:'ubereats',icon:'🛵',name:'Uber Eats',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'deliveroo',icon:'🚴',name:'Deliveroo',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'doordash',icon:'🔴',name:'DoorDash',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
-    {id:'justeat',icon:'🍕',name:'Just Eat',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'ubereats',icon:'',name:'Uber Eats',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'deliveroo',icon:'',name:'Deliveroo',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'doordash',icon:'',name:'DoorDash',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
+    {id:'justeat',icon:'',name:'Just Eat',cat:'delivery',desc:'Connexion manuelle — pas d\'API publique.',connectable:true,priority:false,noApi:true},
 ];
 const DIR_CATEGORIES={
-    local:{title:'Référencement local',icon:'🔍'},
-    auto:{title:'Plateformes synchronisées automatiquement',icon:'🔄'},
-    social:{title:'Réseaux sociaux',icon:'📱'},
-    reservation:{title:'Réservation & caisse',icon:'🍽️'},
-    delivery:{title:'Livraison',icon:'🛵'}
+    local:{title:'Référencement local',icon:''},
+    auto:{title:'Plateformes synchronisées automatiquement',icon:''},
+    social:{title:'Réseaux sociaux',icon:''},
+    reservation:{title:'Réservation & caisse',icon:''},
+    delivery:{title:'Livraison',icon:''}
 };
 
 // AI Agent automation results cache
@@ -6078,14 +6078,14 @@ function renderDirAutoGrid(){
 
             // Status display (Malou-style with checkmark)
             const stHtml=
-                (st==='connected'||st==='automated')?'<span class="dir-status connected">✅ Plateforme connectée</span>':
-                st==='needs_verification'?'<span class="dir-status needs_verification">⚠️ Vérification requise</span>':
+                (st==='connected'||st==='automated')?'<span class="dir-status connected">✓ Plateforme connectée</span>':
+                st==='needs_verification'?'<span class="dir-status needs_verification">! Vérification requise</span>':
                 st==='automating'?'<span class="dir-status automating"><span class="spinner-sm"></span> Agent IA en cours…</span>':
-                st==='found'?'<span class="dir-status found">⚠️ Trouvé — à réclamer</span>':
+                st==='found'?'<span class="dir-status found">! Trouvé — à réclamer</span>':
                 st==='not_found'?'<span class="dir-status not_found">✗ Non trouvé</span>':
                 st==='checking'?'<span class="dir-status checking"><span class="spinner-sm"></span> Scan…</span>':
-                st==='claiming'?'<span class="dir-status claiming">⏳ En cours</span>':
-                st==='locked'?'<span class="dir-status locked">🔒 Plan supérieur</span>':
+                st==='claiming'?'<span class="dir-status claiming"> En cours</span>':
+                st==='locked'?'<span class="dir-status locked">Plan supérieur</span>':
                 '';
 
             // Action button (Malou-style — full width "Connecter" or status)
@@ -6098,19 +6098,19 @@ function renderDirAutoGrid(){
             } else if(st==='automating'){
                 btn=`<div class="dir-progress"><span class="spinner-sm"></span><div class="prog-bar"><div class="prog-fill" style="width:${ar.progress||30}%"></div></div><span style="font-size:.6rem;color:#8b5cf6;">${ar.currentStep||'Navigation…'}</span></div>`;
             } else if(st==='locked'){
-                btn=`<button class="dir-auto-btn" onclick="showUpgradeModal('Passez au plan supérieur pour connecter plus de plateformes.','pro')" style="opacity:.6">🔓 Débloquer</button>`;
+                btn=`<button class="dir-auto-btn" onclick="showUpgradeModal('Passez au plan supérieur pour connecter plus de plateformes.','pro')" style="opacity:.6"> Débloquer</button>`;
             } else {
                 // Real OAuth for platforms that support it
                 const oauthPlatforms={facebook:'/auth/facebook',instagram:'/auth/facebook',linkedin:'/auth/linkedin',tiktok:'/auth/tiktok'};
                 if(oauthPlatforms[d.id]){
-                    btn=`<button class="dir-auto-btn" onclick="window.location.href='${oauthPlatforms[d.id]}'">🔗 Connecter (OAuth)</button>`;
+                    btn=`<button class="dir-auto-btn" onclick="window.location.href='${oauthPlatforms[d.id]}'">Connecter (OAuth)</button>`;
                 } else if(d.noApi){
                     // No public API — guide user to their dashboard
                     const urls={thefork:'https://manager.thefork.com',zenchef:'https://app.zenchef.com',opentable:'https://restaurant.opentable.com',ubereats:'https://merchants.ubereats.com',deliveroo:'https://restaurant-hub.deliveroo.net',doordash:'https://merchant-portal.doordash.com',justeat:'https://partner.just-eat.fr',sevenrooms:'https://app.sevenrooms.com',resy:'https://os.resy.com'};
-                    btn=`<button class="dir-auto-btn" onclick="window.open('${urls[d.id]||'#'}','_blank')" style="background:linear-gradient(135deg,#f59e0b,#d97706);">📋 Gérer manuellement</button>`;
+                    btn=`<button class="dir-auto-btn" onclick="window.open('${urls[d.id]||'#'}','_blank')" style="background:linear-gradient(135deg,#f59e0b,#d97706);">Gérer manuellement</button>`;
                 } else if(d.claimUrl) {
                     // Direct link to claim/manage page on the platform
-                    btn=`<button class="dir-auto-btn" onclick="window.open('${d.claimUrl}','_blank')">🔗 Réclamer la fiche</button>`;
+                    btn=`<button class="dir-auto-btn" onclick="window.open('${d.claimUrl}','_blank')">Réclamer la fiche</button>`;
                 } else {
                     btn=`<button class="dir-auto-btn" onclick="aiAgentAutoOne('${d.id}')">Vérifier</button>`;
                 }
@@ -6123,7 +6123,7 @@ function renderDirAutoGrid(){
                 agentDetail=`<div class="dir-instructions show" style="border-color:rgba(139,92,246,.15);background:rgba(139,92,246,.03);margin-top:8px;">
                     <div style="font-size:.65rem;line-height:1.5;">${stepsText}</div>
                     ${ar.status==='needs_verification'?`<div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
-                        <button class="dir-auto-btn small" onclick="window.open('${ar.finalUrl||'#'}','_blank')">🔗 Ouvrir</button>
+                        <button class="dir-auto-btn small" onclick="window.open('${ar.finalUrl||'#'}','_blank')">Ouvrir</button>
                         <button class="dir-auto-btn small connect" onclick="markPlatformDone('${d.id}')">✓ Fait</button>
                     </div>`:''}
                 </div>`;
@@ -6134,7 +6134,7 @@ function renderDirAutoGrid(){
             const instrHtml=claim?`<div class="dir-instructions show" style="margin-top:8px;">
                 <ol style="margin:0;padding-left:16px;font-size:.65rem;">${(claim.instructions||[]).map(i=>`<li>${i.replace(/^\d+\.\s*/,'')}</li>`).join('')}</ol>
                 <div style="display:flex;gap:6px;margin-top:6px;flex-wrap:wrap;">
-                    <button class="dir-auto-btn small" onclick="window.open('${claim.url}','_blank')">🔗 Ouvrir</button>
+                    <button class="dir-auto-btn small" onclick="window.open('${claim.url}','_blank')">Ouvrir</button>
                     <button class="dir-auto-btn small connect" onclick="markPlatformDone('${d.id}')">✓ Fait</button>
                     <button class="dir-auto-btn small outline" onclick="closePlatformInstr('${d.id}')">✕</button>
                 </div></div>`:'';
@@ -6186,7 +6186,7 @@ async function autoCheckOnePlatform(platId){
         const data=await resp.json();
         if(data.success&&data.results?.length>0){
             dirCheckResults[platId]=data.results[0];
-            addToLog(`🔍 ${platId}: ${data.results[0].found?'✅ Trouvé':'❌ Non trouvé'}`);
+            addToLog(`${platId}: ${data.results[0].found?'✓ Trouvé':'✗ Non trouvé'}`);
         } else {
             dirCheckResults[platId]={status:'error'};
         }
@@ -6207,7 +6207,7 @@ async function autoCheckAllPlatforms(){
     renderDirAutoGrid();
 
     const prog=document.getElementById('dirScanProgress');
-    if(prog){prog.style.display='block';prog.innerHTML='🔍 Scan de toutes les plateformes en cours…';}
+    if(prog){prog.style.display='block';prog.innerHTML='Scan de toutes les plateformes en cours…';}
 
     try{
         const resp=await fetch(API_BASE+'/api/directories/auto-check',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -6218,13 +6218,13 @@ async function autoCheckAllPlatforms(){
                 if(platformStatus[r.platform]!=='done') dirCheckResults[r.platform]=r;
             });
             const found=data.results.filter(r=>r.found).length;
-            addToLog(`🔍 Scan terminé: ${found}/${data.results.length} plateformes avec fiche existante`);
-            if(prog)prog.innerHTML=`✅ Scan terminé — ${found} fiches trouvées, ${data.results.length-found} à créer`;
+            addToLog(`Scan terminé: ${found}/${data.results.length} plateformes avec fiche existante`);
+            if(prog)prog.innerHTML=`✓ Scan terminé — ${found} fiches trouvées, ${data.results.length-found} à créer`;
         }
     }catch(e){
-        if(prog)prog.innerHTML='❌ Erreur de scan: '+e.message;
+        if(prog)prog.innerHTML='✗ Erreur de scan: '+e.message;
     }
-    if(btn){btn.disabled=false;btn.innerHTML='🔍 Scanner toutes les plateformes';}
+    if(btn){btn.disabled=false;btn.innerHTML='Scanner toutes les plateformes';}
     renderDirAutoGrid();
     saveAllData();
 }
@@ -6243,7 +6243,7 @@ async function aiAgentAutoOne(platId){
     // Set working state
     dirAgentResults[platId]={status:'working',progress:10,currentStep:'Connexion en cours…'};
     renderDirAutoGrid();
-    agentLogAppend(`🔗 Connexion ${DIR_LIST.find(d=>d.id===platId)?.name||platId}…`);
+    agentLogAppend(`Connexion ${DIR_LIST.find(d=>d.id===platId)?.name||platId}…`);
 
     try{
         const resp=await fetch(API_BASE+'/api/directories/auto-do',{method:'POST',headers:{'Content-Type':'application/json'},
@@ -6253,9 +6253,9 @@ async function aiAgentAutoOne(platId){
             dirAgentResults[platId]={status:data.status,steps:data.steps,finalUrl:data.finalUrl,message:data.message,found:data.found};
             if(data.status==='automated'){
                 platformStatus[platId]='done';
-                agentLogAppend(`✅ ${platId} automatisé avec succès`);
+                agentLogAppend(`✓ ${platId} automatisé avec succès`);
             } else {
-                agentLogAppend(`📋 ${platId}: ${data.found?'fiche trouvée':'instructions prêtes'} — cliquez Ouvrir`);
+                agentLogAppend(`${platId}: ${data.found?'fiche trouvée':'instructions prêtes'} — cliquez Ouvrir`);
             }
         } else {
             // Server returned error — use /api/directories/auto-claim as fallback
@@ -6266,14 +6266,14 @@ async function aiAgentAutoOne(platId){
                 if(data2.success){
                     dirClaimData[platId]=data2;
                     dirAgentResults[platId]={status:'needs_verification',steps:(data2.instructions||[]).map((s,i)=>({step:s,needsManual:true,url:i===0?data2.url:''})),finalUrl:data2.url};
-                    agentLogAppend(`📋 ${platId}: instructions disponibles`);
+                    agentLogAppend(`${platId}: instructions disponibles`);
                 } else {
                     dirAgentResults[platId]={status:'error',steps:[{step:'Erreur serveur',detail:data.error||'Inconnu',needsManual:true}],message:data.error};
-                    agentLogAppend(`❌ ${platId}: ${data.error}`);
+                    agentLogAppend(`✗ ${platId}: ${data.error}`);
                 }
             }catch(e2){
                 dirAgentResults[platId]={status:'error',steps:[{step:'Erreur serveur',detail:data.error||'Inconnu',needsManual:true}],message:data.error};
-                agentLogAppend(`❌ ${platId}: ${data.error}`);
+                agentLogAppend(`✗ ${platId}: ${data.error}`);
             }
         }
     }catch(e){
@@ -6285,7 +6285,7 @@ async function aiAgentAutoOne(platId){
             if(data2.success){
                 dirClaimData[platId]=data2;
                 dirAgentResults[platId]={status:'needs_verification',steps:(data2.instructions||[]).map((s,i)=>({step:s,needsManual:true,url:i===0?data2.url:''})),finalUrl:data2.url};
-                agentLogAppend(`📋 ${platId}: instructions disponibles (fallback)`);
+                agentLogAppend(`${platId}: instructions disponibles (fallback)`);
             }
         }catch(e2){
             dirAgentResults[platId]={status:'error',steps:[{step:'Erreur réseau',detail:e.message,needsManual:true}],message:e.message};
@@ -6293,7 +6293,7 @@ async function aiAgentAutoOne(platId){
     }
     renderDirAutoGrid();
     saveAllData();
-    addToLog('🔗 '+platId+' → '+(dirAgentResults[platId]?.status||'done'));
+    addToLog(''+platId+' → '+(dirAgentResults[platId]?.status||'done'));
 }
 
 // AI Agent: automate ALL platforms sequentially
@@ -6306,23 +6306,23 @@ async function aiAgentAutoAll(){
     // Show agent log
     const logEl=document.getElementById('agentLog');
     if(logEl){logEl.style.display='block';logEl.innerHTML='';}
-    agentLogAppend('🤖 Démarrage de l\'agent IA sur toutes les plateformes…');
+    agentLogAppend('Démarrage de l\'agent IA sur toutes les plateformes…');
 
     // First: scan all platforms if not done
     const unchecked=DIR_LIST.filter(d=>!dirCheckResults[d.id]&&platformStatus[d.id]!=='done');
     if(unchecked.length>0){
-        agentLogAppend('🔍 Scan des plateformes en cours…');
+        agentLogAppend('Scan des plateformes en cours…');
         await autoCheckAllPlatforms();
-        agentLogAppend('✅ Scan terminé');
+        agentLogAppend('✓ Scan terminé');
     }
 
     // Then: automate each platform sequentially
     const toAutomate=DIR_LIST.filter(d=>platformStatus[d.id]!=='done'&&dirAgentResults[d.id]?.status!=='automated');
-    agentLogAppend(`📋 ${toAutomate.length} plateformes à automatiser`);
+    agentLogAppend(`${toAutomate.length} plateformes à automatiser`);
 
     for(let i=0;i<toAutomate.length;i++){
         const d=toAutomate[i];
-        agentLogAppend(`[${i+1}/${toAutomate.length}] 🤖 ${d.name}…`);
+        agentLogAppend(`[${i+1}/${toAutomate.length}] ${d.name}…`);
         await aiAgentAutoOne(d.id);
         // Anti-bot delay
         if(i<toAutomate.length-1) await new Promise(r=>setTimeout(r,1500+Math.random()*2000));
@@ -6332,9 +6332,9 @@ async function aiAgentAutoAll(){
     const automated=DIR_LIST.filter(d=>dirAgentResults[d.id]?.status==='automated'||platformStatus[d.id]==='done').length;
     const needsVerif=DIR_LIST.filter(d=>dirAgentResults[d.id]?.status==='needs_verification').length;
     const errors=DIR_LIST.filter(d=>dirAgentResults[d.id]?.status==='error').length;
-    agentLogAppend(`\n🏁 Terminé: ${automated} automatisés · ${needsVerif} à vérifier · ${errors} erreurs`);
+    agentLogAppend(`\n Terminé: ${automated} automatisés · ${needsVerif} à vérifier · ${errors} erreurs`);
 
-    if(btn){btn.disabled=false;btn.innerHTML='🤖 Lancer l\'agent IA sur toutes les plateformes';}
+    if(btn){btn.disabled=false;btn.innerHTML='Lancer l\'agent IA sur toutes les plateformes';}
     if(agentSt){agentSt.className='ai-agent-status done';agentSt.textContent=`${automated}/${DIR_LIST.length} fait`;}
     renderDirAutoGrid();
 }
@@ -6357,7 +6357,7 @@ function markPlatformDone(platId){
     if(dirAgentResults[platId]) dirAgentResults[platId].status='automated';
     renderDirAutoGrid();
     saveAllData();
-    addToLog('✅ Connecté: '+platId);
+    addToLog('✓ Connecté: '+platId);
 }
 
 function closePlatformInstr(platId){
@@ -6395,11 +6395,11 @@ async function runFullAutonomous(){
     if(summaryEl)summaryEl.style.display='none';
 
     const steps=[
-        {id:'audit',name:'Audit SEO + GEO',detail:'Analyse 47 critères de visibilité',icon:'🔍'},
-        {id:'gbp',name:'Google Business Profile',detail:'Tout GBP + réponses avis + posts',icon:'📊'},
-        {id:'website',name:'Site web & CMS',detail:'Schema.org, meta tags, OG, FAQ, NAP, sitemap',icon:'🌐'},
-        {id:'directories',name:'Annuaires (11 plateformes)',detail:'Scan + claim + ouverture auto',icon:'📋'},
-        {id:'social',name:'Social + GEO',detail:'Posts, contenu GEO, Hub Central',icon:'📱'},
+        {id:'audit',name:'Audit SEO + GEO',detail:'Analyse 47 critères de visibilité',icon:''},
+        {id:'gbp',name:'Google Business Profile',detail:'Tout GBP + réponses avis + posts',icon:''},
+        {id:'website',name:'Site web & CMS',detail:'Schema.org, meta tags, OG, FAQ, NAP, sitemap',icon:''},
+        {id:'directories',name:'Annuaires (11 plateformes)',detail:'Scan + claim + ouverture auto',icon:''},
+        {id:'social',name:'Social + GEO',detail:'Posts, contenu GEO, Hub Central',icon:''},
     ];
     const results={};
 
@@ -6534,7 +6534,7 @@ async function runFullAutonomous(){
     progress(50);
 
     // ── Step 4: Directories — AI Agent automation ──
-    await runAutoStep('directories','running','🤖 Agent IA: scan des 11 plateformes…');
+    await runAutoStep('directories','running','Agent IA: scan des 11 plateformes…');
     progress(55);
     const pendingDirs=DIR_LIST.filter(d=>platformStatus[d.id]!=='done');
     if(pendingDirs.length>0){
@@ -6542,7 +6542,7 @@ async function runFullAutonomous(){
         const unchecked=DIR_LIST.filter(d=>!dirCheckResults[d.id]&&platformStatus[d.id]!=='done');
         if(unchecked.length>0) await autoCheckAllPlatforms();
         progress(65);
-        await runAutoStep('directories','running','🤖 Agent IA: automatisation en cours…');
+        await runAutoStep('directories','running','Agent IA: automatisation en cours…');
 
         // Use AI agent for each platform
         const toAutomate=DIR_LIST.filter(d=>platformStatus[d.id]!=='done'&&dirAgentResults[d.id]?.status!=='automated');
@@ -6554,7 +6554,7 @@ async function runFullAutonomous(){
         for(let i=0;i<toAutomate.length;i++){
             const d=toAutomate[i];
             progress(65+Math.floor((i/toAutomate.length)*20));
-            await runAutoStep('directories','running',`🤖 ${d.name} (${i+1}/${toAutomate.length})…`);
+            await runAutoStep('directories','running',`${d.name} (${i+1}/${toAutomate.length})…`);
             // Try AI auto-do, fallback to claim
             try{
                 dirAgentResults[d.id]={status:'working',progress:30,currentStep:'Navigation…'};
@@ -6581,7 +6581,7 @@ async function runFullAutonomous(){
 
         const connected4=DIR_LIST.filter(d=>platformStatus[d.id]==='done'||dirAgentResults[d.id]?.status==='automated').length;
         const needsVerif=DIR_LIST.filter(d=>dirAgentResults[d.id]?.status==='needs_verification').length;
-        results.directories={ok:true,detail:`🤖 ${connected4} automatisés · ${needsVerif} à vérifier`};
+        results.directories={ok:true,detail:`${connected4} automatisés · ${needsVerif} à vérifier`};
         await runAutoStep('directories','success',results.directories.detail);
     } else {
         results.directories={ok:true,detail:'11/11 annuaires déjà connectés ✓'};
@@ -6623,11 +6623,11 @@ async function runFullAutonomous(){
     const allOk=!hasErrors&&!hasWarns;
     if(summaryEl){
         summaryEl.style.display='block';
-        const summaryTitle=allOk?'✅ Automatisation terminée':hasErrors?'❌ Automatisation terminée avec erreurs':'✅ Automatisation terminée';
+        const summaryTitle=allOk?'✓ Automatisation terminée':hasErrors?'✗ Automatisation terminée avec erreurs':'✓ Automatisation terminée';
         summaryEl.innerHTML=`
             <div style="font-weight:800;margin-bottom:8px;font-size:.85rem;">${summaryTitle} <span style="color:var(--mut);font-weight:400;">(${elapsed}s)</span></div>
             ${Object.entries(results).map(([k,v])=>{
-                const icons={audit:'🔍',gbp:'📊',website:'🌐',directories:'📋',social:'📱'};
+                const icons={audit:'',gbp:'',website:'',directories:'',social:''};
                 const cls=v.ok===true?'ok':v.ok==='warn'?'warn':'err';
                 const label=v.ok===true?'OK':v.ok==='warn'?'À faire':'✗';
                 return `<div class="auto-summary-line">
@@ -6640,11 +6640,11 @@ async function runFullAutonomous(){
     }
 
     btn.disabled=false;
-    btn.innerHTML='⚡ Relancer l\'automatisation';
+    btn.innerHTML='Relancer l\'automatisation';
     renderDirAutoGrid();
     try{renderPlatforms();}catch(e){}
     saveAllData();
-    addToLog(`🏁 Full Autonomie terminée en ${elapsed}s`);
+    addToLog(` Full Autonomie terminée en ${elapsed}s`);
 }
 
 async function runAutoStep(id,status,detail){
@@ -6706,7 +6706,7 @@ async function checkAlgoUpdates(){
                 source:u.source||'curated',
                 link:u.link||''
             }));
-            addToLog('📡 '+data.real_count+' mises à jour réelles + '+Math.max(0,data.total-data.real_count)+' curées récupérées');
+            addToLog(' '+data.real_count+' mises à jour réelles + '+Math.max(0,data.total-data.real_count)+' curées récupérées');
         }
     }catch(e){console.log('Algo updates API error:',e.message);}
     // Fallback to local cache if server unavailable
@@ -6718,7 +6718,7 @@ async function checkAlgoUpdates(){
     panel.innerHTML=recent.map(u=>{
         const impactColor=u.impact==='high'?'#ef4444':u.impact==='medium'?'#f59e0b':'var(--grn)';
         const impactLabel=u.impact==='high'?'IMPACT FORT':u.impact==='medium'?'IMPACT MOYEN':'IMPACT FAIBLE';
-        const areaIcon={core:'🔄',local:'📍',reviews:'⭐',geo:'🤖',spam:'🚫'}[u.area]||'📡';
+        const areaIcon={core:'',local:'',reviews:'',geo:'',spam:''}[u.area]||'';
         return `<div class="auto-step" style="margin-bottom:6px;">
             <div class="auto-step-icon">${areaIcon}</div>
             <div class="auto-step-text">
@@ -6728,11 +6728,11 @@ async function checkAlgoUpdates(){
             </div>
             <span style="font-size:.6rem;color:var(--mut);white-space:nowrap;">${new Date(u.date).toLocaleDateString('fr-FR')}</span>
         </div>`;
-    }).join('')||'<p style="font-size:.75rem;color:var(--grn);text-align:center;">✅ Aucune mise à jour récente impactant le SEO local.</p>';
+    }).join('')||'<p style="font-size:.75rem;color:var(--grn);text-align:center;">✓ Aucune mise à jour récente impactant le SEO local.</p>';
 
     // Auto-adjust audit weights based on latest updates
     applyAlgoAdjustments(recent);
-    addToLog('📡 Veille algorithmique : '+recent.length+' mises à jour récentes analysées');
+    addToLog(' Veille algorithmique : '+recent.length+' mises à jour récentes analysées');
 }
 
 // Cache for algo updates
@@ -6877,7 +6877,7 @@ function buildWebsiteImprovements(){
     }
 
     // Real rating in meta description
-    const ratingText=rating?` ⭐ ${rating}/5 (${reviewCount||''} avis)`:'';
+    const ratingText=rating?` ${rating}/5 (${reviewCount||''} avis)`:'';
 
     return {
         schema_org:JSON.stringify(schema,null,2),
@@ -6924,28 +6924,28 @@ let hubPhotoSelected=new Set();
 
 async function connectMeta(){
     const st=document.getElementById('metaStatus');
-    if(st){st.style.display='block';st.style.background='rgba(24,119,242,.1)';st.style.color='#1877f2';st.textContent='⏳ Vérification config Meta…';}
+    if(st){st.style.display='block';st.style.background='rgba(24,119,242,.1)';st.style.color='#1877f2';st.textContent=' Vérification config Meta…';}
     try{
         const r=await fetch('/api/meta/status',{headers:{'Authorization':'Bearer '+sessionToken}});
         const d=await r.json();
         if(!d.configured){
-            if(st){st.style.background='rgba(249,115,22,.12)';st.style.color='var(--org)';st.innerHTML='⚠️ META_APP_ID non configuré sur le serveur. Admin : ajouter META_APP_ID + META_APP_SECRET dans les variables d\'environnement. Guide : developers.facebook.com → Business app → Facebook Login + Instagram Graph API.';}
+            if(st){st.style.background='rgba(249,115,22,.12)';st.style.color='var(--org)';st.innerHTML='! META_APP_ID non configuré sur le serveur. Admin : ajouter META_APP_ID + META_APP_SECRET dans les variables d\'environnement. Guide : developers.facebook.com → Business app → Facebook Login + Instagram Graph API.';}
             return;
         }
         if(d.connected){
-            if(st){st.style.background='rgba(34,197,94,.12)';st.style.color='var(--grn)';st.innerHTML=`✅ Connecté — ${d.pages||0} Page(s) Facebook${d.instagram?' + Instagram Business':''}. <button onclick="window.location.href='/auth/facebook'" style="background:none;border:none;color:#1877f2;cursor:pointer;text-decoration:underline;font-size:.72rem;">Reconnecter</button>`;}
+            if(st){st.style.background='rgba(34,197,94,.12)';st.style.color='var(--grn)';st.innerHTML=`✓ Connecté — ${d.pages||0} Page(s) Facebook${d.instagram?' + Instagram Business':''}. <button onclick="window.location.href='/auth/facebook'" style="background:none;border:none;color:#1877f2;cursor:pointer;text-decoration:underline;font-size:.72rem;">Reconnecter</button>`;}
             return;
         }
         // Configured but not connected → launch OAuth
         window.location.href='/auth/facebook';
     }catch(e){
-        if(st){st.style.background='rgba(239,68,68,.12)';st.style.color='var(--red)';st.textContent='❌ Erreur: '+e.message;}
+        if(st){st.style.background='rgba(239,68,68,.12)';st.style.color='var(--red)';st.textContent='✗ Erreur: '+e.message;}
     }
 }
 
 async function scrapeHubData(){
     const status=document.getElementById('hubNapStatus');
-    if(status){status.style.display='block';status.style.background='rgba(99,102,241,.1)';status.style.color='var(--ind2)';status.textContent='🔄 Récupération des données en cours...';}
+    if(status){status.style.display='block';status.style.background='rgba(99,102,241,.1)';status.style.color='var(--ind2)';status.textContent='Récupération des données en cours...';}
     const name=currentData?.name||storedName||'Restaurant';
     const city=currentData?.city||storedCity||'Paris';
     const website=currentData?.websiteUrl||storedWebsite||'';
@@ -7001,18 +7001,18 @@ async function scrapeHubData(){
             if(br.domainAuthority)extras.push('DA '+br.domainAuthority);
             if(data.data.gmbPhotoCount)extras.push(data.data.gmbPhotoCount+' photos GMB');
             if(data.data.instagramPhotos?.length)extras.push(data.data.instagramPhotos.length+' photos IG');
-            if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✅ Données récupérées ! ${data.data.photos?.length||0} photos${extras.length?' + '+extras.join(', '):''}`;}
+            if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✓ Données récupérées ! ${data.data.photos?.length||0} photos${extras.length?' + '+extras.join(', '):''}`;}
             renderHubSources();
-            addToLog(`📥 Hub: scrappé — ${data.data.photos?.length||0} photos, tel: ${data.data.phone||'—'}${extras.length?', '+extras.join(', '):''}`);
+            addToLog(`Hub: scrappé — ${data.data.photos?.length||0} photos, tel: ${data.data.phone||'—'}${extras.length?', '+extras.join(', '):''}`);
         }
     }catch(e){
-        if(status){status.style.background='rgba(239,68,68,.1)';status.style.color='var(--red)';status.textContent='❌ Erreur: '+e.message;}
+        if(status){status.style.background='rgba(239,68,68,.1)';status.style.color='var(--red)';status.textContent='✗ Erreur: '+e.message;}
     }
 }
 
 async function scrapePhotos(){
     const status=document.getElementById('photoStatus');
-    if(status){status.style.display='block';status.style.background='rgba(236,72,153,.1)';status.style.color='var(--pnk)';status.textContent='📥 Récupération des photos...';}
+    if(status){status.style.display='block';status.style.background='rgba(236,72,153,.1)';status.style.color='var(--pnk)';status.textContent='Récupération des photos...';}
     const name=currentData?.name||storedName||'Restaurant';
     const city=currentData?.city||storedCity||'Paris';
     const website=currentData?.websiteUrl||storedWebsite||'';
@@ -7023,25 +7023,25 @@ async function scrapePhotos(){
         if(data.success){
             hubPhotos=data.photos.all.map((p,i)=>({...p,selected:false,id:'p'+i}));
             renderHubPhotos();
-            if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✅ ${data.total} photos récupérées (${data.photos.gmb?.length||0} GMB + ${data.photos.website?.length||0} site)`;}
-            addToLog(`📸 ${data.total} photos récupérées pour la médiathèque`);
+            if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✓ ${data.total} photos récupérées (${data.photos.gmb?.length||0} GMB + ${data.photos.website?.length||0} site)`;}
+            addToLog(` ${data.total} photos récupérées pour la médiathèque`);
         }
     }catch(e){
-        if(status){status.style.background='rgba(239,68,68,.1)';status.style.color='var(--red)';status.textContent='❌ Erreur: '+e.message;}
+        if(status){status.style.background='rgba(239,68,68,.1)';status.style.color='var(--red)';status.textContent='✗ Erreur: '+e.message;}
     }
 }
 
 async function fetchInstagramPhotos(){
     const status=document.getElementById('photoStatus');
-    if(status){status.style.display='block';status.style.background='linear-gradient(135deg,rgba(225,48,108,.1),rgba(247,119,55,.1))';status.style.color='#E1306C';status.textContent='📸 Connexion Instagram Graph API...';}
+    if(status){status.style.display='block';status.style.background='linear-gradient(135deg,rgba(225,48,108,.1),rgba(247,119,55,.1))';status.style.color='#E1306C';status.textContent=' Connexion Instagram Graph API...';}
     try{
         const resp=await fetchTimeout(`${API_BASE}/api/instagram/photos`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')}},30000);
         const data=await resp.json();
         if(!data.success){
             if(data.error==='no_instagram'){
-                if(status){status.textContent='⚠️ Connectez d\'abord Instagram via Facebook OAuth (onglet Dispatch → 🔗 Connecter Meta)';status.style.color='var(--org)';}
+                if(status){status.textContent='! Connectez d\'abord Instagram via Facebook OAuth (onglet Dispatch → Connecter Meta)';status.style.color='var(--org)';}
             } else {
-                if(status){status.textContent='❌ '+data.message;status.style.color='var(--red)';}
+                if(status){status.textContent='✗ '+data.message;status.style.color='var(--red)';}
             }
             return;
         }
@@ -7065,10 +7065,10 @@ async function fetchInstagramPhotos(){
                 document.getElementById('hubInstagram').value='https://instagram.com/'+data.profile.username;
             }
         }
-        if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✅ ${data.photos.length} photos + ${data.videos?.length||0} vidéos Instagram récupérées via Graph API${data.profile?.username?' (@'+data.profile.username+', '+data.profile.followers+' followers)':''}`;}
-        addToLog(`📸 Instagram: ${data.total} médias récupérés via Graph API — @${data.profile?.username||'?'}`);
+        if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✓ ${data.photos.length} photos + ${data.videos?.length||0} vidéos Instagram récupérées via Graph API${data.profile?.username?' (@'+data.profile.username+', '+data.profile.followers+' followers)':''}`;}
+        addToLog(` Instagram: ${data.total} médias récupérés via Graph API — @${data.profile?.username||'?'}`);
     }catch(e){
-        if(status){status.style.background='rgba(239,68,68,.1)';status.style.color='var(--red)';status.textContent='❌ Erreur Instagram: '+e.message;}
+        if(status){status.style.background='rgba(239,68,68,.1)';status.style.color='var(--red)';status.textContent='✗ Erreur Instagram: '+e.message;}
     }
 }
 
@@ -7076,11 +7076,11 @@ function renderHubPhotos(){
     const grid=document.getElementById('photoGrid');if(!grid)return;
     // Instagram filter = filter by source, not by type
     const filtered=hubPhotoFilter==='all'?hubPhotos:hubPhotoFilter==='instagram'?hubPhotos.filter(p=>p.source==='instagram'):hubPhotos.filter(p=>p.type===hubPhotoFilter);
-    if(!filtered.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mut);font-size:.85rem;">Aucune photo. Cliquez "📥 Récupérer les photos" pour scanner GMB et votre site web.</div>';return;}
+    if(!filtered.length){grid.innerHTML='<div style="grid-column:1/-1;text-align:center;padding:40px;color:var(--mut);font-size:.85rem;">Aucune photo. Cliquez "Récupérer les photos" pour scanner GMB et votre site web.</div>';return;}
     grid.innerHTML=filtered.map(p=>`
-        <div class="photo-grid-item${p.selected?' selected':''}" onclick="togglePhoto('${p.id}')" title="${p.caption||p.alt||p.type}${p.likes?' — ❤️ '+p.likes:''}">
+        <div class="photo-grid-item${p.selected?' selected':''}" onclick="togglePhoto('${p.id}')" title="${p.caption||p.alt||p.type}${p.likes?' —  '+p.likes:''}">
             <img src="${p.url}" alt="${p.caption||p.alt||'Photo restaurant'}" loading="lazy" onerror="this.parentElement.style.display='none'">
-            <span class="photo-badge">${p.source==='instagram'?'📸':p.source==='gmb'?'📍':p.type==='plat'?'🍽️':p.type==='ambiance'?'🪑':p.type==='facade'?'🏠':p.type==='equipe'?'👨‍🍳':p.type==='terrasse'?'☀️':'🌐'}${p.likes?' ❤️'+p.likes:''}</span>${p.isVideo?'<span style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;font-size:.6rem;padding:1px 4px;border-radius:3px;">▶️</span>':''}
+            <span class="photo-badge">${p.source==='instagram'?'':p.source==='gmb'?'':p.type==='plat'?'':p.type==='ambiance'?'':p.type==='facade'?'':p.type==='equipe'?'':p.type==='terrasse'?'':''}${p.likes?' '+p.likes:''}</span>${p.isVideo?'<span style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.7);color:#fff;font-size:.6rem;padding:1px 4px;border-radius:3px;"></span>':''}
             <span class="photo-src ${p.source}">${p.source==='gmb'?'GMB':'Site'}</span>
             <div class="photo-check">✓</div>
         </div>
@@ -7168,9 +7168,9 @@ function saveHubData(){
     fetchTimeout(`${API_BASE}/api/hub/${_hubRid}`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},body:JSON.stringify({data:hubData})},5000).catch(()=>{});
     // Also trigger full save to keep everything in sync
     saveAllData();
-    addToLog('💾 Hub Central sauvegardé');
+    addToLog('Hub Central sauvegardé');
     const status=document.getElementById('hubNapStatus');
-    if(status){status.style.display='block';status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent='✅ Données sauvegardées ! Prêtes à être poussées sur les annuaires.';}
+    if(status){status.style.display='block';status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent='✓ Données sauvegardées ! Prêtes à être poussées sur les annuaires.';}
 }
 
 // SINGLE SOURCE OF TRUTH — every feature (blog, Reddit, dispatch, GBP, CMS,
@@ -7261,7 +7261,7 @@ async function pushHubToAll(){
     const hub=getHubData();
     if(!hub.name){alert('Remplissez au moins le nom du restaurant.');return;}
     const status=document.getElementById('hubNapStatus');
-    if(status){status.style.display='block';status.style.background='rgba(99,102,241,.1)';status.style.color='var(--ind2)';status.textContent='🚀 Publication sur tous les annuaires en cours...';}
+    if(status){status.style.display='block';status.style.background='rgba(99,102,241,.1)';status.style.color='var(--ind2)';status.textContent='Publication sur tous les annuaires en cours...';}
 
     // Load latest special hours from DB before pushing
     await loadSpecialHours();
@@ -7271,17 +7271,17 @@ async function pushHubToAll(){
     if(googleAuth?.connected){
         try{
             if(hub.description)await fetch(API_BASE+'/api/gbp/update-description',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:googleAuth.userId,location_name:googleAuth.locationName,description:hub.description})});
-            addToLog('✅ GBP: description mise à jour');
+            addToLog('✓ GBP: description mise à jour');
             // Push special hours if any
             if(hub.special_hours.length>0){
                 try{
                     const shResp=await fetch(API_BASE+'/api/hub/push-special-hours',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:currentData?.restaurant_id||0,user_id:googleAuth.userId,location_name:googleAuth.locationName})});
                     const shData=await shResp.json();
-                    if(shData.success)addToLog(`✅ GBP: ${shData.pushed||0} jours exceptionnels poussés`);
-                    else addToLog('⚠️ GBP special hours: '+(shData.error||'erreur'));
-                }catch(e){addToLog('⚠️ GBP special hours: '+e.message);}
+                    if(shData.success)addToLog(`✓ GBP: ${shData.pushed||0} jours exceptionnels poussés`);
+                    else addToLog('! GBP special hours: '+(shData.error||'erreur'));
+                }catch(e){addToLog('! GBP special hours: '+e.message);}
             }
-        }catch(e){addToLog('⚠️ GBP: '+e.message);}
+        }catch(e){addToLog('! GBP: '+e.message);}
     }
 
     // 2. Push to CMS/Website if connected
@@ -7291,9 +7291,9 @@ async function pushHubToAll(){
             const improvements=buildWebsiteImprovements(hub.name,currentData?.city||storedCity);
             if(cmsConn.cms==='wordpress'){
                 await fetch(API_BASE+'/api/cms/wordpress/apply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({connection_id:cmsConn.id,tasks:[{type:'schema',content:improvements.schema_jsonld},{type:'meta',content:{title:hub.name+' — Restaurant '+hub.category+' à '+(currentData?.city||storedCity),description:hub.description.substring(0,160)}}]})});
-                addToLog('✅ WordPress: schema + meta mis à jour');
+                addToLog('✓ WordPress: schema + meta mis à jour');
             }
-        }catch(e){addToLog('⚠️ CMS: '+e.message);}
+        }catch(e){addToLog('! CMS: '+e.message);}
     }
 
     // 3. AI Agent: automate directory connections — pass FULL hub payload for consistency
@@ -7332,8 +7332,8 @@ async function pushHubToAll(){
     }
     renderDirAutoGrid();
 
-    if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✅ Publié ! GBP${googleAuth?.connected?' ✓':' ⚠'} | Site${cmsConn?' ✓':' ⚠'} | 🤖 ${automated} automatisés · ${prepared} prêts`;}
-    addToLog(`🚀 Hub poussé: 🤖 ${automated} automatisés · ${prepared} prêts`);
+    if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✓ Publié ! GBP${googleAuth?.connected?' ✓':' '} | Site${cmsConn?' ✓':' '} | ${automated} automatisés · ${prepared} prêts`;}
+    addToLog(`Hub poussé: ${automated} automatisés · ${prepared} prêts`);
 }
 
 async function checkNapConsistency(){
@@ -7343,8 +7343,8 @@ async function checkNapConsistency(){
     container.innerHTML='<div style="padding:12px;color:var(--cyn);font-size:.8rem;"><span class="spinner-sm"></span> Vérification de la cohérence NAP sur toutes les sources…</div>';
 
     const sources=[
-        {name:'Hub Central',icon:'🏠',data:hub},
-        {name:'Google Business',icon:'📊',data:{name:currentData?.name||'',phone:currentData?.phone||window._hubData?.phone||'',address:currentData?.address||window._hubData?.address||'',website:currentData?.websiteUrl||window._hubData?.website||''}},
+        {name:'Hub Central',icon:'',data:hub},
+        {name:'Google Business',icon:'',data:{name:currentData?.name||'',phone:currentData?.phone||window._hubData?.phone||'',address:currentData?.address||window._hubData?.address||'',website:currentData?.websiteUrl||window._hubData?.website||''}},
     ];
 
     // Active fetch from server for external platforms
@@ -7353,21 +7353,21 @@ async function checkNapConsistency(){
         const data=await resp.json();
         if(data.success&&data.sources){
             data.sources.forEach(s=>{if(s.found)sources.push(s);});
-            addToLog('🔍 NAP check : '+data.sources.length+' sources externes vérifiées');
+            addToLog('NAP check : '+data.sources.length+' sources externes vérifiées');
         }
     }catch(e){console.log('NAP check API error:',e.message);}
 
     // Also use cached real audit data
     const det=window._realAuditDetails||{};
     const addedNames=sources.map(s=>s.name.toLowerCase());
-    if(det.foursquare?.available&&det.foursquare?.found&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'📍',data:{name:det.foursquare.name||'',phone:det.foursquare.phone||'',address:det.foursquare.address||'',website:det.foursquare.website||''}});}
-    if(det.tripadvisor?.available&&det.tripadvisor?.found&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:det.tripadvisor.name||'',phone:'',address:det.tripadvisor.address||'',website:''}});}
-    if(det.yelp?.available&&det.yelp?.found&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'⭐',data:{name:det.yelp.name||'',phone:det.yelp.phone||'',address:det.yelp.address||'',website:''}});}
+    if(det.foursquare?.available&&det.foursquare?.found&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'',data:{name:det.foursquare.name||'',phone:det.foursquare.phone||'',address:det.foursquare.address||'',website:det.foursquare.website||''}});}
+    if(det.tripadvisor?.available&&det.tripadvisor?.found&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'',data:{name:det.tripadvisor.name||'',phone:'',address:det.tripadvisor.address||'',website:''}});}
+    if(det.yelp?.available&&det.yelp?.found&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'',data:{name:det.yelp.name||'',phone:det.yelp.phone||'',address:det.yelp.address||'',website:''}});}
     // Fallback to old format
     const ra=window._realAuditData||currentData||{};
-    if(!det.foursquare&&ra._foursquare&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'📍',data:{name:ra._foursquare.name||'',phone:ra._foursquare.phone||'',address:ra._foursquare.address||'',website:ra._foursquare.website||''}});}
-    if(!det.tripadvisor&&ra._tripadvisor&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'🦉',data:{name:ra._tripadvisor.name||'',phone:'',address:ra._tripadvisor.address||'',website:''}});}
-    if(!det.yelp&&ra._yelp&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'⭐',data:{name:ra._yelp.name||'',phone:ra._yelp.phone||'',address:ra._yelp.address||'',website:''}});}
+    if(!det.foursquare&&ra._foursquare&&!addedNames.includes('foursquare')){sources.push({name:'Foursquare',icon:'',data:{name:ra._foursquare.name||'',phone:ra._foursquare.phone||'',address:ra._foursquare.address||'',website:ra._foursquare.website||''}});}
+    if(!det.tripadvisor&&ra._tripadvisor&&!addedNames.includes('tripadvisor')){sources.push({name:'TripAdvisor',icon:'',data:{name:ra._tripadvisor.name||'',phone:'',address:ra._tripadvisor.address||'',website:''}});}
+    if(!det.yelp&&ra._yelp&&!addedNames.includes('yelp')){sources.push({name:'Yelp',icon:'',data:{name:ra._yelp.name||'',phone:ra._yelp.phone||'',address:ra._yelp.address||'',website:''}});}
 
     // dirCheckResults
     const dirList=typeof DIR_LIST!=='undefined'?DIR_LIST:[];
@@ -7377,15 +7377,15 @@ async function checkNapConsistency(){
         const check=(typeof dirCheckResults!=='undefined')?dirCheckResults[pid]:null;
         if(check&&check.found&&!addedPlatforms.includes(pid)){
             const dirInfo=dirList.find(d=>d.id===pid);
-            sources.push({name:dirInfo?.name||pid,icon:dirInfo?.icon||'📋',data:{name:check.title||'',phone:'',address:check.snippet||'',website:''}});
+            sources.push({name:dirInfo?.name||pid,icon:dirInfo?.icon||'',data:{name:check.title||'',phone:'',address:check.snippet||'',website:''}});
         }
     });
     // Website data
     if(storedWebsite&&window._realAudit){
-        sources.push({name:'Site web',icon:'🌐',data:{name:window._realAudit.siteTitle||'',phone:window._realAudit.napPhone||'',address:window._realAudit.napAddress||'',website:storedWebsite}});
+        sources.push({name:'Site web',icon:'',data:{name:window._realAudit.siteTitle||'',phone:window._realAudit.napPhone||'',address:window._realAudit.napAddress||'',website:storedWebsite}});
     }
 
-    let html='<div style="font-size:.82rem;font-weight:700;margin-bottom:10px;">🔍 Cohérence NAP — '+sources.length+' sources comparées</div>';
+    let html='<div style="font-size:.82rem;font-weight:700;margin-bottom:10px;">Cohérence NAP — '+sources.length+' sources comparées</div>';
     html+='<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:.72rem;"><tr><th style="text-align:left;padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Source</th><th style="padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Nom</th><th style="padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Téléphone</th><th style="padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Adresse</th><th style="padding:6px 8px;border-bottom:2px solid var(--ind);color:var(--mut);">Site</th></tr>';
     const refName=hub.name.toLowerCase().trim();
     const refPhone=(hub.phone||'').replace(/\D/g,'');
@@ -7400,10 +7400,10 @@ async function checkNapConsistency(){
         if(s.data.website){totalChecks++;if(webOk)passedChecks++;}
         html+=`<tr style="background:${s.name==='Hub Central'?'rgba(99,102,241,.05)':'transparent'};">`;
         html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);font-weight:${s.name==='Hub Central'?'700':'400'};">${s.icon} ${s.name}</td>`;
-        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.name?`<span style="color:${nameOk?'var(--grn)':'var(--red)'};">${nameOk?'✅':'❌'}</span> ${s.data.name.substring(0,25)}`:'<span style="color:var(--mut);">—</span>'}</td>`;
-        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.phone?`<span style="color:${phoneOk?'var(--grn)':'var(--red)'};">${phoneOk?'✅':'❌'}</span> ${s.data.phone}`:'<span style="color:var(--mut);">—</span>'}</td>`;
+        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.name?`<span style="color:${nameOk?'var(--grn)':'var(--red)'};">${nameOk?'':''}</span> ${s.data.name.substring(0,25)}`:'<span style="color:var(--mut);">—</span>'}</td>`;
+        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.phone?`<span style="color:${phoneOk?'var(--grn)':'var(--red)'};">${phoneOk?'':''}</span> ${s.data.phone}`:'<span style="color:var(--mut);">—</span>'}</td>`;
         html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.address?s.data.address.substring(0,40):'<span style="color:var(--mut);">—</span>'}</td>`;
-        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.website?`<span style="color:${webOk?'var(--grn)':'var(--red)'};">${webOk?'✅':'❌'}</span>`:'<span style="color:var(--mut);">—</span>'}</td></tr>`;
+        html+=`<td style="padding:6px 8px;border-bottom:1px solid var(--bdr);text-align:center;">${s.data.website?`<span style="color:${webOk?'var(--grn)':'var(--red)'};">${webOk?'':''}</span>`:'<span style="color:var(--mut);">—</span>'}</td></tr>`;
     });
     html+='</table></div>';
     const score=totalChecks>0?Math.round(passedChecks/totalChecks*100):0;
@@ -7418,12 +7418,12 @@ async function checkNapConsistency(){
 function renderHubSources(){
     const grid=document.getElementById('hubSourceGrid');if(!grid)return;
     const sources=[
-        {icon:'📊',name:'Google Places',status:currentData?._placesApiUsed?'ok':window._hubData?.source==='google_places_api'?'ok':googleAuth?.connected?'ok':'err',label:currentData?._placesApiUsed?'✅ Places API':window._hubData?.source==='google_places_api'?'✅ Places API':googleAuth?.connected?'Connecté':'Non connecté'},
-        {icon:'🌐',name:'Site web',status:storedWebsite?'ok':'err',label:storedWebsite||'Pas de site'},
-        {icon:'🔍',name:'Audit SEO',status:window._realAudit?'ok':currentData?'warn':'err',label:window._realAudit?'Données réelles':currentData?'Audit en attente':'Non lancé'},
-        {icon:'📸',name:'Photos',status:hubPhotos.length>10?'ok':hubPhotos.length>0?'warn':'err',label:hubPhotos.length+' photos'},
-        {icon:'📋',name:'Annuaires',status:Object.keys(dirCheckResults).length>5?'ok':'warn',label:Object.keys(dirCheckResults).length+'/11 scannés'},
-        {icon:'🤖',name:'CMS',status:detectedCMS?.detected?'ok':'warn',label:detectedCMS?.detected?detectedCMS.detected.cms:'Non détecté'},
+        {icon:'',name:'Google Places',status:currentData?._placesApiUsed?'ok':window._hubData?.source==='google_places_api'?'ok':googleAuth?.connected?'ok':'err',label:currentData?._placesApiUsed?'✓ Places API':window._hubData?.source==='google_places_api'?'✓ Places API':googleAuth?.connected?'Connecté':'Non connecté'},
+        {icon:'',name:'Site web',status:storedWebsite?'ok':'err',label:storedWebsite||'Pas de site'},
+        {icon:'',name:'Audit SEO',status:window._realAudit?'ok':currentData?'warn':'err',label:window._realAudit?'Données réelles':currentData?'Audit en attente':'Non lancé'},
+        {icon:'',name:'Photos',status:hubPhotos.length>10?'ok':hubPhotos.length>0?'warn':'err',label:hubPhotos.length+' photos'},
+        {icon:'',name:'Annuaires',status:Object.keys(dirCheckResults).length>5?'ok':'warn',label:Object.keys(dirCheckResults).length+'/11 scannés'},
+        {icon:'',name:'CMS',status:detectedCMS?.detected?'ok':'warn',label:detectedCMS?.detected?detectedCMS.detected.cms:'Non détecté'},
     ];
     grid.innerHTML=sources.map(s=>`
         <div class="hub-source-card">
@@ -7438,7 +7438,7 @@ async function publishPhotosAll(){
     const selected=hubPhotos.filter(p=>p.selected);
     if(!selected.length){alert('Sélectionnez au moins une photo.');return;}
     const status=document.getElementById('photoStatus');
-    if(status){status.style.display='block';status.style.background='rgba(99,102,241,.1)';status.style.color='var(--ind2)';status.textContent=`📤 Publication de ${selected.length} photos sur les annuaires...`;}
+    if(status){status.style.display='block';status.style.background='rgba(99,102,241,.1)';status.style.color='var(--ind2)';status.textContent=`Publication de ${selected.length} photos sur les annuaires...`;}
 
     // Push to GBP if connected
     if(googleAuth?.connected){
@@ -7446,13 +7446,13 @@ async function publishPhotosAll(){
             for(const photo of selected.slice(0,10)){
                 await fetch(API_BASE+'/api/gbp/update-photo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:googleAuth.userId,location_name:googleAuth.locationName,photo_url:photo.url,category:photo.type==='facade'?'EXTERIOR':photo.type==='ambiance'?'INTERIOR':photo.type==='plat'?'FOOD_AND_DRINK':'ADDITIONAL'})});
             }
-            addToLog(`📸 ${Math.min(selected.length,10)} photos publiées sur GBP`);
-        }catch(e){addToLog('⚠️ GBP photos: '+e.message);}
+            addToLog(` ${Math.min(selected.length,10)} photos publiées sur GBP`);
+        }catch(e){addToLog('! GBP photos: '+e.message);}
     }
 
     // For other platforms, prepare download links or instructions
-    addToLog(`📸 ${selected.length} photos prêtes. Utilisez "Pousser sur tous les annuaires" dans le Hub pour les publier partout.`);
-    if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✅ ${selected.length} photos publiées sur GBP${googleAuth?.connected?'':' (non connecté)'} — autres plateformes via connexion manuelle`;}
+    addToLog(` ${selected.length} photos prêtes. Utilisez "Pousser sur tous les annuaires" dans le Hub pour les publier partout.`);
+    if(status){status.style.background='rgba(16,185,129,.1)';status.style.color='var(--grn)';status.textContent=`✓ ${selected.length} photos publiées sur GBP${googleAuth?.connected?'':' (non connecté)'} — autres plateformes via connexion manuelle`;}
 }
 
 // Auto-populate hub when switching to tab
@@ -7489,7 +7489,7 @@ function populateHub(){
         const logoUrl=branding.logo||branding.ogImage||branding.favicon||hd.logo||'';
         if(logoEl&&logoUrl&&!logoEl.value){
             logoEl.value=logoUrl;
-            if(logoPreview)logoPreview.innerHTML=`<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<span style=\\'font-size:.6rem;color:var(--mut);\\'>❌</span>'">`;
+            if(logoPreview)logoPreview.innerHTML=`<img src="${logoUrl}" style="width:100%;height:100%;object-fit:contain;" onerror="this.parentElement.innerHTML='<span style=\\'font-size:.6rem;color:var(--mut);\\'></span>'">`;
         }
         // Also update old hubLogo field
         const oldLogo=document.getElementById('hubLogo');
@@ -7512,7 +7512,7 @@ function populateHub(){
         const colorsEl=document.getElementById('hubColors');
         const siteColors=branding.colors||hd.colors||[];
         if(colorsEl&&siteColors.length>0){
-            colorsEl.innerHTML=siteColors.map(c=>`<div style="display:flex;align-items:center;gap:4px;background:var(--s2);padding:3px 8px;border-radius:6px;border:1px solid var(--bdr);cursor:pointer;" onclick="navigator.clipboard.writeText('${c}');addToLog('📋 Couleur ${c} copiée');" title="Cliquer pour copier"><div style="width:18px;height:18px;border-radius:4px;background:${c};border:1px solid rgba(255,255,255,.15);"></div><span style="font-size:.68rem;font-family:monospace;color:var(--txt);">${c}</span></div>`).join('');
+            colorsEl.innerHTML=siteColors.map(c=>`<div style="display:flex;align-items:center;gap:4px;background:var(--s2);padding:3px 8px;border-radius:6px;border:1px solid var(--bdr);cursor:pointer;" onclick="navigator.clipboard.writeText('${c}');addToLog('Couleur ${c} copiée');" title="Cliquer pour copier"><div style="width:18px;height:18px;border-radius:4px;background:${c};border:1px solid rgba(255,255,255,.15);"></div><span style="font-size:.68rem;font-family:monospace;color:var(--txt);">${c}</span></div>`).join('');
         }
 
         // Branding: Fonts
@@ -7536,9 +7536,9 @@ document.addEventListener('DOMContentLoaded',()=>{
 // DIRECTORY AUTO-CONNECT FINALIZATION
 // ============================================================
 async function autoConnectAndFinalize(){
-    addToLog('🔍 Scan de toutes les plateformes...');
+    addToLog('Scan de toutes les plateformes...');
     await autoCheckAllPlatforms();
-    addToLog('🚀 Préparation des connexions...');
+    addToLog('Préparation des connexions...');
     const hub=getHubData();
     const toConnect=DIR_LIST.filter(d=>platformStatus[d.id]!=='done');
     const results=await Promise.allSettled(toConnect.map(d=>
@@ -7557,12 +7557,12 @@ async function autoConnectAndFinalize(){
         const d=opened[i];
         const claim=dirClaimData[d.id];
         if(claim?.url){
-            addToLog(`🔗 Ouverture ${d.name} (${i+1}/${opened.length})...`);
+            addToLog(`Ouverture ${d.name} (${i+1}/${opened.length})...`);
             window.open(claim.url,'_blank');
             if(i<opened.length-1)await new Promise(r=>setTimeout(r,2000+Math.random()*3000));
         }
     }
-    addToLog(`✅ ${opened.length} plateformes ouvertes — complétez l'inscription puis cliquez "C'est fait" pour chacune`);
+    addToLog(`✓ ${opened.length} plateformes ouvertes — complétez l'inscription puis cliquez "C'est fait" pour chacune`);
 }
 
 // ============================================================
@@ -7573,7 +7573,7 @@ async function runPostScanAutomation(){
     const summary={hub:null,reviews:null,posts:null,directories:null,fixes:null};
     const name=currentData?.name||storedName||'Restaurant';
     const city=currentData?.city||storedCity||'Paris';
-    console.log('🤖 AutoPilot: démarrage post-scan...');
+    console.log('AutoPilot: démarrage post-scan...');
 
     // ── 1. Auto-populate Hub Central ──
     try{
@@ -7701,7 +7701,7 @@ async function runPostScanAutomation(){
                 }
             }
             try{renderDirAutoGrid();}catch(e){}
-            summary.directories={ok:true,detail:`🤖 ${automated} automatisés · ${ready} prêts`};
+            summary.directories={ok:true,detail:`${automated} automatisés · ${ready} prêts`};
         } else {
             summary.directories={ok:true,detail:'Annuaires déjà connectés'};
         }
@@ -7932,7 +7932,7 @@ async function runPostScanAutomation(){
 
     // ── Show non-intrusive notification toast ──
     const elapsed=((Date.now()-t0)/1000).toFixed(1);
-    console.log(`🤖 AutoPilot: terminé en ${elapsed}s`,summary);
+    console.log(`AutoPilot: terminé en ${elapsed}s`,summary);
     showAutoPilotToast(summary,elapsed);
     saveAllData();
 }
@@ -7943,13 +7943,13 @@ function showAutoPilotToast(summary,elapsed){
     if(old)old.remove();
 
     const actions=Object.entries(summary).filter(([k,v])=>v&&v.ok).map(([k,v])=>{
-        const icons={hub:'🏠',reviews:'⭐',semantic:'🔬',posts:'📱',directories:'📋',fixes:'🔧',keywords:'🎯',blog:'📝',reddit:'🤖',social:'📱',faq:'❓',napSync:'🔗',autoPublish:'🚀',rrf:'📊',schemaMenu:'🍽️',sameAs:'🔗',claims:'💎',cmsInject:'💉'};
+        const icons={hub:'',reviews:'',semantic:'',posts:'',directories:'',fixes:'',keywords:'',blog:'',reddit:'',social:'',faq:'',napSync:'',autoPublish:'',rrf:'',schemaMenu:'',sameAs:'',claims:'',cmsInject:''};
         const labels={hub:'Hub Central',reviews:'Avis',semantic:'Analyse sémantique',posts:'Google Post',directories:'Annuaires',fixes:'Améliorations',keywords:'Mots-clés',blog:'Blog GEO',reddit:'Reddit GEO',social:'Posts sociaux',faq:'FAQ GEO',napSync:'Sync NAP',autoPublish:'Publication auto',rrf:'Score RRF (ChatGPT)',schemaMenu:'Schema Menu',sameAs:'SameAs Links',claims:'Unique Claims',cmsInject:'Injection CMS'};
         return `<div style="display:flex;align-items:center;gap:6px;font-size:.72rem;"><span>${icons[k]||'•'}</span><span style="color:var(--txt);">${labels[k]||k}</span><span style="color:var(--grn);margin-left:auto;">${v.detail}</span></div>`;
     });
 
     const warnings=Object.entries(summary).filter(([k,v])=>v&&!v.ok).map(([k,v])=>{
-        return `<div style="font-size:.7rem;color:#f59e0b;">⚠ ${k}: ${v.detail}</div>`;
+        return `<div style="font-size:.7rem;color:#f59e0b;"> ${k}: ${v.detail}</div>`;
     });
 
     const toast=document.createElement('div');
@@ -7957,7 +7957,7 @@ function showAutoPilotToast(summary,elapsed){
     toast.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--s2);border:1px solid var(--bdr);border-radius:12px;padding:14px 18px;max-width:340px;box-shadow:0 8px 32px rgba(0,0,0,.4);z-index:9999;animation:slideUp .3s ease;';
     toast.innerHTML=`
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-            <span style="font-weight:800;font-size:.8rem;">🤖 AutoPilot terminé</span>
+            <span style="font-weight:800;font-size:.8rem;">AutoPilot terminé</span>
             <span style="font-size:.65rem;color:var(--mut);">${elapsed}s</span>
             <button onclick="this.closest('#autoPilotToast').remove()" style="background:none;border:none;color:var(--mut);cursor:pointer;font-size:1rem;padding:0 0 0 8px;">✕</button>
         </div>
@@ -7985,7 +7985,7 @@ async function renderStatsTab(){
     const city=currentData?.city||'Votre ville';
     const rid=currentData?.restaurant_id||1;
     
-    container.innerHTML='<p style="text-align:center;color:var(--mut);padding:40px;">⏳ Chargement des statistiques...</p>';
+    container.innerHTML='<p style="text-align:center;color:var(--mut);padding:40px;"> Chargement des statistiques...</p>';
 
     // ── Real data from Google Places + audit ──
     const gd=window._realAuditDetails?.google||{};
@@ -8030,7 +8030,7 @@ async function renderStatsTab(){
     html+=`<div style="padding:10px 14px;border-radius:10px;background:rgba(16,185,129,.06);border:1px solid rgba(16,185,129,.15);margin-bottom:16px;font-size:.75rem;">
         <span style="font-weight:700;color:var(--txt);">Sources de données :</span>
         ${allSources.map(s=>`<span style="display:inline-block;padding:1px 8px;border-radius:4px;background:rgba(16,185,129,.12);color:var(--grn);font-weight:600;font-size:.65rem;margin-left:4px;">✓ ${s}</span>`).join('')}
-        ${!hasGoogle?'<span style="display:block;margin-top:4px;color:var(--mut);font-size:.7rem;">💡 Connectez Google Business Profile pour des KPI de recherches et vues Maps en temps réel.</span>':''}
+        ${!hasGoogle?'<span style="display:block;margin-top:4px;color:var(--mut);font-size:.7rem;">Connectez Google Business Profile pour des KPI de recherches et vues Maps en temps réel.</span>':''}
     </div>`;
 
     // ── Real KPI cards ──
@@ -8054,10 +8054,10 @@ async function renderStatsTab(){
 
     // ── Google Search Console — Interactive Performance Chart ──
     html+=`<div class="chart-section" id="gscSection">
-        <h3 class="chart-title">📊 Google Search Console — Performance</h3>
+        <h3 class="chart-title">Google Search Console — Performance</h3>
         <div id="gscChart" style="background:var(--s1);border-radius:10px;border:1px solid var(--bdr);overflow:hidden;">
             <div style="padding:20px;text-align:center;">
-                <div style="font-size:1.5rem;margin-bottom:8px;">⏳</div>
+                <div style="font-size:1.5rem;margin-bottom:8px;"></div>
                 <div style="color:var(--mut);font-size:.82rem;">Chargement des données Search Console...</div>
             </div>
         </div>
@@ -8065,44 +8065,44 @@ async function renderStatsTab(){
 
     // ── Backlinks Section ──
     html+=`<div class="chart-section" id="backlinksSection">
-        <h3 class="chart-title">🔗 Profil de backlinks</h3>
+        <h3 class="chart-title">Profil de backlinks</h3>
         <div id="backlinksContainer" style="background:var(--s1);border-radius:10px;border:1px solid var(--bdr);padding:20px;">
-            <div style="text-align:center;color:var(--mut);font-size:.82rem;">⏳ Analyse des backlinks en cours...</div>
+            <div style="text-align:center;color:var(--mut);font-size:.82rem;"> Analyse des backlinks en cours...</div>
         </div>
     </div>`;
 
     // ── Content Automation Engine (GEO-Optimized) ──
     html+=`<div class="chart-section" id="contentAutoSection">
-        <h3 class="chart-title">🚀 Automatisation GEO+SEO — Contenu, Backlinks & Publication</h3>
+        <h3 class="chart-title">Automatisation GEO+SEO — Contenu, Backlinks & Publication</h3>
         <p style="font-size:.78rem;color:var(--mut);margin:0 0 16px;line-height:1.5;">
             Contenu optimisé pour Google <b>ET</b> les moteurs IA (ChatGPT, Perplexity, Gemini). Mots-clés GEO intégrés automatiquement.
         </p>
         <div style="background:var(--s1);border-radius:10px;border:1px solid var(--bdr);padding:20px;">
             <!-- Main CTA: Auto-Publish Everything -->
             <button onclick="autoPublishAll()" id="btnAutoPublish" class="auto-btn-full" style="width:100%;padding:18px;font-size:.95rem;background:linear-gradient(135deg,#f59e0b,#d97706,#b45309);border:none;color:#fff;border-radius:12px;cursor:pointer;font-weight:700;margin-bottom:16px;box-shadow:0 4px 15px rgba(245,158,11,.3);letter-spacing:.3px;">
-                ⚡ TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post
+                TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post
             </button>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
                 <button onclick="generateBlogPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#6366f1,#8b5cf6);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    📝 Blog GEO
+                    Blog GEO
                 </button>
                 <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#ff4500,#ff6b35);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    🤖 Reddit x3
+                    Reddit x3
                 </button>
                 <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#10b981,#059669);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    ✍️ Guest Post
+                     Guest Post
                 </button>
                 <button onclick="generateSocialPosts()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#ec4899,#be185d);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    📱 Social x7
+                    Social x7
                 </button>
                 <button onclick="generateTikTokKit()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#000,#25f4ee);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    🎵 TikTok Kit x3
+                     TikTok Kit x3
                 </button>
                 <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#14b8a6,#0d9488);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    ❓ FAQ GEO x15
+                     FAQ GEO x15
                 </button>
                 <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:linear-gradient(135deg,#64748b,#475569);border:none;color:#fff;border-radius:10px;cursor:pointer;font-weight:600;">
-                    🔄 Tout régénérer
+                    Tout régénérer
                 </button>
             </div>
             <div id="contentAutoResults" style="display:none;"></div>
@@ -8116,7 +8116,7 @@ async function renderStatsTab(){
     </div>`;
 
     html+=`<div class="chart-section">
-        <h3 class="chart-title">🎯 Classements mots-clés (Top 10)</h3>
+        <h3 class="chart-title">Classements mots-clés (Top 10)</h3>
         <table class="keyword-table"><thead><tr><th>Mot-clé</th><th>Langue</th><th>Popularité</th><th>Position Google</th><th style="text-align:center;">Évolution</th><th>Concurrents</th></tr></thead><tbody>`;
     keywords.forEach((k,i)=>{
         const badgeClass=k.pop==='Élevée'?'badge-high':k.pop==='Moyenne'?'badge-medium':'badge-low';
@@ -8136,7 +8136,7 @@ async function renderStatsTab(){
     const perf=window._realAuditDetails?.performance;
     const webData=window._realAuditDetails?.website;
     if(perf?.available||webData){
-        html+=`<div class="chart-section"><h3 class="chart-title">⚡ Performance du site (PageSpeed)</h3>`;
+        html+=`<div class="chart-section"><h3 class="chart-title">Performance du site (PageSpeed)</h3>`;
         if(perf?.available){
             const mob=perf.mobile||{};const desk=perf.desktop||{};
             const renderGauge=(label,score)=>{
@@ -8146,13 +8146,13 @@ async function renderStatsTab(){
             };
             html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
                 <div style="padding:16px;background:var(--s1);border-radius:10px;border:1px solid var(--bdr);">
-                    <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:12px;">📱 Mobile</div>
+                    <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:12px;">Mobile</div>
                     <div style="display:flex;justify-content:space-around;">${renderGauge('Perf.',mob.performance)}${renderGauge('A11y',mob.accessibility)}${renderGauge('SEO',mob.seo)}</div>
                     ${mob.fcp?`<div style="margin-top:12px;font-size:.72rem;color:var(--mut);display:grid;grid-template-columns:1fr 1fr;gap:4px;">
                         <span>FCP: ${mob.fcp}</span><span>LCP: ${mob.lcp||'—'}</span><span>CLS: ${mob.cls||'—'}</span><span>TBT: ${mob.tbt||'—'}</span></div>`:''}
                 </div>
                 <div style="padding:16px;background:var(--s1);border-radius:10px;border:1px solid var(--bdr);">
-                    <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:12px;">🖥️ Desktop</div>
+                    <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:12px;"> Desktop</div>
                     <div style="display:flex;justify-content:space-around;">${renderGauge('Perf.',desk.performance)}${renderGauge('A11y',desk.accessibility)}${renderGauge('SEO',desk.seo)}</div>
                     ${desk.fcp?`<div style="margin-top:12px;font-size:.72rem;color:var(--mut);display:grid;grid-template-columns:1fr 1fr;gap:4px;">
                         <span>FCP: ${desk.fcp}</span><span>LCP: ${desk.lcp||'—'}</span><span>CLS: ${desk.cls||'—'}</span><span>TBT: ${desk.tbt||'—'}</span></div>`:''}
@@ -8167,15 +8167,15 @@ async function renderStatsTab(){
     // ── AI Visibility section ──
     const ai=window._realAuditDetails?.aiVisibility;
     if(ai?.available&&ai?.mentioned!==undefined){
-        html+=`<div class="chart-section"><h3 class="chart-title">🤖 Visibilité IA (ChatGPT / Claude / Gemini)</h3>
+        html+=`<div class="chart-section"><h3 class="chart-title">Visibilité IA (ChatGPT / Claude / Gemini)</h3>
             <div style="padding:16px;background:var(--s1);border-radius:10px;border:1px solid var(--bdr);">
                 <div style="display:flex;align-items:center;gap:16px;margin-bottom:12px;">
-                    <div style="width:60px;height:60px;border-radius:50%;background:${ai.mentioned?'rgba(16,185,129,.15)':'rgba(239,68,68,.15)'};display:flex;align-items:center;justify-content:center;font-size:1.5rem;">${ai.mentioned?'✅':'❌'}</div>
+                    <div style="width:60px;height:60px;border-radius:50%;background:${ai.mentioned?'rgba(16,185,129,.15)':'rgba(239,68,68,.15)'};display:flex;align-items:center;justify-content:center;font-size:1.5rem;">${ai.mentioned?'':''}</div>
                     <div><div style="font-weight:700;font-size:.95rem;color:var(--txt);">${ai.mentioned?'Votre restaurant est mentionné par les IA':'Non trouvé dans les réponses IA'}</div>
                     <div style="font-size:.78rem;color:var(--mut);">Basé sur un test avec le prompt : "${name} ${currentData?.city||''}"</div></div>
                 </div>
                 ${ai.response?`<div style="padding:10px;background:var(--s2);border-radius:8px;font-size:.78rem;color:var(--txt);line-height:1.5;max-height:120px;overflow-y:auto;border:1px solid var(--bdr);">${ai.response.substring(0,500)}${ai.response.length>500?'...':''}</div>`:''}
-                ${ai.error?`<div style="font-size:.75rem;color:var(--org);margin-top:8px;">⚠️ ${ai.error}</div>`:''}
+                ${ai.error?`<div style="font-size:.75rem;color:var(--org);margin-top:8px;">! ${ai.error}</div>`:''}
             </div>
         </div>`;
     }
@@ -8217,7 +8217,7 @@ async function loadGSCChart(){
                Google est connecté mais le site du restaurant n'est pas vérifié dans votre Search Console.
                Les données GSC apparaîtront automatiquement une fois le site vérifié.
            </div>
-           <div style="font-size:.7rem;color:var(--mut);">💡 Vérifiez votre site sur <a href="https://search.google.com/search-console" target="_blank" style="color:var(--ind);">search.google.com/search-console</a></div>`
+           <div style="font-size:.7rem;color:var(--mut);">Vérifiez votre site sur <a href="https://search.google.com/search-console" target="_blank" style="color:var(--ind);">search.google.com/search-console</a></div>`
         : `<div style="font-weight:700;color:var(--txt);font-size:.9rem;margin-bottom:6px;">Connexion Google en cours…</div>
            <div style="font-size:.75rem;color:var(--mut);margin-bottom:14px;max-width:400px;margin-left:auto;margin-right:auto;line-height:1.5;">
                RestauRank se connecte automatiquement à votre compte Google pour récupérer vos données Search Console.
@@ -8282,7 +8282,7 @@ function renderGSCChart(data){
     // Top Queries table
     if(queries?.length>0){
         html+=`<div style="padding:0 20px 16px;">
-            <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:8px;">🎯 Top requêtes de recherche</div>
+            <div style="font-weight:600;font-size:.82rem;color:var(--txt);margin-bottom:8px;">Top requêtes de recherche</div>
             <table style="width:100%;border-collapse:collapse;font-size:.75rem;">
                 <thead><tr style="border-bottom:1px solid var(--bdr);">
                     <th style="text-align:left;padding:6px;color:var(--mut);">Requête</th>
@@ -8404,7 +8404,7 @@ async function loadBacklinks(){
     const websiteUrl=storedWebsite||currentData?.websiteUrl||window._hubData?.website||'';
     if(!websiteUrl){
         container.innerHTML=`<div style="text-align:center;padding:10px;">
-            <div style="font-size:1.2rem;margin-bottom:6px;">🔗</div>
+            <div style="font-size:1.2rem;margin-bottom:6px;"></div>
             <div style="color:var(--mut);font-size:.78rem;margin-bottom:8px;">Ajoutez l'URL de votre site web pour analyser votre profil de backlinks.</div>
             <button onclick="switchDashTab('tabHub')" style="padding:6px 16px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;font-weight:600;">Aller au Hub Central</button>
         </div>`;
@@ -8438,13 +8438,13 @@ async function loadBacklinks(){
                 <div style="font-size:.65rem;color:var(--mut);">Authority</div>
             </div>
         </div>
-        <div style="font-size:1.1rem;margin-bottom:6px;">🔗</div>
+        <div style="font-size:1.1rem;margin-bottom:6px;"></div>
         <div style="font-weight:700;color:var(--txt);font-size:.85rem;margin-bottom:6px;">Analyse de backlinks</div>
         <div style="font-size:.75rem;color:var(--mut);margin-bottom:12px;line-height:1.5;max-width:380px;margin-left:auto;margin-right:auto;">
             ${domain?'Domaine détecté : <strong style="color:var(--cyn);">'+domain+'</strong><br>':''}
             Les données de backlinks nécessitent une intégration avec Ahrefs, Moz ou Majestic. Disponible bientôt.
         </div>
-        <span style="display:inline-block;padding:8px 20px;background:var(--s2);color:var(--mut);border:1px solid var(--bdr);border-radius:8px;font-size:.75rem;font-weight:600;">🔒 Bientôt disponible</span>
+        <span style="display:inline-block;padding:8px 20px;background:var(--s2);color:var(--mut);border:1px solid var(--bdr);border-radius:8px;font-size:.75rem;font-weight:600;">Bientôt disponible</span>
     </div>`;
 }
 
@@ -8469,7 +8469,7 @@ function renderBacklinks(data){
 
     // Top referring domains
     if(data.topLinks?.length>0){
-        html+=`<div style="margin-bottom:12px;"><div style="font-weight:600;font-size:.78rem;color:var(--txt);margin-bottom:6px;">🌐 Domaines référents</div>
+        html+=`<div style="margin-bottom:12px;"><div style="font-weight:600;font-size:.78rem;color:var(--txt);margin-bottom:6px;">Domaines référents</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;">
                 ${data.topLinks.slice(0,15).map(d=>`<span style="padding:3px 10px;background:var(--s2);border:1px solid var(--bdr);border-radius:6px;font-size:.7rem;color:var(--cyn);">${d}</span>`).join('')}
             </div>
@@ -8478,7 +8478,7 @@ function renderBacklinks(data){
 
     // Top anchors
     if(data.anchors?.length>0){
-        html+=`<div><div style="font-weight:600;font-size:.78rem;color:var(--txt);margin-bottom:6px;">⚓ Textes d'ancrage principaux</div>
+        html+=`<div><div style="font-weight:600;font-size:.78rem;color:var(--txt);margin-bottom:6px;"> Textes d'ancrage principaux</div>
             <div style="display:flex;flex-wrap:wrap;gap:6px;">
                 ${data.anchors.slice(0,10).map(a=>`<span style="padding:3px 10px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.2);border-radius:6px;font-size:.7rem;color:var(--ind);">"${a}"</span>`).join('')}
             </div>
@@ -8522,7 +8522,7 @@ function _contentCard(id,title,icon,content,actions=''){
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <span style="font-weight:700;color:var(--txt);">${icon} ${title}</span>
             <div style="display:flex;gap:6px;">${actions}
-            <button onclick="copyToClip(document.getElementById('${id}').innerText)" style="padding:4px 12px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📋 Copier</button></div>
+            <button onclick="copyToClip(document.getElementById('${id}').innerText)" style="padding:4px 12px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">Copier</button></div>
         </div>
         <div id="${id}" style="font-size:.78rem;color:var(--txt);line-height:1.7;max-height:350px;overflow-y:auto;background:var(--s1);padding:12px;border-radius:8px;">${content}</div>
     </div>`;
@@ -8532,77 +8532,77 @@ async function generateBlogPost(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA de l\'article de blog SEO...</div>';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);"> Génération IA de l\'article de blog SEO...</div>';
     try{
         const data=await _callContentAPI('blog');
-        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
-        const publishBtn=`<button onclick="publishBlogPost()" style="padding:4px 12px;background:var(--grn);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">🚀 Publier</button>`;
-        const wpBtn=`<button onclick="publishToWordPress()" style="padding:4px 12px;background:#21759b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📰 WordPress</button>`;
-        results.innerHTML=_contentCard('blogContent','Article de blog SEO','📝',data.content,publishBtn+wpBtn);
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ ${data.error}</div>`;return;}
+        const publishBtn=`<button onclick="publishBlogPost()" style="padding:4px 12px;background:var(--grn);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">Publier</button>`;
+        const wpBtn=`<button onclick="publishToWordPress()" style="padding:4px 12px;background:#21759b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">WordPress</button>`;
+        results.innerHTML=_contentCard('blogContent','Article de blog SEO','',data.content,publishBtn+wpBtn);
         results.innerHTML+=`<div style="font-size:.65rem;color:var(--mut);margin-top:-8px;margin-bottom:8px;">Généré via ${data.model||'IA'} · ${data.tokens||0} caractères</div>`;
-    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ Erreur: ${e.message}</div>`;}
 }
 
 async function generateRedditPost(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA du post Reddit...</div>';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);"> Génération IA du post Reddit...</div>';
     try{
         const data=await _callContentAPI('reddit');
-        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ ${data.error}</div>`;return;}
         const subreddits=['paris','france','food','FoodPorn','restaurant'];
-        const postBtns=subreddits.map(s=>`<button onclick="postToReddit('${s}')" style="padding:3px 10px;background:rgba(255,69,0,.1);border:1px solid rgba(255,69,0,.3);border-radius:6px;font-size:.68rem;color:#ff4500;cursor:pointer;">🚀 r/${s}</button>`).join('');
-        results.innerHTML=_contentCard('redditContent','Post Reddit','🤖',data.content.replace(/\n/g,'<br>'),'');
+        const postBtns=subreddits.map(s=>`<button onclick="postToReddit('${s}')" style="padding:3px 10px;background:rgba(255,69,0,.1);border:1px solid rgba(255,69,0,.3);border-radius:6px;font-size:.68rem;color:#ff4500;cursor:pointer;">r/${s}</button>`).join('');
+        results.innerHTML=_contentCard('redditContent','Post Reddit','',data.content.replace(/\n/g,'<br>'),'');
         results.innerHTML+=`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:-8px;margin-bottom:8px;">${postBtns}</div>`;
         results.innerHTML+=`<div style="font-size:.65rem;color:var(--mut);">Généré via ${data.model||'IA'}</div>`;
-    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ Erreur: ${e.message}</div>`;}
 }
 
 async function generateGuestPost(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA du pitch guest post...</div>';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);"> Génération IA du pitch guest post...</div>';
     try{
         const data=await _callContentAPI('guest_post');
-        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
-        results.innerHTML=_contentCard('guestContent','Pitch Guest Post / Link Building','✍️',data.content.replace(/\n/g,'<br>'),'');
-    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ ${data.error}</div>`;return;}
+        results.innerHTML=_contentCard('guestContent','Pitch Guest Post / Link Building','',data.content.replace(/\n/g,'<br>'),'');
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ Erreur: ${e.message}</div>`;}
 }
 
 async function generateSocialPosts(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA des posts sociaux...</div>';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);"> Génération IA des posts sociaux...</div>';
     try{
         const data=await _callContentAPI('social');
-        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
-        results.innerHTML=_contentCard('socialContent','Posts Instagram/Facebook','📱',data.content.replace(/\n/g,'<br>'),'');
-    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ ${data.error}</div>`;return;}
+        results.innerHTML=_contentCard('socialContent','Posts Instagram/Facebook','',data.content.replace(/\n/g,'<br>'),'');
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ Erreur: ${e.message}</div>`;}
 }
 
 async function generateAllSEOContent(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⚡ Génération IA de tout le contenu SEO... (peut prendre 30-60 secondes)</div>';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">Génération IA de tout le contenu SEO... (peut prendre 30-60 secondes)</div>';
 
     let allHtml='';
-    const types=[{fn:_callContentAPI,type:'blog',title:'Article de blog SEO',icon:'📝',id:'blogAll'},
-                 {fn:_callContentAPI,type:'reddit',title:'Post Reddit',icon:'🤖',id:'redditAll'},
-                 {fn:_callContentAPI,type:'guest_post',title:'Pitch Guest Post',icon:'✍️',id:'guestAll'},
-                 {fn:_callContentAPI,type:'social',title:'Posts Sociaux',icon:'📱',id:'socialAll'},
-                 {fn:_callContentAPI,type:'faq',title:'FAQ SEO (Schema.org)',icon:'❓',id:'faqAll'}];
+    const types=[{fn:_callContentAPI,type:'blog',title:'Article de blog SEO',icon:'',id:'blogAll'},
+                 {fn:_callContentAPI,type:'reddit',title:'Post Reddit',icon:'',id:'redditAll'},
+                 {fn:_callContentAPI,type:'guest_post',title:'Pitch Guest Post',icon:'',id:'guestAll'},
+                 {fn:_callContentAPI,type:'social',title:'Posts Sociaux',icon:'',id:'socialAll'},
+                 {fn:_callContentAPI,type:'faq',title:'FAQ SEO (Schema.org)',icon:'',id:'faqAll'}];
 
     for(const t of types){
         try{
-            results.innerHTML=`<div style="text-align:center;padding:20px;color:var(--mut);">⚡ Génération : ${t.title}... (${types.indexOf(t)+1}/${types.length})</div>`+allHtml;
+            results.innerHTML=`<div style="text-align:center;padding:20px;color:var(--mut);">Génération : ${t.title}... (${types.indexOf(t)+1}/${types.length})</div>`+allHtml;
             const data=await t.fn(t.type);
             if(data.success) allHtml+=_contentCard(t.id,t.title,t.icon,data.content.replace(/\n/g,'<br>'),'');
-            else allHtml+=`<div style="padding:8px;color:var(--org);font-size:.75rem;">⚠️ ${t.title}: ${data.error}</div>`;
-        }catch(e){allHtml+=`<div style="padding:8px;color:var(--red);font-size:.75rem;">❌ ${t.title}: ${e.message}</div>`;}
+            else allHtml+=`<div style="padding:8px;color:var(--org);font-size:.75rem;">! ${t.title}: ${data.error}</div>`;
+        }catch(e){allHtml+=`<div style="padding:8px;color:var(--red);font-size:.75rem;">✗ ${t.title}: ${e.message}</div>`;}
     }
     results.innerHTML=allHtml;
 }
@@ -8617,8 +8617,8 @@ async function postToReddit(subreddit){
     try{
         const r=await fetchTimeout(`${API_BASE}/api/reddit/post`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({subreddit,title,text:content})},15000);
         const d=await r.json();
-        if(d.success){alert(`✅ Posté sur r/${subreddit} !\n${d.url}`);if(d.url)window.open(d.url,'_blank');}
-        else alert(`❌ Reddit: ${d.error}`);
+        if(d.success){alert(`✓ Posté sur r/${subreddit} !\n${d.url}`);if(d.url)window.open(d.url,'_blank');}
+        else alert(`✗ Reddit: ${d.error}`);
     }catch(e){alert('Erreur Reddit: '+e.message);}
 }
 
@@ -8636,29 +8636,29 @@ async function publishToWordPress(){
         if(formDiv){formDiv.style.display='block';return;}
         formDiv=document.createElement('div');formDiv.id='wpCredsForm';
         formDiv.style.cssText='background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:16px;margin:12px 0;';
-        formDiv.innerHTML=`<div style="font-weight:600;margin-bottom:12px;">🔑 Connexion WordPress</div>
+        formDiv.innerHTML=`<div style="font-weight:600;margin-bottom:12px;">Connexion WordPress</div>
             <input id="wpUrl" type="url" placeholder="URL WordPress (ex: https://monsite.fr)" style="width:100%;padding:10px 12px;border:1px solid var(--brd);border-radius:8px;background:var(--bg);color:var(--txt);margin-bottom:8px;box-sizing:border-box;">
             <input id="wpUser" type="text" placeholder="Nom d'utilisateur WordPress" style="width:100%;padding:10px 12px;border:1px solid var(--brd);border-radius:8px;background:var(--bg);color:var(--txt);margin-bottom:8px;box-sizing:border-box;">
             <input id="wpPass" type="password" placeholder="Mot de passe d'application" style="width:100%;padding:10px 12px;border:1px solid var(--brd);border-radius:8px;background:var(--bg);color:var(--txt);margin-bottom:8px;box-sizing:border-box;">
-            <div style="display:flex;gap:8px;"><button onclick="submitWpCreds()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✅ Connecter & Publier</button><button onclick="document.getElementById('wpCredsForm').style.display='none'" style="padding:10px 16px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>`;
+            <div style="display:flex;gap:8px;"><button onclick="submitWpCreds()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✓ Connecter & Publier</button><button onclick="document.getElementById('wpCredsForm').style.display='none'" style="padding:10px 16px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>`;
         container.insertBefore(formDiv,container.querySelector('[onclick*="publishToWordPress"]')?.nextSibling||container.firstChild);
         return;
     }
     try{
         const r=await fetchTimeout(`${API_BASE}/api/wordpress/publish`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...wpCreds,title:`${currentData?.name||'Restaurant'} — Guide complet`,content,status:'draft'})},15000);
         const d=await r.json();
-        if(d.success){alert(`✅ Article créé en brouillon sur WordPress !\n${d.edit_url}`);if(d.edit_url)window.open(d.edit_url,'_blank');}
-        else alert(`❌ WordPress: ${d.error}`);
+        if(d.success){alert(`✓ Article créé en brouillon sur WordPress !\n${d.edit_url}`);if(d.edit_url)window.open(d.edit_url,'_blank');}
+        else alert(`✗ WordPress: ${d.error}`);
     }catch(e){alert('Erreur WordPress: '+e.message);}
 }
 function submitWpCreds(){
     const url=document.getElementById('wpUrl')?.value?.trim();
     const user=document.getElementById('wpUser')?.value?.trim();
     const pass=document.getElementById('wpPass')?.value?.trim();
-    if(!url||!user||!pass){showToast('⚠️ Remplissez les 3 champs','error');return;}
+    if(!url||!user||!pass){showToast('! Remplissez les 3 champs','error');return;}
     window._wpCredentials={site_url:url,username:user,app_password:pass};
     const form=document.getElementById('wpCredsForm');if(form)form.style.display='none';
-    showToast('✅ Credentials WordPress sauvegardés','success');
+    showToast('✓ Credentials WordPress sauvegardés','success');
     publishToWordPress();
 }
 
@@ -8671,7 +8671,7 @@ async function publishBlogPost(){
     try{
         const r=await fetchTimeout(`${API_BASE}/api/cms/${detectedCMS.detected.cms}/apply`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({website_url:storedWebsite||currentData?.websiteUrl,tasks:[{type:'create_blog_post',title:`${currentData?.name||'Restaurant'} — Guide complet`,content}]})},15000);
         const d=await r.json();
-        alert(d.success?'✅ Article publié sur le site !':'❌ Erreur : '+(d.error||'voir console'));
+        alert(d.success?'✓ Article publié sur le site !':'✗ Erreur : '+(d.error||'voir console'));
     }catch(e){alert('Erreur de publication : '+e.message);}
 }
 
@@ -8679,32 +8679,32 @@ async function generateTikTokKit(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">🎵 Création du kit TikTok (3 concepts de vidéos)...</div>';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);"> Création du kit TikTok (3 concepts de vidéos)...</div>';
     try{
         const data=await _callContentAPI('tiktok_kit');
-        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ ${data.error}</div>`;return;}
         const concepts=data.content.split('===CONCEPT===').filter(c=>c.trim());
         let html='';
         concepts.forEach((concept,i)=>{
-            html+=_contentCard(`tiktokConcept${i}`,`🎬 Concept TikTok ${i+1}`,'🎵',concept.replace(/\n/g,'<br>').replace(/(HOOK|PLAN DE TOURNAGE|TEXTE EN OVERLAY|CAPTION|HASHTAGS|SON SUGGÉRÉ|TIPS DE TOURNAGE)/g,'<strong style="color:var(--cyn);">$1</strong>'),'');
+            html+=_contentCard(`tiktokConcept${i}`,` Concept TikTok ${i+1}`,'',concept.replace(/\n/g,'<br>').replace(/(HOOK|PLAN DE TOURNAGE|TEXTE EN OVERLAY|CAPTION|HASHTAGS|SON SUGGÉRÉ|TIPS DE TOURNAGE)/g,'<strong style="color:var(--cyn);">$1</strong>'),'');
         });
-        if(!html)html=_contentCard('tiktokFull','Kit TikTok complet','🎵',data.content.replace(/\n/g,'<br>'),'');
+        if(!html)html=_contentCard('tiktokFull','Kit TikTok complet','',data.content.replace(/\n/g,'<br>'),'');
         results.innerHTML=html;
         window._autoTikTokKit=data.content;
-    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ Erreur: ${e.message}</div>`;}
 }
 
 async function generateFAQContent(){
     const results=document.getElementById('contentAutoResults');
     if(!results)return;
     results.style.display='block';
-    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);">⏳ Génération IA de la FAQ GEO (15 questions)...</div>';
+    results.innerHTML='<div style="text-align:center;padding:20px;color:var(--mut);"> Génération IA de la FAQ GEO (15 questions)...</div>';
     try{
         const data=await _callContentAPI('faq');
-        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;return;}
-        results.innerHTML=_contentCard('faqContent','FAQ GEO (15 Q&A + Schema.org)','❓',data.content.replace(/\n/g,'<br>'),'');
+        if(!data.success){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ ${data.error}</div>`;return;}
+        results.innerHTML=_contentCard('faqContent','FAQ GEO (15 Q&A + Schema.org)','',data.content.replace(/\n/g,'<br>'),'');
         results.innerHTML+=`<div style="font-size:.65rem;color:var(--mut);">Généré via ${data.model||'IA'} · Optimisé pour citation par ChatGPT/Perplexity</div>`;
-    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;}
+    }catch(e){results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ Erreur: ${e.message}</div>`;}
 }
 
 // ── AUTO-PUBLISH ALL — Generate + Publish everything in 1 click ──
@@ -8717,7 +8717,7 @@ async function autoPublishAll(){
     log.innerHTML='';
 
     const btn=document.getElementById('btnAutoPublish');
-    if(btn){btn.disabled=true;btn.style.opacity='.5';btn.innerHTML='⏳ Publication automatique en cours...';}
+    if(btn){btn.disabled=true;btn.style.opacity='.5';btn.innerHTML=' Publication automatique en cours...';}
 
     function addLog(msg,type='info'){
         const colors={info:'var(--mut)',success:'var(--grn)',error:'var(--red)',warning:'var(--org)'};
@@ -8727,12 +8727,12 @@ async function autoPublishAll(){
     }
 
     const resto=_getRestoContext();
-    addLog(`🎯 Restaurant: ${resto.name} à ${resto.city} (${resto.cuisine})`);
-    addLog(`🔑 Mots-clés GEO: ${resto.keywords?.join(', ')||'auto-détectés'}`);
+    addLog(`Restaurant: ${resto.name} à ${resto.city} (${resto.cuisine})`);
+    addLog(`Mots-clés GEO: ${resto.keywords?.join(', ')||'auto-détectés'}`);
     addLog('───────────────────────────────────');
 
     // Check which services are configured
-    addLog('🔍 Vérification des services configurés...');
+    addLog('Vérification des services configurés...');
     let services={};
     try{
         const s=await fetchTimeout(`${API_BASE}/api/services/status`,{},5000);
@@ -8743,14 +8743,14 @@ async function autoPublishAll(){
     const hasReddit=services.reddit?.configured;
     const hasWP=!!window._wpCredentials?.site_url;
 
-    addLog(hasAI?'✅ IA configurée ('+((services.openai?.configured?'OpenAI':'')+(services.anthropic?.configured?' Anthropic':''))+')':'❌ Aucune clé IA — génération impossible','success');
-    addLog(hasReddit?'✅ Reddit configuré — publication auto possible':'⚠️ Reddit non configuré — génération sans publication',hasReddit?'success':'warning');
-    addLog(hasWP?'✅ WordPress configuré — publication auto possible':'⚠️ WordPress non configuré — génération sans publication',hasWP?'success':'warning');
+    addLog(hasAI?'✓ IA configurée ('+((services.openai?.configured?'OpenAI':'')+(services.anthropic?.configured?' Anthropic':''))+')':'✗ Aucune clé IA — génération impossible','success');
+    addLog(hasReddit?'✓ Reddit configuré — publication auto possible':'! Reddit non configuré — génération sans publication',hasReddit?'success':'warning');
+    addLog(hasWP?'✓ WordPress configuré — publication auto possible':'! WordPress non configuré — génération sans publication',hasWP?'success':'warning');
     addLog('───────────────────────────────────');
 
     if(!hasAI){
-        addLog('❌ Impossible sans clé IA. Ajoutez OPENAI_API_KEY ou ANTHROPIC_API_KEY.','error');
-        if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='⚡ TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post';}
+        addLog('✗ Impossible sans clé IA. Ajoutez OPENAI_API_KEY ou ANTHROPIC_API_KEY.','error');
+        if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post';}
         return;
     }
 
@@ -8762,8 +8762,8 @@ async function autoPublishAll(){
     };
     if(hasWP) body.wordpress=window._wpCredentials;
 
-    addLog('🚀 Lancement de la génération + publication automatique...');
-    results.innerHTML='<div style="text-align:center;padding:30px;color:var(--mut);font-size:.85rem;">⚡ Génération IA GEO en cours pour 5 types de contenu...<br><span style="font-size:.72rem;">Blog + Reddit x3 + Social x7 + FAQ x15 + Guest Post</span></div>';
+    addLog('Lancement de la génération + publication automatique...');
+    results.innerHTML='<div style="text-align:center;padding:30px;color:var(--mut);font-size:.85rem;">Génération IA GEO en cours pour 5 types de contenu...<br><span style="font-size:.72rem;">Blog + Reddit x3 + Social x7 + FAQ x15 + Guest Post</span></div>';
 
     try{
         const r=await fetchTimeout(`${API_BASE}/api/auto-publish`,{
@@ -8774,46 +8774,46 @@ async function autoPublishAll(){
         const data=await r.json();
 
         if(!data.success){
-            addLog('❌ Erreur: '+(data.error||'inconnue'),'error');
-            results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ ${data.error}</div>`;
+            addLog('✗ Erreur: '+(data.error||'inconnue'),'error');
+            results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ ${data.error}</div>`;
             return;
         }
 
         addLog('───────────────────────────────────');
-        addLog(`📊 RÉSULTATS:`);
-        addLog(`   ✅ ${data.summary.generated} contenus générés`,'success');
-        addLog(`   🚀 ${data.summary.published} contenus publiés`,'success');
-        if(data.summary.errors>0) addLog(`   ⚠️ ${data.summary.errors} erreurs`,'warning');
+        addLog(`RÉSULTATS:`);
+        addLog(`   ✓ ${data.summary.generated} contenus générés`,'success');
+        addLog(`   ${data.summary.published} contenus publiés`,'success');
+        if(data.summary.errors>0) addLog(`   ! ${data.summary.errors} erreurs`,'warning');
 
         // Show generated content
         data.generated?.forEach(g=>{
-            addLog(`   ✅ ${g.type}: ${g.length} caractères via ${g.model}`,'success');
+            addLog(`   ✓ ${g.type}: ${g.length} caractères via ${g.model}`,'success');
         });
 
         // Show published content
         data.published?.forEach(p=>{
-            addLog(`   🚀 ${p.type} publié sur ${p.platform}${p.url?' → '+p.url:''}`,'success');
+            addLog(`   ${p.type} publié sur ${p.platform}${p.url?' → '+p.url:''}`,'success');
         });
 
         // Show errors
         data.errors?.forEach(e=>{
-            addLog(`   ⚠️ ${e.type} (${e.step}): ${e.error}`,'warning');
+            addLog(`   ! ${e.type} (${e.step}): ${e.error}`,'warning');
         });
 
         // Display all generated content as cards
         let allHtml='<div style="margin-top:16px;">';
-        const typeLabels={blog:{title:'Article Blog GEO',icon:'📝'},reddit:{title:'Posts Reddit x3',icon:'🤖'},social:{title:'Posts Sociaux x7',icon:'📱'},faq:{title:'FAQ GEO x15',icon:'❓'},guest_post:{title:'Guest Post + Pitch',icon:'✍️'}};
+        const typeLabels={blog:{title:'Article Blog GEO',icon:''},reddit:{title:'Posts Reddit x3',icon:''},social:{title:'Posts Sociaux x7',icon:''},faq:{title:'FAQ GEO x15',icon:''},guest_post:{title:'Guest Post + Pitch',icon:''}};
 
         // Re-fetch each content for display (auto-publish stores them but we need to show)
         for(const type of ['blog','reddit','social','faq','guest_post']){
-            const lbl=typeLabels[type]||{title:type,icon:'📄'};
+            const lbl=typeLabels[type]||{title:type,icon:''};
             const gen=data.generated?.find(g=>g.type===type);
             if(gen){
                 try{
                     const cr=await _callContentAPI(type);
                     if(cr.success){
                         const pub=data.published?.find(p=>p.type===type);
-                        const pubBadge=pub?`<span style="background:var(--grn);color:#fff;padding:2px 8px;border-radius:4px;font-size:.65rem;margin-left:8px;">✅ Publié sur ${pub.platform}</span>`:'';
+                        const pubBadge=pub?`<span style="background:var(--grn);color:#fff;padding:2px 8px;border-radius:4px;font-size:.65rem;margin-left:8px;">✓ Publié sur ${pub.platform}</span>`:'';
                         allHtml+=_contentCard('ap_'+type,lbl.title+pubBadge,lbl.icon,cr.content.replace(/\n/g,'<br>'),'');
                     }
                 }catch(e){}
@@ -8823,20 +8823,20 @@ async function autoPublishAll(){
         results.innerHTML=allHtml;
 
         addLog('───────────────────────────────────');
-        addLog('✅ Publication automatique GEO terminée !','success');
+        addLog('✓ Publication automatique GEO terminée !','success');
 
     }catch(e){
-        addLog('❌ Erreur fatale: '+e.message,'error');
-        results.innerHTML=`<div style="padding:16px;color:var(--red);">❌ Erreur: ${e.message}</div>`;
+        addLog('✗ Erreur fatale: '+e.message,'error');
+        results.innerHTML=`<div style="padding:16px;color:var(--red);">✗ Erreur: ${e.message}</div>`;
     }finally{
-        if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='⚡ TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post';}
+        if(btn){btn.disabled=false;btn.style.opacity='1';btn.innerHTML='TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post';}
     }
 }
 
 function copyToClip(text){
     navigator.clipboard?.writeText(text).then(()=>{
         const toast=document.createElement('div');
-        toast.textContent='✅ Copié !';
+        toast.textContent='✓ Copié !';
         toast.style.cssText='position:fixed;bottom:20px;right:20px;background:var(--grn);color:#fff;padding:8px 16px;border-radius:8px;font-size:.8rem;z-index:99999;';
         document.body.appendChild(toast);
         setTimeout(()=>toast.remove(),2000);
@@ -8862,7 +8862,7 @@ async function saveApiKey(service,key,extra){
         const r=await fetchTimeout(`${API_BASE}/api/keys`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({user_id:userId,service,api_key:key,extra})},5000);
         const d=await r.json();
         if(d.success){
-            showToast(`✅ Clé ${service} sauvegardée !`);
+            showToast(`✓ Clé ${service} sauvegardée !`);
             loadServiceStatus();
         }else alert('Erreur: '+d.error);
     }catch(e){alert('Erreur: '+e.message);}
@@ -8952,12 +8952,12 @@ function renderPromptLibrary(container){
     if(!container)return;
     const lib=window._promptLibrary;
     if(!lib)return;
-    const catLabels={all:'Tous',discovery:'🔍 Découverte',reputation:'⭐ Réputation',comparison:'⚔️ Comparaison',specifics:'📌 Spécifique'};
+    const catLabels={all:'Tous',discovery:'Découverte',reputation:'Réputation',comparison:' Comparaison',specifics:' Spécifique'};
     const allPrompts=[];
     Object.entries(lib).forEach(([cat,prompts])=>prompts.forEach(p=>allPrompts.push({...p,category:cat})));
     const filtered=window._activePromptCat==='all'?allPrompts:allPrompts.filter(p=>p.category===window._activePromptCat);
 
-    let html=`<div class="prompt-lib"><div class="prompt-lib-title">📚 Prompt Library — Test de visibilité IA</div>
+    let html=`<div class="prompt-lib"><div class="prompt-lib-title"> Prompt Library — Test de visibilité IA</div>
     <div class="prompt-lib-sub">Sélectionnez les prompts à tester sur ChatGPT, Perplexity, Gemini et Claude pour vérifier si votre restaurant est cité.</div>
     <div class="prompt-cats">`;
     Object.entries(catLabels).forEach(([k,v])=>{
@@ -8973,7 +8973,7 @@ function renderPromptLibrary(container){
         </div>`;
     });
     html+=`</div><div class="prompt-actions">
-        <button class="prompt-test-btn" onclick="runAIMatrixTest()" ${window._selectedPrompts.size===0?'disabled':''}>🧪 Tester sur 4 plateformes IA</button>
+        <button class="prompt-test-btn" onclick="runAIMatrixTest()" ${window._selectedPrompts.size===0?'disabled':''}>Tester sur 4 plateformes IA</button>
         <span class="prompt-sel-count">${window._selectedPrompts.size} prompt${window._selectedPrompts.size!==1?'s':''} sélectionné${window._selectedPrompts.size!==1?'s':''}</span>
         <button style="padding:6px 12px;border-radius:8px;border:1px solid var(--bdr);background:transparent;color:var(--mut);font-size:.7rem;cursor:pointer;margin-left:auto;" onclick="selectAllPrompts()">Tout sélectionner</button>
     </div></div>`;
@@ -9048,7 +9048,7 @@ async function runAIMatrixTest(){
             });
             if(d.summary)window._aiMatrixSummary=d.summary;
             renderAIMatrix();
-            showToast(`✅ ${d.results.length} tests terminés — ${d.summary?.cited_count||0} citations trouvées`);
+            showToast(`✓ ${d.results.length} tests terminés — ${d.summary?.cited_count||0} citations trouvées`);
             return;
         }
     }catch(e){console.warn('Matrix API failed:',e.message);}
@@ -9056,7 +9056,7 @@ async function runAIMatrixTest(){
     // No API — show error, never fake results
     window._aiTestResults.forEach(r=>{r.status='error';r.error='Clé API requise';r.cited=false;r.confidence=0;r.position=0;});
     renderAIMatrix();
-    showToast('⚠️ Configurez votre clé API dans Paramètres pour tester la visibilité IA','error',5000);
+    showToast('! Configurez votre clé API dans Paramètres pour tester la visibilité IA','error',5000);
 }
 
 function renderAIMatrix(){
@@ -9064,14 +9064,14 @@ function renderAIMatrix(){
     if(!container)return;
     const results=window._aiTestResults;
     if(!results.length){
-        container.innerHTML='<div class="ai-matrix"><div class="ai-matrix-title">🧪 Matrice de visibilité IA</div><div style="text-align:center;color:var(--mut);padding:20px;font-size:.8rem;">Sélectionnez des prompts et lancez un test pour voir les résultats ici.</div></div>';
+        container.innerHTML='<div class="ai-matrix"><div class="ai-matrix-title">Matrice de visibilité IA</div><div style="text-align:center;color:var(--mut);padding:20px;font-size:.8rem;">Sélectionnez des prompts et lancez un test pour voir les résultats ici.</div></div>';
         return;
     }
     const platforms=['ChatGPT','Perplexity','Gemini','Claude'];
-    const platformIcons={ChatGPT:'🤖',Perplexity:'🔎',Gemini:'✨',Claude:'🟠'};
+    const platformIcons={ChatGPT:'',Perplexity:'',Gemini:'',Claude:''};
     const prompts=[...new Set(results.map(r=>r.prompt))];
 
-    let html=`<div class="ai-matrix"><div class="ai-matrix-title">🧪 Matrice de visibilité IA <span style="font-size:.65rem;color:var(--mut);font-weight:400;margin-left:8px;">${results.filter(r=>r.status==='done').length}/${results.length} tests</span></div>`;
+    let html=`<div class="ai-matrix"><div class="ai-matrix-title">Matrice de visibilité IA <span style="font-size:.65rem;color:var(--mut);font-weight:400;margin-left:8px;">${results.filter(r=>r.status==='done').length}/${results.length} tests</span></div>`;
     html+=`<div class="ai-matrix-grid"><table><thead><tr><th>Prompt</th>`;
     platforms.forEach(p=>html+=`<th>${platformIcons[p]||''} ${p}</th>`);
     html+=`<th>Score</th></tr></thead><tbody>`;
@@ -9084,7 +9084,7 @@ function renderAIMatrix(){
         platforms.forEach(pl=>{
             const r=pResults.find(r=>r.platform===pl);
             if(!r||r.status==='pending')html+=`<td><div class="mx-cell pending">—</div></td>`;
-            else if(r.status==='testing')html+=`<td><div class="mx-cell testing">⏳</div></td>`;
+            else if(r.status==='testing')html+=`<td><div class="mx-cell testing"></div></td>`;
             else{
                 const cls=r.cited?'cited':'not';
                 const icon=r.cited?'✓':'✗';
@@ -9121,7 +9121,7 @@ function showAITestDetail(promptB64,platform){
     }
     modal.innerHTML=`<div class="mx-detail-box" style="position:relative;">
         <div class="mx-detail-close" onclick="document.getElementById('aiTestDetailModal').classList.remove('active')">✕</div>
-        <div style="font-size:1rem;font-weight:700;margin-bottom:6px;">${r.cited?'✅ Cité':'❌ Non cité'} sur ${platform}</div>
+        <div style="font-size:1rem;font-weight:700;margin-bottom:6px;">${r.cited?'✓ Cité':'✗ Non cité'} sur ${platform}</div>
         <div style="font-size:.75rem;color:var(--mut);margin-bottom:12px;">Confiance: ${Math.round(r.confidence*100)}% ${r.position>0?'· Position: #'+r.position:''}</div>
         <div style="font-size:.78rem;font-weight:600;color:var(--ind2);margin-bottom:8px;">Prompt testé :</div>
         <div style="padding:10px 14px;background:var(--s3);border-radius:8px;font-size:.78rem;margin-bottom:14px;">${prompt}</div>
@@ -9207,7 +9207,7 @@ function renderCompetitorWatch(){
     const c=document.getElementById('compWatchContainer');
     if(!c)return;
     if(window._compDiscovering){
-        c.innerHTML=`<div class="comp-watch"><div class="comp-watch-title">🔎 Competitor Watch</div>
+        c.innerHTML=`<div class="comp-watch"><div class="comp-watch-title"> Competitor Watch</div>
         <div class="comp-loading"><div class="comp-loading-spinner"></div><div class="comp-loading-text">Analyse des concurrents en cours...</div></div></div>`;
         return;
     }
@@ -9215,34 +9215,34 @@ function renderCompetitorWatch(){
     if(comps.length===0){
         const noAPI=window._compNoAPI;
         c.innerHTML=`<div class="comp-watch">
-            <div class="comp-watch-title">🔎 Competitor Watch</div>
+            <div class="comp-watch-title"> Competitor Watch</div>
             ${noAPI?`<div style="text-align:center;padding:20px 16px;">
                 <div style="display:flex;justify-content:center;gap:16px;margin-bottom:16px;opacity:.35;pointer-events:none;">
                     <div style="background:var(--s3);border-radius:10px;padding:14px 20px;width:100px;"><div style="font-size:1.1rem;font-weight:700;">—</div><div style="font-size:.65rem;color:var(--mut);">Concurrent 1</div></div>
                     <div style="background:var(--s3);border-radius:10px;padding:14px 20px;width:100px;"><div style="font-size:1.1rem;font-weight:700;">—</div><div style="font-size:.65rem;color:var(--mut);">Concurrent 2</div></div>
                     <div style="background:var(--s3);border-radius:10px;padding:14px 20px;width:100px;"><div style="font-size:1.1rem;font-weight:700;">—</div><div style="font-size:.65rem;color:var(--mut);">Concurrent 3</div></div>
                 </div>
-                <div style="font-size:1.4rem;margin-bottom:6px;">🤖</div>
+                <div style="font-size:1.4rem;margin-bottom:6px;"></div>
                 <div style="font-weight:600;margin-bottom:4px;">Analyse concurrentielle IA</div>
                 <div style="font-size:.8rem;color:var(--mut);margin-bottom:14px;">Nécessite une clé API (Claude ou OpenAI) pour analyser vos concurrents directs.</div>
-                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">🔒 Configurer dans Paramètres → Clé API</span>
+                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">Configurer dans Paramètres → Clé API</span>
             </div>`:`<div class="comp-watch-desc">Découvrez automatiquement vos concurrents directs et comparez votre visibilité en ligne.</div>
-            <button class="comp-discover-btn" onclick="discoverCompetitors()">🔍 Découvrir mes concurrents</button>`}
+            <button class="comp-discover-btn" onclick="discoverCompetitors()">Découvrir mes concurrents</button>`}
         </div>`;
         return;
     }
     const d=window.currentData||{};
     c.innerHTML=`<div class="comp-watch">
-        <div class="comp-watch-title">🔎 Competitor Watch — ${comps.length} concurrents identifiés</div>
+        <div class="comp-watch-title"> Competitor Watch — ${comps.length} concurrents identifiés</div>
         <div class="comp-watch-desc">Cliquez sur un concurrent pour voir la comparaison détaillée avec ${d.name||'votre restaurant'}.</div>
         <div class="comp-grid">
             ${comps.map((comp,i)=>`<div class="comp-card" onclick="compareWithCompetitor('${comp.name.replace(/'/g,"\\'")}')">
-                <div class="comp-card-threat ${comp.threat_level||'medium'}">${comp.threat_level==='high'?'⚠️ Fort':comp.threat_level==='low'?'✅ Faible':'🔶 Moyen'}</div>
+                <div class="comp-card-threat ${comp.threat_level||'medium'}">${comp.threat_level==='high'?'! Fort':comp.threat_level==='low'?'✓ Faible':' Moyen'}</div>
                 <div class="comp-card-name">${comp.name}</div>
                 <div class="comp-card-cuisine">${comp.cuisine||'Restaurant'}</div>
                 <div class="comp-card-stats">
-                    <div class="comp-card-stat">⭐ <span class="val">${comp.rating||'?'}</span>/5</div>
-                    <div class="comp-card-stat">💬 <span class="val">${comp.reviews||'?'}</span> avis</div>
+                    <div class="comp-card-stat"><span class="val">${comp.rating||'?'}</span>/5</div>
+                    <div class="comp-card-stat"> <span class="val">${comp.reviews||'?'}</span> avis</div>
                 </div>
                 <div class="comp-card-tags">
                     ${(comp.strengths||[]).map(s=>`<span class="comp-card-tag">${s}</span>`).join('')}
@@ -9252,7 +9252,7 @@ function renderCompetitorWatch(){
             </div>`).join('')}
         </div>
         <div style="margin-top:12px;display:flex;gap:8px;">
-            <button class="comp-discover-btn" onclick="discoverCompetitors()" style="font-size:.72rem;padding:8px 14px;">🔄 Relancer l'analyse</button>
+            <button class="comp-discover-btn" onclick="discoverCompetitors()" style="font-size:.72rem;padding:8px 14px;">Relancer l'analyse</button>
         </div>
     </div>`;
 }
@@ -9266,20 +9266,20 @@ function renderCompetitorCompare(){
     const cName=window._selectedCompetitor;
 
     if(window._compComparing){
-        c.innerHTML=`<div class="comp-compare"><div class="comp-compare-title">⚔️ ${rName} vs ${cName}</div>
+        c.innerHTML=`<div class="comp-compare"><div class="comp-compare-title"> ${rName} vs ${cName}</div>
         <div class="comp-loading"><div class="comp-loading-spinner"></div><div class="comp-loading-text">Comparaison en cours...</div></div></div>`;
         return;
     }
     const comp=window._compComparison;
     if(!comp){
-        if(window._compCompareNoAPI){c.innerHTML=`<div class="comp-compare"><div class="comp-compare-title">⚔️ ${rName} vs ${cName}</div><div style="text-align:center;padding:20px;"><div style="font-size:1.2rem;margin-bottom:8px;">🤖</div><div style="font-weight:600;margin-bottom:4px;">Comparaison IA indisponible</div><div style="font-size:.8rem;color:var(--mut);">Configurez une clé API IA dans Paramètres pour activer la comparaison détaillée.</div></div></div>`;}
+        if(window._compCompareNoAPI){c.innerHTML=`<div class="comp-compare"><div class="comp-compare-title"> ${rName} vs ${cName}</div><div style="text-align:center;padding:20px;"><div style="font-size:1.2rem;margin-bottom:8px;"></div><div style="font-weight:600;margin-bottom:4px;">Comparaison IA indisponible</div><div style="font-size:.8rem;color:var(--mut);">Configurez une clé API IA dans Paramètres pour activer la comparaison détaillée.</div></div></div>`;}
         else c.innerHTML='';
         return;
     }
 
     const cats=comp.categories||[];
     c.innerHTML=`<div class="comp-compare">
-        <div class="comp-compare-title">⚔️ ${rName} vs ${cName}</div>
+        <div class="comp-compare-title"> ${rName} vs ${cName}</div>
         <div class="comp-overall">
             <div class="comp-overall-item"><div class="comp-overall-score you">${comp.overall_restaurant||0}</div><div class="comp-overall-label">${rName}</div></div>
             <div class="comp-overall-vs">VS</div>
@@ -9302,16 +9302,16 @@ function renderCompetitorCompare(){
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;">
             <div style="padding:10px;background:var(--s3);border-radius:8px;">
-                <div style="font-size:.72rem;font-weight:700;color:var(--grn);margin-bottom:6px;">✅ Vos avantages</div>
+                <div style="font-size:.72rem;font-weight:700;color:var(--grn);margin-bottom:6px;">✓ Vos avantages</div>
                 ${(comp.key_advantages||[]).map(a=>`<div style="font-size:.68rem;color:var(--txt);margin-bottom:3px;">• ${a}</div>`).join('')}
             </div>
             <div style="padding:10px;background:var(--s3);border-radius:8px;">
-                <div style="font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:6px;">⚠️ Écarts à combler</div>
+                <div style="font-size:.72rem;font-weight:700;color:var(--red);margin-bottom:6px;">! Écarts à combler</div>
                 ${(comp.key_gaps||[]).map(g=>`<div style="font-size:.68rem;color:var(--txt);margin-bottom:3px;">• ${g}</div>`).join('')}
             </div>
         </div>
         <div class="comp-action-plan">
-            <div class="comp-action-plan-title">🎯 Plan d'action prioritaire</div>
+            <div class="comp-action-plan-title">Plan d'action prioritaire</div>
             ${(comp.action_plan||[]).map(a=>`<div class="comp-action-item">${a}</div>`).join('')}
         </div>
         <div style="margin-top:10px;text-align:center;">
@@ -9368,20 +9368,20 @@ function displayAutoGeneratedContent(){
     const hasContent=window._autoBlogPost||window._autoRedditPosts||window._autoSocialPosts||window._autoFAQ;
     if(!hasContent)return;
     results.style.display='block';
-    let html='<div style="font-size:.72rem;color:var(--grn);font-weight:700;margin-bottom:10px;">✅ Contenu généré automatiquement par l\'AutoPilot IA</div>';
+    let html='<div style="font-size:.72rem;color:var(--grn);font-weight:700;margin-bottom:10px;">✓ Contenu généré automatiquement par l\'AutoPilot IA</div>';
     if(window._autoBlogPost){
-        const publishBtn=`<button onclick="publishBlogPost()" style="padding:4px 12px;background:var(--grn);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">🚀 Publier</button>`;
-        const wpBtn=`<button onclick="publishToWordPress()" style="padding:4px 12px;background:#21759b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">📰 WordPress</button>`;
-        html+=_contentCard('autoBlog','Article de blog GEO (auto-généré)','📝',window._autoBlogPost.replace(/\n/g,'<br>'),publishBtn+wpBtn);
+        const publishBtn=`<button onclick="publishBlogPost()" style="padding:4px 12px;background:var(--grn);color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">Publier</button>`;
+        const wpBtn=`<button onclick="publishToWordPress()" style="padding:4px 12px;background:#21759b;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:.72rem;">WordPress</button>`;
+        html+=_contentCard('autoBlog','Article de blog GEO (auto-généré)','',window._autoBlogPost.replace(/\n/g,'<br>'),publishBtn+wpBtn);
     }
     if(window._autoRedditPosts){
-        html+=_contentCard('autoReddit','Posts Reddit GEO x3 (auto-générés)','🤖',window._autoRedditPosts.replace(/\n/g,'<br>'),'');
+        html+=_contentCard('autoReddit','Posts Reddit GEO x3 (auto-générés)','',window._autoRedditPosts.replace(/\n/g,'<br>'),'');
     }
     if(window._autoSocialPosts){
-        html+=_contentCard('autoSocial','Posts sociaux x7 (auto-générés)','📱',window._autoSocialPosts.replace(/\n/g,'<br>'),'');
+        html+=_contentCard('autoSocial','Posts sociaux x7 (auto-générés)','',window._autoSocialPosts.replace(/\n/g,'<br>'),'');
     }
     if(window._autoFAQ){
-        html+=_contentCard('autoFAQ','FAQ GEO x15 Schema.org (auto-générée)','❓',window._autoFAQ.replace(/\n/g,'<br>'),'');
+        html+=_contentCard('autoFAQ','FAQ GEO x15 Schema.org (auto-générée)','',window._autoFAQ.replace(/\n/g,'<br>'),'');
     }
     results.innerHTML=html;
 }
@@ -9418,16 +9418,16 @@ function renderBenchmark(){
         if(window._benchmarkNoAPI){
             const d=window.currentData||{};
             c.innerHTML=`<div class="bench-section" style="text-align:center;padding:24px 16px;">
-                <div class="bench-title">📊 Benchmark Industrie — ${d.cuisine||'Restaurant'} à ${d.city||'France'}</div>
+                <div class="bench-title">Benchmark Industrie — ${d.cuisine||'Restaurant'} à ${d.city||'France'}</div>
                 <div style="display:flex;justify-content:center;gap:14px;margin:16px 0;opacity:.3;pointer-events:none;">
                     <div style="background:var(--s3);border-radius:10px;padding:14px 18px;"><div style="font-size:1.2rem;font-weight:700;">—%</div><div style="font-size:.65rem;color:var(--mut);">Percentile SEO</div></div>
                     <div style="background:var(--s3);border-radius:10px;padding:14px 18px;"><div style="font-size:1.2rem;font-weight:700;">—%</div><div style="font-size:.65rem;color:var(--mut);">Percentile GEO</div></div>
                     <div style="background:var(--s3);border-radius:10px;padding:14px 18px;"><div style="font-size:1.2rem;font-weight:700;">—%</div><div style="font-size:.65rem;color:var(--mut);">Note</div></div>
                 </div>
-                <div style="font-size:1.4rem;margin-bottom:6px;">📊</div>
+                <div style="font-size:1.4rem;margin-bottom:6px;"></div>
                 <div style="font-weight:600;margin-bottom:4px;">Benchmark sectoriel</div>
                 <div style="font-size:.8rem;color:var(--mut);margin-bottom:14px;">Comparez vos scores SEO/GEO aux moyennes du secteur et au top 10%.<br>Nécessite les données GBP ou une clé API IA.</div>
-                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">🔒 Bientôt disponible</span>
+                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">Bientôt disponible</span>
             </div>`;
         } else c.innerHTML='';
         return;
@@ -9439,7 +9439,7 @@ function renderBenchmark(){
         {key:'rating',label:'Note Google',max:5,color:'var(--org)'},
     ];
     c.innerHTML=`<div class="bench-section">
-        <div class="bench-title">📊 Benchmark Industrie — ${b.category} à ${b.city}</div>
+        <div class="bench-title">Benchmark Industrie — ${b.category} à ${b.city}</div>
         <div class="bench-percentile">
             <div class="bench-pct-item"><div class="bench-pct-value" style="color:${pctColor(b.percentile.seo)}">${b.percentile.seo}%</div><div class="bench-pct-label">Percentile SEO</div></div>
             <div class="bench-pct-item"><div class="bench-pct-value" style="color:${pctColor(b.percentile.geo)}">${b.percentile.geo}%</div><div class="bench-pct-label">Percentile GEO</div></div>
@@ -9480,7 +9480,7 @@ function renderBenchmark(){
             </div>`;
         }).join('')}
         <div class="bench-insights">
-            ${(b.insights||[]).map(i=>`<div class="bench-insight ${i.type}">${i.type==='warning'?'⚠️':i.type==='success'?'✅':'ℹ️'} ${i.text}</div>`).join('')}
+            ${(b.insights||[]).map(i=>`<div class="bench-insight ${i.type}">${i.type==='warning'?'':i.type==='success'?'':''} ${i.text}</div>`).join('')}
         </div>
     </div>`;
 }
@@ -9515,25 +9515,25 @@ function renderSentiment(){
     if(!s){
         if(window._sentimentNoAPI){
             c.innerHTML=`<div class="sentiment-section" style="text-align:center;padding:24px 16px;">
-                <div class="sentiment-title">💬 Analyse de Sentiment — Avis clients</div>
+                <div class="sentiment-title"> Analyse de Sentiment — Avis clients</div>
                 <div style="display:flex;justify-content:center;gap:14px;margin:16px 0;opacity:.3;pointer-events:none;">
-                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;">😊</div><div style="font-size:.65rem;color:var(--mut);">Cuisine</div></div>
-                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;">😐</div><div style="font-size:.65rem;color:var(--mut);">Service</div></div>
-                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;">😊</div><div style="font-size:.65rem;color:var(--mut);">Ambiance</div></div>
-                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;">😟</div><div style="font-size:.65rem;color:var(--mut);">Attente</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;"></div><div style="font-size:.65rem;color:var(--mut);">Cuisine</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;"></div><div style="font-size:.65rem;color:var(--mut);">Service</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;"></div><div style="font-size:.65rem;color:var(--mut);">Ambiance</div></div>
+                    <div style="background:var(--s3);border-radius:10px;padding:12px 16px;"><div style="font-size:1.1rem;"></div><div style="font-size:.65rem;color:var(--mut);">Attente</div></div>
                 </div>
-                <div style="font-size:1.4rem;margin-bottom:6px;">🤖</div>
+                <div style="font-size:1.4rem;margin-bottom:6px;"></div>
                 <div style="font-weight:600;margin-bottom:4px;">Analyse IA des avis</div>
                 <div style="font-size:.8rem;color:var(--mut);margin-bottom:14px;">Nécessite une clé API IA pour analyser le sentiment de vos avis clients.</div>
-                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">🔒 Configurer dans Paramètres → Clé API</span>
+                <span style="font-size:.75rem;padding:6px 14px;border-radius:20px;background:var(--s3);color:var(--mut);">Configurer dans Paramètres → Clé API</span>
             </div>`;
         } else c.innerHTML='';
         return;
     }
-    const emoji=s.score>=0.7?'😊':s.score>=0.4?'😐':'😟';
+    const emoji=s.score>=0.7?'':s.score>=0.4?'':'';
     const sentColor=v=>v>=0.7?'var(--grn)':v>=0.4?'var(--org)':'var(--red)';
     c.innerHTML=`<div class="sentiment-section">
-        <div class="sentiment-title">💬 Analyse de Sentiment — Avis clients</div>
+        <div class="sentiment-title"> Analyse de Sentiment — Avis clients</div>
         <div class="sentiment-overall">
             <div class="sentiment-emoji">${emoji}</div>
             <div>
@@ -9576,7 +9576,7 @@ function renderWeeklyReport(){
     const acct=window.currentAccount||{};
     const email=window._reportOpts.email||acct.email||'';
     c.innerHTML=`<div class="report-section">
-        <div class="report-title">📧 Rapport Hebdomadaire Automatique</div>
+        <div class="report-title">Rapport Hebdomadaire Automatique</div>
         <div class="report-config">
             <div class="report-input-group">
                 <label>Email de réception</label>
@@ -9603,8 +9603,8 @@ function renderWeeklyReport(){
             </label>
         </div>
         <div style="display:flex;gap:10px;align-items:center;">
-            <button class="report-subscribe-btn" onclick="subscribeReport()">📩 Activer le rapport</button>
-            <button class="report-subscribe-btn" style="background:var(--s3);color:var(--txt);" onclick="previewReport()">👁️ Aperçu</button>
+            <button class="report-subscribe-btn" onclick="subscribeReport()"> Activer le rapport</button>
+            <button class="report-subscribe-btn" style="background:var(--s3);color:var(--txt);" onclick="previewReport()"> Aperçu</button>
             <span id="reportStatus"></span>
         </div>
         <div id="reportPreviewBox"></div>
@@ -9618,10 +9618,10 @@ async function subscribeReport(){
     try{
         const resp=await fetch('/api/reports/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:d.restaurant_id||0,email,frequency:window._reportOpts.frequency,include_competitors:window._reportOpts.competitors,include_sentiment:window._reportOpts.sentiment,include_benchmark:window._reportOpts.benchmark})});
         const json=await resp.json();
-        if(json.success)document.getElementById('reportStatus').innerHTML=`<span class="report-status active">✅ ${json.message}</span>`;
+        if(json.success)document.getElementById('reportStatus').innerHTML=`<span class="report-status active">✓ ${json.message}</span>`;
         else document.getElementById('reportStatus').innerHTML=`<span class="report-status" style="background:rgba(239,68,68,.1);color:var(--red)">Erreur</span>`;
     }catch(e){
-        document.getElementById('reportStatus').innerHTML='<span class="report-status active">✅ Rapport configuré (mode local)</span>';
+        document.getElementById('reportStatus').innerHTML='<span class="report-status active">✓ Rapport configuré (mode local)</span>';
     }
 }
 
@@ -9636,13 +9636,13 @@ async function previewReport(){
         const json=await resp.json();
         if(json.success)window._reportPreview=json.report;
     }catch(e){
-        window._reportPreview={title:`Rapport — ${d.name||'Restaurant'}`,period:`Semaine du ${new Date().toLocaleDateString('fr-FR')}`,summary:{seo_score:scores.seo||0,seo_change:2,geo_score:scores.geo||0,geo_change:1,rating:d.rating||0,new_reviews:5,competitors_tracked:(window._competitors||[]).length},highlights:['📊 Données de la semaine analysées','⚡ 3 actions recommandées'],actions:[{priority:'high',text:'Répondre aux avis',status:'pending'},{priority:'medium',text:'Publier un Google Post',status:'pending'}]};
+        window._reportPreview={title:`Rapport — ${d.name||'Restaurant'}`,period:`Semaine du ${new Date().toLocaleDateString('fr-FR')}`,summary:{seo_score:scores.seo||0,seo_change:2,geo_score:scores.geo||0,geo_change:1,rating:d.rating||0,new_reviews:5,competitors_tracked:(window._competitors||[]).length},highlights:['Données de la semaine analysées','3 actions recommandées'],actions:[{priority:'high',text:'Répondre aux avis',status:'pending'},{priority:'medium',text:'Publier un Google Post',status:'pending'}]};
     }
     const r=window._reportPreview;
     if(!r){box.innerHTML='';return;}
     const ch=(v)=>v>0?`<span style="color:var(--grn)">▲+${v}</span>`:v<0?`<span style="color:var(--red)">▼${v}</span>`:'—';
     box.innerHTML=`<div class="report-preview">
-        <div class="report-preview-title">📋 ${r.title}</div>
+        <div class="report-preview-title">${r.title}</div>
         <div style="font-size:.62rem;color:var(--mut);margin-bottom:8px;">${r.period}</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:10px;">
             <div style="text-align:center;padding:8px;background:var(--s2);border-radius:6px;">
@@ -9664,7 +9664,7 @@ async function previewReport(){
         </div>
         ${(r.highlights||[]).map(h=>`<div class="report-preview-item">${h}</div>`).join('')}
         <div style="margin-top:8px;font-size:.68rem;font-weight:600;">Actions prioritaires :</div>
-        ${(r.actions||[]).map(a=>`<div class="report-preview-item">${a.priority==='high'?'🔴':a.priority==='medium'?'🟡':'🟢'} ${a.text}</div>`).join('')}
+        ${(r.actions||[]).map(a=>`<div class="report-preview-item">${a.priority==='high'?'':a.priority==='medium'?'':''} ${a.text}</div>`).join('')}
     </div>`;
 }
 
@@ -9716,7 +9716,7 @@ function renderUsageScore(){
     if(detailEl)detailEl.textContent=details.join(' | ');
 }
 
-const CHARS={terrasse:{icon:'🏖️',label:'Terrasse'},wifi:{icon:'📡',label:'Wifi'},parking:{icon:'🚗',label:'Parking'},vegetarian:{icon:'🥗',label:'Végétarien'},vegan:{icon:'🌱',label:'Végan'},halal:{icon:'🍖️',label:'Halal'},delivery:{icon:'🚚',label:'Livraison'},takeout:{icon:'🥡',label:'À emporter'},dineIn:{icon:'🍽️',label:'Sur place'},reservations:{icon:'📅',label:'Réservations'},live_music:{icon:'🎵',label:'Musique live'},accepts_cards:{icon:'💳',label:'Cartes acceptées'},outdoor_seating:{icon:'☀️',label:'Assises ext.'},wifi_available:{icon:'📶',label:'Wifi gratuit'},wheelchair_accessible:{icon:'♿',label:'Accessible'}};
+const CHARS={terrasse:{icon:'',label:'Terrasse'},wifi:{icon:'',label:'Wifi'},parking:{icon:'',label:'Parking'},vegetarian:{icon:'',label:'Végétarien'},vegan:{icon:'',label:'Végan'},halal:{icon:'',label:'Halal'},delivery:{icon:'',label:'Livraison'},takeout:{icon:'',label:'À emporter'},dineIn:{icon:'',label:'Sur place'},reservations:{icon:'',label:'Réservations'},live_music:{icon:'',label:'Musique live'},accepts_cards:{icon:'',label:'Cartes acceptées'},outdoor_seating:{icon:'',label:'Assises ext.'},wifi_available:{icon:'',label:'Wifi gratuit'},wheelchair_accessible:{icon:'',label:'Accessible'}};
 
 async function renderCharacteristics(){
     const rid=currentData?.restaurant_id||1;
@@ -9806,20 +9806,20 @@ async function renderHolidaysAndHours(){
         const st=sh?sh.status:null;
         const src=sh?sh.source:null; // local | gbp | synced
         let pill='';
-        if(st==='closed')pill='<span style="background:rgba(239,68,68,.15);color:var(--red);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">🔒 Fermé</span>';
-        else if(st==='custom'||st==='open')pill='<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">✅ Ouvert</span>';
+        if(st==='closed')pill='<span style="background:rgba(239,68,68,.15);color:var(--red);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">Fermé</span>';
+        else if(st==='custom'||st==='open')pill='<span style="background:rgba(16,185,129,.15);color:var(--grn);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;">✓ Ouvert</span>';
         // Sync badge
-        if(src==='synced')pill+=' <span style="background:rgba(59,130,246,.15);color:#60a5fa;padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Synchronisé avec Google">🔄 Sync</span>';
+        if(src==='synced')pill+=' <span style="background:rgba(59,130,246,.15);color:#60a5fa;padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Synchronisé avec Google">Sync</span>';
         else if(src==='gbp')pill+=' <span style="background:rgba(139,92,246,.15);color:#a78bfa;padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Vient de Google">G</span>';
-        else if(src==='local')pill+=' <span style="background:rgba(245,158,11,.15);color:var(--org);padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Pas encore poussé sur Google">⚠️ Local</span>';
+        else if(src==='local')pill+=' <span style="background:rgba(245,158,11,.15);color:var(--org);padding:3px 6px;border-radius:6px;font-size:.6rem;font-weight:700;" title="Pas encore poussé sur Google">! Local</span>';
         // Hole detection: holiday in next 30 days + no status
         if(!st&&h.date<=in30d&&googleAuth?.connected&&window._gbpSpecialHoursLoaded){
-            pill='<span style="background:rgba(239,68,68,.15);color:var(--red);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;" title="Google attend une réponse">⚠️ Non déclaré sur Google</span>';
+            pill='<span style="background:rgba(239,68,68,.15);color:var(--red);padding:3px 8px;border-radius:6px;font-size:.65rem;font-weight:700;" title="Google attend une réponse">! Non déclaré sur Google</span>';
         }
-        const btns=st?`<button class="holiday-btn" style="padding:4px 10px;font-size:.7rem;" onclick="clearHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}')">↺ Annuler</button>`:
+        const btns=st?`<button class="holiday-btn" style="padding:4px 10px;font-size:.7rem;" onclick="clearHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}')">Annuler</button>`:
             `<button class="holiday-btn" onclick="setHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}',false)">J'ouvre normalement</button>
              <button class="holiday-btn" onclick="setHolidayStatus('${h.date}','${h.name.replace(/'/g,"\\'")}',true)">Je suis fermé</button>`;
-        html+=`<div class="holiday-alert"><span>⚠️</span>
+        html+=`<div class="holiday-alert"><span></span>
             <span><strong>${h.name}</strong> — ${label}</span>
             ${pill}
             <div class="holiday-buttons" style="margin-left:auto;">${btns}</div>
@@ -9827,7 +9827,7 @@ async function renderHolidaysAndHours(){
     }
     // Custom closure input
     html+=`<div class="holiday-alert" style="background:rgba(99,102,241,.08);border-color:rgba(99,102,241,.25);">
-        <span>➕</span>
+        <span></span>
         <span><strong>Fermeture exceptionnelle</strong> (congés, travaux, événement privé…)</span>
         <div style="margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
             <input type="date" id="customCloseDate" style="background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);color:#fff;padding:5px 8px;border-radius:6px;font-size:.7rem;">
@@ -9842,7 +9842,7 @@ async function setHolidayStatus(date,name,isClosed){
     const rid=currentData?.restaurant_id||0;
     try{
         await fetch(`${API_BASE}/api/gbp/special-hours`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,date,is_closed:isClosed,holiday_name:name})});
-        addToLog((isClosed?'🔒 ':'✅ ')+name+' — '+(isClosed?'fermé':'ouvert normalement'));
+        addToLog((isClosed?'':'✓ ')+name+' — '+(isClosed?'fermé':'ouvert normalement'));
     }catch(e){}
     await loadSpecialHours();
     renderHolidaysAndHours();
@@ -9852,7 +9852,7 @@ async function clearHolidayStatus(date,name){
     const rid=currentData?.restaurant_id||0;
     try{
         await fetch(`${API_BASE}/api/hub/special-hours`,{method:'DELETE',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:rid,date})});
-        addToLog('↺ '+name+' — statut supprimé');
+        addToLog(''+name+' — statut supprimé');
     }catch(e){}
     await loadSpecialHours();
     renderHolidaysAndHours();
@@ -9865,7 +9865,7 @@ async function addCustomClosure(){
     const rid=currentData?.restaurant_id||0;
     try{
         await fetch(`${API_BASE}/api/hub/special-hours`,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+sessionToken},body:JSON.stringify({restaurant_id:rid,date,status:'closed',label})});
-        addToLog('🔒 '+label+' ('+date+') — ajouté');
+        addToLog(''+label+' ('+date+') — ajouté');
     }catch(e){alert('Erreur: '+e.message);}
     await loadSpecialHours();
     renderHolidaysAndHours();
@@ -9894,13 +9894,13 @@ async function renderTargetKeywords(){
         if(list)list.innerHTML=`<tbody><tr><td colspan="5" style="text-align:center;padding:24px;color:var(--mut);">
             <div style="font-size:.9rem;margin-bottom:8px;">Aucun mot-clé ciblé pour ce restaurant.</div>
             <div style="font-size:.7rem;margin-bottom:12px;">Génère 12 suggestions adaptées à ton restaurant via l'IA (Hub Central → cuisine, quartier, plats, services).</div>
-            <button class="btn-gen" style="font-size:.75rem;padding:6px 14px;" onclick="generateKeywordSuggestions()">💡 Générer 12 mots-clés ciblés (IA)</button>
+            <button class="btn-gen" style="font-size:.75rem;padding:6px 14px;" onclick="generateKeywordSuggestions()">Générer 12 mots-clés ciblés (IA)</button>
         </td></tr></tbody>`;
         if(header)header.textContent='Mots-clés cibles (0)';
         return;
     }
 
-    const catLabels={brand:'🏷️ Brand',local:'📍 Local',transactional:'💰 Action',informational:'ℹ️ Info'};
+    const catLabels={brand:'Brand',local:'Local',transactional:'Action',informational:'Info'};
     const catColors={
         brand:'background:rgba(99,102,241,.15);color:#a5b4fc;border:1px solid rgba(99,102,241,.3);',
         local:'background:rgba(16,185,129,.15);color:#6ee7b7;border:1px solid rgba(16,185,129,.3);',
@@ -9930,7 +9930,7 @@ function removeKeyword(i){
     if(!window._targetKeywords)return;
     const removed=window._targetKeywords[i];
     window._targetKeywords.splice(i,1);
-    addToLog('🗑️ Mot-clé retiré: '+removed.kw);
+    addToLog('Mot-clé retiré: '+removed.kw);
     renderTargetKeywords();
     // Persist to server
     const rid=currentData?.restaurant_id||1;
@@ -10069,17 +10069,17 @@ async function renderReviewAutomation(){
         savedSettings=window._reviewAutoSettings||{};
     }
     
-    const stars=['1-2⭐','3⭐','4⭐','5⭐'];
+    const stars=['1-2','3','4','5'];
     const buildToggles=(prefix)=>{
         let html='';
         stars.forEach(star=>{
-            const key=`${prefix}_${star.replace(/[⭐]/g,'')}`;
+            const key=`${prefix}_${star.replace(/[]/g,'')}`;
             const isOn=savedSettings[key];
             html+=`<div class="review-star-group">
                 <span class="review-stars">${star}</span>
                 <div class="review-toggle ${isOn?'on':''}" data-key="${key}" onclick="toggleReviewAuto(this)"></div>
                 <div class="platform-icons">
-                    <span class="platform-icon">🔵</span><span class="platform-icon">⭐</span><span class="platform-icon">💛</span>
+                    <span class="platform-icon"></span><span class="platform-icon"></span><span class="platform-icon"></span>
                 </div>
             </div>`;
         });
@@ -10119,8 +10119,8 @@ async function saveAiSettings(){
     const rid=currentData?.restaurant_id||1;
     try{
         await fetchTimeout(`${API_BASE}/api/settings/ai_settings`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,data:settings})},5000);
-        addToLog('💾 Paramètres IA sauvegardés (serveur + local)');
-    }catch(e){addToLog('💾 Paramètres IA sauvegardés (local uniquement)');};
+        addToLog('Paramètres IA sauvegardés (serveur + local)');
+    }catch(e){addToLog('Paramètres IA sauvegardés (local uniquement)');};
 }
 
 // generateSocialContent() and publishSocialPost() defined above (line ~5681/5720) — no duplicate here
@@ -10144,8 +10144,8 @@ async function editGooglePost(id){
     const p=targetCard.querySelector('p');
     const btns=targetCard.querySelector('div:last-child');
     p.outerHTML=`<textarea id="editPostArea" style="width:100%;min-height:60px;padding:8px;border:1px solid var(--ind);border-radius:6px;background:var(--s1);color:var(--txt);font-size:.8rem;font-family:inherit;resize:vertical;margin:6px 0;">${postText}</textarea>`;
-    btns.innerHTML=`<button style="flex:1;padding:6px;border:none;border-radius:4px;background:var(--grn);color:#fff;font-size:.7rem;cursor:pointer;font-weight:600;" onclick="saveEditedPost(${id})">✅ Sauvegarder</button>
-        <button style="flex:1;padding:6px;border:none;border-radius:4px;background:var(--s3);color:var(--txt);font-size:.7rem;cursor:pointer;" onclick="renderGooglePostsList()">❌ Annuler</button>`;
+    btns.innerHTML=`<button style="flex:1;padding:6px;border:none;border-radius:4px;background:var(--grn);color:#fff;font-size:.7rem;cursor:pointer;font-weight:600;" onclick="saveEditedPost(${id})">✓ Sauvegarder</button>
+        <button style="flex:1;padding:6px;border:none;border-radius:4px;background:var(--s3);color:var(--txt);font-size:.7rem;cursor:pointer;" onclick="renderGooglePostsList()">✗ Annuler</button>`;
     targetCard.querySelector('#editPostArea')?.focus();
 }
 async function saveEditedPost(id){
@@ -10164,8 +10164,8 @@ async function saveEditedPost(id){
     const posts=currentData?.googlePosts||window._googlePosts||[];
     const post=posts.find((p,i)=>p.id==id||i===id);
     if(post)post.text=newContent;
-    showToast(saved?'✅ Post sauvegardé':'✅ Post modifié localement','success');
-    addToLog('✏️ Post modifié'+(saved?' et sauvegardé sur le serveur':''));
+    showToast(saved?'✓ Post sauvegardé':'✓ Post modifié localement','success');
+    addToLog('Post modifié'+(saved?' et sauvegardé sur le serveur':''));
     renderGooglePostsList();
 }
 async function duplicateGooglePost(text){
@@ -10183,10 +10183,10 @@ async function duplicateGooglePost(text){
         const rid=currentData?.restaurant_id||0;
         const resp=await fetchTimeout(`${API_BASE}/api/posts/google/duplicate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,original_content:text})},8000);
         const data=await resp.json();
-        if(data.success)addToLog('📋 Post dupliqué'+(data.source==='gbp_api'?' et publié sur Google':' en brouillon'));
+        if(data.success)addToLog('Post dupliqué'+(data.source==='gbp_api'?' et publié sur Google':' en brouillon'));
     }catch(e){console.log('Duplicate post API:',e.message);}
-    showToast('📋 Post dupliqué — modifiez-le ci-dessous','success');
-    addToLog('📋 Post dupliqué en brouillon');
+    showToast('Post dupliqué — modifiez-le ci-dessous','success');
+    addToLog('Post dupliqué en brouillon');
     renderGooglePostsList();
     // Scroll to editor
     if(ta){ta.scrollIntoView({behavior:'smooth',block:'center'});ta.focus();}
@@ -10199,7 +10199,7 @@ async function schedulePost(){
     const scheduleDate=new Date(Date.now()+86400000*3).toISOString();
     try{
         await fetchTimeout(`${API_BASE}/api/posts/google`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,post_type:type,content:content,status:'scheduled',scheduled_at:scheduleDate})},5000);
-        addToLog(`📅 Google Post programmé pour ${new Date(scheduleDate).toLocaleDateString('fr-FR')}`);
+        addToLog(` Google Post programmé pour ${new Date(scheduleDate).toLocaleDateString('fr-FR')}`);
         document.getElementById('socialContent').value='';
         renderGooglePostsList();
     }catch(e){alert('Erreur de programmation');}
@@ -10214,10 +10214,10 @@ function editTargetKeywords(){
     if(!container)return;
     editor=document.createElement('div');editor.id='kwEditor';
     editor.style.cssText='background:var(--card);border:1px solid var(--brd);border-radius:10px;padding:14px;margin:10px 0;';
-    editor.innerHTML=`<div style="font-weight:600;margin-bottom:8px;">✏️ Modifier les mots-clés</div>
+    editor.innerHTML=`<div style="font-weight:600;margin-bottom:8px;">Modifier les mots-clés</div>
         <textarea id="kwEditInput" rows="3" style="width:100%;padding:10px;border:1px solid var(--brd);border-radius:8px;background:var(--bg);color:var(--txt);resize:vertical;box-sizing:border-box;font-size:.95rem;">${current}</textarea>
         <div style="font-size:.8rem;color:var(--mut);margin:4px 0 8px;">Séparez par des virgules</div>
-        <div style="display:flex;gap:8px;"><button onclick="confirmEditKeywords()" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✅ Enregistrer</button><button onclick="document.getElementById('kwEditor').style.display='none'" style="padding:9px 14px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>`;
+        <div style="display:flex;gap:8px;"><button onclick="confirmEditKeywords()" style="flex:1;padding:9px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✓ Enregistrer</button><button onclick="document.getElementById('kwEditor').style.display='none'" style="padding:9px 14px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>`;
     container.appendChild(editor);
 }
 function confirmEditKeywords(){
@@ -10231,8 +10231,8 @@ function confirmEditKeywords(){
     });
     const editor=document.getElementById('kwEditor');if(editor)editor.style.display='none';
     renderTargetKeywords();
-    addToLog('🎯 Mots-clés cibles mis à jour ('+newKws.length+')');
-    showToast('✅ '+newKws.length+' mots-clés enregistrés');
+    addToLog('Mots-clés cibles mis à jour ('+newKws.length+')');
+    showToast('✓ '+newKws.length+' mots-clés enregistrés');
 }
 async function generateKeywordSuggestions(){
     const name=currentData?.name||storedName||'restaurant';
@@ -10244,7 +10244,7 @@ async function generateKeywordSuggestions(){
     const existingKws=existing.map(e=>e.kw);
 
     const btn=document.querySelector('[onclick*="generateKeywordSuggestions"]');
-    if(btn){btn.disabled=true;btn.textContent='⏳ Analyse IA…';}
+    if(btn){btn.disabled=true;btn.textContent=' Analyse IA…';}
 
     let suggestions=[];
     try{
@@ -10275,16 +10275,16 @@ async function generateKeywordSuggestions(){
         const data=await resp.json();
         if(data.success&&data.keywords){
             suggestions=data.keywords;
-            addToLog('💡 '+suggestions.length+' mots-clés ciblés générés (IA, contexte Hub Central)');
+            addToLog(''+suggestions.length+' mots-clés ciblés générés (IA, contexte Hub Central)');
         } else {
-            addToLog('⚠️ '+(data.error||'Erreur IA'));
+            addToLog('! '+(data.error||'Erreur IA'));
         }
     }catch(e){
         console.log('Keywords API error:',e.message);
-        addToLog('⚠️ Erreur IA: '+e.message);
+        addToLog('! Erreur IA: '+e.message);
     }
 
-    if(btn){btn.disabled=false;btn.textContent='💡 Suggestions IA';}
+    if(btn){btn.disabled=false;btn.textContent='Suggestions IA';}
 
     if(!suggestions.length){
         showToast('Aucune suggestion générée. Vérifiez votre clé API IA dans Settings.','error');
@@ -10297,7 +10297,7 @@ async function generateKeywordSuggestions(){
 
     // Show inline selection panel with category tags + reasons (NO fake popularity/comp)
     window._kwSuggestions=newSuggestions;window._kwExisting=existing;
-    const catLabels={brand:'🏷️ Brand',local:'📍 Local',transactional:'💰 Action',informational:'ℹ️ Info'};
+    const catLabels={brand:'Brand',local:'Local',transactional:'Action',informational:'Info'};
     const catColors={brand:'#a5b4fc',local:'#6ee7b7',transactional:'#fbbf24',informational:'#c4b5fd'};
     const items=newSuggestions.map((s,i)=>{
         const cat=s.cat||'local';
@@ -10319,10 +10319,10 @@ async function generateKeywordSuggestions(){
     panel.style.cssText='position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.7);z-index:10000;display:flex;align-items:center;justify-content:center;';
     panel.onclick=e=>{if(e.target===panel)panel.remove();};
     panel.innerHTML=`<div style="background:var(--card);border-radius:16px;padding:24px;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;">
-        <div style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">💡 Suggestions de mots-clés</div>
+        <div style="font-size:1.1rem;font-weight:700;margin-bottom:4px;">Suggestions de mots-clés</div>
         <div style="font-size:.8rem;color:var(--mut);margin-bottom:14px;">Cochez les mots-clés à ajouter</div>
         <div style="margin-bottom:14px;">${items}</div>
-        <div style="display:flex;gap:8px;"><button onclick="addSelectedKeywords()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✅ Ajouter la sélection</button><button onclick="document.getElementById('kwSugPanel')?.remove()" style="padding:10px 16px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>
+        <div style="display:flex;gap:8px;"><button onclick="addSelectedKeywords()" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--acc);color:#fff;cursor:pointer;font-weight:600;">✓ Ajouter la sélection</button><button onclick="document.getElementById('kwSugPanel')?.remove()" style="padding:10px 16px;border:1px solid var(--brd);border-radius:8px;background:transparent;color:var(--mut);cursor:pointer;">Annuler</button></div>
     </div>`;
     document.body.appendChild(panel);
 }
@@ -10335,8 +10335,8 @@ function addSelectedKeywords(){
     window._targetKeywords=existing;
     document.getElementById('kwSugPanel')?.remove();
     renderTargetKeywords();
-    addToLog('💡 '+toAdd.length+' mot(s)-clé(s) ajouté(s)');
-    showToast('✅ '+toAdd.length+' mots-clés ajoutés !');
+    addToLog(''+toAdd.length+' mot(s)-clé(s) ajouté(s)');
+    showToast('✓ '+toAdd.length+' mots-clés ajoutés !');
     // Persist with full categorization (cat, intent, reason) — NO fake popularity/comp
     const rid=currentData?.restaurant_id||1;
     fetchTimeout(`${API_BASE}/api/keywords/bulk`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,keywords:existing.map(k=>({keyword:k.kw,language:k.lang||'FR',category:k.cat||'local',intent:k.intent||'',reason:k.reason||''}))})},5000).catch(()=>{});
@@ -10352,7 +10352,7 @@ function viewKeywordAnalysis(i){
     modal.onclick=e=>{if(e.target===modal)modal.remove();};
     modal.innerHTML=`<div style="background:var(--s1);border:1px solid var(--bdr);border-radius:16px;padding:24px;max-width:420px;width:90%;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-            <h3 style="margin:0;font-size:1rem;">📊 Analyse : "${kw.kw}"</h3>
+            <h3 style="margin:0;font-size:1rem;">Analyse : "${kw.kw}"</h3>
             <span onclick="this.closest('div[style*=fixed]').remove()" style="cursor:pointer;font-size:1.2rem;">✕</span>
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
@@ -10367,7 +10367,7 @@ function viewKeywordAnalysis(i){
             </div>
         </div>
         <div style="background:var(--s2);border-radius:10px;padding:12px;margin-bottom:12px;">
-            <div style="font-size:.75rem;font-weight:600;margin-bottom:8px;">💡 Conseils d'optimisation</div>
+            <div style="font-size:.75rem;font-weight:600;margin-bottom:8px;">Conseils d'optimisation</div>
             <ul style="margin:0;padding-left:16px;font-size:.72rem;color:var(--mut);line-height:1.6;">
                 <li>Intégrez "<b>${kw.kw}</b>" dans votre fiche Google Business</li>
                 <li>Ajoutez-le dans le title et la meta description de votre site</li>
@@ -10383,16 +10383,16 @@ async function markHolidayOpen(){
     const holiday=getNextHoliday();
     if(!holiday)return;
     const alertEl=document.getElementById('holidayAlert');
-    if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:var(--ind);">⏳ Mise à jour en cours…</div>';
+    if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:var(--ind);"> Mise à jour en cours…</div>';
     try{
         const rid=currentData?.restaurant_id||0;
         const resp=await fetchTimeout(`${API_BASE}/api/gbp/special-hours`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,date:holiday.date,is_closed:false,holiday_name:holiday.name})},8000);
         const data=await resp.json();
-        addToLog('✅ Jour férié '+holiday.name+' : horaires normaux confirmés'+(data.source==='gbp_api'?' (Google mis à jour)':' (en attente sync)'));
-        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn);">✅ '+holiday.name+' — Ouvert normalement. '+(data.message||'')+'</div>';
+        addToLog('✓ Jour férié '+holiday.name+' : horaires normaux confirmés'+(data.source==='gbp_api'?' (Google mis à jour)':' (en attente sync)'));
+        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn);">✓ '+holiday.name+' — Ouvert normalement. '+(data.message||'')+'</div>';
     }catch(e){
-        addToLog('✅ Jour férié '+holiday.name+' : horaires normaux (sauvé localement)');
-        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn);">✅ '+holiday.name+' — Ouvert normalement (sera synchronisé avec Google).</div>';
+        addToLog('✓ Jour férié '+holiday.name+' : horaires normaux (sauvé localement)');
+        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.3);color:var(--grn);">✓ '+holiday.name+' — Ouvert normalement (sera synchronisé avec Google).</div>';
     }
     await loadSpecialHours();
     setTimeout(()=>{if(alertEl)alertEl.innerHTML='';},8000);
@@ -10401,16 +10401,16 @@ async function markHolidayClosed(){
     const holiday=getNextHoliday();
     if(!holiday)return;
     const alertEl=document.getElementById('holidayAlert');
-    if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:var(--ind);">⏳ Mise à jour en cours…</div>';
+    if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(99,102,241,.1);border-color:rgba(99,102,241,.3);color:var(--ind);"> Mise à jour en cours…</div>';
     try{
         const rid=currentData?.restaurant_id||0;
         const resp=await fetchTimeout(`${API_BASE}/api/gbp/special-hours`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({restaurant_id:rid,date:holiday.date,is_closed:true,holiday_name:holiday.name})},8000);
         const data=await resp.json();
-        addToLog('🔒 Jour férié '+holiday.name+' : marqué comme fermé'+(data.source==='gbp_api'?' (Google mis à jour)':' (en attente sync)'));
-        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);">🔒 '+holiday.name+' — Fermé. '+(data.message||'')+'</div>';
+        addToLog('Jour férié '+holiday.name+' : marqué comme fermé'+(data.source==='gbp_api'?' (Google mis à jour)':' (en attente sync)'));
+        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);">'+holiday.name+' — Fermé. '+(data.message||'')+'</div>';
     }catch(e){
-        addToLog('🔒 Jour férié '+holiday.name+' : fermé (sauvé localement)');
-        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);">🔒 '+holiday.name+' — Fermé (sera synchronisé avec Google).</div>';
+        addToLog('Jour férié '+holiday.name+' : fermé (sauvé localement)');
+        if(alertEl)alertEl.innerHTML='<div class="holiday-alert" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--red);">'+holiday.name+' — Fermé (sera synchronisé avec Google).</div>';
     }
     await loadSpecialHours();
     setTimeout(()=>{if(alertEl)alertEl.innerHTML='';},8000);
@@ -10435,13 +10435,13 @@ function renderPricingGrid(){
             {t:'1 restaurant',ok:true},{t:'1 scan / jour',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'Auto-apply',ok:false},{t:'Gestion des avis',ok:false},{t:'Annuaires (3 max)',ok:true},{t:'Support email',ok:false}
         ],btn:'secondary',label:'Commencer gratuitement'},
         {key:'starter',name:'Starter',desc:'Pour un restaurant qui veut passer à l\'action',price:29,yearly:23,popular:false,features:[
-            {t:'1 restaurant',ok:true},{t:'5 scans / jour',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'⚡ Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis',ok:true},{t:'5 annuaires',ok:true},{t:'Support email prioritaire',ok:true}
+            {t:'1 restaurant',ok:true},{t:'5 scans / jour',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis',ok:true},{t:'5 annuaires',ok:true},{t:'Support email prioritaire',ok:true}
         ],btn:'primary',label:'Choisir Starter'},
         {key:'pro',name:'Pro',desc:'Multi-sites, équipe, et automatisation complète',price:79,yearly:63,popular:true,features:[
-            {t:'3 restaurants',ok:true},{t:'Scans illimités',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'⚡ Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis IA',ok:true},{t:'11 annuaires',ok:true},{t:'3 membres d\'équipe',ok:true}
+            {t:'3 restaurants',ok:true},{t:'Scans illimités',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis IA',ok:true},{t:'11 annuaires',ok:true},{t:'3 membres d\'équipe',ok:true}
         ],btn:'primary',label:'Choisir Pro'},
         {key:'premium',name:'Premium',desc:'Chaînes de restaurants et franchises',price:149,yearly:119,features:[
-            {t:'10 restaurants',ok:true},{t:'Scans illimités',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'⚡ Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis IA',ok:true},{t:'11 annuaires',ok:true},{t:'10 membres d\'équipe',ok:true}
+            {t:'10 restaurants',ok:true},{t:'Scans illimités',ok:true},{t:'Score SEO + GEO complet',ok:true},{t:'49 critères analysés',ok:true},{t:'Auto-apply (GBP + CMS)',ok:true},{t:'Gestion des avis IA',ok:true},{t:'11 annuaires',ok:true},{t:'10 membres d\'équipe',ok:true}
         ],btn:'secondary',label:'Choisir Premium'}
     ];
     grid.innerHTML=plans.map(p=>{
@@ -10622,7 +10622,7 @@ Site : https://stripe.com</p>
 document.addEventListener('DOMContentLoaded',()=>{
     // Load data from server on startup
     loadAllDataFromServer().then(store=>{
-        if(store){_serverDataCache=store;console.log('📡 Data loaded from server:',Object.keys(store.restaurants||{}).length,'restaurants');}
+        if(store){_serverDataCache=store;console.log(' Data loaded from server:',Object.keys(store.restaurants||{}).length,'restaurants');}
         renderHistory();
     }).catch(()=>{});
     setTimeout(()=>{renderHubFeatures();renderAiSettings();renderReviewAutomation();renderGooglePostsList();renderPricingGrid();renderLegalPages();},500);
