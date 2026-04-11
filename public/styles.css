@@ -1,15 +1,25 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;700&display=swap');
 :root{
-/* Palette Yatai Ramen — yatairamen.fr */
---bg:#031c33;--s1:#0a2540;--s2:#0f2e4d;--s3:#14375a;--s4:#1a4067;
---bdr:#1f4a6e;--txt:#f8e5db;--mut:#8a9ab0;--mut2:#5d6c7b;
---ind:#f04b2e;--ind2:#f06a52;--cyn:#c6fb50;--grn:#8bc34a;--grn2:#a4d65e;
---org:#f04b2e;--red:#f04b2e;--pnk:#f7a4a3;--prp:#f7a4a3;--blu:#3898ec;
-/* Accent aliases */
---acc:#f04b2e;--brand:#c6fb50;--card:#0a2540;
+/* Palette Yatai Ramen — yatairamen.fr
+   Structure: blue-dark frame (#031c33) wrapping beige content (#f8e5db)
+   Body text: Noto Serif light (300) on dark | Headings: Pprightgothic 900
+   Primary CTA: orange filled #f04b2e | Secondary: outline dark blue border */
+--bg:#031c33;       /* page frame = deep navy */
+--s1:#0a2540;       /* surface 1 (cards on dark) */
+--s2:#f8e5db;       /* surface 2 = beige content areas */
+--s3:#fff;          /* surface 3 = white content areas */
+--s4:#f0d5c4;       /* surface 4 = slightly darker beige */
+--bdr:#031c3322;    /* border (subtle on beige) */
+--txt:#031c33;      /* text on light backgrounds */
+--txt-light:#f8e5db;/* text on dark backgrounds */
+--mut:#5d6c7b;      /* muted text */
+--mut2:#8a9ab0;     /* extra muted */
+--ind:#f04b2e;--ind2:#f06a52;--cyn:#c6fb50;--grn:#2d7a4f;--grn2:#3d9a65;
+--org:#f04b2e;--red:#c0392b;--pnk:#f7a4a3;--prp:#f7a4a3;--blu:#3898ec;
+--acc:#f04b2e;--brand:#c6fb50;--card:#f8e5db;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:'Noto Sans',sans-serif;background:var(--bg);color:var(--txt);line-height:1.5;min-height:100vh;
+body{font-family:'Noto Sans',sans-serif;background:var(--bg);color:var(--txt-light);line-height:1.5;min-height:100vh;
   -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
   -webkit-touch-callout:none;
 }
@@ -36,14 +46,14 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;-moz-use
 .input-wrap input:focus{border-color:var(--ind);box-shadow:0 0 0 3px rgba(99,102,241,.12),0 8px 30px rgba(99,102,241,.1);}
 .input-wrap input::placeholder{color:var(--mut2);}
 .input-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);font-size:1.1rem;opacity:.5;}
-/* Yatai-style buttons */
-.btn-scan{padding:16px 36px;border-radius:12px;border:2px solid #f04b2e;background:#f04b2e;color:#fff;font-size:1rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all .25s ease;margin-top:4px;text-transform:uppercase;letter-spacing:.8px;}
-.btn-scan:hover{background:#d4402a;border-color:#d4402a;}
+/* Yatai-style primary CTA — filled orange, no border, Pprightgothic-like */
+.btn-scan{padding:18px 36px;border-radius:8px;border:none;background:#f04b2e;color:#f8e5db;font-size:1rem;font-weight:300;font-family:inherit;cursor:pointer;transition:all .25s ease;margin-top:4px;text-transform:uppercase;letter-spacing:.5px;}
+.btn-scan:hover{background:#d4402a;}
 .btn-scan:active{transform:translateY(1px);}
 
-/* Base button — Yatai outline style: transparent → orange on hover */
-.btn-gen{padding:8px 16px;border-radius:8px;border:2px solid var(--bdr);background:transparent;color:var(--txt);font-size:.78rem;font-weight:700;font-family:inherit;cursor:pointer;transition:all .2s ease;text-transform:uppercase;letter-spacing:.5px;}
-.btn-gen:hover{background:var(--ind);border-color:var(--ind);color:#fff;}
+/* Yatai base button — on dark bg: outline beige / on light bg: outline dark blue */
+.btn-gen{padding:8px 16px;border-radius:8px;border:2px solid var(--txt-light);background:transparent;color:var(--txt-light);font-size:.78rem;font-weight:600;font-family:inherit;cursor:pointer;transition:all .2s ease;text-transform:uppercase;letter-spacing:.5px;}
+.btn-gen:hover{background:#f04b2e;border-color:#f04b2e;color:#f8e5db;}
 .btn-gen:active{transform:translateY(1px);}
 .btn-gen:disabled{opacity:.4;cursor:not-allowed;transform:none;}
 
@@ -282,11 +292,11 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;-moz-use
 .auth-box h2{font-size:1.3rem;margin:0 0 4px;text-align:center;}
 .auth-box .auth-sub{font-size:.82rem;color:var(--mut);text-align:center;margin-bottom:24px;line-height:1.5;}
 .auth-field{display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
-.auth-field label{font-size:.72rem;font-weight:700;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;}
-.auth-field input{padding:12px 16px;border-radius:10px;border:1px solid var(--bdr);background:var(--s2);color:var(--txt);font-size:.9rem;font-family:inherit;outline:none;transition:all .25s ease;}
+.auth-field label{font-size:.72rem;font-weight:700;color:#5d6c7b;text-transform:uppercase;letter-spacing:.5px;}
+.auth-field input{padding:12px 16px;border-radius:10px;border:2px solid #031c33;background:#fff;color:#031c33;font-size:.9rem;font-family:inherit;outline:none;transition:all .25s ease;}
 .auth-field input:focus{border-color:var(--ind);box-shadow:0 0 0 3px rgba(99,102,241,.1);}
-.auth-btn{width:100%;padding:16px;border-radius:10px;border:2px solid #f04b2e;background:#f04b2e;color:#fff;font-weight:700;font-size:.92rem;cursor:pointer;font-family:inherit;transition:all .25s ease;margin-top:8px;text-transform:uppercase;letter-spacing:.6px;}
-.auth-btn:hover{background:#d4402a;border-color:#d4402a;}
+.auth-btn{width:100%;padding:18px;border-radius:8px;border:none;background:#f04b2e;color:#f8e5db;font-weight:300;font-size:.95rem;cursor:pointer;font-family:inherit;transition:all .25s ease;margin-top:8px;text-transform:uppercase;letter-spacing:.5px;}
+.auth-btn:hover{background:#d4402a;}
 .auth-btn:active{transform:translateY(1px);}
 .auth-btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
 /* ONBOARDING WIZARD */
