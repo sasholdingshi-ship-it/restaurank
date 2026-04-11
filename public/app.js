@@ -8083,25 +8083,25 @@ async function renderStatsTab(){
                 TOUT GÉNÉRER & PUBLIER — Blog + Reddit + Social + FAQ + Guest Post
             </button>
             <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px;">
-                <button onclick="generateBlogPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
+                <button onclick="generateBlogPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:1px solid #031c3340;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Blog GEO
                 </button>
-                <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
+                <button onclick="generateRedditPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:1px solid #031c3340;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Reddit x3
                 </button>
-                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
+                <button onclick="generateGuestPost()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:1px solid #031c3340;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                      Guest Post
                 </button>
-                <button onclick="generateSocialPosts()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
+                <button onclick="generateSocialPosts()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:1px solid #031c3340;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Social x7
                 </button>
-                <button onclick="generateTikTokKit()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
+                <button onclick="generateTikTokKit()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:1px solid #031c3340;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                      TikTok Kit x3
                 </button>
-                <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
+                <button onclick="generateFAQContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:1px solid #031c3340;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                      FAQ GEO x15
                 </button>
-                <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:2px solid #031c33;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
+                <button onclick="generateAllSEOContent()" class="auto-btn-full" style="padding:12px 8px;font-size:.78rem;background:#f8e5db;border:1px solid #031c3340;color:#031c33;border-radius:8px;cursor:pointer;font-weight:600;">
                     Tout régénérer
                 </button>
             </div>
@@ -10070,13 +10070,14 @@ async function renderReviewAutomation(){
     }
     
     const stars=['1-2','3','4','5'];
+    const starDisplay={'1-2':'★☆☆☆☆','3':'★★★☆☆','4':'★★★★☆','5':'★★★★★'};
     const buildToggles=(prefix)=>{
         let html='';
         stars.forEach(star=>{
             const key=`${prefix}_${star.replace(/[]/g,'')}`;
             const isOn=savedSettings[key];
             html+=`<div class="review-star-group">
-                <span class="review-stars">${star}</span>
+                <span class="review-stars" style="color:#f04b2e;">${starDisplay[star]||star}</span>
                 <div class="review-toggle ${isOn?'on':''}" data-key="${key}" onclick="toggleReviewAuto(this)"></div>
                 <div class="platform-icons">
                     <span class="platform-icon"></span><span class="platform-icon"></span><span class="platform-icon"></span>
