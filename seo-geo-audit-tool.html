@@ -220,11 +220,11 @@
         <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:12px;">
             <div style="flex:1;min-width:180px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Email (optionnel)</label>
-                <input type="email" id="invEmailFor" placeholder="client@email.com (ou vide = tout le monde)" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
+                <input type="email" id="invEmailFor" placeholder="client@email.com (ou vide = tout le monde)" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:#f8e5db;color:#031c33;font-size:.75rem;">
             </div>
             <div style="min-width:100px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Plan offert</label>
-                <select id="invPlan" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
+                <select id="invPlan" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:#f8e5db;color:#031c33;font-size:.75rem;">
                     <option value="free">Free</option>
                     <option value="starter">Starter</option>
                     <option value="pro" selected>Pro</option>
@@ -233,11 +233,11 @@
             </div>
             <div style="min-width:80px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Utilisations</label>
-                <input type="number" id="invMaxUses" value="1" min="1" max="100" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
+                <input type="number" id="invMaxUses" value="1" min="1" max="100" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:#f8e5db;color:#031c33;font-size:.75rem;">
             </div>
             <div style="min-width:80px;">
                 <label style="font-size:.65rem;color:var(--mut);display:block;margin-bottom:2px;">Expire (jours)</label>
-                <input type="number" id="invExpDays" value="7" min="1" max="365" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:var(--bg);color:var(--txt);font-size:.75rem;">
+                <input type="number" id="invExpDays" value="7" min="1" max="365" style="width:100%;padding:6px 10px;border:1px solid var(--bdr);border-radius:6px;background:#f8e5db;color:#031c33;font-size:.75rem;">
             </div>
             <button onclick="createInviteCode()" style="padding:6px 16px;background:var(--ind);color:#fff;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-size:.75rem;white-space:nowrap;">Générer un code</button>
         </div>
@@ -246,8 +246,8 @@
 
     <!-- SEARCH & FILTER -->
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center;">
-        <input type="text" id="adminSearchInput" placeholder="Rechercher par email, nom, restaurant…" oninput="filterAdminTable()" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:.8rem;">
-        <select id="adminFilterPlan" onchange="filterAdminTable()" style="padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:.75rem;">
+        <input type="text" id="adminSearchInput" placeholder="Rechercher par email, nom, restaurant…" oninput="filterAdminTable()" style="flex:1;min-width:200px;padding:8px 12px;border:1px solid var(--bdr);border-radius:8px;background:#f8e5db;color:#031c33;font-size:.8rem;">
+        <select id="adminFilterPlan" onchange="filterAdminTable()" style="padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;background:#f8e5db;color:#031c33;font-size:.75rem;">
             <option value="">Tous les plans</option>
             <option value="free">Free</option>
             <option value="starter">Starter</option>
@@ -255,7 +255,7 @@
             <option value="premium">Premium</option>
             <option value="enterprise">Enterprise</option>
         </select>
-        <select id="adminFilterStatus" onchange="filterAdminTable()" style="padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;background:var(--bg);color:var(--txt);font-size:.75rem;">
+        <select id="adminFilterStatus" onchange="filterAdminTable()" style="padding:8px 10px;border:1px solid var(--bdr);border-radius:8px;background:#f8e5db;color:#031c33;font-size:.75rem;">
             <option value="">Tous</option>
             <option value="active">Actifs</option>
             <option value="inactive">Inactifs</option>

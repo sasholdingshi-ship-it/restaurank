@@ -384,16 +384,16 @@ h3,.chart-title{font-size:1rem;}
 .user-bar .ub-btn.admin:hover{background:#f04b2e;color:#f8e5db;}
 
 /* ══ ADMIN DASHBOARD ══ */
-.admin-screen{display:none;min-height:100vh;padding:60px 20px 20px;}
-.admin-screen.active{display:block;}
+.admin-screen{display:none;min-height:100vh;padding:68px 16px 16px;}
+.admin-screen.active{display:block;background-color:#f8e5db;background-image:url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');background-size:242px;background-repeat:repeat;border-radius:8px;margin:0 16px;color:#031c33;}
 .admin-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:20px;}
-.admin-stat{background:var(--s1);border:1px solid var(--bdr);border-radius:12px;padding:16px;text-align:center;}
+.admin-stat{background:#f8e5db;border:1px solid #031c3322;border-radius:8px;padding:16px;text-align:center;}
 .admin-stat .as-val{font-size:1.6rem;font-weight:900;color:var(--ind);}
 .admin-stat .as-label{font-size:.7rem;color:var(--mut);text-transform:uppercase;margin-top:2px;}
-.admin-table{width:100%;border-collapse:collapse;font-size:.78rem;background:var(--s1);border-radius:12px;overflow:hidden;border:1px solid var(--bdr);}
-.admin-table th{padding:10px 14px;text-align:left;font-size:.68rem;color:var(--mut);text-transform:uppercase;letter-spacing:.5px;background:var(--s2);border-bottom:1px solid var(--bdr);}
-.admin-table td{padding:10px 14px;border-bottom:1px solid var(--bdr);}
-.admin-table tr:hover{background:rgba(99,102,241,.04);}
+.admin-table{width:100%;border-collapse:collapse;font-size:.78rem;background:#f8e5db;border-radius:8px;overflow:hidden;border:1px solid #031c3322;}
+.admin-table th{padding:10px 14px;text-align:left;font-size:.68rem;color:#585254;text-transform:uppercase;letter-spacing:.5px;background:#f3ddd0;border-bottom:1px solid #031c3322;}
+.admin-table td{padding:10px 14px;border-bottom:1px solid #031c3315;}
+.admin-table tr:hover{background:#f04b2e08;}
 .admin-badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.65rem;font-weight:700;}
 .admin-badge.active{background:rgba(16,185,129,.12);color:var(--grn);}
 .admin-badge.inactive{background:rgba(239,68,68,.12);color:var(--red);}
