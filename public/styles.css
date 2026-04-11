@@ -1219,3 +1219,10 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
 .report-preview-item{font-size:.68rem;color:var(--txt);margin-bottom:3px;display:flex;align-items:flex-start;gap:4px;}
 .report-status{font-size:.68rem;padding:4px 10px;border-radius:6px;margin-top:8px;display:inline-block;}
 .report-status.active{background:rgba(16,185,129,.12);color:var(--grn);}
+
+/* Global: force dark blue text on ALL beige surfaces — no black anywhere */
+.chart-section *,.kpi-card *,.hub-feature-section *,.confirm-info *,
+.group-header *,.group-summary *,.group-body *,.dash-tab-content.active *,
+.landing-card *,.module-card *,.auth-box *{color:inherit;}
+.chart-section,.kpi-card,.hub-feature-section,.confirm-info,
+.group-header,.group-summary,.group-body,.landing-card,.module-card,.auth-box{color:#031c33;}
