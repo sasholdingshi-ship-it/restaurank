@@ -9438,50 +9438,32 @@ function renderBenchmark(){
         {key:'geo',label:'Score GEO',max:100,color:'var(--cyn)'},
         {key:'rating',label:'Note Google',max:5,color:'var(--org)'},
     ];
-    c.innerHTML=`<div class="bench-section">
-        <div class="bench-title">Benchmark Industrie — ${b.category} à ${b.city}</div>
-        <div class="bench-percentile">
-            <div class="bench-pct-item"><div class="bench-pct-value" style="color:${pctColor(b.percentile.seo)}">${b.percentile.seo}%</div><div class="bench-pct-label">Percentile SEO</div></div>
-            <div class="bench-pct-item"><div class="bench-pct-value" style="color:${pctColor(b.percentile.geo)}">${b.percentile.geo}%</div><div class="bench-pct-label">Percentile GEO</div></div>
-            <div class="bench-pct-item"><div class="bench-pct-value" style="color:${pctColor(b.percentile.rating)}">${b.percentile.rating}%</div><div class="bench-pct-label">Percentile Note</div></div>
-            <div class="bench-pct-item"><div class="bench-pct-value" style="color:${pctColor(b.percentile.reviews)}">${b.percentile.reviews}%</div><div class="bench-pct-label">Percentile Avis</div></div>
-        </div>
-        <div class="bench-grid">
-            ${metrics.map(m=>{
-                const you=m.key==='rating'?b.your_scores[m.key]:b.your_scores[m.key];
-                const avg=b.industry_avg[m.key];
-                const top=b.top_10_pct[m.key];
-                return`<div class="bench-card">
-                    <div class="bench-card-label">${m.label}</div>
-                    <div class="bench-card-value" style="color:${m.color}">${you}${m.key==='rating'?'/5':''}</div>
-                    <div class="bench-card-sub">Moy: ${avg} · Top 10%: ${top}</div>
+    const allMetrics=[
+        {key:'seo',label:'Score SEO',unit:'',max:100},
+        {key:'geo',label:'Score GEO',unit:'',max:100},
+        {key:'rating',label:'Note Google',unit:'/5',max:5},
+        {key:'reviews',label:'Avis',unit:'',max:null},
+    ];
+    c.innerHTML=`<div style="background:#f8e5db;border-radius:8px;padding:24px;">
+        <h2 style="font-size:1.1rem;margin:0 0 20px;">Benchmark — ${b.category} à ${b.city}</h2>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+            ${allMetrics.map(m=>{
+                const you=b.your_scores[m.key]||0;
+                const avg=b.industry_avg[m.key]||0;
+                const top=b.top_10_pct[m.key]||0;
+                const pct=b.percentile[m.key]||0;
+                const col=pct>=70?'#2d7a4f':pct>=40?'#f04b2e':'#f04b2e';
+                return`<div style="text-align:center;">
+                    <div style="font-size:1.5rem;font-weight:800;color:${col};">${you}${m.unit}</div>
+                    <div style="font-size:.7rem;color:#585254;text-transform:uppercase;letter-spacing:.5px;margin:4px 0;">${m.label}</div>
+                    <div style="font-size:.65rem;color:#9e9e9e;">Moy: ${avg} · Top: ${top}</div>
+                    <div style="font-size:.65rem;color:${col};font-weight:600;margin-top:4px;">Top ${pct}%</div>
                 </div>`;
             }).join('')}
-            <div class="bench-card">
-                <div class="bench-card-label">Nombre d'avis</div>
-                <div class="bench-card-value" style="color:var(--grn)">${b.your_scores.reviews}</div>
-                <div class="bench-card-sub">Moy: ${b.industry_avg.reviews} · Top: ${b.top_10_pct.reviews}</div>
-            </div>
         </div>
-        ${metrics.map(m=>{
-            const you=b.your_scores[m.key];
-            const avg=b.industry_avg[m.key];
-            const top=b.top_10_pct[m.key];
-            const youPct=Math.round((you/m.max)*100);
-            const avgPct=Math.round((avg/m.max)*100);
-            const topPct=Math.round((top/m.max)*100);
-            return`<div class="bench-bar-row">
-                <div class="bench-bar-label">${m.label}</div>
-                <div class="bench-bar-track">
-                    <div class="bench-bar-fill" style="width:${youPct}%;background:${m.color};"></div>
-                    <div class="bench-bar-marker" style="left:${avgPct}%"><span class="bench-bar-marker-label" style="left:${avgPct}%">Moy</span></div>
-                    <div class="bench-bar-marker" style="left:${topPct}%;background:var(--grn)"><span class="bench-bar-marker-label" style="left:${topPct}%">Top10%</span></div>
-                </div>
-            </div>`;
-        }).join('')}
-        <div class="bench-insights">
-            ${(b.insights||[]).map(i=>`<div class="bench-insight ${i.type}">${i.type==='warning'?'':i.type==='success'?'':''} ${i.text}</div>`).join('')}
-        </div>
+        ${(b.insights||[]).length?`<div style="display:flex;flex-direction:column;gap:8px;">
+            ${(b.insights||[]).map(i=>`<div style="padding:10px 14px;border-left:3px solid ${i.type==='success'?'#2d7a4f':'#f04b2e'};background:#f8e5db;border-radius:0 6px 6px 0;font-size:.8rem;line-height:1.5;color:#031c33;">${i.text}</div>`).join('')}
+        </div>`:''}
     </div>`;
 }
 
