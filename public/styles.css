@@ -969,8 +969,8 @@ button,a,.dash-tab,.audit-header,.history-card{-webkit-tap-highlight-color:trans
 .rk-toast.success{border-color:rgba(16,185,129,.3);}
 .rk-toast.error{border-color:rgba(239,68,68,.3);}
 .feature-badges{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:20px;position:relative;z-index:1;}
-.feature-badge{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;background:#031c331a;border:1px solid #031c3322;font-size:.72rem;color:#031c33;font-weight:500;transition:all .2s;}
-.feature-badge:hover{border-color:#f04b2e;color:#f04b2e;}
+.feature-badge{display:flex;align-items:center;gap:5px;padding:6px 12px;border-radius:8px;background:transparent;border:2px solid #031c33;font-size:.72rem;color:#031c33;font-weight:600;transition:all .2s;}
+.feature-badge:hover{background:#f04b2e;border-color:#f04b2e;color:#f8e5db;}
 .feature-badge .fb-icon{font-size:.8rem;}
 .screen{transition:opacity .3s ease;}
 .skeleton{background:linear-gradient(90deg,var(--s2) 25%,var(--s3) 50%,var(--s2) 75%);background-size:200% 100%;animation:skeleton-shimmer 1.5s infinite;border-radius:8px;}
