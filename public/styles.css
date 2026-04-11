@@ -14,9 +14,9 @@
 --txt-light:#f8e5db;/* text on dark backgrounds */
 --mut:#5d6c7b;      /* muted text */
 --mut2:#8a9ab0;     /* extra muted */
---ind:#f04b2e;--ind2:#f06a52;--cyn:#c6fb50;--grn:#2d7a4f;--grn2:#3d9a65;
+--ind:#f04b2e;--ind2:#f06a52;--cyn:#f04b2e;--grn:#2d7a4f;--grn2:#3d9a65;
 --org:#f04b2e;--red:#c0392b;--pnk:#f7a4a3;--prp:#f7a4a3;--blu:#3898ec;
---acc:#f04b2e;--brand:#c6fb50;--card:#f8e5db;
+--acc:#f04b2e;--brand:#f04b2e;--card:#f8e5db;
 }
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:'Noto Sans',sans-serif;background:var(--bg);color:var(--txt-light);line-height:1.5;min-height:100vh;
@@ -823,8 +823,9 @@ input,textarea,select,[contenteditable="true"]{-webkit-user-select:text;-moz-use
 .dash-tab{padding:14px 22px;border-bottom:3px solid transparent;cursor:pointer;font-size:.82rem;font-weight:600;color:var(--mut2);transition:all .2s ease;white-space:nowrap;position:relative;}
 .dash-tab:hover{color:var(--txt-light);}
 .dash-tab.active{color:var(--ind);border-bottom-color:var(--ind);}
+/* Yatai pattern: beige content panel (page_main) inside dark frame (page_wrap) */
 .dash-tab-content{display:none;flex:1;overflow-y:auto;}
-.dash-tab-content.active{display:flex;flex-direction:column;animation:fadeIn .25s ease;}
+.dash-tab-content.active{display:flex;flex-direction:column;animation:fadeIn .25s ease;background:var(--s2);border-radius:8px;margin:0 16px 16px;color:var(--txt);}
 @keyframes fadeIn{from{opacity:0}to{opacity:1}}
 
 /* REVIEWS PANEL */
