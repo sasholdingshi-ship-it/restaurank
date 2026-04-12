@@ -1085,7 +1085,7 @@ async function authLogout(){
 }
 
 async function checkSession(){
-    if(!sessionToken)return showAuth('login');
+    if(!sessionToken)return showGuestLanding();
     await detectAuthMode();
     if(authMode==='server'){
         try{
@@ -1102,12 +1102,31 @@ async function checkSession(){
         }
     }catch(e){}
     sessionToken=null;localStorage.removeItem('restaurank_session');
-    showAuth('login');
+    showGuestLanding();
+}
+
+// Guest mode — show landing without login gate
+function showGuestLanding(){
+    document.querySelectorAll('.auth-screen').forEach(s=>s.classList.remove('active'));
+    const bar=document.getElementById('userBar');if(bar)bar.style.display='none';
+    showScreen('landing');
+    // Show "Se connecter" link in landing for returning users
+    let gl=document.getElementById('guestLoginLink');
+    if(!gl){
+        gl=document.createElement('div');
+        gl.id='guestLoginLink';
+        gl.style.cssText='position:fixed;top:12px;right:16px;z-index:9999;display:flex;gap:8px;';
+        gl.innerHTML=`<button onclick="showAuth('login')" style="padding:6px 14px;border-radius:20px;border:1px solid var(--bdr);background:var(--bg);color:var(--txt);font-size:.78rem;cursor:pointer;font-weight:500;">Se connecter</button><button onclick="showAuth('register')" style="padding:6px 14px;border-radius:20px;border:none;background:var(--ind);color:#fff;font-size:.78rem;cursor:pointer;font-weight:600;">Essai gratuit</button>`;
+        document.body.appendChild(gl);
+    }
 }
 
 async function onAuthSuccess(){
-    // Hide auth screens
+    // Hide auth screens + guest UI
     document.querySelectorAll('.auth-screen').forEach(s=>s.classList.remove('active'));
+    const gl=document.getElementById('guestLoginLink');if(gl)gl.remove();
+    const gb=document.getElementById('guestSaveBanner');if(gb)gb.remove();
+    const ac=document.getElementById('aiCommercialChat');if(ac)ac.remove();
     // Show user bar
     const bar=document.getElementById('userBar');bar.style.display='flex';
     document.getElementById('ubEmail').textContent=currentAccount.email;
@@ -1123,7 +1142,18 @@ async function onAuthSuccess(){
         t.style.display=currentAccount.role==='admin'?'':'none';
     });
 
-    // NEW USER → onboarding wizard
+    // NEW USER after guest audit → save results and stay on dashboard
+    if(window._isNewSignup && currentData && currentData.name){
+        window._isNewSignup=false;
+        // Save the guest audit results now that we have an account
+        saveAllData();
+        renderTrialBanner();
+        showScreen('dashboard');renderDashboard();
+        setTimeout(()=>showToast('Résultats sauvegardés — bienvenue sur RestauRank !','ok'),600);
+        return;
+    }
+
+    // NEW USER without prior audit → onboarding wizard
     if(window._isNewSignup){
         window._isNewSignup=false;
         showOnboardingWizard();
@@ -3307,12 +3337,13 @@ let autonomousScanResult=null;
 
 function startScan(name,city){
     if(!name)name=storedName;if(!city)city=storedCity;if(!name||!city)return;
-    // Plan limit: scan count
-    const scanCheck=canDoAction('scan');
-    if(!scanCheck.allowed)return showUpgradeModal(scanCheck.reason,scanCheck.upgrade);
-    // Plan limit: restaurant count (new restaurants only)
-    const existing=getStoredRestaurants().find(r=>r.name===name&&r.city===city);
-    if(!existing){const restCheck=canDoAction('restaurant');if(!restCheck.allowed)return showUpgradeModal(restCheck.reason,restCheck.upgrade);}
+    // Guest mode: skip plan limits entirely — free audit, no account needed
+    if(currentAccount){
+        const scanCheck=canDoAction('scan');
+        if(!scanCheck.allowed)return showUpgradeModal(scanCheck.reason,scanCheck.upgrade);
+        const existing=getStoredRestaurants().find(r=>r.name===name&&r.city===city);
+        if(!existing){const restCheck=canDoAction('restaurant');if(!restCheck.allowed)return showUpgradeModal(restCheck.reason,restCheck.upgrade);}
+    }
     // Google connection handled via button — not auto-triggered during scan
     incrementScanCount();
     showScreen('scanning');
@@ -3397,9 +3428,15 @@ function startScan(name,city){
             if(detectedCMS&&detectedCMS.detected){currentData.detectedCMS=detectedCMS.detected;currentData.websiteUrl=storedWebsite;currentData.seoAnalysis=detectedCMS.seoAnalysis||{};}
             currentScores=computeScores(currentData);activeMainTab=defaultTab;activeCategory=defaultCat;
             document.getElementById('dashResto').innerHTML=`${name} — ${city}${storedWebsite?' · <span style="color:var(--cyn);font-size:.78rem;">'+storedWebsite+'</span>':''}`;
-            showScreen('dashboard');renderDashboard();saveAllData();
-            // AUTO-PILOT: run post-scan automation silently
-            setTimeout(()=>runPostScanAutomation(),500);
+            showScreen('dashboard');renderDashboard();
+            if(currentAccount)saveAllData();
+            // Guest mode: show save CTA + AI commercial chat
+            if(!currentAccount){
+                showGuestSaveBanner(name,city);
+                setTimeout(()=>showAICommercialChat(name),4500);
+            }
+            // AUTO-PILOT: run post-scan automation silently (only for logged-in users)
+            if(currentAccount)setTimeout(()=>runPostScanAutomation(),500);
         },400);return;}
         const el=document.getElementById(`step${cur}`);el.classList.add('active');el.querySelector('.step-icon').classList.add('spinning');
         bar.style.width=`${(cur+1)/filteredSteps.length*100}%`;cur++;
@@ -3416,6 +3453,82 @@ function startScan(name,city){
 
 function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');}
 function goLanding(){showScreen('landing');}
+
+// ============================================================
+// GUEST MODE — Save banner + AI commercial chat
+// ============================================================
+function showGuestSaveBanner(name,city){
+    const old=document.getElementById('guestSaveBanner');if(old)old.remove();
+    const b=document.createElement('div');
+    b.id='guestSaveBanner';
+    b.style.cssText='position:fixed;bottom:0;left:0;right:0;z-index:9998;background:linear-gradient(135deg,#031c33 0%,#0a2d50 100%);color:#fff;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 -4px 24px rgba(0,0,0,.35);';
+    b.innerHTML=`<div style="display:flex;align-items:center;gap:12px;flex:1;min-width:0;">
+        <div style="width:36px;height:36px;border-radius:50%;background:#f04b2e;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.1rem;"></div>
+        <div style="min-width:0;">
+            <div style="font-weight:700;font-size:.88rem;">Sauvegardez les résultats de "${name}"</div>
+            <div style="font-size:.73rem;color:#a8c4e0;margin-top:1px;">Créez un compte gratuit — 14 jours d'essai, sans carte bancaire</div>
+        </div>
+    </div>
+    <div style="display:flex;gap:8px;flex-shrink:0;">
+        <button onclick="showAuth('register')" style="padding:9px 18px;border-radius:20px;border:none;background:#f04b2e;color:#fff;font-size:.82rem;cursor:pointer;font-weight:700;white-space:nowrap;">Essai gratuit</button>
+        <button onclick="bookDemo()" style="padding:9px 16px;border-radius:20px;border:1px solid rgba(255,255,255,.3);background:transparent;color:#fff;font-size:.78rem;cursor:pointer;white-space:nowrap;">Prendre un call</button>
+        <button onclick="document.getElementById('guestSaveBanner').style.display='none'" style="padding:6px 10px;border-radius:20px;border:none;background:rgba(255,255,255,.1);color:#a8c4e0;font-size:.8rem;cursor:pointer;">✕</button>
+    </div>`;
+    document.body.appendChild(b);
+}
+
+function bookDemo(){
+    window.open('https://cal.com/restaurank','_blank');
+}
+
+function showAICommercialChat(name){
+    if(document.getElementById('aiCommercialChat'))return;
+    const seo=currentScores?.seo||0;const geo=currentScores?.geo||0;
+    // Find top 3 worst categories
+    const cats=currentScores?.categories||[];
+    const worst=cats.filter(c=>c.score<60).sort((a,b)=>a.score-b.score).slice(0,3);
+    const issues=worst.length>0?worst.map(c=>`<li style="margin:3px 0;font-size:.8rem;color:#e0e8f0;">${c.label} — <strong style="color:#f04b2e;">${c.score}/100</strong></li>`).join(''):'<li style="margin:3px 0;font-size:.8rem;color:#e0e8f0;">Plusieurs points à améliorer détectés</li>';
+
+    const chat=document.createElement('div');
+    chat.id='aiCommercialChat';
+    chat.style.cssText='position:fixed;bottom:80px;right:20px;z-index:9997;max-width:320px;width:calc(100vw - 40px);background:#031c33;border:1px solid rgba(255,255,255,.12);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.5);overflow:hidden;animation:slideUpChat .4s ease;';
+
+    // Add CSS animation
+    if(!document.getElementById('aiChatStyle')){
+        const style=document.createElement('style');
+        style.id='aiChatStyle';
+        style.textContent=`@keyframes slideUpChat{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}`;
+        document.head.appendChild(style);
+    }
+
+    chat.innerHTML=`<div style="background:#f04b2e;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;">
+        <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:.9rem;"></div>
+            <div>
+                <div style="font-weight:700;color:#fff;font-size:.82rem;">RestauRank IA</div>
+                <div style="font-size:.65rem;color:rgba(255,255,255,.8);">En ligne</div>
+            </div>
+        </div>
+        <button onclick="document.getElementById('aiCommercialChat').remove()" style="background:none;border:none;color:rgba(255,255,255,.7);cursor:pointer;font-size:1rem;padding:2px 6px;">✕</button>
+    </div>
+    <div style="padding:14px 16px;">
+        <div style="font-size:.82rem;color:#e0e8f0;line-height:1.5;margin-bottom:10px;">
+            J'ai analysé <strong style="color:#fff;">${name}</strong>.<br>
+            Score SEO <strong style="color:${seo<50?'#f04b2e':seo<70?'#f5a623':'#22c55e'};">${seo}/100</strong> · GEO <strong style="color:${geo<50?'#f04b2e':geo<70?'#f5a623':'#22c55e'};">${geo}/100</strong>
+        </div>
+        ${worst.length>0?`<div style="font-size:.78rem;color:#a8c4e0;margin-bottom:8px;">Points critiques :</div>
+        <ul style="margin:0 0 12px 16px;padding:0;">${issues}</ul>`:''}
+        <div style="font-size:.79rem;color:#a8c4e0;margin-bottom:14px;">Je peux corriger ces problèmes automatiquement. Voulez-vous qu'on en parle ?</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+            <button onclick="showAuth('register');document.getElementById('aiCommercialChat').remove();" style="padding:10px;border-radius:10px;border:none;background:#f04b2e;color:#fff;font-size:.82rem;cursor:pointer;font-weight:700;text-align:center;">Démarrer l'essai gratuit</button>
+            <button onclick="bookDemo();document.getElementById('aiCommercialChat').remove();" style="padding:9px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:#a8c4e0;font-size:.78rem;cursor:pointer;text-align:center;">Prendre un appel de 15 min</button>
+        </div>
+    </div>`;
+    document.body.appendChild(chat);
+
+    // Auto-dismiss after 60s if ignored
+    setTimeout(()=>{const el=document.getElementById('aiCommercialChat');if(el)el.remove();},60000);
+}
 
 // ============================================================
 // COMMAND CENTER — ANNUAIRES (auto-connexion)
