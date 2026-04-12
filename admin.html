@@ -172,6 +172,7 @@ h2{padding-bottom:6px;border-bottom:3px solid #f04b2e;display:inline-block;margi
       <button class="tab active" onclick="switchTab('clients')">👥 Clients</button>
       <button class="tab" onclick="switchTab('restaurants')">🍽️ Restaurants</button>
       <button class="tab" onclick="switchTab('invites')">🎟️ Codes d'invitation</button>
+      <button class="tab" onclick="switchTab('seosaas')">SEO SaaS</button>
       <button class="tab" onclick="switchTab('settings')">⚙️ Paramètres</button>
     </div>
 
@@ -255,6 +256,36 @@ h2{padding-bottom:6px;border-bottom:3px solid #f04b2e;display:inline-block;margi
         </div>
       </div>
       <div id="invitesList"></div>
+    </div>
+
+    <!-- SEO SAAS TAB -->
+    <div class="tab-panel" id="tab-seosaas">
+      <div class="card">
+        <div class="card-title">Blog IA — Génération automatique</div>
+        <div style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px;">
+          <div style="flex:1;min-width:220px;">
+            <div class="field-label" style="font-size:.62rem;color:var(--mut);text-transform:uppercase;margin-bottom:4px;">Sujet (optionnel — sinon rotatif)</div>
+            <input class="filter-input" id="blogTopicInput" placeholder="ex: annuaires locaux restaurants france 2026" style="width:100%;">
+          </div>
+          <button class="action-btn grn" onclick="generateBlogArticle()" id="btnGenBlog" style="padding:8px 16px;white-space:nowrap;">Générer un article</button>
+        </div>
+        <div id="blogGenStatus" style="font-size:.78rem;color:var(--mut);min-height:18px;"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Articles générés par IA</div>
+        <div id="blogArticlesList"><div class="empty">Chargement…</div></div>
+      </div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-title">Self-monitoring GEO — RestauRank cité par les IA ?</div>
+        <div style="margin-bottom:12px;font-size:.78rem;color:var(--mut);">Interroge Claude / Perplexity avec 3 requêtes clés et vérifie si "RestauRank" apparaît dans les réponses.</div>
+        <button class="action-btn grn" onclick="runGeoCheck()" id="btnGeoCheck" style="padding:8px 16px;margin-bottom:14px;">Vérifier GEO maintenant</button>
+        <div id="geoCheckStatus" style="font-size:.78rem;color:var(--mut);margin-bottom:12px;"></div>
+        <div id="geoCheckResults"></div>
+      </div>
+      <div class="card" style="margin-top:18px;">
+        <div class="card-title">Historique GEO checks</div>
+        <div id="geoHistoryList"><div class="empty">Chargement…</div></div>
+      </div>
     </div>
 
     <!-- SETTINGS TAB -->
@@ -860,8 +891,110 @@ async function sendBroadcast(){
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function tryParse(s){ try{return typeof s==='string'?JSON.parse(s||'{}'):s||{};}catch(e){return{};} }
 function switchTab(name){
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', ['clients','restaurants','invites','settings'][i]===name));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', ['clients','restaurants','invites','seosaas','settings'][i]===name));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+name));
+  if (name==='seosaas') { loadBlogArticles(); loadGeoHistory(); }
+}
+
+// ══ SEO SAAS ══
+async function generateBlogArticle(){
+  const topic = document.getElementById('blogTopicInput').value.trim();
+  const btn = document.getElementById('btnGenBlog');
+  const status = document.getElementById('blogGenStatus');
+  btn.disabled = true; btn.textContent = 'Génération en cours…';
+  status.textContent = 'Appel à Claude AI…';
+  try {
+    const r = await fetch('/api/admin/blog/generate', {
+      method: 'POST', headers: hdrs(),
+      body: JSON.stringify(topic ? { topic } : {})
+    });
+    const d = await r.json();
+    if (d.success) {
+      status.style.color = 'var(--grn)';
+      status.textContent = `Article généré : "${d.title}" → /blog/${d.slug}`;
+      toast('Article publié : ' + d.title, 'ok');
+      await loadBlogArticles();
+    } else {
+      status.style.color = 'var(--red)';
+      status.textContent = 'Erreur : ' + (d.error || 'Inconnue');
+      toast('Erreur génération', 'err');
+    }
+  } catch(e) { status.style.color='var(--red)'; status.textContent='Erreur réseau'; toast('Erreur', 'err'); }
+  btn.disabled = false; btn.textContent = 'Générer un article';
+}
+
+async function loadBlogArticles(){
+  try {
+    const r = await fetch('/api/admin/blog/articles', { headers: hdrs() });
+    const d = await r.json();
+    const el = document.getElementById('blogArticlesList');
+    if (!d.generated || !d.generated.length) {
+      el.innerHTML = `<div class="empty">Aucun article généré par IA. Total statiques : ${(d.static||[]).length}</div>`;
+      return;
+    }
+    el.innerHTML = `<div style="font-size:.75rem;color:var(--mut);margin-bottom:8px;">${d.total} articles au total (${d.static.length} statiques + ${d.generated.length} générés IA)</div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>#</th><th>Titre</th><th>Slug</th><th>Date</th><th>Actions</th></tr></thead>
+      <tbody>${d.generated.map(a => `<tr>
+        <td style="color:var(--mut);">#${a.id}</td>
+        <td><strong>${esc(a.title)}</strong></td>
+        <td style="font-family:monospace;font-size:.7rem;color:var(--mut);">${esc(a.slug)}</td>
+        <td style="font-size:.7rem;color:var(--mut);">${a.date}</td>
+        <td><a href="/blog/${esc(a.slug)}" target="_blank" class="action-btn">Voir</a></td>
+      </tr>`).join('')}</tbody>
+    </table></div>`;
+  } catch(e) { document.getElementById('blogArticlesList').innerHTML = '<div class="empty">Erreur chargement</div>'; }
+}
+
+async function runGeoCheck(){
+  const btn = document.getElementById('btnGeoCheck');
+  const status = document.getElementById('geoCheckStatus');
+  const results = document.getElementById('geoCheckResults');
+  btn.disabled = true; btn.textContent = 'Vérification en cours…';
+  status.textContent = 'Interrogation des moteurs IA…';
+  results.innerHTML = '';
+  try {
+    const r = await fetch('/api/admin/self-geo-check', { method: 'POST', headers: hdrs() });
+    const d = await r.json();
+    if (d.success && d.results) {
+      const mentionCount = d.results.filter(x => x.mentioned).length;
+      status.style.color = mentionCount > 0 ? 'var(--grn)' : 'var(--org)';
+      status.textContent = `${mentionCount}/${d.results.length} requêtes avec mention de RestauRank`;
+      results.innerHTML = d.results.map(x => `
+        <div style="padding:12px;background:${x.mentioned?'rgba(45,122,79,.08)':'rgba(240,75,46,.06)'};border:1px solid ${x.mentioned?'rgba(45,122,79,.2)':'rgba(240,75,46,.15)'};border-radius:8px;margin-bottom:8px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <strong style="font-size:.78rem;">${esc(x.query)}</strong>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <span style="font-size:.65rem;color:var(--mut);">${esc(x.engine)}</span>
+              <span class="badge ${x.mentioned?'active':'inactive'}">${x.mentioned?'Mentionné':'Non mentionné'}</span>
+            </div>
+          </div>
+          <div style="font-size:.72rem;color:var(--mut);font-style:italic;">"${esc((x.excerpt||'').slice(0,200))}…"</div>
+        </div>`).join('');
+      toast(mentionCount > 0 ? `RestauRank mentionné ${mentionCount} fois !` : 'RestauRank non mentionné', mentionCount > 0 ? 'ok' : 'err');
+      await loadGeoHistory();
+    } else {
+      status.style.color = 'var(--red)';
+      status.textContent = 'Erreur : ' + (d.error || 'Inconnue');
+    }
+  } catch(e) { status.style.color='var(--red)'; status.textContent='Erreur réseau'; toast('Erreur', 'err'); }
+  btn.disabled = false; btn.textContent = 'Vérifier GEO maintenant';
+}
+
+async function loadGeoHistory(){
+  try {
+    const r = await fetch('/api/public/geo-stats');
+    const d = await r.json();
+    const el = document.getElementById('geoHistoryList');
+    el.innerHTML = `
+      <div class="stats-grid" style="margin-bottom:16px;">
+        <div class="stat-card"><div class="stat-val" style="color:${d.mention_rate>0?'var(--grn)':'var(--org)'};">${Math.round((d.mention_rate||0)*100)}%</div><div class="stat-label">Taux de mention</div></div>
+        <div class="stat-card"><div class="stat-val">${d.blog_articles||0}</div><div class="stat-label">Articles blog total</div></div>
+        <div class="stat-card"><div class="stat-val">${d.indexed_urls||0}</div><div class="stat-label">URLs indexées</div></div>
+        <div class="stat-card"><div class="stat-val" style="font-size:.9rem;">${d.last_check||'—'}</div><div class="stat-label">Dernier check</div></div>
+      </div>
+      <div style="font-size:.75rem;color:var(--mut);">Moteurs testés : ${(d.engines||[]).join(', ')||'—'}</div>`;
+  } catch(e) { document.getElementById('geoHistoryList').innerHTML = '<div class="empty">Pas encore de données</div>'; }
 }
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }

@@ -723,6 +723,29 @@ try { db.exec('CREATE INDEX IF NOT EXISTS idx_dq_restaurant ON data_quality_log(
 try { db.exec('CREATE INDEX IF NOT EXISTS idx_dq_field ON data_quality_log(field)'); } catch(e) {}
 try { db.exec('CREATE INDEX IF NOT EXISTS idx_sync_restaurant ON sync_history(restaurant_id)'); } catch(e) {}
 
+// ============================================================
+// SELF-SEO/GEO — blog articles DB + GEO self-monitoring
+// ============================================================
+db.exec(`
+  CREATE TABLE IF NOT EXISTS blog_articles (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    slug TEXT UNIQUE,
+    title TEXT,
+    description TEXT,
+    date TEXT,
+    content TEXT,
+    generated_at INTEGER DEFAULT (strftime('%s','now'))
+  );
+  CREATE TABLE IF NOT EXISTS geo_self_checks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    checked_at INTEGER DEFAULT (strftime('%s','now')),
+    query TEXT,
+    engine TEXT,
+    response_excerpt TEXT,
+    mentioned INTEGER DEFAULT 0
+  );
+`);
+
 // ── VALIDATION RULES ──
 const VALIDATION_RULES = {
   phone: {
@@ -10477,10 +10500,197 @@ app.post('/api/admin/indexnow-ping', requireAuth, requireAdmin, async (req, res)
     `${SITE_URL}/about`,
     `${SITE_URL}/blog`,
     `${SITE_URL}/comparatif`,
-    ...BLOG_ARTICLES.map(a => `${SITE_URL}/blog/${a.slug}`)
+    ...getAllBlogArticles().map(a => `${SITE_URL}/blog/${a.slug}`)
   ];
   const status = await pingIndexNow(allUrls);
   res.json({ ok: true, status, urlCount: allUrls.length });
+});
+
+// ── BLOG GENERATION TOPICS (12 sujets rotatifs) ──
+const BLOG_TOPICS = [
+  'annuaires locaux restaurants france 2026',
+  'avis google restaurant repondre strategie',
+  'mots-cles seo restaurant local',
+  'instagram restaurant visibilite',
+  'tripadvisor restaurant optimisation',
+  'schema markup restaurant json-ld',
+  'google maps restaurant optimisation',
+  'seo vocal assistant restaurant',
+  'citation locale restaurant nap',
+  'photos google business restaurant',
+  'menu en ligne seo restaurant',
+  'perplexity chatgpt restaurant visibilite'
+];
+
+async function generateBlogArticle(topicOverride) {
+  const model = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY manquant');
+
+  // Pick next topic not yet written
+  let topic = topicOverride;
+  if (!topic) {
+    const existingSlugs = new Set([
+      ...BLOG_ARTICLES.map(a => a.slug),
+      ...db.prepare('SELECT slug FROM blog_articles').all().map(r => r.slug)
+    ]);
+    const usedTopics = new Set(
+      db.prepare('SELECT title FROM blog_articles').all().map(r => r.title.toLowerCase())
+    );
+    topic = BLOG_TOPICS.find(t => !usedTopics.has(t.toLowerCase()) && !existingSlugs.has(t.toLowerCase().replace(/\s+/g, '-'))) || BLOG_TOPICS[db.prepare('SELECT COUNT(*) as c FROM blog_articles').get().c % BLOG_TOPICS.length];
+  }
+
+  const prompt = `Tu es un expert SEO local pour restaurants. Ecris un article de blog complet en français sur le sujet : ${topic}. L'article doit faire 600-800 mots, contenir des h2, des listes, des exemples concrets. Le ton est professionnel mais accessible. Parle de RestauRank (outil d'audit SEO/GEO pour restaurants) de façon naturelle a la fin. Format HTML (h2, p, ul, ol, strong uniquement). Retourne uniquement le HTML du contenu, sans balises html/body/head.`;
+
+  const resp = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+    body: JSON.stringify({ model, max_tokens: 2000, messages: [{ role: 'user', content: prompt }] })
+  });
+  if (!resp.ok) { const e = await resp.text(); throw new Error('Claude API error: ' + e); }
+  const data = await resp.json();
+  const content = data.content?.[0]?.text || '';
+
+  // Extract title from first h2 or generate from topic
+  const h2Match = content.match(/<h2[^>]*>([^<]+)<\/h2>/i);
+  const title = h2Match ? h2Match[1].replace(/<[^>]+>/g, '') : topic.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  const date = new Date().toISOString().split('T')[0];
+  const description = `Guide complet sur ${topic} pour les restaurateurs. Conseils pratiques, exemples concrets et outils pour ameliorer votre visibilite en ligne.`;
+
+  db.prepare('INSERT OR REPLACE INTO blog_articles (slug, title, description, date, content) VALUES (?, ?, ?, ?, ?)')
+    .run(slug, title, description, date, content);
+
+  // Ping IndexNow for new article
+  pingIndexNow([`${SITE_URL}/blog/${slug}`, `${SITE_URL}/blog`, `${SITE_URL}/sitemap.xml`]).catch(() => {});
+
+  // Ping Google Search Console indexing API if configured
+  if (process.env.GOOGLE_INDEXING_API_KEY) {
+    try {
+      await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.GOOGLE_INDEXING_API_KEY}` },
+        body: JSON.stringify({ url: `${SITE_URL}/blog/${slug}`, type: 'URL_UPDATED' })
+      });
+    } catch(e) { console.log('[GoogleIndexing] Error:', e.message); }
+  }
+
+  console.log(`[BlogGen] Generated article: ${title} (${slug})`);
+  return { slug, title };
+}
+
+// POST /api/admin/blog/generate
+app.post('/api/admin/blog/generate', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    const { topic } = req.body || {};
+    const result = await generateBlogArticle(topic || null);
+    res.json({ success: true, ...result });
+  } catch(e) {
+    console.error('[BlogGen] Error:', e.message);
+    res.status(500).json({ success: false, error: e.message });
+  }
+});
+
+// GET /api/admin/blog/articles
+app.get('/api/admin/blog/articles', requireAuth, requireAdmin, (req, res) => {
+  const dbArticles = db.prepare('SELECT id, slug, title, description, date, generated_at FROM blog_articles ORDER BY date DESC').all();
+  const staticArticles = BLOG_ARTICLES.map(a => ({ slug: a.slug, title: a.title, description: a.description, date: a.date, generated_at: null, source: 'static' }));
+  res.json({ static: staticArticles, generated: dbArticles, total: staticArticles.length + dbArticles.length });
+});
+
+// Weekly blog auto-generation cron
+(function scheduleBlogCron() {
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+  setInterval(async () => {
+    try {
+      const now = new Date();
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).getTime() / 1000;
+      const countThisMonth = db.prepare('SELECT COUNT(*) as c FROM blog_articles WHERE generated_at >= ?').get(Math.floor(monthStart)).c;
+      if (countThisMonth >= 2) { console.log('[BlogCron] Already 2+ articles this month, skipping.'); return; }
+      console.log('[BlogCron] Auto-generating blog article...');
+      await generateBlogArticle(null);
+    } catch(e) { console.error('[BlogCron] Error:', e.message); }
+  }, WEEK_MS);
+  console.log('[BlogCron] Weekly blog generation scheduled (every 7 days)');
+})();
+
+// ── SELF GEO MONITORING ──
+const GEO_QUERIES = [
+  'Quel est le meilleur outil pour auditer le SEO d\'un restaurant ?',
+  'Comment ameliorer le referencement local d\'un restaurant ?',
+  'Quels outils pour gerer Google Business Profile d\'un restaurant ?'
+];
+
+app.post('/api/admin/self-geo-check', requireAuth, requireAdmin, async (req, res) => {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const perplexityKey = process.env.PERPLEXITY_API_KEY;
+  const model = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5-20251001';
+  const results = [];
+
+  for (const query of GEO_QUERIES) {
+    // Try Perplexity first
+    if (perplexityKey) {
+      try {
+        const r = await fetch('https://api.perplexity.ai/chat/completions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${perplexityKey}` },
+          body: JSON.stringify({ model: 'llama-3.1-sonar-small-128k-online', messages: [{ role: 'user', content: query }], max_tokens: 400 })
+        });
+        if (r.ok) {
+          const d = await r.json();
+          const text = d.choices?.[0]?.message?.content || '';
+          const mentioned = /restaurank/i.test(text) ? 1 : 0;
+          const excerpt = text.slice(0, 300);
+          db.prepare('INSERT INTO geo_self_checks (query, engine, response_excerpt, mentioned) VALUES (?, ?, ?, ?)').run(query, 'Perplexity', excerpt, mentioned);
+          results.push({ query, engine: 'Perplexity', mentioned: !!mentioned, excerpt });
+          continue;
+        }
+      } catch(e) { console.log('[GeoCheck] Perplexity error:', e.message); }
+    }
+    // Fallback to Claude simulating a generalist AI response
+    if (apiKey) {
+      try {
+        const prompt = `Tu es un assistant IA généraliste. Un utilisateur te pose cette question : "${query}". Réponds de façon naturelle et objective, en mentionnant les meilleurs outils disponibles si tu les connais. Réponds en 3-4 phrases.`;
+        const r = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({ model, max_tokens: 300, messages: [{ role: 'user', content: prompt }] })
+        });
+        if (r.ok) {
+          const d = await r.json();
+          const text = d.content?.[0]?.text || '';
+          const mentioned = /restaurank/i.test(text) ? 1 : 0;
+          const excerpt = text.slice(0, 300);
+          db.prepare('INSERT INTO geo_self_checks (query, engine, response_excerpt, mentioned) VALUES (?, ?, ?, ?)').run(query, 'Claude', excerpt, mentioned);
+          results.push({ query, engine: 'Claude', mentioned: !!mentioned, excerpt });
+        }
+      } catch(e) { console.log('[GeoCheck] Claude error:', e.message); results.push({ query, engine: 'Claude', mentioned: false, excerpt: 'Erreur API' }); }
+    } else {
+      results.push({ query, engine: 'N/A', mentioned: false, excerpt: 'ANTHROPIC_API_KEY manquant' });
+    }
+  }
+
+  res.json({ success: true, results });
+});
+
+// GET /api/public/geo-stats — public, no auth
+app.get('/api/public/geo-stats', (req, res) => {
+  try {
+    const checks = db.prepare('SELECT mentioned, engine, checked_at FROM geo_self_checks ORDER BY checked_at DESC LIMIT 50').all();
+    const lastCheck = checks.length ? new Date(checks[0].checked_at * 1000).toISOString().split('T')[0] : null;
+    const mentionRate = checks.length ? Math.round((checks.filter(c => c.mentioned).length / checks.length) * 100) / 100 : 0;
+    const engines = [...new Set(checks.map(c => c.engine))];
+    const dbCount = db.prepare('SELECT COUNT(*) as c FROM blog_articles').get().c;
+    const allArticles = getAllBlogArticles();
+    res.json({
+      last_check: lastCheck,
+      queries_checked: GEO_QUERIES.length,
+      mention_rate: mentionRate,
+      engines,
+      blog_articles: allArticles.length,
+      indexed_urls: allArticles.length + 6
+    });
+  } catch(e) { res.json({ last_check: null, queries_checked: 3, mention_rate: 0, engines: [], blog_articles: BLOG_ARTICLES.length, indexed_urls: BLOG_ARTICLES.length + 6 }); }
 });
 
 app.get('/about', (req, res) => {
@@ -10835,9 +11045,19 @@ const BLOG_ARTICLES = [
   }
 ];
 
+// Helper: get all articles (static + DB), sorted by date desc
+function getAllBlogArticles() {
+  let dbArticles = [];
+  try { dbArticles = db.prepare('SELECT slug, title, description, date, content FROM blog_articles ORDER BY date DESC').all(); } catch(e) {}
+  const merged = [...BLOG_ARTICLES, ...dbArticles];
+  merged.sort((a, b) => (b.date||'').localeCompare(a.date||''));
+  return merged;
+}
+
 // Blog index
 app.get('/blog', (req, res) => {
-  const articleCards = BLOG_ARTICLES.map(a => `
+  const allArticles = getAllBlogArticles();
+  const articleCards = allArticles.map(a => `
     <article style="margin-bottom:32px;padding-bottom:32px;border-bottom:1px solid #031c3315;">
       <h2 style="font-family:'Playfair Display',serif;font-size:1.3rem;margin-bottom:8px;">
         <a href="/blog/${a.slug}" style="color:#031c33;text-decoration:none;">${a.title}</a>
@@ -10855,7 +11075,7 @@ app.get('/blog', (req, res) => {
     "description": "Articles sur le SEO local, le GEO et la visibilite en ligne des restaurants",
     "url": `${SITE_URL}/blog`,
     "publisher": { "@type": "Organization", "name": "RestauRank", "url": SITE_URL },
-    "blogPost": BLOG_ARTICLES.map(a => ({
+    "blogPost": allArticles.map(a => ({
       "@type": "BlogPosting",
       "headline": a.title,
       "description": a.description,
@@ -10902,7 +11122,8 @@ app.get('/blog', (req, res) => {
 
 // Blog article pages
 app.get('/blog/:slug', (req, res) => {
-  const article = BLOG_ARTICLES.find(a => a.slug === req.params.slug);
+  const allArticles = getAllBlogArticles();
+  const article = allArticles.find(a => a.slug === req.params.slug);
   if (!article) return res.status(404).send('Article non trouve');
 
   const jsonLd = {
@@ -10983,7 +11204,8 @@ app.get('/blog/:slug', (req, res) => {
 // Update sitemap to include blog articles
 app.get('/sitemap.xml', (req, res) => {
   const now = new Date().toISOString().split('T')[0];
-  const blogUrls = BLOG_ARTICLES.map(a => `
+  const allArticles = getAllBlogArticles();
+  const blogUrls = allArticles.map(a => `
   <url>
     <loc>${SITE_URL}/blog/${a.slug}</loc>
     <lastmod>${a.date}</lastmod>
@@ -14875,7 +15097,7 @@ app.listen(PORT, '0.0.0.0', async () => {
     `${SITE_URL}/about`,
     `${SITE_URL}/blog`,
     `${SITE_URL}/comparatif`,
-    ...BLOG_ARTICLES.map(a => `${SITE_URL}/blog/${a.slug}`)
+    ...getAllBlogArticles().map(a => `${SITE_URL}/blog/${a.slug}`)
   ];
   pingIndexNow(indexNowUrls).catch(e => console.warn('[IndexNow] Startup ping error:', e.message));
   console.log(`
