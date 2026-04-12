@@ -998,11 +998,7 @@ async function authLogout(){
     sessionToken=null;currentAccount=null;
     localStorage.removeItem('restaurank_session');
     localStorage.removeItem('restaurank_local_account');
-    document.getElementById('userBar').style.display='none';
-    document.getElementById('landing').classList.remove('active');
-    document.getElementById('dashboard').classList.remove('active');
-    document.getElementById('adminDash').classList.remove('active');
-    showAuth('login');
+    window.location.href='/';
 }
 
 async function checkSession(){

@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RestauRank — Auditez et boostez la visibilité de votre restaurant sur Google et les IA</title>
+  <meta name="description" content="RestauRank analyse 49 critères SEO local et mesure votre score GEO — la probabilité d'être recommandé par ChatGPT, Perplexity et Gemini. Corrections automatiques en 1 clic. 1 audit gratuit par jour.">
+  <link rel="canonical" href="https://restaurank.onrender.com/">
+  <meta property="og:title" content="RestauRank — Visibilité Google et IA pour les restaurants">
+  <meta property="og:description" content="49 critères SEO local + score GEO IA. Corrections automatiques en 1 clic. Sans carte bancaire.">
+  <meta property="og:url" content="https://restaurank.onrender.com/">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://restaurank.onrender.com/og-image.jpg">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="RestauRank — Visibilité Google et IA pour les restaurants">
+  <meta name="twitter:description" content="49 critères SEO local + score GEO IA. Corrections automatiques en 1 clic.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "RestauRank — Auditez et boostez la visibilité de votre restaurant",
+    "url": "https://restaurank.onrender.com/",
+    "description": "RestauRank analyse 49 critères SEO local et mesure votre score GEO pour les restaurants."
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "RestauRank",
+    "applicationCategory": "BusinessApplication",
+    "operatingSystem": "Web",
+    "url": "https://restaurank.onrender.com/",
+    "description": "Outil d'audit SEO local et GEO pour restaurants. 49 critères analysés, corrections automatiques en 1 clic.",
+    "offers": [
+      {"@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "EUR"},
+      {"@type": "Offer", "name": "Starter", "price": "19", "priceCurrency": "EUR"},
+      {"@type": "Offer", "name": "Pro", "price": "49", "priceCurrency": "EUR"},
+      {"@type": "Offer", "name": "Premium", "price": "99", "priceCurrency": "EUR"}
+    ]
+  }
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #031c33;
+      font-family: 'Inter', sans-serif;
+      color: #353233;
+      line-height: 1.6;
+    }
+
+    .page-wrap {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: #f8e5db;
+      background-image: url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');
+      background-size: 242px;
+      background-repeat: repeat;
+      min-height: 100vh;
+    }
+
+    h1, h2, h3, h4 {
+      font-family: 'Playfair Display', serif;
+      color: #031c33;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    .btn-primary {
+      display: inline-block;
+      background: #f04b2e;
+      color: #f8e5db;
+      border: none;
+      padding: 14px 32px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-primary:hover { opacity: 0.88; }
+
+    .btn-secondary {
+      display: inline-block;
+      background: #f8e5db;
+      color: #031c33;
+      border: 1px solid #031c3340;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 500;
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: border-color 0.15s;
+    }
+    .btn-secondary:hover { border-color: #031c3380; }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: #f8e5db;
+      background-image: url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');
+      background-size: 242px;
+      background-repeat: repeat;
+      border-bottom: 1px solid #031c3315;
+      padding: 0 32px;
+    }
+    .navbar-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
+      gap: 24px;
+    }
+    .navbar-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: #031c33;
+      letter-spacing: -0.5px;
+    }
+    .navbar-logo span { color: #f04b2e; }
+    .navbar-links {
+      display: flex;
+      align-items: center;
+      gap: 28px;
+      list-style: none;
+    }
+    .navbar-links a {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #353233;
+      transition: color 0.15s;
+    }
+    .navbar-links a:hover { color: #031c33; }
+    .navbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .btn-nav-login {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #353233;
+      padding: 8px 16px;
+      border-radius: 6px;
+      transition: background 0.15s;
+    }
+    .btn-nav-login:hover { background: #031c3310; }
+    .btn-nav-cta {
+      background: #f04b2e;
+      color: #f8e5db;
+      border: none;
+      padding: 9px 20px;
+      border-radius: 7px;
+      font-weight: 600;
+      font-size: 0.875rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .btn-nav-cta:hover { opacity: 0.88; }
+
+    /* ── HERO ── */
+    .hero {
+      padding: 80px 48px 64px;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: clamp(1.9rem, 4vw, 3rem);
+      line-height: 1.2;
+      max-width: 780px;
+      margin: 0 auto 20px;
+      letter-spacing: -0.5px;
+    }
+    .hero-sub {
+      font-size: 1.05rem;
+      color: #585254;
+      max-width: 640px;
+      margin: 0 auto 36px;
+      line-height: 1.7;
+    }
+    .hero-ctas {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .hero-footnote {
+      font-size: 0.82rem;
+      color: #8b7d7a;
+      margin-top: 8px;
+    }
+    .hero-footnote span { margin: 0 6px; color: #c9b5ae; }
+
+    /* score badges */
+    .score-badges {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-top: 48px;
+      flex-wrap: wrap;
+    }
+    .score-badge {
+      background: #f8e5db;
+      border: 1px solid #031c3320;
+      border-radius: 14px;
+      padding: 24px 32px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      min-width: 160px;
+    }
+    .score-badge-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #585254;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .score-ring {
+      position: relative;
+      width: 88px;
+      height: 88px;
+    }
+    .score-ring svg { transform: rotate(-90deg); }
+    .score-ring-num {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #031c33;
+    }
+    .score-ring-sub {
+      font-size: 0.75rem;
+      color: #8b7d7a;
+    }
+
+    /* ── LOGOS ── */
+    .logos-section {
+      padding: 40px 48px;
+      border-top: 1px solid #031c3310;
+      border-bottom: 1px solid #031c3310;
+      text-align: center;
+    }
+    .logos-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: #8b7d7a;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 20px;
+    }
+    .logos-row {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      flex-wrap: wrap;
+    }
+    .logo-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      opacity: 0.75;
+      transition: opacity 0.15s;
+    }
+    .logo-item:hover { opacity: 1; }
+    .logo-item img {
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+    }
+    .logo-item span {
+      font-size: 0.7rem;
+      color: #8b7d7a;
+      font-weight: 500;
+    }
+
+    /* ── HOW IT WORKS ── */
+    .section {
+      padding: 72px 48px;
+    }
+    .section-title {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+    .section-sub {
+      text-align: center;
+      color: #585254;
+      font-size: 0.95rem;
+      margin-bottom: 48px;
+    }
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 24px;
+    }
+    .step-card {
+      background: #f8e5db;
+      border: 1px solid #031c3315;
+      border-radius: 12px;
+      padding: 32px 28px;
+    }
+    .step-num {
+      font-family: 'Playfair Display', serif;
+      font-size: 3rem;
+      font-weight: 700;
+      color: #f04b2e;
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .step-card h3 {
+      font-size: 1.05rem;
+      margin-bottom: 10px;
+    }
+    .step-card p {
+      font-size: 0.9rem;
+      color: #585254;
+      line-height: 1.65;
+    }
+
+    /* ── FEATURES ── */
+    .features-section {
+      padding: 72px 48px;
+      background: #f0d4c8;
+      background-image: url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');
+      background-size: 242px;
+      background-repeat: repeat;
+    }
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 20px;
+    }
+    .feature-card {
+      background: #f8e5db;
+      border: 1px solid #031c3320;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #031c3310;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+    }
+    .feature-icon svg { width: 20px; height: 20px; }
+    .feature-card h3 {
+      font-size: 1rem;
+      margin-bottom: 8px;
+    }
+    .feature-card p {
+      font-size: 0.875rem;
+      color: #585254;
+      line-height: 1.6;
+    }
+
+    /* ── PRICING ── */
+    .pricing-section {
+      padding: 72px 48px;
+    }
+    .pricing-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      align-items: start;
+    }
+    .plan-card {
+      background: #f8e5db;
+      border: 1px solid #031c3320;
+      border-radius: 14px;
+      padding: 28px 24px;
+      position: relative;
+    }
+    .plan-card.featured {
+      border: 2px solid #f04b2e;
+    }
+    .plan-badge {
+      position: absolute;
+      top: -12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #f04b2e;
+      color: #f8e5db;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 12px;
+      border-radius: 20px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    .plan-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.1rem;
+      color: #031c33;
+      margin-bottom: 6px;
+    }
+    .plan-price {
+      font-size: 2rem;
+      font-weight: 700;
+      font-family: 'Playfair Display', serif;
+      color: #031c33;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .plan-price sup { font-size: 1rem; vertical-align: top; margin-top: 4px; }
+    .plan-price span { font-size: 0.9rem; font-weight: 400; color: #8b7d7a; }
+    .plan-desc {
+      font-size: 0.82rem;
+      color: #585254;
+      margin-bottom: 20px;
+      line-height: 1.5;
+    }
+    .plan-features {
+      list-style: none;
+      margin-bottom: 24px;
+    }
+    .plan-features li {
+      font-size: 0.85rem;
+      color: #353233;
+      padding: 5px 0;
+      padding-left: 18px;
+      position: relative;
+    }
+    .plan-features li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 11px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #031c3330;
+    }
+    .plan-features li.ok::before { background: #f04b2e; }
+    .plan-cta {
+      display: block;
+      width: 100%;
+      text-align: center;
+      padding: 11px 16px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: opacity 0.15s;
+    }
+    .plan-cta-primary {
+      background: #f04b2e;
+      color: #f8e5db;
+      border: none;
+    }
+    .plan-cta-secondary {
+      background: transparent;
+      color: #031c33;
+      border: 1px solid #031c3340;
+    }
+    .plan-cta:hover { opacity: 0.85; }
+
+    /* ── FAQ ── */
+    .faq-section {
+      padding: 72px 48px;
+      background: #f0d4c8;
+      background-image: url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');
+      background-size: 242px;
+      background-repeat: repeat;
+    }
+    .faq-list {
+      max-width: 720px;
+      margin: 0 auto;
+    }
+    .faq-item {
+      border-bottom: 1px solid #031c3315;
+    }
+    .faq-item:first-child { border-top: 1px solid #031c3315; }
+    .faq-toggle {
+      display: none;
+    }
+    .faq-label {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 0;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #031c33;
+      user-select: none;
+    }
+    .faq-label::after {
+      content: '+';
+      font-size: 1.4rem;
+      font-weight: 300;
+      color: #f04b2e;
+      transition: transform 0.2s;
+      flex-shrink: 0;
+      margin-left: 16px;
+    }
+    .faq-toggle:checked + .faq-label::after {
+      transform: rotate(45deg);
+    }
+    .faq-body {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.25s ease;
+    }
+    .faq-toggle:checked ~ .faq-body {
+      max-height: 400px;
+    }
+    .faq-body p {
+      font-size: 0.9rem;
+      color: #585254;
+      line-height: 1.7;
+      padding-bottom: 20px;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      background: #031c33;
+      color: #f8e5db;
+      padding: 56px 48px 32px;
+    }
+    .footer-inner {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .footer-top {
+      display: grid;
+      grid-template-columns: 1fr repeat(3, auto);
+      gap: 48px;
+      margin-bottom: 48px;
+    }
+    .footer-brand-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #f8e5db;
+      margin-bottom: 10px;
+    }
+    .footer-brand-logo span { color: #f04b2e; }
+    .footer-tagline {
+      font-size: 0.85rem;
+      color: #9e9e9e;
+      line-height: 1.5;
+      max-width: 220px;
+    }
+    .footer-col-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #f8e5db;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 16px;
+    }
+    .footer-links {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .footer-links a {
+      font-size: 0.875rem;
+      color: #b0a8a4;
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: #f8e5db; }
+    .footer-bottom {
+      border-top: 1px solid #f8e5db15;
+      padding-top: 24px;
+      font-size: 0.8rem;
+      color: #9e9e9e;
+    }
+
+    /* ── RESPONSIVE ── */
+    @media (max-width: 768px) {
+      .navbar-links { display: none; }
+      .hero { padding: 48px 24px 40px; }
+      .section { padding: 48px 24px; }
+      .features-section { padding: 48px 24px; }
+      .pricing-section { padding: 48px 24px; }
+      .faq-section { padding: 48px 24px; }
+      .logos-section { padding: 28px 24px; }
+      .footer { padding: 40px 24px 24px; }
+      .footer-top {
+        grid-template-columns: 1fr;
+        gap: 32px;
+      }
+      .score-badges { gap: 14px; }
+      .score-badge { min-width: 130px; padding: 18px 22px; }
+      .steps-grid { grid-template-columns: 1fr; }
+      .features-grid { grid-template-columns: 1fr; }
+      .pricing-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="navbar-inner">
+    <a href="/" class="navbar-logo">Restau<span>Rank</span></a>
+    <ul class="navbar-links">
+      <li><a href="/about">A propos</a></li>
+      <li><a href="/blog">Blog</a></li>
+      <li><a href="#fonctionnalites">Fonctionnalites</a></li>
+      <li><a href="#tarifs">Tarifs</a></li>
+    </ul>
+    <div class="navbar-actions">
+      <a href="/app" class="btn-nav-login">Se connecter</a>
+      <a href="/app" class="btn-nav-cta">Essai gratuit</a>
+    </div>
+  </div>
+</nav>
+
+<div class="page-wrap">
+
+  <!-- HERO -->
+  <section class="hero">
+    <h1>Auditez et boostez la visibilite de votre restaurant sur Google et les IA</h1>
+    <p class="hero-sub">RestauRank analyse 49 criteres SEO local et mesure votre score GEO — la probabilite d'etre recommande par ChatGPT, Perplexity et Gemini. Corrections automatiques en 1 clic.</p>
+    <div class="hero-ctas">
+      <a href="/app" class="btn-primary">Lancer un audit gratuit &rarr;</a>
+      <a href="#comment-ca-marche" class="btn-secondary">Voir la demo</a>
+    </div>
+    <p class="hero-footnote">
+      Sans carte bancaire<span>·</span>Resultats en 30 secondes<span>·</span>1 audit gratuit/jour
+    </p>
+
+    <!-- Score badges -->
+    <div class="score-badges">
+      <div class="score-badge">
+        <div class="score-badge-label">Score SEO</div>
+        <div class="score-ring">
+          <svg width="88" height="88" viewBox="0 0 88 88">
+            <circle cx="44" cy="44" r="36" fill="none" stroke="#031c3312" stroke-width="7"/>
+            <circle cx="44" cy="44" r="36" fill="none" stroke="#f04b2e" stroke-width="7"
+              stroke-dasharray="226.2" stroke-dashoffset="61.1" stroke-linecap="round"/>
+          </svg>
+          <div class="score-ring-num">73</div>
+        </div>
+        <div class="score-ring-sub">sur 100</div>
+      </div>
+      <div class="score-badge">
+        <div class="score-badge-label">Score GEO</div>
+        <div class="score-ring">
+          <svg width="88" height="88" viewBox="0 0 88 88">
+            <circle cx="44" cy="44" r="36" fill="none" stroke="#031c3312" stroke-width="7"/>
+            <circle cx="44" cy="44" r="36" fill="none" stroke="#031c33" stroke-width="7"
+              stroke-dasharray="226.2" stroke-dashoffset="88.2" stroke-linecap="round"/>
+          </svg>
+          <div class="score-ring-num">61</div>
+        </div>
+        <div class="score-ring-sub">sur 100</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LOGOS -->
+  <div class="logos-section">
+    <div class="logos-title">Compatible avec</div>
+    <div class="logos-row">
+      <div class="logo-item">
+        <img src="https://www.google.com/s2/favicons?domain=google.com&sz=64" alt="Google" loading="lazy">
+        <span>Google</span>
+      </div>
+      <div class="logo-item">
+        <img src="https://www.google.com/s2/favicons?domain=tripadvisor.com&sz=64" alt="TripAdvisor" loading="lazy">
+        <span>TripAdvisor</span>
+      </div>
+      <div class="logo-item">
+        <img src="https://www.google.com/s2/favicons?domain=yelp.com&sz=64" alt="Yelp" loading="lazy">
+        <span>Yelp</span>
+      </div>
+      <div class="logo-item">
+        <img src="https://www.google.com/s2/favicons?domain=foursquare.com&sz=64" alt="Foursquare" loading="lazy">
+        <span>Foursquare</span>
+      </div>
+      <div class="logo-item">
+        <img src="https://www.google.com/s2/favicons?domain=pagesjaunes.fr&sz=64" alt="PagesJaunes" loading="lazy">
+        <span>PagesJaunes</span>
+      </div>
+      <div class="logo-item">
+        <img src="https://www.google.com/s2/favicons?domain=thefork.com&sz=64" alt="TheFork" loading="lazy">
+        <span>TheFork</span>
+      </div>
+      <div class="logo-item">
+        <img src="https://www.google.com/s2/favicons?domain=wordpress.org&sz=64" alt="WordPress" loading="lazy">
+        <span>WordPress</span>
+      </div>
+      <div class="logo-item">
+        <img src="https://www.google.com/s2/favicons?domain=webflow.com&sz=64" alt="Webflow" loading="lazy">
+        <span>Webflow</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HOW IT WORKS -->
+  <section class="section" id="comment-ca-marche">
+    <h2 class="section-title">Comment ca marche</h2>
+    <p class="section-sub">Trois etapes suffisent pour transformer votre visibilite en ligne</p>
+    <div class="steps-grid">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <h3>Entrez votre restaurant</h3>
+        <p>Nom et ville en 5 secondes. RestauRank trouve votre fiche Google Maps automatiquement et identifie votre site web.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <h3>Audit complet en 30 secondes</h3>
+        <p>49 criteres analyses : Google Business Profile, avis clients, annuaires, site web, coherence NAP, visibilite sur ChatGPT, Perplexity et Gemini.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <h3>Corrigez en 1 clic</h3>
+        <p>Connectez Google Business, votre CMS et vos annuaires. L'agent IA applique toutes les corrections directement — sans competence technique.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section class="features-section" id="fonctionnalites">
+    <h2 class="section-title">Tout ce qu'il faut pour dominer les resultats</h2>
+    <p class="section-sub">Six modules integres pour une visibilite maximale sur Google et les IA</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="#031c33" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+        </div>
+        <h3>SEO Local — 49 criteres</h3>
+        <p>Audit exhaustif de votre fiche Google Business Profile, schema.org, balises meta, photos, horaires, coherence NAP et autorité de domaine.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="#031c33" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+          </svg>
+        </div>
+        <h3>Score GEO — Visibilite IA</h3>
+        <p>Mesurez votre probabilite d'etre recommande par ChatGPT, Perplexity, Gemini et Claude. Le premier outil GEO dedie aux restaurants.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="#031c33" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </div>
+        <h3>Google Business Profile connecte</h3>
+        <p>Connexion directe via API officielle. Publiez des posts, repondez aux avis, mettez a jour vos photos et horaires depuis RestauRank.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="#031c33" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064"/>
+          </svg>
+        </div>
+        <h3>29 Annuaires verifies</h3>
+        <p>TripAdvisor, Yelp, PagesJaunes, Foursquare, TheFork et 24 autres. Verification automatique de votre presence et coherence NAP.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="#031c33" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"/>
+          </svg>
+        </div>
+        <h3>Auto-apply CMS</h3>
+        <p>WordPress, Webflow, Wix, Squarespace, Shopify. L'agent detecte votre CMS et applique schema.org, meta tags, FAQ et sitemap automatiquement.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg fill="none" stroke="#031c33" stroke-width="1.8" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+          </svg>
+        </div>
+        <h3>Generation de contenu IA</h3>
+        <p>Google Posts, articles de blog, descriptions annuaires, reponses aux avis. Generes par Claude AI, optimises pour votre restaurant et votre zone.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section class="pricing-section" id="tarifs">
+    <h2 class="section-title">Tarifs simples et transparents</h2>
+    <p class="section-sub">Commencez gratuitement. Passez au plan superieur quand vous etes pret.</p>
+    <div class="pricing-grid">
+      <!-- Free -->
+      <div class="plan-card">
+        <div class="plan-name">Free</div>
+        <div class="plan-price">0<sup>&euro;</sup></div>
+        <div class="plan-desc">Pour decouvrir RestauRank</div>
+        <ul class="plan-features">
+          <li class="ok">1 audit par jour</li>
+          <li class="ok">Score SEO + GEO</li>
+          <li>1 restaurant</li>
+          <li>Sans GBP connecte</li>
+        </ul>
+        <a href="/app" class="plan-cta plan-cta-secondary">Commencer gratuitement</a>
+      </div>
+      <!-- Starter -->
+      <div class="plan-card">
+        <div class="plan-name">Starter</div>
+        <div class="plan-price">19<sup>&euro;</sup><span>/mois</span></div>
+        <div class="plan-desc">Pour les restaurateurs actifs</div>
+        <ul class="plan-features">
+          <li class="ok">Audits illimites</li>
+          <li class="ok">1 restaurant</li>
+          <li class="ok">GBP connecte</li>
+          <li>Auto-apply CMS</li>
+          <li>Generation IA</li>
+        </ul>
+        <a href="/app" class="plan-cta plan-cta-secondary">Choisir Starter</a>
+      </div>
+      <!-- Pro — featured -->
+      <div class="plan-card featured">
+        <div class="plan-badge">Populaire</div>
+        <div class="plan-name">Pro</div>
+        <div class="plan-price">49<sup>&euro;</sup><span>/mois</span></div>
+        <div class="plan-desc">Pour les groupes et agences</div>
+        <ul class="plan-features">
+          <li class="ok">Audits illimites</li>
+          <li class="ok">3 restaurants</li>
+          <li class="ok">GBP connecte</li>
+          <li class="ok">Auto-apply CMS</li>
+          <li class="ok">Generation IA</li>
+        </ul>
+        <a href="/app" class="plan-cta plan-cta-primary">Choisir Pro</a>
+      </div>
+      <!-- Premium -->
+      <div class="plan-card">
+        <div class="plan-name">Premium</div>
+        <div class="plan-price">99<sup>&euro;</sup><span>/mois</span></div>
+        <div class="plan-desc">Pour les grands groupes</div>
+        <ul class="plan-features">
+          <li class="ok">Audits illimites</li>
+          <li class="ok">10 restaurants</li>
+          <li class="ok">GBP connecte</li>
+          <li class="ok">Auto-apply CMS</li>
+          <li class="ok">API acces</li>
+          <li class="ok">Support prioritaire</li>
+        </ul>
+        <a href="/app" class="plan-cta plan-cta-secondary">Choisir Premium</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="faq-section">
+    <h2 class="section-title">Questions frequentes</h2>
+    <p class="section-sub">Tout ce que vous devez savoir avant de commencer</p>
+    <div class="faq-list">
+      <div class="faq-item">
+        <input type="checkbox" class="faq-toggle" id="faq1">
+        <label class="faq-label" for="faq1">Qu'est-ce que RestauRank ?</label>
+        <div class="faq-body">
+          <p>RestauRank est un outil SaaS d'audit et d'optimisation de la visibilite en ligne pour les restaurants. Il analyse 49 criteres SEO local (Google Maps, GBP, site web, annuaires) et calcule un score GEO qui mesure la probabilite que votre restaurant soit recommande par les moteurs IA comme ChatGPT, Perplexity, Gemini et Claude. Les corrections sont appliquees automatiquement via des connexions directes aux APIs de Google, WordPress, Webflow et autres plateformes.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <input type="checkbox" class="faq-toggle" id="faq2">
+        <label class="faq-label" for="faq2">Qu'est-ce que le score GEO ?</label>
+        <div class="faq-body">
+          <p>Le score GEO (Generative Engine Optimization) mesure la probabilite qu'un moteur IA recommande votre restaurant quand un utilisateur pose une question comme "meilleur restaurant japonais a Paris". Il tient compte de la richesse de vos donnees structurees, de la coherence de vos informations sur le web, de la quantite et qualite de vos avis, et de votre presence dans les sources que les IA consultent. C'est une metrique unique a RestauRank, complementaire au SEO traditionnel.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <input type="checkbox" class="faq-toggle" id="faq3">
+        <label class="faq-label" for="faq3">Est-ce vraiment gratuit ?</label>
+        <div class="faq-body">
+          <p>Oui, le plan Free permet de lancer un audit complet par jour sans carte bancaire. Vous obtenez votre score SEO, votre score GEO, et les recommandations prioritaires. Pour les audits illimites, la connexion GBP, l'auto-apply CMS et la generation de contenu IA, les plans payants debutent a 19 €/mois.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <input type="checkbox" class="faq-toggle" id="faq4">
+        <label class="faq-label" for="faq4">Quels CMS sont supportes ?</label>
+        <div class="faq-body">
+          <p>RestauRank supporte WordPress (via API REST et plugin dedie), Webflow (via API Content), Wix, Squarespace (import WXR), Shopify, PrestaShop, Jimdo et les sites custom. La detection du CMS est automatique. Pour WordPress, un plugin RestauRank est disponible pour simplifier la connexion et permettre les mises a jour en 1 clic depuis le dashboard.</p>
+        </div>
+      </div>
+      <div class="faq-item">
+        <input type="checkbox" class="faq-toggle" id="faq5">
+        <label class="faq-label" for="faq5">Comment RestauRank se connecte a Google Business Profile ?</label>
+        <div class="faq-body">
+          <p>RestauRank utilise l'API officielle Google Business Profile (acces approuve par Google). Vous autorisez la connexion via OAuth2 en 2 clics — sans partager vos identifiants. Une fois connecte, RestauRank peut lire et mettre a jour vos informations (horaires, description, photos), publier des Google Posts et analyser vos avis directement depuis le dashboard. La connexion est securisee et revocable a tout moment depuis votre compte Google.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="footer">
+    <div class="footer-inner">
+      <div class="footer-top">
+        <div>
+          <div class="footer-brand-logo">Restau<span>Rank</span></div>
+          <p class="footer-tagline">L'outil de visibilite Google et IA pour les restaurants. SEO local + GEO en un seul tableau de bord.</p>
+        </div>
+        <div>
+          <div class="footer-col-title">Produit</div>
+          <ul class="footer-links">
+            <li><a href="#fonctionnalites">Fonctionnalites</a></li>
+            <li><a href="#tarifs">Tarifs</a></li>
+            <li><a href="/about">Comparatif</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-col-title">Ressources</div>
+          <ul class="footer-links">
+            <li><a href="/blog">Blog</a></li>
+            <li><a href="/about">A propos</a></li>
+          </ul>
+        </div>
+        <div>
+          <div class="footer-col-title">Legal</div>
+          <ul class="footer-links">
+            <li><a href="/app">CGV</a></li>
+            <li><a href="/app">Confidentialite</a></li>
+            <li><a href="/app">Mentions legales</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        &copy; 2026 RestauRank — Tous droits reserves
+      </div>
+    </div>
+  </footer>
+
+</div><!-- /.page-wrap -->
+</body>
+</html>

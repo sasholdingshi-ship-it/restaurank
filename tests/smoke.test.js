@@ -31,8 +31,16 @@ test.after(() => {
   if (server && !server.killed) server.kill('SIGTERM');
 });
 
-test('GET / serves main HTML', async () => {
+test('GET / serves landing page', async () => {
   const r = await fetch(`${BASE}/`);
+  assert.strictEqual(r.status, 200);
+  const body = await r.text();
+  assert.match(body, /RestauRank/);
+  assert.match(body, /audit/i);
+});
+
+test('GET /app serves the SPA', async () => {
+  const r = await fetch(`${BASE}/app`);
   assert.strictEqual(r.status, 200);
   const body = await r.text();
   assert.match(body, /RestauRank/);
