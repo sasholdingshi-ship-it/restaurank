@@ -12,6 +12,7 @@ RUN npm ci --omit=dev
 # Copy app files
 COPY server.js ./
 COPY seo-geo-audit-tool.html ./
+COPY landing.html ./
 COPY admin.html ./
 COPY db-adapter.js ./
 COPY init-db.sql ./
