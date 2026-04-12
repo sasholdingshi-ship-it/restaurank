@@ -172,6 +172,7 @@ h2{padding-bottom:6px;border-bottom:3px solid #f04b2e;display:inline-block;margi
       <button class="tab active" onclick="switchTab('clients')">👥 Clients</button>
       <button class="tab" onclick="switchTab('restaurants')">🍽️ Restaurants</button>
       <button class="tab" onclick="switchTab('invites')">🎟️ Codes d'invitation</button>
+      <button class="tab" onclick="switchTab('commercialization')">💳 Commercialisation</button>
       <button class="tab" onclick="switchTab('seosaas')">SEO SaaS</button>
       <button class="tab" onclick="switchTab('settings')">⚙️ Paramètres</button>
     </div>
@@ -256,6 +257,48 @@ h2{padding-bottom:6px;border-bottom:3px solid #f04b2e;display:inline-block;margi
         </div>
       </div>
       <div id="invitesList"></div>
+    </div>
+
+    <!-- COMMERCIALISATION TAB -->
+    <div class="tab-panel" id="tab-commercialization">
+      <!-- Stats cards -->
+      <div class="stats-grid" id="commStatsGrid" style="margin-bottom:20px;">
+        <div class="stat-card"><div class="stat-val">…</div><div class="stat-label">Total comptes</div></div>
+      </div>
+
+      <!-- Stripe config -->
+      <div class="card">
+        <div class="card-title">💳 Configuration Stripe</div>
+        <div id="stripeConfigStatus" style="font-size:.82rem;margin-bottom:14px;color:var(--mut);">Chargement…</div>
+        <div id="stripePricesTable" style="margin-bottom:14px;"></div>
+        <button class="action-btn grn" onclick="initStripeProducts()" id="btnStripeInit" style="padding:8px 16px;">Initialiser les produits Stripe</button>
+      </div>
+
+      <!-- Trial email log -->
+      <div class="card" style="margin-top:18px;">
+        <div class="card-title">📧 Emails essai envoyés (50 derniers)</div>
+        <div id="trialEmailLog"><div class="empty">Chargement…</div></div>
+      </div>
+
+      <!-- Manual email send -->
+      <div class="card" style="margin-top:18px;">
+        <div class="card-title">✉️ Envoyer un email d'essai manuellement</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+          <div>
+            <div class="field-label" style="font-size:.62rem;color:var(--mut);text-transform:uppercase;margin-bottom:4px;">ID du compte</div>
+            <input class="filter-input" type="number" id="manualEmailAccountId" placeholder="ex: 42" style="width:120px;">
+          </div>
+          <div>
+            <div class="field-label" style="font-size:.62rem;color:var(--mut);text-transform:uppercase;margin-bottom:4px;">Type</div>
+            <select class="filter-input" id="manualEmailType">
+              <option value="d3">D+3 (Quick wins)</option>
+              <option value="d12">D+12 (Urgence)</option>
+              <option value="expired">Expiré</option>
+            </select>
+          </div>
+          <button class="action-btn grn" onclick="sendManualTrialEmail()" style="padding:8px 16px;">Envoyer</button>
+        </div>
+      </div>
     </div>
 
     <!-- SEO SAAS TAB -->
@@ -891,9 +934,10 @@ async function sendBroadcast(){
 function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
 function tryParse(s){ try{return typeof s==='string'?JSON.parse(s||'{}'):s||{};}catch(e){return{};} }
 function switchTab(name){
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', ['clients','restaurants','invites','seosaas','settings'][i]===name));
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', ['clients','restaurants','invites','commercialization','seosaas','settings'][i]===name));
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.toggle('active', p.id==='tab-'+name));
   if (name==='seosaas') { loadBlogArticles(); loadGeoHistory(); }
+  if (name==='commercialization') { loadCommercializationData(); }
 }
 
 // ══ SEO SAAS ══
@@ -996,6 +1040,78 @@ async function loadGeoHistory(){
       <div style="font-size:.75rem;color:var(--mut);">Moteurs testés : ${(d.engines||[]).join(', ')||'—'}</div>`;
   } catch(e) { document.getElementById('geoHistoryList').innerHTML = '<div class="empty">Pas encore de données</div>'; }
 }
+// ══ COMMERCIALISATION ══
+async function loadCommercializationData(){
+  try {
+    const [r1, r2] = await Promise.all([
+      fetch(API + '/api/admin/commercialization', {headers: hdrs()}),
+      fetch(API + '/api/admin/trial-emails', {headers: hdrs()})
+    ]);
+    const stats = await r1.json();
+    const emails = await r2.json();
+    renderCommStats(stats);
+    renderTrialEmailLog(emails);
+  } catch(e) { toast('Erreur chargement commercialisation', 'err'); }
+}
+
+function renderCommStats(s){
+  document.getElementById('commStatsGrid').innerHTML = `
+    <div class="stat-card"><div class="stat-val">${s.totalAccounts||0}</div><div class="stat-label">Total comptes</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--org);">${s.trialing||0}</div><div class="stat-label">En essai</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--grn);">${s.paid||0}</div><div class="stat-label">Payants</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--red);">${s.expired||0}</div><div class="stat-label">Essai expiré</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--grn);">${s.mrr||0}€</div><div class="stat-label">MRR</div></div>
+    <div class="stat-card"><div class="stat-val">${Math.round((s.trialConversionRate||0)*100)}%</div><div class="stat-label">Taux conversion essai</div></div>
+  `;
+  const configured = s.stripeConfigured && s.stripePrices?.starter;
+  document.getElementById('stripeConfigStatus').innerHTML = configured
+    ? `<span style="color:var(--grn);font-weight:600;">✓ Configuré</span>`
+    : `<span style="color:var(--org);font-weight:600;">⚠ Non configuré — STRIPE_SECRET_KEY manquante ou produits non créés</span>`;
+  if(s.stripePrices){
+    const p=s.stripePrices;
+    document.getElementById('stripePricesTable').innerHTML = `
+      <table style="font-size:.75rem;border-collapse:collapse;width:100%;">
+        <thead><tr><th style="text-align:left;padding:6px 10px;background:#f3ddd0;">Plan</th><th style="text-align:left;padding:6px 10px;background:#f3ddd0;">Price ID</th><th style="padding:6px 10px;background:#f3ddd0;"></th></tr></thead>
+        <tbody>
+          ${['starter','pro','premium'].map(k=>`<tr><td style="padding:6px 10px;border-bottom:1px solid #031c3311;">${k}</td><td style="padding:6px 10px;border-bottom:1px solid #031c3311;font-family:monospace;font-size:.7rem;">${p[k]||'—'}</td><td style="padding:6px 10px;border-bottom:1px solid #031c3311;">${p[k]?`<button class="action-btn" onclick="navigator.clipboard.writeText('${p[k]}');toast('Copié','ok')">Copier</button>`:''}</td></tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+}
+
+function renderTrialEmailLog(emails){
+  const el=document.getElementById('trialEmailLog');
+  if(!Array.isArray(emails)||!emails.length){el.innerHTML='<div class="empty">Aucun email envoyé</div>';return;}
+  el.innerHTML=`<div class="table-wrap"><table>
+    <thead><tr><th>Compte</th><th>Type</th><th>Envoyé le</th></tr></thead>
+    <tbody>${emails.map(e=>`<tr><td>${esc(e.account_email||'#'+e.account_id)}</td><td><span class="badge active">${e.email_type}</span></td><td style="color:var(--mut);font-size:.7rem;">${new Date(e.sent_at).toLocaleString('fr-FR')}</td></tr>`).join('')}</tbody>
+  </table></div>`;
+}
+
+async function initStripeProducts(){
+  const btn=document.getElementById('btnStripeInit');
+  btn.disabled=true;btn.textContent='Initialisation…';
+  try {
+    const r=await fetch(API+'/api/admin/stripe/setup',{method:'POST',headers:hdrs()});
+    const d=await r.json();
+    if(d.success){toast('Produits Stripe créés','ok');loadCommercializationData();}
+    else toast(d.error||'Erreur','err');
+  } catch(e){toast('Erreur réseau','err');}
+  btn.disabled=false;btn.textContent='Initialiser les produits Stripe';
+}
+
+async function sendManualTrialEmail(){
+  const accountId=document.getElementById('manualEmailAccountId').value;
+  const emailType=document.getElementById('manualEmailType').value;
+  if(!accountId)return toast('ID du compte requis','err');
+  try {
+    const r=await fetch(API+'/api/admin/trial-email/send',{method:'POST',headers:hdrs(),body:JSON.stringify({accountId:parseInt(accountId),emailType})});
+    const d=await r.json();
+    if(d.success){toast('Email envoyé','ok');loadCommercializationData();}
+    else toast(d.error||'Erreur','err');
+  } catch(e){toast('Erreur réseau','err');}
+}
+
 function openModal(id){ document.getElementById(id).classList.add('open'); }
 function closeModal(id){ document.getElementById(id).classList.remove('open'); }
 function toast(msg, type='ok'){

@@ -554,28 +554,38 @@ function canDoAction(feature,opts){
 }
 
 function showUpgradeModal(reason,suggestedPlan){
+    const currentPlan=(currentAccount&&currentAccount.plan)||'free';
+    const isNewFree=currentPlan==='free';
     const plan=PLAN_LIMITS[suggestedPlan]||PLAN_LIMITS.starter;
     const plans=Object.entries(PLAN_LIMITS).filter(([k])=>k!=='free'&&k!=='enterprise');
+    const existing=document.getElementById('upgradeModal');if(existing)existing.remove();
     const modal=document.createElement('div');
     modal.id='upgradeModal';
-    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:10000;';
-    modal.innerHTML=`<div style="background:var(--card);border:1px solid var(--bdr);border-radius:16px;padding:28px;max-width:480px;width:90%;color:var(--txt);">
-        <h2 style="margin:0 0 8px;font-size:1.2rem;">Fonctionnalité limitée</h2>
-        <p style="color:var(--mut);margin:0 0 18px;font-size:.9rem;">${reason}</p>
-        <h3 style="margin:0 0 12px;font-size:1rem;color:var(--cyn);">Passez à un plan supérieur</h3>
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;align-items:center;justify-content:center;z-index:10000;';
+    modal.innerHTML=`<div style="background:#f8e5db;border:1px solid #031c3322;border-radius:12px;padding:28px;max-width:500px;width:90%;color:#031c33;">
+        <h2 style="margin:0 0 6px;font-size:1.2rem;font-family:'Playfair Display',serif;font-style:italic;color:#031c33;">${isNewFree?'Démarrer avec 14 jours gratuits':'Fonctionnalité limitée'}</h2>
+        <p style="color:#585254;margin:0 0 18px;font-size:.88rem;">${reason||'Passez à un plan supérieur pour accéder à cette fonctionnalité.'}</p>
         <div style="display:grid;gap:8px;">
-            ${plans.map(([k,v])=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:${k===suggestedPlan?'rgba(108,99,255,.15)':'var(--bg)'};border:1px solid ${k===suggestedPlan?'var(--ind)':'var(--bdr)'};border-radius:10px;cursor:pointer;" onclick="selectUpgradePlan('${k}')">
-                <div><strong>${v.label}</strong><span style="color:var(--mut);font-size:.75rem;margin-left:8px;">${v.restaurants} resto${v.restaurants>1?'s':''} · ${v.scansPerDay>100?'∞':v.scansPerDay} scans/j · ${v.directories} annuaires${v.autoApply?' · auto-apply':''}</span></div>
-                <strong style="color:var(--cyn);">${v.price}€/m</strong>
-            </div>`).join('')}
+            ${plans.map(([k,v])=>{
+                const isCurrent=k===currentPlan;
+                const isSuggested=k===suggestedPlan;
+                return`<div style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:${isSuggested?'rgba(240,75,46,.1)':'#fff'};border:2px solid ${isSuggested?'#f04b2e':'#031c3322'};border-radius:10px;cursor:pointer;transition:border-color .2s;" onclick="selectUpgradePlan('${k}')">
+                    <div>
+                        ${isCurrent?'<span style="font-size:.6rem;background:#2d7a4f;color:#fff;padding:1px 6px;border-radius:3px;margin-right:6px;">Actuel</span>':''}
+                        <strong style="color:#031c33;">${v.label}</strong>
+                        <span style="color:#585254;font-size:.75rem;margin-left:6px;">${v.restaurants} resto${v.restaurants>1?'s':''} · ${v.scansPerDay>100?'∞':v.scansPerDay} scans/j · ${v.directories} ann.${v.autoApply?' · auto-apply':''}</span>
+                    </div>
+                    <strong style="color:#f04b2e;white-space:nowrap;">${v.price}€/m</strong>
+                </div>`;
+            }).join('')}
         </div>
         <div style="display:flex;gap:10px;margin-top:18px;">
-            <button onclick="document.getElementById('upgradeModal').remove()" style="flex:1;padding:10px;background:var(--bg);border:1px solid var(--bdr);border-radius:8px;color:var(--mut);cursor:pointer;">Plus tard</button>
-            <button onclick="handleUpgrade()" id="upgradeBtn" style="flex:1;padding:10px;background:var(--ind);border:none;border-radius:8px;color:#fff;cursor:pointer;font-weight:600;">Passer au ${plan.label}</button>
+            <button onclick="document.getElementById('upgradeModal').remove()" style="flex:1;padding:10px;background:#f8e5db;border:1px solid #031c3322;border-radius:8px;color:#585254;cursor:pointer;font-family:inherit;">Plus tard</button>
+            <button onclick="handleUpgrade()" id="upgradeBtn" style="flex:2;padding:10px;background:#f04b2e;border:none;border-radius:8px;color:#f8e5db;cursor:pointer;font-weight:700;font-family:inherit;">${isNewFree?'Démarrer — 14 jours gratuits':'Passer au '+plan.label}</button>
         </div>
     </div>`;
     document.body.appendChild(modal);
-    window._selectedUpgradePlan=suggestedPlan;
+    window._selectedUpgradePlan=suggestedPlan||'starter';
 }
 
 function selectUpgradePlan(plan){
@@ -650,6 +660,79 @@ function checkUpgradeRedirect(){
     } else if(params.get('upgrade')==='cancel'){
         addToLog('! Paiement annulé — vous restez sur votre plan actuel');
         window.history.replaceState({},'',window.location.pathname);
+    }
+}
+
+// ============================================================
+// TRIAL BANNER — sticky top banner during trial period
+// ============================================================
+let _trialStatus = null;
+
+async function fetchTrialStatus(){
+    if(!sessionToken||!currentAccount)return null;
+    try{
+        const r=await fetch(API_BASE+'/api/subscription/trial-status',{headers:{'Authorization':'Bearer '+sessionToken}});
+        if(!r.ok)return null;
+        _trialStatus=await r.json();
+        return _trialStatus;
+    }catch(e){return null;}
+}
+
+function renderTrialBanner(){
+    const existing=document.getElementById('trialBanner');
+    if(existing)existing.remove();
+    if(!currentAccount||currentAccount.role==='admin')return;
+    const plan=currentAccount.plan||'free';
+    const paidPlans=['starter','pro','premium','enterprise'];
+    if(paidPlans.includes(plan))return; // paid — no banner
+    const t=_trialStatus;
+    if(!t)return;
+    const banner=document.createElement('div');
+    banner.id='trialBanner';
+    if(t.isTrialing){
+        const days=t.daysLeft||0;
+        banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9000;background:rgba(240,75,46,.12);border-bottom:1px solid rgba(240,75,46,.3);padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:.82rem;color:#031c33;';
+        banner.innerHTML=`<span>Essai gratuit — <strong>${days} jour${days>1?'s':''}</strong> restant${days>1?'s':''}</span> <a onclick="showUpgradeModal('Passez à un plan payant avant la fin de votre essai.','pro')" style="color:#f04b2e;font-weight:700;cursor:pointer;text-decoration:underline;">Passer au Pro</a> <button onclick="document.getElementById('trialBanner').remove()" style="margin-left:8px;background:none;border:none;color:#585254;cursor:pointer;font-size:1rem;line-height:1;">×</button>`;
+    } else if(t.isExpired){
+        banner.style.cssText='position:fixed;top:0;left:0;right:0;z-index:9000;background:rgba(240,75,46,.2);border-bottom:2px solid #f04b2e;padding:8px 16px;display:flex;align-items:center;justify-content:center;gap:12px;font-size:.82rem;color:#031c33;';
+        banner.innerHTML=`<strong>Essai expiré</strong> — Activez votre compte pour continuer <a onclick="showTrialExpiredOverlay()" style="color:#f04b2e;font-weight:700;cursor:pointer;text-decoration:underline;margin-left:8px;">Voir les plans</a>`;
+    } else {
+        return; // no trial info, no banner
+    }
+    document.body.prepend(banner);
+}
+
+function showTrialExpiredOverlay(){
+    const existing=document.getElementById('trialExpiredOverlay');if(existing)existing.remove();
+    const plans=Object.entries(PLAN_LIMITS).filter(([k])=>k!=='free'&&k!=='enterprise');
+    const overlay=document.createElement('div');
+    overlay.id='trialExpiredOverlay';
+    overlay.style.cssText='position:fixed;inset:0;background:rgba(3,28,51,.85);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    overlay.innerHTML=`<div style="background:#f8e5db;border-radius:12px;padding:32px;max-width:620px;width:100%;color:#031c33;text-align:center;">
+        <h2 style="font-family:'Playfair Display',serif;font-style:italic;margin-bottom:8px;">Votre essai est terminé</h2>
+        <p style="color:#585254;margin-bottom:24px;">Choisissez un plan pour continuer à utiliser RestauRank.</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px;">
+            ${plans.map(([k,v])=>`<div style="background:#fff;border:2px solid ${k==='pro'?'#f04b2e':'#031c3322'};border-radius:10px;padding:16px;cursor:pointer;position:relative;" onclick="selectUpgradePlan('${k}');handleUpgrade();">
+                ${k==='pro'?'<div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);background:#f04b2e;color:#f8e5db;font-size:.65rem;font-weight:700;padding:2px 10px;border-radius:10px;">Recommandé</div>':''}
+                <div style="font-weight:800;color:#031c33;margin-bottom:4px;">${v.label}</div>
+                <div style="font-size:1.4rem;font-weight:900;color:#f04b2e;">${v.price}€<span style="font-size:.65rem;font-weight:400;color:#585254;">/mois</span></div>
+                <div style="font-size:.72rem;color:#585254;margin-top:6px;">${v.restaurants} resto${v.restaurants>1?'s':''} · ${v.directories} ann.</div>
+                <button style="margin-top:10px;width:100%;padding:8px;background:${k==='pro'?'#f04b2e':'#031c33'};color:#f8e5db;border:none;border-radius:6px;cursor:pointer;font-weight:700;font-family:inherit;font-size:.8rem;">Choisir</button>
+            </div>`).join('')}
+        </div>
+        <a onclick="document.getElementById('trialExpiredOverlay').remove()" style="color:#585254;font-size:.82rem;cursor:pointer;text-decoration:underline;">Continuer en lecture seule</a>
+    </div>`;
+    document.body.appendChild(overlay);
+    window._selectedUpgradePlan='pro';
+}
+
+// Check for #upgrade= hash param and auto-open modal
+function checkUpgradeHash(){
+    const hash=window.location.hash;
+    if(hash&&hash.startsWith('#upgrade=')){
+        const plan=hash.slice(9)||'pro';
+        window.history.replaceState({},'',window.location.pathname+window.location.search);
+        setTimeout(()=>showUpgradeModal('',plan),600);
     }
 }
 
@@ -1031,6 +1114,8 @@ async function onAuthSuccess(){
     const planEl=document.getElementById('ubPlan');
     planEl.textContent=currentAccount.plan.toUpperCase();
     const spn=document.getElementById("settingsPlanName");if(spn)spn.textContent=currentAccount.plan.toUpperCase();    planEl.className='ub-plan '+currentAccount.plan;
+    // Load trial status and show banner
+    fetchTrialStatus().then(t=>{if(t)renderTrialBanner();}).catch(()=>{});
     // Show admin button if admin
     document.getElementById('ubAdmin').style.display=currentAccount.role==='admin'?'inline-block':'none';
     // Show admin-only tabs and action buttons if admin
@@ -1695,11 +1780,70 @@ async function revokeInviteCode(id){
 }
 
 // Auto-check session on load
+// ============================================================
+// SUBSCRIPTION SETTINGS TAB — plan info, trial, portal, upgrade
+// ============================================================
+function renderSubscriptionSettings(){
+    const container=document.getElementById('tabSettings');
+    if(!container)return;
+    // Find or create subscription section
+    let sect=document.getElementById('subscriptionSection');
+    if(!sect){
+        sect=document.createElement('div');
+        sect.id='subscriptionSection';
+        // Insert before the existing plan card (first child of settings-container)
+        const sc=container.querySelector('.settings-container');
+        if(sc){sc.insertBefore(sect,sc.firstChild);}else{container.prepend(sect);}
+    }
+    const plan=(currentAccount&&currentAccount.plan)||'free';
+    const t=_trialStatus;
+    const paidPlans=['starter','pro','premium','enterprise'];
+    const isPaid=paidPlans.includes(plan);
+    const planInfo=PLAN_LIMITS[plan]||PLAN_LIMITS.free;
+    let trialHtml='';
+    if(t&&t.isTrialing){
+        const d=t.daysLeft||0;
+        trialHtml=`<div style="margin:10px 0;padding:10px 14px;background:rgba(240,75,46,.08);border-left:3px solid #f04b2e;border-radius:4px;font-size:.82rem;color:#031c33;">Essai gratuit actif — <strong>${d} jour${d>1?'s':''}</strong> restant${d>1?'s':''}. Abonnez-vous pour ne pas perdre l'accès.</div>`;
+    } else if(t&&t.isExpired&&!isPaid){
+        trialHtml=`<div style="margin:10px 0;padding:10px 14px;background:rgba(240,75,46,.15);border-left:3px solid #f04b2e;border-radius:4px;font-size:.82rem;color:#f04b2e;font-weight:600;">Essai expiré — Activez un plan pour continuer.</div>`;
+    }
+    sect.innerHTML=`<div style="background:#f8e5db;border:1px solid #031c3322;border-radius:10px;padding:18px;margin-bottom:16px;">
+        <div style="font-size:.7rem;color:#585254;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Abonnement actuel</div>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+            <span style="display:inline-block;padding:4px 12px;border-radius:20px;font-weight:800;font-size:.9rem;background:${isPaid?'rgba(240,75,46,.15)':'rgba(88,82,84,.1)'};color:${isPaid?'#f04b2e':'#585254'};">${(planInfo.label||plan).toUpperCase()}</span>
+            ${isPaid?`<span style="font-size:.8rem;color:#585254;">${planInfo.price}€/mois · ${planInfo.restaurants} resto${planInfo.restaurants>1?'s':''} · ${planInfo.directories} ann.</span>`:'<span style="font-size:.8rem;color:#585254;">Gratuit</span>'}
+        </div>
+        ${trialHtml}
+        <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+            ${isPaid?`<button class="btn-gen" onclick="openBillingPortal()">Gérer l'abonnement</button>`:''}
+            <button class="btn-gen" onclick="showUpgradeModal('Choisissez le plan qui correspond à vos besoins.','${isPaid&&plan!=='premium'?'premium':'pro'}')" style="background:#f04b2e;color:#f8e5db;border-color:#f04b2e;">Mettre à niveau</button>
+        </div>
+    </div>`;
+}
+
+async function openBillingPortal(){
+    if(authMode!=='server')return alert('Portail Stripe disponible en production.');
+    try{
+        const r=await fetch(API_BASE+'/api/subscription/portal',{method:'POST',headers:{'Authorization':'Bearer '+sessionToken}});
+        const d=await r.json();
+        if(d.portalUrl)window.open(d.portalUrl,'_blank');
+        else alert(d.error||'Portail non disponible (Stripe non configuré)');
+    }catch(e){alert('Erreur réseau');}
+}
+
+// Override renderDashboard to also call renderTrialBanner + renderSubscriptionSettings
+const _origRenderDash_trial = renderDashboard;
+renderDashboard = function(){
+    _origRenderDash_trial.apply(this, arguments);
+    try { renderTrialBanner(); } catch(e) {}
+    try { renderSubscriptionSettings(); } catch(e) {}
+};
+
 document.addEventListener('DOMContentLoaded',()=>{
   // Hide static SEO block (only for crawlers, already visually hidden via CSS)
   const seoStatic=document.getElementById('_seo_static');
   if(seoStatic)seoStatic.remove();
-  if(!handleUrlParams()){checkSession();}checkUpgradeRedirect();checkOAuthRedirect();checkRegistrationMode();
+  if(!handleUrlParams()){checkSession();}checkUpgradeRedirect();checkOAuthRedirect();checkRegistrationMode();checkUpgradeHash();
 });
 
 // ============================================================

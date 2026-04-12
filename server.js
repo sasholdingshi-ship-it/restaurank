@@ -655,10 +655,28 @@ db.exec(`
   );
 `);
 
+// ============================================================
+// APP CONFIG TABLE — key/value store for dynamic settings
+// ============================================================
+db.exec(`
+  CREATE TABLE IF NOT EXISTS app_config (
+    key TEXT PRIMARY KEY,
+    value TEXT
+  );
+  CREATE TABLE IF NOT EXISTS trial_emails (
+    account_id INTEGER NOT NULL,
+    email_type TEXT NOT NULL,
+    sent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(account_id, email_type)
+  );
+`);
+
 // Migrate: add owner_id to restaurants
 try { db.exec(`ALTER TABLE restaurants ADD COLUMN owner_id INTEGER REFERENCES accounts(id)`); } catch(e) {}
 try { db.exec(`ALTER TABLE restaurants ADD COLUMN hub_data TEXT`); } catch(e) {}
 try { db.exec(`ALTER TABLE users ADD COLUMN social_tokens TEXT DEFAULT '{}'`); } catch(e) {}
+// Migrate: add trial_ends_at to accounts
+try { db.exec(`ALTER TABLE accounts ADD COLUMN trial_ends_at DATETIME`); } catch(e) {}
 
 // Migrate: link existing restaurants to accounts via email matching
 try {
@@ -1113,9 +1131,12 @@ function generateToken() {
 function authMiddleware(req, res, next) {
   const token = (req.headers.authorization || '').replace('Bearer ', '') || req.query.session;
   if (!token) { req.account = null; return next(); }
-  const session = db.prepare('SELECT s.*, a.id as account_id, a.email, a.name, a.role, a.plan, a.plan_expires, a.max_restaurants, a.is_active FROM sessions s JOIN accounts a ON s.account_id = a.id WHERE s.id = ? AND s.expires_at > datetime(\'now\')').get(token);
+  const session = db.prepare('SELECT s.*, a.id as account_id, a.email, a.name, a.role, a.plan, a.plan_expires, a.max_restaurants, a.is_active, a.trial_ends_at FROM sessions s JOIN accounts a ON s.account_id = a.id WHERE s.id = ? AND s.expires_at > datetime(\'now\')').get(token);
   if (!session || !session.is_active) { req.account = null; return next(); }
-  req.account = { id: session.account_id, email: session.email, name: session.name, role: session.role, plan: session.plan, planExpires: session.plan_expires, maxRestaurants: session.max_restaurants };
+  const now = new Date();
+  const trialEndsAt = session.trial_ends_at ? new Date(session.trial_ends_at) : null;
+  const isTrialing = trialEndsAt ? trialEndsAt > now : false;
+  req.account = { id: session.account_id, email: session.email, name: session.name, role: session.role, plan: session.plan, planExpires: session.plan_expires, maxRestaurants: session.max_restaurants, trialEndsAt: session.trial_ends_at, isTrialing };
   req.sessionToken = token;
   next();
 }
@@ -1130,6 +1151,21 @@ function requireAuth(req, res, next) {
 function requireAdmin(req, res, next) {
   if (!req.account || req.account.role !== 'admin') return res.status(403).json({ error: 'Accès admin requis' });
   next();
+}
+
+// Require minimum plan — allows paid plans + active trials, blocks expired free
+function requirePlan(minPlan) {
+  const paidPlans = ['starter','pro','premium','enterprise'];
+  return (req, res, next) => {
+    if (!req.account) return res.status(401).json({ error: 'Non authentifié' });
+    if (req.account.role === 'admin') return next();
+    if (paidPlans.includes(req.account.plan)) return next();
+    // Check trial
+    if (req.account.isTrialing) return next();
+    // Free + trial expired → 402
+    const daysLeft = req.account.trialEndsAt ? Math.max(0, Math.ceil((new Date(req.account.trialEndsAt) - Date.now()) / 86400000)) : 0;
+    return res.status(402).json({ error: 'trial_expired', daysLeft, upgradeUrl: '/app#upgrade' });
+  };
 }
 
 // Require specific role on restaurant
@@ -1371,7 +1407,7 @@ app.post('/auth/register', (req, res) => {
   const hash = hashPassword(password, salt);
   const verificationToken = generateToken();
   const limits = PLAN_LIMITS[grantedPlan] || PLAN_LIMITS.free;
-  const result = db.prepare('INSERT INTO accounts (email, password_hash, salt, name, verification_token, plan, max_restaurants) VALUES (?, ?, ?, ?, ?, ?, ?)').run(emailClean, hash, salt, name || '', verificationToken, grantedPlan, limits.restaurants);
+  const result = db.prepare('INSERT INTO accounts (email, password_hash, salt, name, verification_token, plan, max_restaurants, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime(\'now\', \'+14 days\'))').run(emailClean, hash, salt, name || '', verificationToken, grantedPlan, limits.restaurants);
 
   // Auto-accept pending invitations for this email
   const pendingInvites = db.prepare('SELECT * FROM invitations WHERE email = ? AND accepted = 0 AND expires_at > datetime(\'now\')').all(emailClean);
@@ -1386,8 +1422,10 @@ app.post('/auth/register', (req, res) => {
   db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, ?)').run(sessionId, result.lastInsertRowid, expires);
   db.prepare('UPDATE accounts SET last_login = datetime(\'now\') WHERE id = ?').run(result.lastInsertRowid);
 
-  const account = db.prepare('SELECT id, email, name, role, plan, max_restaurants FROM accounts WHERE id = ?').get(result.lastInsertRowid);
+  const account = db.prepare('SELECT id, email, name, role, plan, max_restaurants, trial_ends_at FROM accounts WHERE id = ?').get(result.lastInsertRowid);
   console.log(`🆕 New account: ${emailClean} (plan: ${grantedPlan}, mode: ${REGISTRATION_MODE}${inviteCode ? ', code: ' + inviteCode.substring(0, 6) + '...' : ''})`);
+  // Send welcome email with trial info (async, don't block response)
+  sendWelcomeWithTrial(account).catch(e => console.warn('Welcome email error:', e.message));
   res.json({ success: true, session: sessionId, account, invitesAccepted: pendingInvites.length });
 });
 
@@ -1596,11 +1634,15 @@ app.get('/api/license/check', (req, res) => {
 // ============================================================
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY || '';
 const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET || '';
-const STRIPE_PRICE_IDS = {
-  starter: process.env.STRIPE_PRICE_STARTER || 'price_starter_monthly',
-  pro: process.env.STRIPE_PRICE_PRO || 'price_pro_monthly',
-  premium: process.env.STRIPE_PRICE_PREMIUM || 'price_premium_monthly'
-};
+
+// Price IDs: read from app_config (auto-setup) first, then env vars, then placeholder
+function getStripePriceIds() {
+  return {
+    starter: db.prepare('SELECT value FROM app_config WHERE key=?').get('stripe_price_starter')?.value || process.env.STRIPE_PRICE_STARTER || '',
+    pro:     db.prepare('SELECT value FROM app_config WHERE key=?').get('stripe_price_pro')?.value     || process.env.STRIPE_PRICE_PRO     || '',
+    premium: db.prepare('SELECT value FROM app_config WHERE key=?').get('stripe_price_premium')?.value || process.env.STRIPE_PRICE_PREMIUM || ''
+  };
+}
 
 let _stripe = null;
 function getStripe() {
@@ -1608,6 +1650,37 @@ function getStripe() {
     try { _stripe = require('stripe')(STRIPE_SECRET); } catch(e) { console.warn('Stripe SDK not installed — running in demo mode'); }
   }
   return _stripe;
+}
+
+async function setupStripeProducts() {
+  if (!STRIPE_SECRET) { console.log('💳 Stripe non configuré — skip auto-setup'); return; }
+  const stripe = getStripe();
+  if (!stripe) return;
+  try {
+    const existing = getStripePriceIds();
+    if (existing.starter && existing.pro && existing.premium) {
+      console.log(`💳 Stripe prices already set: starter=${existing.starter} pro=${existing.pro} premium=${existing.premium}`);
+      return;
+    }
+    const plans = [
+      { key: 'starter', name: 'RestauRank Starter', price: 2900 },
+      { key: 'pro',     name: 'RestauRank Pro',     price: 7900 },
+      { key: 'premium', name: 'RestauRank Premium',  price: 14900 }
+    ];
+    const ids = {};
+    for (const p of plans) {
+      const existingId = db.prepare('SELECT value FROM app_config WHERE key=?').get(`stripe_price_${p.key}`)?.value;
+      if (existingId) { ids[p.key] = existingId; continue; }
+      const product = await stripe.products.create({ name: p.name, metadata: { plan: p.key } });
+      const priceObj = await stripe.prices.create({ product: product.id, unit_amount: p.price, currency: 'eur', recurring: { interval: 'month' } });
+      db.prepare('INSERT OR REPLACE INTO app_config (key,value) VALUES (?,?)').run(`stripe_price_${p.key}`, priceObj.id);
+      ids[p.key] = priceObj.id;
+      console.log(`💳 Created Stripe price for ${p.name}: ${priceObj.id}`);
+    }
+    console.log(`💳 Stripe prices ready: starter=${ids.starter} pro=${ids.pro} premium=${ids.premium}`);
+  } catch(e) {
+    console.warn(`⚠️ Stripe auto-setup failed: ${e.message}`);
+  }
 }
 
 app.get('/api/plans', (req, res) => {
@@ -1621,7 +1694,10 @@ app.post('/api/subscription/upgrade', requireAuth, async (req, res) => {
   if (plan === 'free') return res.status(400).json({ error: 'Utilisez /api/subscription/cancel pour passer au plan gratuit' });
 
   const stripe = getStripe();
-  if (stripe && STRIPE_PRICE_IDS[plan] && !STRIPE_PRICE_IDS[plan].startsWith('price_')) {
+  const STRIPE_PRICE_IDS = getStripePriceIds();
+  // A real price ID looks like price_xxx (alphanumeric after prefix, min length)
+  const isRealPriceId = (id) => id && id.startsWith('price_') && id.length > 10;
+  if (stripe && isRealPriceId(STRIPE_PRICE_IDS[plan])) {
     // --- PRODUCTION: Stripe checkout ---
     try {
       let customerId = db.prepare('SELECT stripe_customer_id FROM accounts WHERE id = ?').get(req.account.id)?.stripe_customer_id;
@@ -1695,6 +1771,139 @@ app.get('/api/subscription/status', requireAuth, (req, res) => {
   });
 });
 
+// Trial status
+app.get('/api/subscription/trial-status', requireAuth, (req, res) => {
+  const account = db.prepare('SELECT plan, trial_ends_at FROM accounts WHERE id = ?').get(req.account.id);
+  if (!account) return res.status(404).json({ error: 'Compte introuvable' });
+  const now = new Date();
+  const trialEndsAt = account.trial_ends_at ? new Date(account.trial_ends_at) : null;
+  const isTrialing = trialEndsAt ? trialEndsAt > now : false;
+  const daysLeft = trialEndsAt ? Math.max(0, Math.ceil((trialEndsAt - now) / 86400000)) : 0;
+  const isExpired = !isTrialing && (!['starter','pro','premium','enterprise'].includes(account.plan));
+  res.json({ plan: account.plan, isTrialing, trialEndsAt: account.trial_ends_at, daysLeft, isExpired });
+});
+
+// ============================================================
+// TRIAL EMAIL SEQUENCES
+// ============================================================
+async function sendWelcomeWithTrial(account) {
+  const trialEnd = account.trial_ends_at ? new Date(account.trial_ends_at).toLocaleDateString('fr-FR') : '—';
+  return sendEmail(account.email, 'Bienvenue sur RestauRank — 14 jours pour booster votre visibilité', `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8e5db;">
+      <h2 style="color:#031c33;font-family:Georgia,serif;">Bienvenue sur RestauRank !</h2>
+      <p style="color:#353233;">Bonjour ${account.name || account.email.split('@')[0]},</p>
+      <p style="color:#353233;">Votre essai gratuit de <strong>14 jours</strong> démarre maintenant. Profitez de toutes les fonctionnalités jusqu'au <strong>${trialEnd}</strong>.</p>
+      <h3 style="color:#031c33;margin-top:20px;">3 actions à faire cette semaine</h3>
+      <ol style="color:#353233;line-height:2;">
+        <li>Lancez votre premier audit SEO + GEO</li>
+        <li>Connectez votre Google Business Profile</li>
+        <li>Réclamez vos fiches sur 3 annuaires clés</li>
+      </ol>
+      <a href="${APP_URL}" style="display:inline-block;background:#f04b2e;color:#f8e5db;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:20px 0;">Démarrer mon audit</a>
+      <p style="color:#888;font-size:12px;margin-top:24px;">Votre essai expire le ${trialEnd}. Passez au plan Starter dès 29€/mois pour continuer.</p>
+    </div>
+  `);
+}
+
+async function sendTrialD3(account) {
+  return sendEmail(account.email, '3 actions qui changent tout pour votre visibilité', `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8e5db;">
+      <h2 style="color:#031c33;font-family:Georgia,serif;">3 quick wins pour booster votre visibilité</h2>
+      <p style="color:#353233;">Vous avez commencé votre essai RestauRank il y a 3 jours. Voici les 3 actions les plus impactantes :</p>
+      <div style="margin:16px 0;padding:14px;background:#fff;border-left:4px solid #f04b2e;border-radius:4px;">
+        <strong style="color:#031c33;">1. Ajoutez Schema.org Restaurant</strong>
+        <p style="color:#585254;font-size:.9rem;margin:4px 0 0;">+15 points GEO en moyenne. RestauRank le génère en 1 clic.</p>
+      </div>
+      <div style="margin:16px 0;padding:14px;background:#fff;border-left:4px solid #f04b2e;border-radius:4px;">
+        <strong style="color:#031c33;">2. Uploadez 25 photos sur GBP</strong>
+        <p style="color:#585254;font-size:.9rem;margin:4px 0 0;">Les restaurants avec 25+ photos reçoivent 42% de demandes d'itinéraire en plus.</p>
+      </div>
+      <div style="margin:16px 0;padding:14px;background:#fff;border-left:4px solid #f04b2e;border-radius:4px;">
+        <strong style="color:#031c33;">3. Réclamez votre fiche Yelp</strong>
+        <p style="color:#585254;font-size:.9rem;margin:4px 0 0;">Yelp = source #1 de ChatGPT. Essentiel pour votre score GEO.</p>
+      </div>
+      <a href="${APP_URL}" style="display:inline-block;background:#f04b2e;color:#f8e5db;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:20px 0;">Appliquer ces améliorations</a>
+    </div>
+  `);
+}
+
+async function sendTrialD12(account) {
+  const daysLeft = account.trial_ends_at ? Math.max(0, Math.ceil((new Date(account.trial_ends_at) - Date.now()) / 86400000)) : 2;
+  return sendEmail(account.email, `Plus que ${daysLeft} jours d'essai RestauRank`, `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8e5db;">
+      <h2 style="color:#031c33;font-family:Georgia,serif;">Votre essai se termine bientôt</h2>
+      <p style="color:#353233;">Il ne vous reste que <strong>${daysLeft} jours</strong> pour profiter de toutes les fonctionnalités RestauRank.</p>
+      <p style="color:#353233;">Ne perdez pas l'accès à vos audits, votre tableau de bord et vos améliorations automatiques.</p>
+      <div style="margin:20px 0;padding:16px;background:#fff;border-radius:8px;text-align:center;">
+        <div style="font-size:2rem;font-weight:900;color:#f04b2e;">29€<small style="font-size:.6em;">/mois</small></div>
+        <div style="color:#585254;font-size:.9rem;">Plan Starter — pour continuer sans interruption</div>
+      </div>
+      <a href="${APP_URL}#upgrade=starter" style="display:inline-block;background:#f04b2e;color:#f8e5db;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:8px 0;">Continuer avec Starter</a>
+    </div>
+  `);
+}
+
+async function sendTrialExpired(account) {
+  return sendEmail(account.email, 'Votre essai RestauRank est terminé — continuez pour 29€/mois', `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8e5db;">
+      <h2 style="color:#031c33;font-family:Georgia,serif;">Votre essai est terminé</h2>
+      <p style="color:#353233;">Votre essai gratuit de 14 jours est arrivé à son terme. Vos données sont conservées — reprenez là où vous en étiez.</p>
+      <p style="color:#353233;">Choisissez le plan qui correspond à votre restaurant :</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;">
+        <tr><td style="padding:10px;background:#fff;border-radius:8px 0 0 8px;"><strong>Starter</strong></td><td style="padding:10px;background:#fff;color:#f04b2e;font-weight:700;">29€/mois</td><td style="padding:10px;background:#fff;border-radius:0 8px 8px 0;"><a href="${APP_URL}#upgrade=starter" style="background:#f04b2e;color:#f8e5db;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:.85rem;">Choisir</a></td></tr>
+        <tr style="height:4px;"></tr>
+        <tr><td style="padding:10px;background:#fff;border-radius:8px 0 0 8px;"><strong>Pro</strong></td><td style="padding:10px;background:#fff;color:#f04b2e;font-weight:700;">79€/mois</td><td style="padding:10px;background:#fff;border-radius:0 8px 8px 0;"><a href="${APP_URL}#upgrade=pro" style="background:#f04b2e;color:#f8e5db;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:.85rem;">Choisir</a></td></tr>
+        <tr style="height:4px;"></tr>
+        <tr><td style="padding:10px;background:#fff;border-radius:8px 0 0 8px;"><strong>Premium</strong></td><td style="padding:10px;background:#fff;color:#f04b2e;font-weight:700;">149€/mois</td><td style="padding:10px;background:#fff;border-radius:0 8px 8px 0;"><a href="${APP_URL}#upgrade=premium" style="background:#f04b2e;color:#f8e5db;padding:6px 14px;border-radius:6px;text-decoration:none;font-size:.85rem;">Choisir</a></td></tr>
+      </table>
+      <p style="color:#888;font-size:12px;">Vos données sont sauvegardées et disponibles dès votre réactivation.</p>
+    </div>
+  `);
+}
+
+async function sendPaymentFailed(account) {
+  return sendEmail(account.email, 'Problème de paiement RestauRank — action requise', `
+    <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8e5db;">
+      <h2 style="color:#031c33;font-family:Georgia,serif;">Problème de paiement</h2>
+      <p style="color:#353233;">Nous n'avons pas pu encaisser votre paiement pour RestauRank. Votre accès reste actif temporairement.</p>
+      <p style="color:#353233;">Mettez à jour votre moyen de paiement pour éviter toute interruption de service.</p>
+      <a href="${APP_URL}/api/subscription/portal" style="display:inline-block;background:#f04b2e;color:#f8e5db;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:20px 0;">Mettre à jour le paiement</a>
+      <p style="color:#888;font-size:12px;">Si le problème persiste, contactez-nous à support@restaurank.com</p>
+    </div>
+  `);
+}
+
+// Trial email cron — runs every 6 hours
+setInterval(async () => {
+  try {
+    const now = new Date();
+    const accounts = db.prepare('SELECT id, email, name, plan, trial_ends_at FROM accounts WHERE trial_ends_at IS NOT NULL AND plan = ? AND is_active = 1').all('free');
+    for (const acc of accounts) {
+      const trialEnd = new Date(acc.trial_ends_at);
+      const daysSinceStart = Math.round((now - (trialEnd - 14 * 86400000)) / 86400000);
+      const daysLeft = Math.ceil((trialEnd - now) / 86400000);
+      const emailSent = (type) => !!db.prepare('SELECT 1 FROM trial_emails WHERE account_id=? AND email_type=?').get(acc.id, type);
+      const markSent = (type) => { try { db.prepare('INSERT OR IGNORE INTO trial_emails (account_id, email_type) VALUES (?,?)').run(acc.id, type); } catch(e) {} };
+      // D+3
+      if (daysSinceStart >= 3 && !emailSent('d3')) {
+        await sendTrialD3(acc).catch(() => {});
+        markSent('d3');
+      }
+      // D+12 (daysLeft <= 2)
+      if (daysLeft <= 2 && daysLeft >= 0 && !emailSent('d12')) {
+        await sendTrialD12(acc).catch(() => {});
+        markSent('d12');
+      }
+      // D+14 expired
+      if (daysLeft <= 0 && !emailSent('expired')) {
+        await sendTrialExpired(acc).catch(() => {});
+        markSent('expired');
+        // Ensure plan stays free (no auto-upgrade action needed, already free)
+      }
+    }
+  } catch(e) { console.warn('Trial cron error:', e.message); }
+}, 6 * 60 * 60 * 1000);
+
 // Stripe webhook — handles subscription lifecycle events
 app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), (req, res) => {
   const stripe = getStripe();
@@ -1743,16 +1952,42 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), (req,
     }
     case 'customer.subscription.deleted': {
       const sub = event.data.object;
-      const account = db.prepare('SELECT id FROM accounts WHERE stripe_subscription_id = ?').get(sub.id);
+      const account = db.prepare('SELECT id, email, name FROM accounts WHERE stripe_subscription_id = ?').get(sub.id);
       if (account) {
         db.prepare('UPDATE accounts SET plan = ?, plan_expires = NULL, stripe_subscription_id = NULL, max_restaurants = 1 WHERE id = ?').run('free', account.id);
         console.log(`⬇️ Account ${account.id} downgraded to free (subscription cancelled)`);
+        // Send cancellation email
+        sendEmail(account.email, 'Votre abonnement RestauRank a été annulé', `
+          <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;padding:24px;background:#f8e5db;">
+            <h2 style="color:#031c33;font-family:Georgia,serif;">Abonnement annulé</h2>
+            <p style="color:#353233;">Votre abonnement RestauRank a été annulé. Vous repassez sur le plan gratuit.</p>
+            <p style="color:#353233;">Vos données sont conservées. Réabonnez-vous à tout moment pour retrouver vos fonctionnalités.</p>
+            <a href="${APP_URL}#upgrade" style="display:inline-block;background:#f04b2e;color:#f8e5db;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:20px 0;">Se réabonner</a>
+          </div>
+        `).catch(() => {});
       }
       break;
     }
     case 'invoice.payment_failed': {
       const invoice = event.data.object;
       console.warn(`⚠️ Payment failed for subscription ${invoice.subscription}`);
+      if (invoice.subscription) {
+        const account = db.prepare('SELECT id, email, name FROM accounts WHERE stripe_subscription_id = ?').get(invoice.subscription);
+        if (account) sendPaymentFailed(account).catch(() => {});
+      }
+      break;
+    }
+    case 'customer.subscription.updated': {
+      const sub = event.data.object;
+      const account = db.prepare('SELECT id FROM accounts WHERE stripe_subscription_id = ?').get(sub.id);
+      if (account && sub.items?.data?.[0]?.price?.metadata?.plan) {
+        const newPlan = sub.items.data[0].price.metadata.plan;
+        if (PLAN_LIMITS[newPlan]) {
+          const limits = PLAN_LIMITS[newPlan];
+          db.prepare('UPDATE accounts SET plan = ?, max_restaurants = ? WHERE id = ?').run(newPlan, limits.restaurants, account.id);
+          console.log(`🔄 Account ${account.id} plan updated to ${newPlan}`);
+        }
+      }
       break;
     }
   }
@@ -1795,6 +2030,58 @@ app.get('/api/admin/stats', requireAuth, requireAdmin, (req, res) => {
   const totalTeamMembers = db.prepare('SELECT COUNT(*) as c FROM team_members').get().c;
   const totalInvitations = db.prepare('SELECT COUNT(*) as c FROM invitations WHERE accepted = 0').get().c;
   res.json({ totalAccounts, activeAccounts, totalRestaurants, planDistribution, recentSignups, recentLogins, totalTeamMembers, totalInvitations });
+});
+
+// Commercialization stats
+app.get('/api/admin/commercialization', requireAuth, requireAdmin, (req, res) => {
+  const now = new Date().toISOString();
+  const totalAccounts = db.prepare('SELECT COUNT(*) as c FROM accounts WHERE role != ?').get('admin').c;
+  const trialing = db.prepare('SELECT COUNT(*) as c FROM accounts WHERE trial_ends_at > ? AND plan = ? AND role != ?').get(now, 'free', 'admin').c;
+  const paid = db.prepare('SELECT COUNT(*) as c FROM accounts WHERE plan IN (?,?,?,?) AND role != ?').get('starter','pro','premium','enterprise','admin').c;
+  const expired = db.prepare('SELECT COUNT(*) as c FROM accounts WHERE (trial_ends_at IS NULL OR trial_ends_at <= ?) AND plan = ? AND role != ?').get(now, 'free', 'admin').c;
+  // MRR
+  const paidAccounts = db.prepare('SELECT plan FROM accounts WHERE plan IN (?,?,?,?)').all('starter','pro','premium','enterprise');
+  const mrr = paidAccounts.reduce((sum, a) => sum + (PLAN_LIMITS[a.plan]?.price || 0), 0);
+  // Conversion rate
+  const totalExpiredOrPaid = expired + paid;
+  const trialConversionRate = totalExpiredOrPaid > 0 ? Math.round((paid / totalExpiredOrPaid) * 100) / 100 : 0;
+  const stripePrices = getStripePriceIds();
+  res.json({ totalAccounts, trialing, paid, expired, mrr, trialConversionRate, stripeConfigured: !!STRIPE_SECRET, stripePrices });
+});
+
+// Manual Stripe setup trigger
+app.post('/api/admin/stripe/setup', requireAuth, requireAdmin, async (req, res) => {
+  try {
+    await setupStripeProducts();
+    const prices = getStripePriceIds();
+    res.json({ success: true, prices });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Trial email log
+app.get('/api/admin/trial-emails', requireAuth, requireAdmin, (req, res) => {
+  const emails = db.prepare('SELECT te.*, a.email as account_email FROM trial_emails te JOIN accounts a ON te.account_id = a.id ORDER BY te.sent_at DESC LIMIT 50').all();
+  res.json(emails);
+});
+
+// Manual trial email send
+app.post('/api/admin/trial-email/send', requireAuth, requireAdmin, async (req, res) => {
+  const { accountId, emailType } = req.body;
+  if (!accountId || !emailType) return res.status(400).json({ error: 'accountId et emailType requis' });
+  const account = db.prepare('SELECT id, email, name, plan, trial_ends_at FROM accounts WHERE id = ?').get(accountId);
+  if (!account) return res.status(404).json({ error: 'Compte introuvable' });
+  try {
+    if (emailType === 'd3') await sendTrialD3(account);
+    else if (emailType === 'd12') await sendTrialD12(account);
+    else if (emailType === 'expired') await sendTrialExpired(account);
+    else return res.status(400).json({ error: 'Type invalide (d3|d12|expired)' });
+    db.prepare('INSERT OR REPLACE INTO trial_emails (account_id, email_type) VALUES (?,?)').run(accountId, emailType);
+    res.json({ success: true });
+  } catch(e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.post('/api/admin/account/:id/toggle', requireAuth, requireAdmin, (req, res) => {
@@ -5970,7 +6257,7 @@ app.get('/restaurank-wp-plugin.zip', (req, res) => {
 });
 
 // WordPress Auto-Apply via REST API
-app.post('/api/cms/wordpress/apply', async (req, res) => {
+app.post('/api/cms/wordpress/apply', requirePlan('starter'), async (req, res) => {
   const { site_url, username, app_password, improvements } = req.body;
   try {
     const results = [];
@@ -6063,7 +6350,7 @@ app.post('/api/cms/wordpress/apply', async (req, res) => {
 });
 
 // Webflow Auto-Apply (generates instructions — actual apply via MCP tools in frontend)
-app.post('/api/cms/webflow/apply', async (req, res) => {
+app.post('/api/cms/webflow/apply', requirePlan('starter'), async (req, res) => {
   const { site_id, improvements } = req.body;
   // Webflow changes are applied via Webflow MCP tools from the frontend
   // This endpoint validates and prepares the payload
@@ -6079,7 +6366,7 @@ app.post('/api/cms/webflow/apply', async (req, res) => {
 });
 
 // Wix Auto-Apply via Velo (Wix Headless API)
-app.post('/api/cms/wix/apply', async (req, res) => {
+app.post('/api/cms/wix/apply', requirePlan('starter'), async (req, res) => {
   const { api_key, site_id, improvements } = req.body;
   const wixKey = api_key || process.env.WIX_API_KEY;
   if (!wixKey) return res.json({ success: false, error: 'WIX_API_KEY requis', needsConfig: true,
@@ -6103,7 +6390,7 @@ app.post('/api/cms/wix/apply', async (req, res) => {
 });
 
 // Squarespace Auto-Apply via REST API
-app.post('/api/cms/squarespace/apply', async (req, res) => {
+app.post('/api/cms/squarespace/apply', requirePlan('starter'), async (req, res) => {
   const { api_key, improvements } = req.body;
   const sqKey = api_key || process.env.SQUARESPACE_API_KEY;
   if (!sqKey) return res.json({ success: false, error: 'SQUARESPACE_API_KEY requis', needsConfig: true,
@@ -6132,7 +6419,7 @@ app.post('/api/cms/squarespace/apply', async (req, res) => {
 });
 
 // Shopify Auto-Apply via Admin API
-app.post('/api/cms/shopify/apply', async (req, res) => {
+app.post('/api/cms/shopify/apply', requirePlan('starter'), async (req, res) => {
   const { shop_domain, access_token, improvements } = req.body;
   const shopDomain = shop_domain || process.env.SHOPIFY_SHOP_DOMAIN;
   const shopToken = access_token || process.env.SHOPIFY_ACCESS_TOKEN;
@@ -6186,7 +6473,7 @@ app.post('/api/cms/shopify/apply', async (req, res) => {
 });
 
 // Generic CMS apply (PrestaShop, Drupal, Joomla — generates instructions + ready-to-paste code)
-app.post('/api/cms/generic/apply', async (req, res) => {
+app.post('/api/cms/generic/apply', requirePlan('starter'), async (req, res) => {
   const { cms_type, improvements } = req.body;
   const results = [];
   const schemaCode = improvements.schema_org ? `<script type="application/ld+json">${improvements.schema_org}</script>` : null;
@@ -6721,7 +7008,7 @@ app.post('/api/directories/auto-check', async (req, res) => {
 });
 
 // Auto-claim a single platform — generates all data needed
-app.post('/api/directories/auto-claim', async (req, res) => {
+app.post('/api/directories/auto-claim', requirePlan('starter'), async (req, res) => {
   const { platform, name, city, address, phone, website, email, restaurant_id } = req.body;
   const q = encodeURIComponent(`${name} ${city}`);
 
@@ -9388,7 +9675,7 @@ app.post('/api/ai/review-reply', async (req, res) => {
 });
 
 // POST /api/ai/bulk-generate — Generate all content for a restaurant in one shot
-app.post('/api/ai/bulk-generate', async (req, res) => {
+app.post('/api/ai/bulk-generate', requirePlan('starter'), async (req, res) => {
   try {
     const { restaurant_id, context } = req.body;
     const apiKey = getAIKey();
@@ -15091,6 +15378,7 @@ app.post('/api/posts/google/duplicate', async (req, res) => {
 // ============================================================
 app.listen(PORT, '0.0.0.0', async () => {
   setupPGSync(db).catch(e => console.warn('PG sync setup error:', e.message));
+  setupStripeProducts().catch(e => console.warn('Stripe setup error:', e.message));
   // IndexNow: ping all public URLs at startup
   const indexNowUrls = [
     `${SITE_URL}/`,
