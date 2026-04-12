@@ -10428,12 +10428,53 @@ app.get('/robots.txt', (req, res) => {
 Allow: /
 Allow: /about
 Allow: /pricing
+Allow: /blog
+Allow: /comparatif
 Disallow: /admin
 Disallow: /api/
 Disallow: /auth/
 
 Sitemap: ${SITE_URL}/sitemap.xml
 `);
+});
+
+// IndexNow key file
+app.get('/indexnow-key.txt', (req, res) => {
+  res.type('text/plain').send('restaurank2026geo');
+});
+
+// IndexNow ping function
+async function pingIndexNow(urls) {
+  try {
+    const body = {
+      host: 'restaurank.onrender.com',
+      key: 'restaurank2026geo',
+      keyLocation: 'https://restaurank.onrender.com/indexnow-key.txt',
+      urlList: urls
+    };
+    const resp = await fetch('https://api.indexnow.org/indexnow', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    console.log(`[IndexNow] Pinged ${urls.length} URLs — status ${resp.status}`);
+    return resp.status;
+  } catch(e) {
+    console.warn('[IndexNow] Ping failed:', e.message);
+  }
+}
+
+// Admin route to manually re-ping IndexNow
+app.post('/api/admin/indexnow-ping', requireAuth, requireAdmin, async (req, res) => {
+  const allUrls = [
+    `${SITE_URL}/`,
+    `${SITE_URL}/about`,
+    `${SITE_URL}/blog`,
+    `${SITE_URL}/comparatif`,
+    ...BLOG_ARTICLES.map(a => `${SITE_URL}/blog/${a.slug}`)
+  ];
+  const status = await pingIndexNow(allUrls);
+  res.json({ ok: true, status, urlCount: allUrls.length });
 });
 
 app.get('/about', (req, res) => {
@@ -10653,6 +10694,129 @@ const BLOG_ARTICLES = [
       <h2>Automatiser la gestion avec RestauRank</h2>
       <p>RestauRank se connecte directement a Google Business Profile via l'API officielle. Il permet de publier des Google Posts, repondre aux avis, mettre a jour les horaires et les attributs — le tout depuis un seul tableau de bord. L'IA genere le contenu adapte au ton et a l'identite du restaurant.</p>
     `
+  },
+  {
+    slug: 'repondre-avis-google-restaurant',
+    title: 'Comment repondre aux avis Google : guide pour restaurateurs',
+    description: 'Strategies et exemples de reponses aux avis Google pour restaurants. Comment transformer un avis negatif en opportunite et booster votre SEO local.',
+    date: '2026-04-09',
+    content: `
+      <h2>Pourquoi repondre aux avis est obligatoire</h2>
+      <p>Google observe le taux de reponse aux avis comme un signal de qualite SEO. Les restaurants qui repondent a plus de 80% de leurs avis apparaissent en moyenne 25% plus souvent dans le Local Pack. Au-dela du SEO, les moteurs IA (ChatGPT, Perplexity, Gemini) privilegient les etablissements dont les fiches sont actives et a jour — repondre aux avis alimente directement ce signal d'activite.</p>
+      <p>Un avis sans reponse est une opportunite manquee : le client insatisfait part sans resolution, les prospects potentiels voient un restaurant qui ne se soucie pas de sa clientele, et Google interprete le silence comme un manque d'engagement.</p>
+
+      <h2>La formule en 3 etapes pour repondre efficacement</h2>
+      <ol>
+        <li><strong>Accuser reception</strong> — Remercier le client par son prenom si disponible, mentionner un detail specifique de son experience pour montrer que la reponse est personnalisee et non automatique.</li>
+        <li><strong>Repondre specifiquement</strong> — Pour un avis negatif : reconnaitre le probleme sans se justifier, proposer une solution concrete (remboursement, invitation a revenir). Pour un avis positif : rebondir sur un detail mentionne, valoriser un plat ou un membre de l'equipe cite.</li>
+        <li><strong>Inviter a revenir</strong> — Terminer par une invitation chaleureuse. Pour les avis negatifs, proposer de contacter directement le restaurant pour resoudre le probleme.</li>
+      </ol>
+
+      <h2>Exemple de reponse a un avis negatif</h2>
+      <p><em>Avis client : "Service tres lent, 45 minutes pour les entrees. Dommage car la cuisine etait bonne."</em></p>
+      <p><strong>Reponse exemplaire :</strong> "Bonjour [Prenom], merci pour votre retour honnete. Vous avez tout a fait raison — un temps d'attente de 45 minutes pour les entrees n'est pas acceptable et nous en sommes desoles. Nous avons renforce notre equipe en salle depuis votre visite. Nous serions ravis de vous accueillir a nouveau pour que vous puissiez vivre l'experience que vous meritez. N'hesitez pas a nous contacter directement."</p>
+
+      <h2>Exemple de reponse a un avis positif</h2>
+      <p><em>Avis client : "Excellent tartare de boeuf, la meilleure version que j'ai mangee a Paris. Ambiance chaleureuse."</em></p>
+      <p><strong>Reponse exemplaire :</strong> "Merci infiniment pour ce beau compliment ! Notre chef sera ravi d'apprendre que son tartare vous a marque — c'est sa recette signature, preparee avec du boeuf Black Angus sourced localement. A tres bientot pour une prochaine decouverte !"</p>
+
+      <h2>Les mots-cles a inclure dans vos reponses</h2>
+      <p>Pour maximiser l'impact SEO, glissez naturellement dans vos reponses : le nom de votre ville ou quartier, votre type de cuisine, le nom de votre restaurant. Ces mots-cles enrichissent le contenu indexable de votre fiche Google.</p>
+
+      <h2>RestauRank automatise les reponses via IA</h2>
+      <p>RestauRank genere automatiquement des projets de reponses personnalisees pour chaque avis, en respectant le ton de votre etablissement. L'IA analyse le contenu de l'avis, detecte les points positifs et negatifs, et propose une reponse optimisee pour le SEO et la satisfaction client — que vous pouvez valider en un clic.</p>
+    `
+  },
+  {
+    slug: 'nap-coherence-restaurant-seo',
+    title: 'NAP : pourquoi la coherence Nom-Adresse-Telephone est critique pour le SEO restaurant',
+    description: 'La coherence NAP (Nom, Adresse, Telephone) est un facteur SEO local majeur. Une seule incoherence sur un annuaire peut diviser votre ranking par 2.',
+    date: '2026-04-10',
+    content: `
+      <h2>Qu'est-ce que le NAP ?</h2>
+      <p>Le NAP (Name, Address, Phone — Nom, Adresse, Telephone) designe l'ensemble des informations d'identification d'un restaurant. La coherence NAP signifie que ces trois informations sont <strong>exactement identiques</strong> sur votre site web, votre fiche Google Business Profile, et tous les annuaires en ligne (TripAdvisor, Yelp, PagesJaunes, TheFork, Foursquare, etc.).</p>
+
+      <h2>Pourquoi Google penalise les incoherences</h2>
+      <p>Google utilise les citations NAP pour verifier l'existence et la legitimite d'un etablissement. Quand les informations different d'une source a l'autre, Google interprete cela comme un signal d'incertitude et abaisse le ranking local. Selon les etudes SEO, une incoherence NAP sur un annuaire important peut reduire le positionnement dans le Local Pack de 15 a 30%.</p>
+      <p>Pour les moteurs IA, la coherence NAP est encore plus critique : ChatGPT et Perplexity agreguent des donnees de multiples sources. Si le nom ou l'adresse varie, l'IA peut considerer qu'il s'agit de deux etablissements differents, divisant ainsi la "notoriete numerique" en deux.</p>
+
+      <h2>Les 5 erreurs NAP les plus frequentes</h2>
+      <ol>
+        <li><strong>Abreviations inconsistantes</strong> — "Bd" vs "Boulevard", "St" vs "Saint", "av." vs "Avenue". Choisissez une convention et appliquez-la partout.</li>
+        <li><strong>Accents manquants ou incorrects</strong> — "Brasserie de l'Hotel" vs "Brasserie de l Hotel" vs "Brasserie de lHotel". Les annuaires etrangers suppriment souvent les accents.</li>
+        <li><strong>Format telephone variable</strong> — "01 23 45 67 89" vs "+33123456789" vs "0123456789". Standardisez au format international (+33).</li>
+        <li><strong>Numero de rue different</strong> — certains restaurants ont un numero d'entree et un numero de livraison. N'utilisez qu'un seul numero.</li>
+        <li><strong>Nom commercial vs raison sociale</strong> — "Le Petit Bistrot" (nom commercial) vs "SARL Durand Restauration" (raison sociale). Utilisez toujours le nom commercial.</li>
+      </ol>
+
+      <h2>Comment auditer votre NAP sur 29 annuaires</h2>
+      <p>Un audit NAP complet necessite de verifier manuellement chaque annuaire : Google, TripAdvisor, Yelp, TheFork, PagesJaunes, Foursquare, Michelin, Booking, OpenTable, Deliveroo, Uber Eats, Just Eat, Mapbox, Apple Maps, Bing Places, Facebook, Instagram, Waze, Here Maps, OpenStreetMap, Zomato, Tripadvisor, LesPACS, Bonne Table, Routard, Petit Fute, Qype, Citysearch, Hotfrog.</p>
+      <p>Ce processus prend entre 2 et 4 heures si fait manuellement. Les incoherences sont souvent introduites par les agregateurs de donnees qui modifient automatiquement les informations.</p>
+
+      <h2>RestauRank verifie et corrige automatiquement</h2>
+      <p>RestauRank verifie en temps reel la coherence NAP sur les 29 principaux annuaires. Le tableau de bord affiche les incoherences detectees avec une indication de severite (majeure, mineure) et propose des corrections automatiques pour les plateformes ou l'API est disponible. Pour les autres, un guide pas-a-pas est fourni.</p>
+    `
+  },
+  {
+    slug: 'schema-org-restaurant-guide',
+    title: 'Schema.org pour restaurants : implementer les donnees structurees et decrocher les rich snippets',
+    description: 'Guide complet pour implementer Schema.org Restaurant sur votre site. Horaires, menu, avis, fourchette de prix — obtenez les rich snippets Google et boostez votre CTR de 30%.',
+    date: '2026-04-11',
+    content: `
+      <h2>Qu'est-ce que Schema.org ?</h2>
+      <p>Schema.org est un vocabulaire de donnees structurees cree par Google, Bing, Yahoo et Yandex. En ajoutant du code JSON-LD (JavaScript Object Notation for Linked Data) dans votre site, vous permettez aux moteurs de recherche de comprendre precisement ce qu'est votre etablissement : un restaurant, pas simplement une page web avec des mots.</p>
+      <p>Les donnees structurees permettent d'obtenir des <strong>rich snippets</strong> dans les resultats Google : etoiles d'avis, horaires, fourchette de prix, type de cuisine — directement affichees dans les SERP avant meme le clic. Les restaurants avec Schema.org complet obtiennent en moyenne 30% de CTR supplementaire.</p>
+
+      <h2>Les types Schema.org pour restaurants</h2>
+      <ul>
+        <li><strong>Restaurant</strong> — le type le plus specifique, herite de FoodEstablishment et LocalBusiness. A utiliser en priorite.</li>
+        <li><strong>FoodEstablishment</strong> — type intermediaire, utile si votre etablissement est a la fois restaurant et bar.</li>
+        <li><strong>LocalBusiness</strong> — type generique, moins efficace pour les rich snippets culinaires mais acceptable en fallback.</li>
+      </ul>
+
+      <h2>Les proprietes essentielles</h2>
+      <ol>
+        <li><strong>name</strong> — nom exact de votre restaurant (identique au NAP)</li>
+        <li><strong>address</strong> — objet PostalAddress avec streetAddress, addressLocality, postalCode, addressCountry</li>
+        <li><strong>telephone</strong> — format international (+33...)</li>
+        <li><strong>openingHours</strong> — format ISO 8601 (ex: "Mo-Fr 12:00-14:30", "Tu-Su 19:00-22:30")</li>
+        <li><strong>servesCuisine</strong> — type de cuisine en texte libre ("Cuisine francaise", "Japonais", "Italien")</li>
+        <li><strong>priceRange</strong> — symboles euro (€, €€, €€€, €€€€)</li>
+        <li><strong>menu</strong> — URL de votre menu en ligne</li>
+        <li><strong>aggregateRating</strong> — note moyenne et nombre d'avis (depuis Google Places ou votre systeme)</li>
+      </ol>
+
+      <h2>Exemple JSON-LD complet</h2>
+      <p>Voici un exemple de Schema.org Restaurant pret a coller dans le &lt;head&gt; de votre site :</p>
+      <pre style="background:#031c33;color:#f8e5db;padding:16px;border-radius:8px;overflow-x:auto;font-size:.8rem;"><code>{
+  "@context": "https://schema.org",
+  "@type": "Restaurant",
+  "name": "Le Petit Bistrot",
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": "12 rue de la Paix",
+    "addressLocality": "Paris",
+    "postalCode": "75001",
+    "addressCountry": "FR"
+  },
+  "telephone": "+33123456789",
+  "openingHours": ["Tu-Sa 12:00-14:30", "Tu-Sa 19:00-22:30"],
+  "servesCuisine": "Cuisine francaise",
+  "priceRange": "€€",
+  "menu": "https://lepetitbistrot.fr/menu",
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.6",
+    "reviewCount": "312"
+  }
+}</code></pre>
+
+      <h2>Impact sur le GEO</h2>
+      <p>Les moteurs IA utilisent Schema.org comme source de verite prioritaire. Quand ChatGPT ou Perplexity cherchent des informations sur votre restaurant, le JSON-LD est la premiere donnee qu'ils lisent — avant meme le contenu textuel. Un Schema.org complet et correct augmente significativement la probabilite d'etre cite avec les bonnes informations dans les reponses IA.</p>
+
+      <h2>RestauRank genere et injecte automatiquement</h2>
+      <p>RestauRank genere le JSON-LD Schema.org complet a partir des donnees de votre Hub Central (NAP, horaires, menu, photos, avis). Pour les sites WordPress, Wix, Squarespace ou Shopify, l'injection est automatique via le plugin ou la connexion API. Le score SEO de votre tableau de bord reflete en temps reel la qualite et la completude de vos donnees structurees.</p>
+    `
   }
 ];
 
@@ -10817,8 +10981,145 @@ app.get('/sitemap.xml', (req, res) => {
     <lastmod>${now}</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/comparatif</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
   </url>${blogUrls}
 </urlset>`);
+});
+
+// Comparatif page (public, SEO)
+app.get('/comparatif', (req, res) => {
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "RestauRank vs audit manuel : comparatif des solutions de referencement pour restaurants",
+    "description": "Comparez RestauRank, l'audit manuel et les agences SEO pour le referencement de votre restaurant. Prix, rapidite, SEO local, score GEO/IA — tableau comparatif complet.",
+    "url": `${SITE_URL}/comparatif`,
+    "publisher": { "@type": "Organization", "name": "RestauRank", "url": SITE_URL }
+  };
+
+  res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RestauRank vs audit manuel : comparatif des solutions de referencement pour restaurants</title>
+<meta name="description" content="Comparez RestauRank, l'audit manuel et les agences SEO pour le referencement de votre restaurant. Prix, rapidite, SEO local, score GEO/IA — tableau comparatif complet.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="${SITE_URL}/comparatif">
+<meta property="og:type" content="website">
+<meta property="og:title" content="RestauRank vs audit manuel vs agence SEO — Comparatif">
+<meta property="og:description" content="Quel est le meilleur outil pour ameliorer le referencement de votre restaurant ? Comparatif complet RestauRank vs audit manuel vs agence SEO.">
+<meta property="og:url" content="${SITE_URL}/comparatif">
+<link rel="stylesheet" href="/public/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<style>
+  .cmp-table { width:100%; border-collapse:collapse; margin:32px 0; font-size:.9rem; }
+  .cmp-table th { background:#031c33; color:#f8e5db; padding:14px 16px; text-align:left; font-family:'Playfair Display',serif; }
+  .cmp-table td { padding:12px 16px; border-bottom:1px solid #031c3315; color:#353233; vertical-align:top; }
+  .cmp-table tr:nth-child(even) td { background:#fff8f3; }
+  .cmp-table .col-rr { background:#fff3ef; font-weight:600; color:#031c33; }
+  .cmp-table .col-rr-head { background:#f04b2e; color:#f8e5db; }
+  .check { color:#2ecc71; font-weight:700; }
+  .cross { color:#e74c3c; }
+  .partial { color:#f39c12; }
+</style>
+</head>
+<body style="background:#031c33;">
+<div style="max-width:900px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;">
+    <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
+    <a href="/about" style="color:#585254;text-decoration:none;font-size:.9rem;">A propos</a>
+    <a href="/blog" style="color:#585254;text-decoration:none;font-size:.9rem;">Blog</a>
+    <a href="/comparatif" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">Comparatif</a>
+  </nav>
+
+  <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:16px;">RestauRank vs audit manuel vs agence SEO</h1>
+  <p style="color:#585254;line-height:1.7;margin-bottom:8px;">Quelle solution choisir pour ameliorer la visibilite en ligne de votre restaurant ? Nous comparons honnement les trois approches sur les criteres qui comptent vraiment pour un restaurateur.</p>
+
+  <table class="cmp-table">
+    <thead>
+      <tr>
+        <th>Critere</th>
+        <th class="col-rr-head">RestauRank</th>
+        <th>Audit manuel</th>
+        <th>Agence SEO</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Prix mensuel</strong></td>
+        <td class="col-rr">A partir de 29€/mois</td>
+        <td>Gratuit (temps)</td>
+        <td>500€ – 2 000€/mois</td>
+      </tr>
+      <tr>
+        <td><strong>Temps d'audit</strong></td>
+        <td class="col-rr">30 secondes</td>
+        <td>2 – 8 heures</td>
+        <td>1 – 2 semaines</td>
+      </tr>
+      <tr>
+        <td><strong>SEO local (49 criteres)</strong></td>
+        <td class="col-rr"><span class="check">✓</span> Automatique</td>
+        <td><span class="partial">~</span> Partiel (5-10 criteres)</td>
+        <td><span class="check">✓</span> Complet</td>
+      </tr>
+      <tr>
+        <td><strong>Score GEO / visibilite IA</strong></td>
+        <td class="col-rr"><span class="check">✓</span> ChatGPT, Perplexity, Gemini, Claude</td>
+        <td><span class="cross">✗</span> Pas de mesure</td>
+        <td><span class="cross">✗</span> Rarement propose</td>
+      </tr>
+      <tr>
+        <td><strong>Auto-apply corrections</strong></td>
+        <td class="col-rr"><span class="check">✓</span> WordPress, Wix, Squarespace</td>
+        <td><span class="cross">✗</span> Manuel</td>
+        <td><span class="partial">~</span> Selon contrat</td>
+      </tr>
+      <tr>
+        <td><strong>Annuaires verifies</strong></td>
+        <td class="col-rr">29 plateformes</td>
+        <td>Quelques-uns</td>
+        <td>10 – 20 selon agence</td>
+      </tr>
+      <tr>
+        <td><strong>Gestion des avis</strong></td>
+        <td class="col-rr"><span class="check">✓</span> IA + reponse auto</td>
+        <td><span class="cross">✗</span> Manuel</td>
+        <td><span class="partial">~</span> En option</td>
+      </tr>
+      <tr>
+        <td><strong>Mises a jour en temps reel</strong></td>
+        <td class="col-rr"><span class="check">✓</span> Monitoring continu</td>
+        <td><span class="cross">✗</span> Ponctuel</td>
+        <td><span class="partial">~</span> Mensuel ou trimestriel</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:40px 0 16px;">Pourquoi RestauRank est fait pour les restaurateurs</h2>
+  <p style="color:#585254;line-height:1.7;margin-bottom:12px;">Les agences SEO generalistes excellent sur les sites e-commerce et les grandes marques, mais le SEO local d'un restaurant a ses propres regles : Google Business Profile, citations NAP, avis clients, visibilite IA. RestauRank a ete concu specifiquement pour ces enjeux.</p>
+  <p style="color:#585254;line-height:1.7;margin-bottom:12px;">L'audit manuel permet de comprendre les bases, mais il ne couvre qu'une fraction des 49 criteres analyses par RestauRank, ne mesure pas le score GEO, et demande un renouvellement constant. Dans un secteur ou la competition locale est intense, la reactivite fait la difference.</p>
+  <p style="color:#585254;line-height:1.7;margin-bottom:32px;">RestauRank combine la profondeur d'une agence avec la rapidite d'un outil SaaS — et le tout reste accessible meme pour un restaurateur sans competences techniques.</p>
+
+  <div style="padding:32px;background:#031c33;border-radius:12px;text-align:center;">
+    <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#f8e5db;margin-bottom:8px;">Essayez RestauRank gratuitement</div>
+    <div style="font-size:.9rem;color:#9e9e9e;margin-bottom:20px;">Audit complet en 30 secondes. Aucune carte bancaire requise.</div>
+    <a href="/" style="display:inline-block;padding:14px 40px;background:#f04b2e;color:#f8e5db;text-decoration:none;border-radius:8px;font-weight:600;font-size:1rem;">Lancer un audit gratuit</a>
+  </div>
+
+  <div style="margin-top:32px;font-size:.85rem;color:#585254;">
+    <a href="/blog" style="color:#f04b2e;text-decoration:none;">Lire nos guides SEO →</a>
+  </div>
+</div>
+</body>
+</html>`);
 });
 
 // Pricing page (public, SEO-friendly)
@@ -14224,6 +14525,15 @@ app.post('/api/posts/google/duplicate', async (req, res) => {
 // ============================================================
 app.listen(PORT, '0.0.0.0', async () => {
   setupPGSync(db).catch(e => console.warn('PG sync setup error:', e.message));
+  // IndexNow: ping all public URLs at startup
+  const indexNowUrls = [
+    `${SITE_URL}/`,
+    `${SITE_URL}/about`,
+    `${SITE_URL}/blog`,
+    `${SITE_URL}/comparatif`,
+    ...BLOG_ARTICLES.map(a => `${SITE_URL}/blog/${a.slug}`)
+  ];
+  pingIndexNow(indexNowUrls).catch(e => console.warn('[IndexNow] Startup ping error:', e.message));
   console.log(`
 ╔══════════════════════════════════════════════════════╗
 ║     RestauRank Backend v6.0 — Full SaaS Mode         ║
