@@ -1699,7 +1699,12 @@ async function revokeInviteCode(id){
 }
 
 // Auto-check session on load
-document.addEventListener('DOMContentLoaded',()=>{if(!handleUrlParams()){checkSession();}checkUpgradeRedirect();checkOAuthRedirect();checkRegistrationMode();});
+document.addEventListener('DOMContentLoaded',()=>{
+  // Hide static SEO block (only for crawlers, already visually hidden via CSS)
+  const seoStatic=document.getElementById('_seo_static');
+  if(seoStatic)seoStatic.remove();
+  if(!handleUrlParams()){checkSession();}checkUpgradeRedirect();checkOAuthRedirect();checkRegistrationMode();
+});
 
 // ============================================================
 // AUDIT DATA — real API data or null (never simulated)
