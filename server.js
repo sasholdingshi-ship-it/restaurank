@@ -10430,6 +10430,7 @@ Allow: /about
 Allow: /pricing
 Allow: /blog
 Allow: /comparatif
+Allow: /features
 Disallow: /admin
 Disallow: /api/
 Disallow: /auth/
@@ -10505,10 +10506,19 @@ app.get('/about', (req, res) => {
   }
 }
 </script>
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"RestauRank","item":"${SITE_URL}"},{"@type":"ListItem","position":2,"name":"A propos","item":"${SITE_URL}/about"}]}
+</script>
 </head>
 <body style="background:#031c33;">
 <div style="max-width:800px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
-  <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.8rem;font-weight:700;display:block;margin-bottom:32px;">RestauRank</a>
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;flex-wrap:wrap;">
+    <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
+    <a href="/about" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">A propos</a>
+    <a href="/blog" style="color:#585254;text-decoration:none;font-size:.9rem;">Blog</a>
+    <a href="/features" style="color:#585254;text-decoration:none;font-size:.9rem;">Features</a>
+    <a href="/pricing" style="color:#585254;text-decoration:none;font-size:.9rem;">Tarifs</a>
+  </nav>
 
   <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:16px;">Audit SEO local et GEO pour restaurants</h1>
 
@@ -10868,10 +10878,12 @@ app.get('/blog', (req, res) => {
 </head>
 <body style="background:#031c33;">
 <div style="max-width:800px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
-  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;">
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;flex-wrap:wrap;">
     <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
     <a href="/about" style="color:#585254;text-decoration:none;font-size:.9rem;">A propos</a>
     <a href="/blog" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">Blog</a>
+    <a href="/features" style="color:#585254;text-decoration:none;font-size:.9rem;">Features</a>
+    <a href="/pricing" style="color:#585254;text-decoration:none;font-size:.9rem;">Tarifs</a>
   </nav>
   <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:32px;">Blog</h1>
   ${articleCards}
@@ -10899,6 +10911,15 @@ app.get('/blog/:slug', (req, res) => {
     "publisher": { "@type": "Organization", "name": "RestauRank", "url": SITE_URL },
     "mainEntityOfPage": { "@type": "WebPage", "@id": `${SITE_URL}/blog/${article.slug}` }
   };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "RestauRank", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Blog", "item": `${SITE_URL}/blog` },
+      { "@type": "ListItem", "position": 3, "name": article.title, "item": `${SITE_URL}/blog/${article.slug}` }
+    ]
+  };
 
   res.send(`<!DOCTYPE html>
 <html lang="fr">
@@ -10917,6 +10938,7 @@ app.get('/blog/:slug', (req, res) => {
 <link rel="stylesheet" href="/public/styles.css">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<script type="application/ld+json">${JSON.stringify(breadcrumbLd)}</script>
 <style>
   .blog-content { line-height: 1.8; color: #353233; }
   .blog-content h2 { font-family: 'Playfair Display', serif; font-size: 1.3rem; color: #031c33; margin: 32px 0 12px; }
@@ -10928,10 +10950,12 @@ app.get('/blog/:slug', (req, res) => {
 </head>
 <body style="background:#031c33;">
 <div style="max-width:800px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
-  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;">
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;flex-wrap:wrap;">
     <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
     <a href="/about" style="color:#585254;text-decoration:none;font-size:.9rem;">A propos</a>
     <a href="/blog" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">Blog</a>
+    <a href="/features" style="color:#585254;text-decoration:none;font-size:.9rem;">Features</a>
+    <a href="/pricing" style="color:#585254;text-decoration:none;font-size:.9rem;">Tarifs</a>
   </nav>
   <article>
     <h1 style="font-family:'Playfair Display',serif;font-size:1.8rem;color:#031c33;margin-bottom:8px;">${article.title}</h1>
@@ -10987,6 +11011,18 @@ app.get('/sitemap.xml', (req, res) => {
     <lastmod>${now}</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/features</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${SITE_URL}/pricing</loc>
+    <lastmod>${now}</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
   </url>${blogUrls}
 </urlset>`);
 });
@@ -11018,6 +11054,7 @@ app.get('/comparatif', (req, res) => {
 <link rel="stylesheet" href="/public/styles.css">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
 <script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"RestauRank","item":"${SITE_URL}"},{"@type":"ListItem","position":2,"name":"Comparatif","item":"${SITE_URL}/comparatif"}]}</script>
 <style>
   .cmp-table { width:100%; border-collapse:collapse; margin:32px 0; font-size:.9rem; }
   .cmp-table th { background:#031c33; color:#f8e5db; padding:14px 16px; text-align:left; font-family:'Playfair Display',serif; }
@@ -11032,10 +11069,12 @@ app.get('/comparatif', (req, res) => {
 </head>
 <body style="background:#031c33;">
 <div style="max-width:900px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
-  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;">
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;flex-wrap:wrap;">
     <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
     <a href="/about" style="color:#585254;text-decoration:none;font-size:.9rem;">A propos</a>
     <a href="/blog" style="color:#585254;text-decoration:none;font-size:.9rem;">Blog</a>
+    <a href="/features" style="color:#585254;text-decoration:none;font-size:.9rem;">Features</a>
+    <a href="/pricing" style="color:#585254;text-decoration:none;font-size:.9rem;">Tarifs</a>
     <a href="/comparatif" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">Comparatif</a>
   </nav>
 
@@ -11122,10 +11161,306 @@ app.get('/comparatif', (req, res) => {
 </html>`);
 });
 
-// Pricing page (public, SEO-friendly)
+// ─── /features ────────────────────────────────────────────────────────────────
+app.get('/features', (req, res) => {
+  const featuresList = [
+    { name: "Audit SEO local — 49 criteres, 7 categories, score sur 100", description: "Analyse complete de la visibilite Google d'un restaurant" },
+    { name: "Score GEO — visibilite IA sur ChatGPT, Perplexity, Gemini, Claude", description: "Mesure de la presence dans les reponses generatives (score RRF)" },
+    { name: "Google Business Profile connecte — posts, avis, photos, horaires", description: "Gestion directe via l'API officielle Google Business Profile" },
+    { name: "Gestion des avis — reponses automatiques IA, surveillance, alertes", description: "Surveillance continue et reponses personnalisees par IA" },
+    { name: "Verification 29 annuaires — TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork", description: "Presence et coherence NAP sur toutes les plateformes cles" },
+    { name: "Auto-apply CMS — WordPress, Webflow, Wix, Squarespace, Shopify", description: "Application automatique des optimisations Schema.org, meta, FAQ" },
+    { name: "Generation de contenu IA — Google Posts, blog, descriptions, mots-cles", description: "Contenu SEO genere et publie automatiquement par Claude" },
+    { name: "Hub Central SSOT — donnees unifiees poussees sur tous les canaux", description: "Source unique de verite pour NAP, photos, horaires et contenu" }
+  ];
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "Fonctionnalites RestauRank",
+    "description": "Les 8 fonctionnalites cles de RestauRank pour le SEO local et GEO des restaurants",
+    "url": `${SITE_URL}/features`,
+    "itemListElement": featuresList.map((f, i) => ({
+      "@type": "ListItem",
+      "position": i + 1,
+      "name": f.name,
+      "description": f.description
+    }))
+  };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "RestauRank", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Features", "item": `${SITE_URL}/features` }
+    ]
+  };
+
+  res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fonctionnalites RestauRank — Tout ce qu'il faut pour le SEO et GEO d'un restaurant</title>
+<meta name="description" content="Decouvrez les 8 fonctionnalites cles de RestauRank : audit 49 criteres, score GEO IA, connexion Google Business Profile, gestion avis, annuaires, CMS auto-apply, blog IA, rapports.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="${SITE_URL}/features">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Fonctionnalites RestauRank — SEO et GEO pour restaurants">
+<meta property="og:description" content="Les 8 fonctionnalites cles de RestauRank : audit 49 criteres, score GEO IA, connexion Google Business Profile, gestion avis, annuaires, CMS auto-apply, blog IA, Hub Central.">
+<meta property="og:url" content="${SITE_URL}/features">
+<link rel="stylesheet" href="/public/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<script type="application/ld+json">${JSON.stringify(breadcrumbLd)}</script>
+</head>
+<body style="background:#031c33;">
+<div style="max-width:800px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;flex-wrap:wrap;">
+    <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
+    <a href="/about" style="color:#585254;text-decoration:none;font-size:.9rem;">A propos</a>
+    <a href="/blog" style="color:#585254;text-decoration:none;font-size:.9rem;">Blog</a>
+    <a href="/features" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">Features</a>
+    <a href="/pricing" style="color:#585254;text-decoration:none;font-size:.9rem;">Tarifs</a>
+  </nav>
+
+  <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:8px;">Fonctionnalites RestauRank</h1>
+  <p style="color:#585254;line-height:1.7;margin-bottom:40px;">Huit modules integres pour auditer, corriger et amplifier la visibilite en ligne de votre restaurant — sur Google et sur les moteurs IA.</p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">1. Audit SEO local — 49 criteres, 7 categories, score sur 100</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank analyse en 30 secondes 49 points de controle repartis en 7 categories : Google Business Profile, avis et reputation, citations et annuaires, site web technique, contenu et mots-cles, reseaux sociaux, coherence NAP. Chaque critere est evalue avec un score individuel, un statut (bon / a ameliorer / critique) et une recommandation concrete.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Le score SEO global sur 100 synthetise l'ensemble de ces criteres pour donner une mesure objective de la visibilite du restaurant sur Google Search, Google Maps et le Local Pack. C'est la premiere etape pour identifier les axes d'amelioration prioritaires.</p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">2. Score GEO — visibilite IA sur ChatGPT, Perplexity, Gemini, Claude</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">Le Generative Engine Optimization (GEO) mesure la presence d'un restaurant dans les reponses des moteurs IA. RestauRank interroge quatre plateformes — ChatGPT, Perplexity, Gemini et Claude — avec des requetes contextualisees ("meilleur restaurant italien a Lyon", "ou manger des sushis a Paris ce soir").</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Le score RRF (Reciprocal Rank Fusion), identique a la methode utilisee par Bing, fusionne les classements obtenus sur ces quatre moteurs en un score unique et comparable. C'est le premier indicateur de visibilite IA specifiquement concu pour la restauration.</p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">3. Google Business Profile connecte — posts, avis, photos, horaires</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank se connecte directement a l'API officielle Google Business Profile pour lire et ecrire toutes les donnees de la fiche Google : informations d'etablissement, categories, attributs, horaires d'ouverture, horaires speciaux, photos, posts Google et reponses aux avis.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">La detection des horaires speciaux (jours feries, fermetures exceptionnelles) est automatique grace a un algorithme de calcul des jours feries francais et un systeme d'alerte pour les "trous" de couverture a 30 jours. Tout se gere depuis le Hub Central RestauRank.</p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">4. Gestion des avis — reponses automatiques IA, surveillance, alertes</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">Les avis Google influencent directement le classement local. RestauRank surveille en continu les nouveaux avis, envoie des alertes instantanees pour les avis negatifs, et genere automatiquement des reponses personnalisees via Claude — en respectant le ton et la personnalite du restaurant.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Les reponses sont adaptees au contexte de chaque avis : remerciement chaleureux pour les avis positifs, desescalade professionnelle pour les avis negatifs, relances pour les avis sans note. Le restaurateur peut les valider en un clic ou les laisser partir automatiquement.</p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">5. Verification 29 annuaires — TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">La coherence des citations (NAP : Nom, Adresse, Telephone) sur les annuaires en ligne est un signal de confiance majeur pour Google. RestauRank verifie automatiquement la presence et l'exactitude des informations du restaurant sur 29 plateformes : TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork, LaFourchette, Tripadvisor, Google Maps, Facebook, Michelin, OpenTable, Zomato, et 17 autres annuaires locaux et internationaux.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Pour chaque plateforme, RestauRank indique le statut de la fiche (presente, incomplete, absente), les incohérences NAP detectees, et propose une action directe : revendiquer la fiche, corriger les informations, ou creer une nouvelle fiche via le lien d'inscription pre-rempli.</p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">6. Auto-apply CMS — WordPress, Webflow, Wix, Squarespace, Shopify</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank detecte automatiquement le CMS utilise par le site web du restaurant (WordPress, Webflow, Wix, Squarespace, Shopify, PrestaShop, Jimdo, ou site custom) et se connecte via les APIs ou credentials fournis pour appliquer les optimisations directement dans le code du site.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Les corrections appliquees incluent : Schema.org LocalBusiness complet (NAP, horaires, coordonnees GPS, menu), balises meta title et description optimisees, section FAQ structuree avec les questions frequentes, balises Open Graph pour les reseaux sociaux, et fichier sitemap.xml mis a jour. Aucune competence technique requise.</p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">7. Generation de contenu IA — Google Posts, blog, descriptions, mots-cles</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank utilise Claude (Anthropic) pour generer du contenu SEO adapte a chaque restaurant : posts Google Business Profile (actualites, offres, evenements), articles de blog sur les specialites et l'histoire du restaurant, descriptions optimisees pour les annuaires, reponses aux avis, et suggestions de mots-cles longue traine.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Tout le contenu est genere en tenant compte du ton du restaurant, de sa localisation, de sa cuisine, et des evenements locaux. Il peut etre publie automatiquement selon un calendrier editorial ou soumis a validation. Le module blog genere des articles complets de 800 a 1500 mots optimises pour les requetes locales.</p>
+
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">8. Hub Central SSOT — donnees unifiees poussees sur tous les canaux</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">Le Hub Central est la source unique de verite (Single Source of Truth) de RestauRank. Il centralise toutes les informations du restaurant — NAP, horaires, horaires speciaux, photos (Google My Business, Instagram, site web), logo, couleurs et polices de la charte graphique, description, menu, et 40 champs supplementaires.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:40px;">Chaque modification dans le Hub Central est automatiquement propagee vers tous les canaux connectes : Google Business Profile, annuaires, site web CMS, et contenu IA genere. Cette synchronisation elimine les incohérences NAP, source majeure de perte de positionnement Google, et garantit une presence en ligne uniforme et professionnelle sur tous les points de contact.</p>
+
+  <div style="padding:32px;background:#031c33;border-radius:12px;text-align:center;margin-bottom:32px;">
+    <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#f8e5db;margin-bottom:8px;">Essayez RestauRank gratuitement</div>
+    <div style="font-size:.9rem;color:#9e9e9e;margin-bottom:20px;">Audit complet en 30 secondes. Aucune carte bancaire requise.</div>
+    <a href="/" style="display:inline-block;padding:14px 40px;background:#f04b2e;color:#f8e5db;text-decoration:none;border-radius:8px;font-weight:600;font-size:1rem;">Lancer un audit gratuit</a>
+  </div>
+
+  <div style="font-size:.85rem;color:#585254;">
+    <a href="/pricing" style="color:#f04b2e;text-decoration:none;font-weight:600;">Voir les tarifs →</a>
+    <span style="margin:0 12px;">|</span>
+    <a href="/about" style="color:#585254;text-decoration:none;">A propos</a>
+    <span style="margin:0 12px;">|</span>
+    <a href="/blog" style="color:#585254;text-decoration:none;">Blog</a>
+  </div>
+</div>
+</body>
+</html>`);
+});
+
+// ─── /pricing ─────────────────────────────────────────────────────────────────
 app.get('/pricing', (req, res) => {
-  // Redirect to main app with pricing screen
-  res.redirect('/#pricing');
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "Tarifs RestauRank — Plans SEO et GEO pour restaurants",
+    "description": "Decouvrez les plans RestauRank : Free (1 audit/jour), Starter (19€/mois), Pro (49€/mois), Premium (99€/mois). Sans engagement, sans carte bancaire pour le plan gratuit.",
+    "url": `${SITE_URL}/pricing`,
+    "offers": [
+      { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "EUR", "description": "1 audit/jour, score SEO+GEO, 3 categories" },
+      { "@type": "Offer", "name": "Starter", "price": "19", "priceCurrency": "EUR", "description": "Audits illimites, toutes categories, 1 restaurant, connexion GBP, gestion avis basique" },
+      { "@type": "Offer", "name": "Pro", "price": "49", "priceCurrency": "EUR", "description": "Tout Starter + auto-apply CMS, generation contenu IA, 3 restaurants, rapports PDF" },
+      { "@type": "Offer", "name": "Premium", "price": "99", "priceCurrency": "EUR", "description": "Tout Pro + 10 restaurants, API acces, support prioritaire, white-label" }
+    ]
+  };
+  const breadcrumbLd = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "RestauRank", "item": SITE_URL },
+      { "@type": "ListItem", "position": 2, "name": "Tarifs", "item": `${SITE_URL}/pricing` }
+    ]
+  };
+
+  res.send(`<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tarifs RestauRank — Plans SEO et GEO pour restaurants</title>
+<meta name="description" content="Decouvrez les plans RestauRank : Free (1 audit/jour), Starter (19€/mois), Pro (49€/mois), Premium (99€/mois). Sans engagement, sans carte bancaire pour le plan gratuit.">
+<meta name="robots" content="index, follow">
+<link rel="canonical" href="${SITE_URL}/pricing">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Tarifs RestauRank — Plans SEO et GEO pour restaurants">
+<meta property="og:description" content="Plans RestauRank : Free 0€, Starter 19€/mois, Pro 49€/mois, Premium 99€/mois. Sans engagement.">
+<meta property="og:url" content="${SITE_URL}/pricing">
+<link rel="stylesheet" href="/public/styles.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
+<script type="application/ld+json">${JSON.stringify(jsonLd)}</script>
+<script type="application/ld+json">${JSON.stringify(breadcrumbLd)}</script>
+<style>
+  .plan-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; margin:40px 0; }
+  .plan-card { background:#fff; border:2px solid #031c3315; border-radius:12px; padding:28px 20px; text-align:center; }
+  .plan-card.featured { border-color:#f04b2e; background:#fff8f6; }
+  .plan-name { font-family:'Playfair Display',serif; font-size:1.3rem; color:#031c33; margin-bottom:8px; }
+  .plan-price { font-size:2rem; font-weight:700; color:#031c33; margin:12px 0 4px; }
+  .plan-price span { font-size:1rem; font-weight:400; color:#585254; }
+  .plan-desc { font-size:.85rem; color:#585254; line-height:1.5; margin-bottom:20px; min-height:60px; }
+  .plan-features { list-style:none; padding:0; margin:0 0 24px; text-align:left; font-size:.85rem; color:#353233; }
+  .plan-features li { padding:6px 0; border-bottom:1px solid #031c3308; }
+  .plan-features li::before { content:"✓ "; color:#2ecc71; font-weight:700; }
+  .plan-features li.no::before { content:"— "; color:#ccc; }
+  .plan-cta { display:inline-block; padding:12px 28px; background:#031c33; color:#f8e5db; text-decoration:none; border-radius:8px; font-weight:600; font-size:.9rem; width:100%; box-sizing:border-box; }
+  .plan-cta:hover { background:#f04b2e; }
+  .plan-card.featured .plan-cta { background:#f04b2e; }
+  .plan-badge { display:inline-block; background:#f04b2e; color:#fff; font-size:.75rem; font-weight:700; padding:3px 10px; border-radius:20px; margin-bottom:8px; }
+</style>
+</head>
+<body style="background:#031c33;">
+<div style="max-width:960px;margin:0 auto;padding:40px 24px;background:#f8e5db;min-height:100vh;">
+  <nav style="display:flex;align-items:center;gap:24px;margin-bottom:40px;flex-wrap:wrap;">
+    <a href="/" style="text-decoration:none;color:#031c33;font-family:'Playfair Display',serif;font-size:1.6rem;font-weight:700;">RestauRank</a>
+    <a href="/about" style="color:#585254;text-decoration:none;font-size:.9rem;">A propos</a>
+    <a href="/blog" style="color:#585254;text-decoration:none;font-size:.9rem;">Blog</a>
+    <a href="/features" style="color:#585254;text-decoration:none;font-size:.9rem;">Features</a>
+    <a href="/pricing" style="color:#f04b2e;text-decoration:none;font-size:.9rem;font-weight:600;">Tarifs</a>
+  </nav>
+
+  <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:8px;text-align:center;">Tarifs</h1>
+  <p style="color:#585254;line-height:1.7;margin-bottom:16px;text-align:center;">Des plans adaptes a chaque restaurant. Sans engagement, sans carte bancaire pour le plan gratuit.</p>
+
+  <div class="plan-grid">
+    <div class="plan-card">
+      <div class="plan-name">Free</div>
+      <div class="plan-price">0€ <span>/ toujours</span></div>
+      <div class="plan-desc">Pour decouvrir RestauRank et obtenir un premier diagnostic.</div>
+      <ul class="plan-features">
+        <li>1 audit par jour</li>
+        <li>Score SEO + GEO</li>
+        <li>3 categories d'audit</li>
+        <li class="no">Auto-apply</li>
+        <li class="no">Connexion GBP</li>
+        <li class="no">Gestion avis</li>
+      </ul>
+      <a href="/" class="plan-cta">Essayer gratuitement</a>
+    </div>
+
+    <div class="plan-card">
+      <div class="plan-name">Starter</div>
+      <div class="plan-price">19€ <span>/ mois</span></div>
+      <div class="plan-desc">Pour un restaurant qui veut controler sa visibilite en continu.</div>
+      <ul class="plan-features">
+        <li>Audits illimites</li>
+        <li>Toutes les categories (49 criteres)</li>
+        <li>1 restaurant</li>
+        <li>Connexion Google Business Profile</li>
+        <li>Gestion avis basique</li>
+        <li class="no">Auto-apply CMS</li>
+      </ul>
+      <a href="/" class="plan-cta">Essayer gratuitement</a>
+    </div>
+
+    <div class="plan-card featured">
+      <div class="plan-badge">Populaire</div>
+      <div class="plan-name">Pro</div>
+      <div class="plan-price">49€ <span>/ mois</span></div>
+      <div class="plan-desc">Pour les restaurateurs qui veulent automatiser leur visibilite.</div>
+      <ul class="plan-features">
+        <li>Tout Starter inclus</li>
+        <li>Auto-apply CMS (WordPress, Wix...)</li>
+        <li>Generation contenu IA</li>
+        <li>3 restaurants</li>
+        <li>Rapports PDF</li>
+        <li>Google Posts automatiques</li>
+      </ul>
+      <a href="/" class="plan-cta">Essayer gratuitement</a>
+    </div>
+
+    <div class="plan-card">
+      <div class="plan-name">Premium</div>
+      <div class="plan-price">99€ <span>/ mois</span></div>
+      <div class="plan-desc">Pour les chaines, groupes et agences qui gerent plusieurs etablissements.</div>
+      <ul class="plan-features">
+        <li>Tout Pro inclus</li>
+        <li>10 restaurants</li>
+        <li>Acces API RestauRank</li>
+        <li>Support prioritaire</li>
+        <li>White-label disponible</li>
+        <li>Onboarding dedie</li>
+      </ul>
+      <a href="/" class="plan-cta">Essayer gratuitement</a>
+    </div>
+  </div>
+
+  <p style="text-align:center;font-size:.85rem;color:#9e9e9e;margin-top:8px;">Tous les plans incluent le score GEO (ChatGPT, Perplexity, Gemini, Claude). Sans engagement — annulez a tout moment.</p>
+
+  <div style="margin-top:48px;padding-top:24px;border-top:1px solid #031c3320;font-size:.85rem;color:#585254;text-align:center;">
+    <a href="/features" style="color:#f04b2e;text-decoration:none;font-weight:600;">Voir toutes les fonctionnalites →</a>
+    <span style="margin:0 12px;">|</span>
+    <a href="/about" style="color:#585254;text-decoration:none;">A propos</a>
+    <span style="margin:0 12px;">|</span>
+    <a href="/comparatif" style="color:#585254;text-decoration:none;">Comparatif</a>
+  </div>
+</div>
+</body>
+</html>`);
+});
+
+// ─── /api/public/info ─────────────────────────────────────────────────────────
+app.get('/api/public/info', (req, res) => {
+  res.json({
+    name: "RestauRank",
+    tagline: "Audit SEO local et GEO pour restaurants",
+    url: "https://restaurank.onrender.com",
+    category: "SaaS / SEO Tool / Restaurant Tech",
+    description: "RestauRank est le premier outil SaaS d'audit SEO local et GEO (Generative Engine Optimization) dedie aux restaurants. En 30 secondes, il analyse 49 criteres de visibilite sur Google et mesure la presence du restaurant dans les reponses des moteurs IA (ChatGPT, Perplexity, Gemini, Claude). La plateforme corrige automatiquement les problemes detectes : connexion Google Business Profile, auto-apply CMS, generation de contenu IA, gestion des avis, verification sur 29 annuaires.",
+    features: [
+      { id: "audit-seo", name: "Audit SEO local", description: "49 criteres, 7 categories, score sur 100, recommendations concretes" },
+      { id: "geo-score", name: "Score GEO visibilite IA", description: "Interrogation de ChatGPT, Perplexity, Gemini et Claude, score RRF" },
+      { id: "gbp", name: "Google Business Profile connecte", description: "Posts, avis, photos, horaires via API officielle GBP" },
+      { id: "reviews", name: "Gestion des avis", description: "Reponses automatiques par IA, surveillance, alertes en temps reel" },
+      { id: "directories", name: "Verification 29 annuaires", description: "TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork et 24 autres" },
+      { id: "cms-apply", name: "Auto-apply CMS", description: "WordPress, Webflow, Wix, Squarespace, Shopify — Schema.org, meta, FAQ" },
+      { id: "ai-content", name: "Generation de contenu IA", description: "Google Posts, blog, descriptions, mots-cles par Claude (Anthropic)" },
+      { id: "hub-central", name: "Hub Central SSOT", description: "Donnees unifiees (NAP, photos, horaires) poussees sur tous les canaux" }
+    ],
+    pricing: [
+      { plan: "Free", price: "0", currency: "EUR", billing: "forever", description: "1 audit/jour, score SEO+GEO, 3 categories" },
+      { plan: "Starter", price: "19", currency: "EUR", billing: "monthly", description: "Audits illimites, toutes categories, 1 restaurant, GBP, avis" },
+      { plan: "Pro", price: "49", currency: "EUR", billing: "monthly", description: "Starter + auto-apply CMS, contenu IA, 3 restaurants, rapports PDF" },
+      { plan: "Premium", price: "99", currency: "EUR", billing: "monthly", description: "Pro + 10 restaurants, API acces, support prioritaire, white-label" }
+    ],
+    tech: {
+      backend: "Node.js/Express",
+      database: "SQLite + PostgreSQL",
+      ai: "Claude by Anthropic",
+      hosting: "Render"
+    },
+    apis: ["Google Business Profile", "Google Places", "Yelp", "TripAdvisor", "Foursquare", "Stripe", "Resend"],
+    languages: ["fr"],
+    founded: "2026",
+    version: "6.0"
+  });
 });
 
 app.get('/', (req, res) => {
