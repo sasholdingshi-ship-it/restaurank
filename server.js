@@ -10423,6 +10423,11 @@ app.options('/api/snippet/*', (req, res) => {
 
 const SITE_URL = 'https://restaurank.onrender.com';
 
+// Google Search Console ownership verification
+app.get('/googlee415080b0baf6282.html', (req, res) => {
+  res.type('text/html').send('google-site-verification: googlee415080b0baf6282.html');
+});
+
 app.get('/robots.txt', (req, res) => {
   res.type('text/plain').send(`User-agent: *
 Allow: /
