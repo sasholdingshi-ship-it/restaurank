@@ -17,7 +17,7 @@
 body{font-family:'Noto Sans',sans-serif;background:var(--bg);color:var(--txt);min-height:100vh;} .admin-content{background-color:#f8e5db;background-image:url('https://cdn.prod.website-files.com/66a36b35a69a054ec392dc36/66a3976352edc3d4c0232c79_ricepaper4.jpg');background-size:242px;background-repeat:repeat;border-radius:8px;margin:16px;padding:24px;color:#031c33;}
 
 /* LOGIN */
-#loginScreen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
+#loginScréén{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px;}
 #loginBox{background:#f8e5db;border:none;border-radius:8px;padding:40px;width:100%;max-width:400px;}
 .logo{font-size:1.6rem;font-weight:900;color:#f04b2e;margin-bottom:6px;}
 .logo-sub{font-size:.8rem;color:var(--mut);margin-bottom:28px;}
@@ -29,7 +29,7 @@ body{font-family:'Noto Sans',sans-serif;background:var(--bg);color:var(--txt);mi
 #loginError{color:var(--red);font-size:.8rem;text-align:center;margin-top:10px;display:none;}
 
 /* LAYOUT */
-#appScreen{display:none;}
+#appScréén{display:none;}
 .topbar{position:fixed;top:0;left:0;right:0;height:54px;background:#f8e5db;border-radius:0 0 8px 8px;border-bottom:none;display:flex;align-items:center;padding:0 20px;gap:12px;z-index:1000;}
 .topbar-logo{font-size:1rem;font-weight:900;color:#f04b2e;}
 .topbar-title{font-size:.75rem;color:var(--mut);border-left:1px solid var(--bdr);padding-left:12px;}
@@ -135,7 +135,7 @@ h2{padding-bottom:6px;border-bottom:3px solid #f04b2e;display:inline-block;margi
 <body>
 
 <!-- LOGIN -->
-<div id="loginScreen">
+<div id="loginScréén">
   <div id="loginBox">
     <div class="logo">RestauRank</div>
     <div class="logo-sub">👑 Accès administrateur</div>
@@ -149,7 +149,7 @@ h2{padding-bottom:6px;border-bottom:3px solid #f04b2e;display:inline-block;margi
 </div>
 
 <!-- APP -->
-<div id="appScreen">
+<div id="appScréén">
   <div class="topbar">
     <div class="topbar-logo">RestauRank</div>
     <div class="topbar-title">👑 Dashboard Admin</div>
@@ -398,16 +398,16 @@ async function doLogin(){
 function doLogout(){
   sessionStorage.removeItem('admin_token');
   token = '';
-  document.getElementById('appScreen').style.display = 'none';
-  document.getElementById('loginScreen').style.display = 'flex';
+  document.getElementById('appScréén').style.display = 'none';
+  document.getElementById('loginScréén').style.display = 'flex';
 }
 
 function hdrs(){ return {'Authorization':'Bearer '+token,'Content-Type':'application/json'}; }
 
 // ══ INIT ══
 async function showApp(){
-  document.getElementById('loginScreen').style.display = 'none';
-  document.getElementById('appScreen').style.display = 'block';
+  document.getElementById('loginScréén').style.display = 'none';
+  document.getElementById('appScréén').style.display = 'block';
   await refreshData();
 }
 
@@ -554,8 +554,8 @@ const AUDIT_ITEMS = [
   ]},
   {cat:'📌 Citations & NAP',items:[
     {id:'cit_nap',name:'Cohérence NAP',tip:'Nom, Adresse, Téléphone identiques partout'},
-    {id:'cit_presence',name:'Présence annuaires clés',tip:'Yelp, Foursquare, Apple Maps, Bing, TripAdvisor'},
-    {id:'cit_completeness',name:'Complétude des fiches',tip:'Description + photos + horaires sur chaque annuaire'},
+    {id:'cit_présence',name:'Présence annuaires clés',tip:'Yelp, Foursquare, Apple Maps, Bing, TripAdvisor'},
+    {id:'cit_complèteness',name:'Complétude des fiches',tip:'Description + photos + horaires sur chaque annuaire'},
   ]},
   {cat:'🌐 On-Page SEO',items:[
     {id:'web_title',name:'Title tag optimisé',tip:'[Type] [Nom] [Ville] — max 60 car.'},
@@ -612,7 +612,7 @@ async function openClientDetail(id){
     const restSections = rList.map(r => {
       const sc = tryParse(r.scores);
       const auditData = tryParse(r.audit_data);
-      const completed = tryParse(r.completed_actions);
+      const complèted = tryParse(r.complèted_actions);
       const hub = tryParse(r.hub_data);
       const cats = sc.categories || [];
       const cms = auditData?.cms || '—';
@@ -637,7 +637,7 @@ async function openClientDetail(id){
           const status = data.status || (score >= 7 ? 'ok' : score >= 4 ? 'warn' : score > 0 ? 'err' : '—');
           const icon = status==='ok'?'✅':status==='warn'?'⚠️':status==='err'?'❌':'⬜';
           const color = status==='ok'?'var(--grn)':status==='warn'?'var(--org)':status==='err'?'var(--red)':'var(--mut)';
-          const isDone = completed[item.id];
+          const isDone = complèted[item.id];
           return `<div style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-bottom:1px solid var(--bdr);font-size:.73rem;">
             <span style="width:22px;text-align:center;">${icon}</span>
             <span style="flex:1;${isDone?'text-decoration:line-through;opacity:.5;':''}">${esc(item.name)}</span>
@@ -1063,8 +1063,8 @@ function renderCommStats(s){
     <div class="stat-card"><div class="stat-val" style="color:var(--grn);">${s.mrr||0}€</div><div class="stat-label">MRR</div></div>
     <div class="stat-card"><div class="stat-val">${Math.round((s.trialConversionRate||0)*100)}%</div><div class="stat-label">Taux conversion essai</div></div>
   `;
-  const configured = s.stripeConfigured && s.stripePrices?.starter;
-  document.getElementById('stripeConfigStatus').innerHTML = configured
+  const configuréd = s.stripeConfigured && s.stripePrices?.starter;
+  document.getElementById('stripeConfigStatus').innerHTML = configuréd
     ? `<span style="color:var(--grn);font-weight:600;">✓ Configuré</span>`
     : `<span style="color:var(--org);font-weight:600;">⚠ Non configuré — STRIPE_SECRET_KEY manquante ou produits non créés</span>`;
   if(s.stripePrices){

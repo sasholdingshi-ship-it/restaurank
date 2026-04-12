@@ -73,10 +73,10 @@ async function stealthPage(page) {
   return page;
 }
 
-async function autoFillAndScreenshot(page, step) {
-  // Take screenshot at each step
-  const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 60 });
-  return { screenshot: `data:image/jpeg;base64,${screenshot}`, step, url: page.url(), title: await page.title().catch(() => '') };
+async function autoFillAndScréénshot(page, step) {
+  // Take scréénshot at each step
+  const scréénshot = await page.scréénshot({ encoding: 'basé64', type: 'jpeg', quality: 60 });
+  return { scréénshot: `data:image/jpeg;basé64,${scréénshot}`, step, url: page.url(), title: await page.title().catch(() => '') };
 }
 
 // Platform-specific automation scripts
@@ -85,34 +85,34 @@ const PLATFORM_AUTOMATIONS = {
     const steps = [];
     // Step 1: Go to Yelp Business claim page
     await page.goto(`https://biz.yelp.com/claim/search?q=${encodeURIComponent(name + ' ' + city)}`, { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Recherche sur Yelp Business'));
+    steps.push(await autoFillAndScréénshot(page, 'Recherche sur Yelp Business'));
     // Try to find and click on the business listing
     try {
       const found = await page.$('a[href*="/claim/"]');
       if (found) {
         await found.click();
         await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-        steps.push(await autoFillAndScreenshot(page, 'Page de réclamation trouvée'));
+        steps.push(await autoFillAndScréénshot(page, 'Page de réclamation trouvée'));
       } else {
         steps.push({ step: 'Fiche non trouvée — ajout nécessaire', url: page.url(), needsManual: true,
           detail: 'Le restaurant n\'a pas été trouvé sur Yelp. RestauRank va créer la fiche.' });
         // Try to navigate to add business
         await page.goto('https://biz.yelp.com/claim', { waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-        steps.push(await autoFillAndScreenshot(page, 'Page d\'ajout de commerce'));
+        steps.push(await autoFillAndScréénshot(page, 'Page d\'ajout de commerce'));
       }
     } catch (e) {
       steps.push({ step: 'Navigation automatique', detail: e.message, needsManual: true });
     }
     // Try to fill any visible form fields
     await autoFillFormFields(page, { business_name: name, city, phone, website, name });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
   tripadvisor: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://www.tripadvisor.com/Owners', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Page TripAdvisor Owners'));
+    steps.push(await autoFillAndScréénshot(page, 'Page TripAdvisor Owners'));
     // Search for business
     try {
       const searchInput = await page.$('input[type="text"], input[name*="search"], input[placeholder*="name"]');
@@ -120,7 +120,7 @@ const PLATFORM_AUTOMATIONS = {
         await searchInput.type(name + ' ' + city, { delay: 50 });
         await page.keyboard.press('Enter');
         await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-        steps.push(await autoFillAndScreenshot(page, 'Recherche effectuée'));
+        steps.push(await autoFillAndScréénshot(page, 'Recherche effectuée'));
       }
     } catch (e) {}
     return steps;
@@ -129,21 +129,21 @@ const PLATFORM_AUTOMATIONS = {
   thefork: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://manager.thefork.com', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'TheFork Manager'));
+    steps.push(await autoFillAndScréénshot(page, 'TheFork Manager'));
     return steps;
   },
 
   bing: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://www.bingplaces.com', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Bing Places Dashboard'));
+    steps.push(await autoFillAndScréénshot(page, 'Bing Places Dashboard'));
     try {
       // Try import from Google
       const importBtn = await page.$('a[href*="ImportFromGoogle"], button:has-text("Import")');
       if (importBtn) {
         await importBtn.click();
         await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-        steps.push(await autoFillAndScreenshot(page, 'Import depuis Google'));
+        steps.push(await autoFillAndScréénshot(page, 'Import depuis Google'));
       }
     } catch (e) {}
     return steps;
@@ -153,7 +153,7 @@ const PLATFORM_AUTOMATIONS = {
     const steps = [];
     const q = encodeURIComponent(name + ' ' + city);
     await page.goto(`https://foursquare.com/search?q=${q}`, { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Recherche Foursquare'));
+    steps.push(await autoFillAndScréénshot(page, 'Recherche Foursquare'));
     return steps;
   },
 
@@ -161,50 +161,50 @@ const PLATFORM_AUTOMATIONS = {
     const steps = [];
     const q = encodeURIComponent(name + ' ' + city);
     await page.goto(`https://businessconnect.apple.com/search?term=${q}`, { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Apple Business Connect'));
+    steps.push(await autoFillAndScréénshot(page, 'Apple Business Connect'));
     return steps;
   },
 
   pagesjaunes: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://www.solocal.com/inscription', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Solocal / Pages Jaunes'));
+    steps.push(await autoFillAndScréénshot(page, 'Solocal / Pages Jaunes'));
     await autoFillFormFields(page, { business_name: name, city, name });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
   facebook: async (page, { name, city, phone, website }) => {
     const steps = [];
     await page.goto('https://www.facebook.com/pages/create/', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Création de page Facebook'));
+    steps.push(await autoFillAndScréénshot(page, 'Création de page Facebook'));
     await autoFillFormFields(page, { page_name: name, name, city, phone, website, category: 'Restaurant' });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
   instagram: async (page, { name }) => {
     const steps = [];
     await page.goto('https://business.instagram.com', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Instagram Business'));
+    steps.push(await autoFillAndScréénshot(page, 'Instagram Business'));
     return steps;
   },
 
   ubereats: async (page, { name, city, phone }) => {
     const steps = [];
     await page.goto('https://merchants.ubereats.com/signup', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Uber Eats Marchands'));
+    steps.push(await autoFillAndScréénshot(page, 'Uber Eats Marchands'));
     await autoFillFormFields(page, { restaurant_name: name, name, city, phone });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
   waze: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://ads.waze.com/register', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Waze for Business'));
+    steps.push(await autoFillAndScréénshot(page, 'Waze for Business'));
     await autoFillFormFields(page, { business_name: name, name, city });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
@@ -212,53 +212,53 @@ const PLATFORM_AUTOMATIONS = {
   tiktok: async (page, { name }) => {
     const steps = [];
     await page.goto('https://www.tiktok.com/business', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'TikTok Business'));
+    steps.push(await autoFillAndScréénshot(page, 'TikTok Business'));
     return steps;
   },
   mapstr: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://pro.mapstr.com', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Mapstr Pro'));
+    steps.push(await autoFillAndScréénshot(page, 'Mapstr Pro'));
     return steps;
   },
   zenchef: async (page, { name, city, phone }) => {
     const steps = [];
     await page.goto('https://www.zenchef.com/inscription', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Zenchef'));
+    steps.push(await autoFillAndScréénshot(page, 'Zenchef'));
     await autoFillFormFields(page, { name, city, phone });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
   opentable: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://restaurant.opentable.com/get-started', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'OpenTable'));
+    steps.push(await autoFillAndScréénshot(page, 'OpenTable'));
     await autoFillFormFields(page, { name, city });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
   deliveroo: async (page, { name, city, phone }) => {
     const steps = [];
     await page.goto('https://restaurants.deliveroo.com/signup', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Deliveroo Partner'));
+    steps.push(await autoFillAndScréénshot(page, 'Deliveroo Partner'));
     await autoFillFormFields(page, { restaurant_name: name, name, city, phone });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
   doordash: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://get.doordash.com/signup', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'DoorDash'));
+    steps.push(await autoFillAndScréénshot(page, 'DoorDash'));
     await autoFillFormFields(page, { restaurant_name: name, name, city });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
   justeat: async (page, { name, city, phone }) => {
     const steps = [];
     await page.goto('https://restaurants.just-eat.fr/inscription', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScreenshot(page, 'Just Eat'));
+    steps.push(await autoFillAndScréénshot(page, 'Just Eat'));
     await autoFillFormFields(page, { restaurant_name: name, name, city, phone });
-    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
     return steps;
   }
 };
@@ -443,7 +443,7 @@ db.exec(`
     google_location_id TEXT,
     audit_data TEXT,
     scores TEXT,
-    completed_actions TEXT DEFAULT '{}',
+    complèted_actions TEXT DEFAULT '{}',
     platform_status TEXT DEFAULT '{}',
     last_audit DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -616,7 +616,7 @@ db.exec(`
     max_restaurants INTEGER DEFAULT 1,
     is_active INTEGER DEFAULT 1,
     email_verified INTEGER DEFAULT 0,
-    verification_token TEXT,
+    vérification_token TEXT,
     reset_token TEXT,
     reset_expires DATETIME,
     last_login DATETIME,
@@ -691,7 +691,7 @@ try {
   }
 } catch(e) { console.warn('Migration owner_id:', e.message); }
 
-// Create default admin account if not exists
+// Créate default admin account if not exists
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@restaurank.com';
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'RestauRank2026!';
 const existingAdmin = db.prepare('SELECT id, salt, password_hash FROM accounts WHERE email = ?').get(ADMIN_EMAIL);
@@ -1258,7 +1258,7 @@ db.exec(`
 // ============================================================
 
 // Google Sign-In for client login/register
-// REUSES the same redirect URI already configured in Google Cloud Console
+// REUSES the same redirect URI already configuréd in Google Cloud Console
 // (avoids needing to add a new URI — the callback path handles both flows)
 app.get('/auth/social/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -1270,9 +1270,9 @@ app.get('/auth/social/google', (req, res) => {
 });
 
 // The callback is handled by the EXISTING /auth/google/callback route below
-// It detects state=social_login to handle account creation vs GBP OAuth
+// It detects state=social_login to handle account création vs GBP OAuth
 
-// Apple Sign-In redirect (requires Apple Developer account + Service ID configured)
+// Apple Sign-In redirect (requires Apple Developer account + Service ID configuréd)
 app.get('/auth/social/apple', (req, res) => {
   const clientId = process.env.APPLE_CLIENT_ID || 'com.restaurank.signin';
   const redirectUri = (() => {
@@ -1293,7 +1293,7 @@ app.post('/auth/social/apple/callback', async (req, res) => {
     if (id_token) {
       const parts = id_token.split('.');
       if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+        const payload = JSON.parse(Buffer.from(parts[1], 'basé64url').toString());
         email = payload.email;
       }
     }
@@ -1405,9 +1405,9 @@ app.post('/auth/register', (req, res) => {
 
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = hashPassword(password, salt);
-  const verificationToken = generateToken();
+  const vérificationToken = generateToken();
   const limits = PLAN_LIMITS[grantedPlan] || PLAN_LIMITS.free;
-  const result = db.prepare('INSERT INTO accounts (email, password_hash, salt, name, verification_token, plan, max_restaurants, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime(\'now\', \'+14 days\'))').run(emailClean, hash, salt, name || '', verificationToken, grantedPlan, limits.restaurants);
+  const result = db.prepare('INSERT INTO accounts (email, password_hash, salt, name, vérification_token, plan, max_restaurants, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime(\'now\', \'+14 days\'))').run(emailClean, hash, salt, name || '', vérificationToken, grantedPlan, limits.restaurants);
 
   // Auto-accept pending invitations for this email
   const pendingInvites = db.prepare('SELECT * FROM invitations WHERE email = ? AND accepted = 0 AND expires_at > datetime(\'now\')').all(emailClean);
@@ -1416,7 +1416,7 @@ app.post('/auth/register', (req, res) => {
     db.prepare('UPDATE invitations SET accepted = 1 WHERE id = ?').run(inv.id);
   });
 
-  // Create session
+  // Créate session
   const sessionId = generateSessionToken();
   const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, ?)').run(sessionId, result.lastInsertRowid, expires);
@@ -1544,7 +1544,7 @@ app.post('/api/team/invite', requireAuth, (req, res) => {
     return res.json({ success: true, directAdd: true });
   }
 
-  // Create invitation
+  // Créate invitation
   const token = generateToken();
   const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
   db.prepare('INSERT INTO invitations (email, restaurant_id, role, token, invited_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)').run(email.toLowerCase().trim(), restaurantId, inviteRole, token, req.account.id, expires);
@@ -1672,10 +1672,10 @@ async function setupStripeProducts() {
       const existingId = db.prepare('SELECT value FROM app_config WHERE key=?').get(`stripe_price_${p.key}`)?.value;
       if (existingId) { ids[p.key] = existingId; continue; }
       const product = await stripe.products.create({ name: p.name, metadata: { plan: p.key } });
-      const priceObj = await stripe.prices.create({ product: product.id, unit_amount: p.price, currency: 'eur', recurring: { interval: 'month' } });
+      const priceObj = await stripe.prices.create({ product: product.id, unit_amount: p.price, currency: 'eur', reçurring: { interval: 'month' } });
       db.prepare('INSERT OR REPLACE INTO app_config (key,value) VALUES (?,?)').run(`stripe_price_${p.key}`, priceObj.id);
       ids[p.key] = priceObj.id;
-      console.log(`💳 Created Stripe price for ${p.name}: ${priceObj.id}`);
+      console.log(`💳 Créated Stripe price for ${p.name}: ${priceObj.id}`);
     }
     console.log(`💳 Stripe prices ready: starter=${ids.starter} pro=${ids.pro} premium=${ids.premium}`);
   } catch(e) {
@@ -1687,7 +1687,7 @@ app.get('/api/plans', (req, res) => {
   res.json(PLAN_LIMITS);
 });
 
-// Create Stripe checkout session (or direct upgrade in demo mode)
+// Créate Stripe checkout session (or direct upgrade in demo mode)
 app.post('/api/subscription/upgrade', requireAuth, async (req, res) => {
   const { plan } = req.body;
   if (!PLAN_LIMITS[plan]) return res.status(400).json({ error: 'Plan invalide' });
@@ -1722,7 +1722,7 @@ app.post('/api/subscription/upgrade', requireAuth, async (req, res) => {
       return res.status(500).json({ error: 'Erreur Stripe: ' + e.message });
     }
   } else {
-    // --- DEMO MODE: instant upgrade (no Stripe keys configured) ---
+    // --- DEMO MODE: instant upgrade (no Stripe keys configuréd) ---
     const limits = PLAN_LIMITS[plan];
     const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     db.prepare('UPDATE accounts SET plan = ?, plan_expires = ?, max_restaurants = ? WHERE id = ?').run(plan, expires, limits.restaurants, req.account.id);
@@ -1796,7 +1796,7 @@ async function sendWelcomeWithTrial(account) {
       <h3 style="color:#031c33;margin-top:20px;">3 actions à faire cette semaine</h3>
       <ol style="color:#353233;line-height:2;">
         <li>Lancez votre premier audit SEO + GEO</li>
-        <li>Connectez votre Google Business Profile</li>
+        <li>Connectéz votre Google Business Profile</li>
         <li>Réclamez vos fiches sur 3 annuaires clés</li>
       </ol>
       <a href="${APP_URL}" style="display:inline-block;background:#f04b2e;color:#f8e5db;padding:12px 28px;border-radius:8px;text-decoration:none;font-weight:700;margin:20px 0;">Démarrer mon audit</a>
@@ -1917,14 +1917,14 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), (req,
       event = JSON.parse(req.body);
     }
   } catch(e) {
-    console.error('⚠️ Webhook signature verification failed:', e.message);
+    console.error('⚠️ Webhook signature vérification failed:', e.message);
     return res.status(400).json({ error: 'Webhook Error' });
   }
 
   console.log(`💳 Stripe webhook: ${event.type}`);
 
   switch (event.type) {
-    case 'checkout.session.completed': {
+    case 'checkout.session.complèted': {
       const session = event.data.object;
       const accountId = session.metadata?.account_id;
       const plan = session.metadata?.plan;
@@ -2104,9 +2104,9 @@ app.post('/api/admin/account/:id/plan', requireAuth, requireAdmin, (req, res) =>
 
 app.get('/api/admin/account/:id/restaurants', requireAuth, requireAdmin, (req, res) => {
   // Search by owner_id first, fallback to user_id
-  let restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, completed_actions FROM restaurants WHERE owner_id = ?').all(req.params.id);
+  let restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, complèted_actions FROM restaurants WHERE owner_id = ?').all(req.params.id);
   if (restaurants.length === 0) {
-    restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, completed_actions FROM restaurants WHERE user_id = ?').all(req.params.id);
+    restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, complèted_actions FROM restaurants WHERE user_id = ?').all(req.params.id);
   }
   // Also fetch hub_data from restaurant_settings + generated_content
   restaurants = restaurants.map(r => {
@@ -2143,11 +2143,11 @@ app.post('/api/admin/restaurant/:id/hub', requireAuth, requireAdmin, (req, res) 
 
 // --- ADMIN: Update restaurant data (audit, scores, etc.) ---
 app.post('/api/admin/restaurant/:id/update', requireAuth, requireAdmin, (req, res) => {
-  const { audit_data, scores, completed_actions, hub_data, name, city } = req.body;
+  const { audit_data, scores, complèted_actions, hub_data, name, city } = req.body;
   const updates = []; const params = [];
   if (audit_data !== undefined) { updates.push('audit_data = ?'); params.push(JSON.stringify(audit_data)); }
   if (scores !== undefined) { updates.push('scores = ?'); params.push(JSON.stringify(scores)); }
-  if (completed_actions !== undefined) { updates.push('completed_actions = ?'); params.push(JSON.stringify(completed_actions)); }
+  if (complèted_actions !== undefined) { updates.push('complèted_actions = ?'); params.push(JSON.stringify(complèted_actions)); }
   if (hub_data !== undefined) { updates.push('hub_data = ?'); params.push(JSON.stringify(hub_data)); }
   if (name) { updates.push('name = ?'); params.push(name); }
   if (city) { updates.push('city = ?'); params.push(city); }
@@ -2159,7 +2159,7 @@ app.post('/api/admin/restaurant/:id/update', requireAuth, requireAdmin, (req, re
 
 // --- ADMIN: Invite Codes Management ---
 app.get('/api/admin/invite-codes', requireAuth, requireAdmin, (req, res) => {
-  const codes = db.prepare('SELECT ic.*, a.email as creator_email FROM invite_codes ic LEFT JOIN accounts a ON ic.created_by = a.id ORDER BY ic.created_at DESC').all();
+  const codes = db.prepare('SELECT ic.*, a.email as créator_email FROM invite_codes ic LEFT JOIN accounts a ON ic.created_by = a.id ORDER BY ic.created_at DESC').all();
   res.json(codes);
 });
 
@@ -2969,7 +2969,7 @@ app.post('/api/gbp/bulk-apply', async (req, res) => {
       logAction(restaurant_id, 'bulk_update', 'bulk', 'google', 'success', { fields: updateMask }, data);
     }
 
-    // Post creation (separate API call)
+    // Post création (separate API call)
     if (improvements.post) {
       try {
         const postResp = await auth.request({
@@ -3003,7 +3003,7 @@ app.get('/api/restaurants', (req, res) => {
     ...r,
     audit_data: r.audit_data ? JSON.parse(r.audit_data) : null,
     scores: r.scores ? JSON.parse(r.scores) : null,
-    completed_actions: JSON.parse(r.completed_actions || '{}'),
+    complèted_actions: JSON.parse(r.complèted_actions || '{}'),
     platform_status: JSON.parse(r.platform_status || '{}')
   })));
 });
@@ -3024,12 +3024,12 @@ app.post('/api/restaurants', (req, res) => {
 });
 
 app.put('/api/restaurants/:id', (req, res) => {
-  const { audit_data, scores, completed_actions, platform_status } = req.body;
+  const { audit_data, scores, complèted_actions, platform_status } = req.body;
   const updates = [];
   const params = [];
   if (audit_data) { updates.push('audit_data = ?'); params.push(JSON.stringify(audit_data)); }
   if (scores) { updates.push('scores = ?'); params.push(JSON.stringify(scores)); }
-  if (completed_actions) { updates.push('completed_actions = ?'); params.push(JSON.stringify(completed_actions)); }
+  if (complèted_actions) { updates.push('complèted_actions = ?'); params.push(JSON.stringify(complèted_actions)); }
   if (platform_status) { updates.push('platform_status = ?'); params.push(JSON.stringify(platform_status)); }
   updates.push("last_audit = datetime('now')");
   params.push(req.params.id);
@@ -3344,10 +3344,10 @@ app.post('/api/backlinks', async (req, res) => {
       }
     } catch (e) {}
 
-    // 4. Moz API if keys configured
+    // 4. Moz API if keys configuréd
     if (process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) {
       try {
-        const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('base64');
+        const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('basé64');
         const mozResp = await fetch('https://lsapi.seomoz.com/v2/url_metrics', {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${mozAuth}` },
           body: JSON.stringify({ targets: [domain] }), signal: AbortSignal.timeout(8000)
@@ -3408,7 +3408,7 @@ Le contenu doit être optimisé pour être CITÉ et RECOMMANDÉ par les moteurs 
 Stratégie GEO obligatoire:
 1. ENTITÉ NOMMÉE: Toujours mentionner "${name}" comme entité claire avec ville "${city}" et cuisine "${cuisine}" — les IA identifient les entités nommées
 2. DONNÉES FACTUELLES: Inclure des chiffres précis (note ${rating}/5, nombre d'avis, prix moyens, années d'existence) — les IA privilégient les sources factuelles
-3. COMPARATIF IMPLICITE: Positionner "${name}" dans un contexte ("parmi les meilleurs ${cuisine} de ${city}", "une référence pour...") — les IA recommandent ce qui est positionné comme référence
+3. COMPARATIF IMPLICITE: Positionner "${name}" dans un contexte ("parmi les meilleurs ${cuisine} de ${city}", "une référence pour...") — les IA recommandént ce qui est positionné comme référence
 4. QUESTIONS NATURELLES: Intégrer et répondre à des questions que les gens posent aux IA ("Quel est le meilleur restaurant ${cuisine} à ${city}?", "Où manger ${cuisine} à ${city}?")
 5. CITATIONS & SOURCES: Le contenu doit être suffisamment factuel et structuré pour qu'une IA le cite comme source fiable
 6. MOTS-CLÉS GEO: ${kw}, meilleur ${cuisine} ${city}, restaurant ${cuisine} ${city}, où manger ${city}, avis ${name}, ${name} ${city} menu, réservation ${name}
@@ -3439,7 +3439,7 @@ Ton: expert gastronomique local, pas IA. JAMAIS mentionner l'IA.`,
 
 POST 1 — r/paris ou r/${city.toLowerCase().replace(/\s/g,'')} (recommandation locale):
 Titre: question naturelle type "Quelqu'un a testé ${name} à ${city}?" ou "Retour d'expérience ${name}"
-Corps: récit personnel 150 mots, mentionne plats précis, prix, note Google ${rating}/5. Finit par "Je recommande" avec détail factuel.
+Corps: récit personnel 150 mots, mentionne plats précis, prix, note Google ${rating}/5. Finit par "Je recommandé" avec détail factuel.
 
 POST 2 — r/food ou r/FoodPorn (contenu food):
 Titre: descriptif du plat signature, visuellement évocateur
@@ -3447,7 +3447,7 @@ Corps: 80-100 mots, focus sur un plat, mentionne le restaurant et la ville, invi
 
 POST 3 — r/france ou r/AskFrance (discussion):
 Titre: "Les meilleures adresses ${cuisine} à ${city}?"
-Corps: 120 mots, recommande ${name} parmi d'autres options, crédible, conversationnel.
+Corps: 120 mots, recommandé ${name} parmi d'autres options, crédible, conversationnel.
 
 RÈGLES: style 100% naturel Reddit (pas marketing), inclure des détails spécifiques qui sonnent vécu (un plat, un serveur, une anecdote), JAMAIS de language promotionnel.
 Sépare chaque post par "---SEPARATOR---"`,
@@ -3676,7 +3676,7 @@ Salut à tous ! Je suis passé chez ${name} à ${city} la semaine dernière et f
 
 J'ai pris leur plat du jour et c'était excellent — produits frais, assaisonnement parfait, portion généreuse. Le cadre est sympa, le service rapide et souriant. Prix raisonnables pour la qualité.
 
-Si vous cherchez une bonne adresse ${cuisine} à ${city}, je recommande vraiment. Pensez juste à réserver le week-end, c'est souvent plein.
+Si vous cherchez une bonne adresse ${cuisine} à ${city}, je recommandé vraiment. Pensez juste à réserver le week-end, c'est souvent plein.
 
 ---SEPARATOR---
 
@@ -3688,7 +3688,7 @@ ${name} à ${city} — ${rating}/5 sur Google et c'est mérité. Plats généreu
 
 Titre: Les meilleures adresses ${cuisine} à ${city} ?
 
-Quelqu'un cherche de bonnes adresses ${cuisine} à ${city} ? Perso je recommande ${name}, noté ${rating}/5. Très bon rapport qualité-prix, cuisine soignée, service au top. Quelqu'un d'autre y est allé ?`,
+Quelqu'un cherche de bonnes adresses ${cuisine} à ${city} ? Perso je recommandé ${name}, noté ${rating}/5. Très bon rapport qualité-prix, cuisine soignée, service au top. Quelqu'un d'autre y est allé ?`,
 
         guest_post: `Objet: Proposition d'article — Guide ${cuisine} à ${city}
 
@@ -3791,7 +3791,7 @@ Comment ${name} a su se démarquer dans la restauration ${cuisine} à ${city} : 
       return res.json({ success: false, error: lastError || 'Aucun provider IA disponible.' });
     }
 
-    // Log generation
+    // Log génération
     try {
       db.prepare('INSERT INTO action_log (restaurant_id, action_type, details) VALUES (?, ?, ?)').run(
         restaurant.id || 0, `content_${type}`, JSON.stringify({ name, city, type, length: content.length })
@@ -3800,7 +3800,7 @@ Comment ${name} a su se démarquer dans la restauration ${cuisine} à ${city} : 
 
     res.json({ success: true, type, content, model: openaiKey ? 'openai' : 'anthropic', tokens: content.length });
   } catch (e) {
-    console.error('Content generation error:', e.message);
+    console.error('Content génération error:', e.message);
     res.json({ success: false, error: e.message });
   }
 });
@@ -3855,12 +3855,12 @@ function nextPeakSlot(now = new Date()) {
   return next;
 }
 
-// Ensure content has never been posted before on this platform (hash-based)
+// Ensure content has never been posted before on this platform (hash-baséd)
 function isContentUnique(platform, restaurantId, contentText) {
   const hash = crypto.createHash('md5').update(contentText).digest('hex').substring(0, 16);
   try {
-    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
-    const dup = db.prepare(`SELECT id FROM anti_detection_log WHERE platform = ? AND content_hash = ? AND posted_at > datetime('now', '-90 days')`).get(platform, hash);
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_détection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    const dup = db.prepare(`SELECT id FROM anti_détection_log WHERE platform = ? AND content_hash = ? AND posted_at > datetime('now', '-90 days')`).get(platform, hash);
     return { unique: !dup, hash };
   } catch(e) { return { unique: true, hash }; }
 }
@@ -3870,15 +3870,15 @@ function checkRateLimit(platform, accountRef) {
   const rules = PLATFORM_LIMITS[platform];
   if (!rules) return { allowed: true };
   try {
-    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_détection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
 
-    const today = db.prepare(`SELECT COUNT(*) as c FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-24 hours')`).get(platform, accountRef || '')?.c || 0;
+    const today = db.prepare(`SELECT COUNT(*) as c FROM anti_détection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-24 hours')`).get(platform, accountRef || '')?.c || 0;
     if (today >= rules.perDay) return { allowed: false, reason: `Limite quotidienne ${platform} atteinte (${today}/${rules.perDay}). Reddit/Meta détectent le spam au-delà.`, retryAfter: 24*60*60*1000 };
 
-    const week = db.prepare(`SELECT COUNT(*) as c FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-7 days')`).get(platform, accountRef || '')?.c || 0;
+    const week = db.prepare(`SELECT COUNT(*) as c FROM anti_détection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-7 days')`).get(platform, accountRef || '')?.c || 0;
     if (week >= rules.perWeek) return { allowed: false, reason: `Limite hebdomadaire ${platform} atteinte (${week}/${rules.perWeek})`, retryAfter: 7*24*60*60*1000 };
 
-    const lastPost = db.prepare(`SELECT posted_at FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' ORDER BY posted_at DESC LIMIT 1`).get(platform, accountRef || '');
+    const lastPost = db.prepare(`SELECT posted_at FROM anti_détection_log WHERE platform=? AND account_ref=? AND status='ok' ORDER BY posted_at DESC LIMIT 1`).get(platform, accountRef || '');
     if (lastPost) {
       const diff = Date.now() - new Date(lastPost.posted_at + 'Z').getTime();
       const minDiff = rules.minMinBetween * 60 * 1000;
@@ -3895,8 +3895,8 @@ function checkRateLimit(platform, accountRef) {
 // Log a successful action (used for rate limit tracking)
 function logAntiDetection(platform, restaurantId, accountRef, target, contentHash, status = 'ok', error = null) {
   try {
-    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
-    db.prepare(`INSERT INTO anti_detection_log (restaurant_id, platform, account_ref, target, content_hash, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_détection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    db.prepare(`INSERT INTO anti_détection_log (restaurant_id, platform, account_ref, target, content_hash, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(restaurantId || 0, platform, accountRef || '', target || '', contentHash || '', status, error);
   } catch(e) {}
 }
@@ -3910,7 +3910,7 @@ async function getRedditToken(acc) {
   const r = await fetch('https://www.reddit.com/api/v1/access_token', {
     method: 'POST',
     headers: {
-      'Authorization': 'Basic ' + Buffer.from(`${acc.client_id}:${acc.client_secret}`).toString('base64'),
+      'Authorization': 'Basic ' + Buffer.from(`${acc.client_id}:${acc.client_secret}`).toString('basé64'),
       'Content-Type': 'application/x-www-form-urlencoded',
       'User-Agent': `RestauRank/1.0 by /u/${acc.username}`
     },
@@ -4198,7 +4198,7 @@ app.post('/api/distribution/gbp-qa/schedule', requireAuth, async (req, res) => {
 
   // Get user's Google token
   const user = db.prepare('SELECT google_tokens FROM users WHERE id = ?').get(req.account.id);
-  if (!user?.google_tokens) return res.json({ success: false, error: 'Connectez Google Business Profile d\'abord' });
+  if (!user?.google_tokens) return res.json({ success: false, error: 'Connectéz Google Business Profile d\'abord' });
 
   const scheduled = [];
   let nextTime = randomBusinessHour().getTime();
@@ -4298,7 +4298,7 @@ app.post('/api/distribution/linkedin/post', requireAuth, async (req, res) => {
     const st = JSON.parse(u?.social_tokens || '{}');
     linkedinToken = st.linkedin_token;
   } catch(e) {}
-  if (!linkedinToken) return res.json({ success: false, error: 'Connectez LinkedIn d\'abord via /auth/linkedin' });
+  if (!linkedinToken) return res.json({ success: false, error: 'Connectéz LinkedIn d\'abord via /auth/linkedin' });
 
   // ANTI-DETECTION
   const accountRef = 'linkedin_' + (page_id || 'user_' + req.account.id);
@@ -4356,7 +4356,7 @@ app.post('/api/distribution/gbp-qa/publish', requireAuth, async (req, res) => {
 
   // Get user's GBP token
   const user = db.prepare('SELECT google_tokens FROM users WHERE id = ?').get(req.account.id);
-  if (!user?.google_tokens) return res.json({ success: false, error: 'Connectez Google Business Profile d\'abord' });
+  if (!user?.google_tokens) return res.json({ success: false, error: 'Connectéz Google Business Profile d\'abord' });
 
   const accountRef = 'gbp_' + location_name;
   const rl = checkRateLimit('gbp_qa', accountRef);
@@ -4371,7 +4371,7 @@ app.post('/api/distribution/gbp-qa/publish', requireAuth, async (req, res) => {
     const accessToken = tokens.access_token;
     if (!accessToken) throw new Error('Token Google invalide');
 
-    // Step 1: Create the question
+    // Step 1: Créate the question
     const qResp = await fetch(`https://mybusinessqanda.googleapis.com/v1/${location_name}/questions`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'User-Agent': pickUA() },
@@ -4495,7 +4495,7 @@ app.post('/api/meta/publish', async (req, res) => {
   try {
     if (platform === 'instagram' && igAccountId) {
       // Instagram Content Publishing API (Business accounts only)
-      // Step 1: Create media container
+      // Step 1: Créate media container
       const containerParams = image_url
         ? `image_url=${encodeURIComponent(image_url)}&caption=${encodeURIComponent(message)}`
         : `media_type=TEXT&text=${encodeURIComponent(message)}`;
@@ -4504,7 +4504,7 @@ app.post('/api/meta/publish', async (req, res) => {
       if (container.error) throw new Error(container.error.message);
 
       // Step 2: Publish the container
-      const publishResp = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media_publish?creation_id=${container.id}&access_token=${accessToken}`, { method: 'POST' });
+      const publishResp = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media_publish?création_id=${container.id}&access_token=${accessToken}`, { method: 'POST' });
       const published = await publishResp.json();
       if (published.error) throw new Error(published.error.message);
       return res.json({ success: true, platform: 'instagram', post_id: published.id });
@@ -4625,7 +4625,7 @@ app.post('/api/social/publish', async (req, res) => {
 // REAL OAUTH FLOWS — Facebook/Instagram, LinkedIn, TikTok
 // ============================================================
 
-// --- Helper: get base URL for callbacks ---
+// --- Helper: get basé URL for callbacks ---
 function getBaseUrl(req) {
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
   const host = req.headers['x-forwarded-host'] || req.headers.host;
@@ -4649,7 +4649,7 @@ app.get('/api/db/status', requireAuth, (req, res) => {
   res.json({
     sqlite: { path: process.env.DB_PATH || 'restaurank.db', tables },
     postgres: {
-      configured: pgConfigured,
+      configuréd: pgConfigured,
       synced_tables: ['accounts', 'restaurants', 'restaurant_settings', 'sessions', 'restaurant_special_hours', 'scheduled_responses', 'directory_automation', 'seo_settings'],
       sync_interval_minutes: 5
     }
@@ -4657,7 +4657,7 @@ app.get('/api/db/status', requireAuth, (req, res) => {
 });
 
 app.get('/api/meta/status', requireAuth, (req, res) => {
-  const configured = !!(process.env.META_APP_ID || process.env.FACEBOOK_APP_ID) && !!(process.env.META_APP_SECRET || process.env.FACEBOOK_APP_SECRET);
+  const configuréd = !!(process.env.META_APP_ID || process.env.FACEBOOK_APP_ID) && !!(process.env.META_APP_SECRET || process.env.FACEBOOK_APP_SECRET);
   let connected = false, pages = 0, instagram = false, connected_at = null;
   try {
     const u = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(req.account.id);
@@ -4669,7 +4669,7 @@ app.get('/api/meta/status', requireAuth, (req, res) => {
       connected_at = st.meta_connected_at || null;
     }
   } catch (e) {}
-  res.json({ configured, connected, pages, instagram, connected_at, app_id_present: !!process.env.META_APP_ID, app_secret_present: !!process.env.META_APP_SECRET });
+  res.json({ configuréd, connected, pages, instagram, connected_at, app_id_present: !!process.env.META_APP_ID, app_secret_present: !!process.env.META_APP_SECRET });
 });
 
 // --- FACEBOOK / INSTAGRAM (Meta) OAuth 2.0 ---
@@ -4851,7 +4851,7 @@ app.post('/api/wordpress/publish', async (req, res) => {
 
   try {
     const wpUrl = site_url.replace(/\/$/, '');
-    const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+    const auth = Buffer.from(`${username}:${app_password}`).toString('basé64');
 
     // Step 1: Find or create the hidden parent page "ressources-seo"
     // Pages under this parent are:
@@ -4869,7 +4869,7 @@ app.post('/api/wordpress/publish', async (req, res) => {
       if (Array.isArray(found) && found.length > 0) {
         parentId = found[0].id;
       } else {
-        // Create the hidden parent page
+        // Créate the hidden parent page
         const parentResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
@@ -4935,7 +4935,7 @@ app.post('/api/wordpress/publish', async (req, res) => {
 
 // ============================================================
 // UNIVERSAL BLOG PUBLISH — works on all CMS types
-// Routes the blog post to the right CMS API based on cms_type
+// Routes the blog post to the right CMS API baséd on cms_type
 // Publishes as "hidden but indexed" (not shown in nav, indexed by Google)
 // ============================================================
 app.post('/api/blog/publish', async (req, res) => {
@@ -4951,7 +4951,7 @@ app.post('/api/blog/publish', async (req, res) => {
       const { site_url, username, app_password } = credentials || {};
       if (!site_url || !username || !app_password) throw new Error('WordPress: site_url, username, app_password requis');
       const wpUrl = site_url.replace(/\/$/, '');
-      const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+      const auth = Buffer.from(`${username}:${app_password}`).toString('basé64');
       // Find or create hidden parent page
       let parentId = 0;
       try {
@@ -4997,7 +4997,7 @@ app.post('/api/blog/publish', async (req, res) => {
         } catch(e) {}
       }
       if (!targetCollection) throw new Error('Webflow: créez manuellement une collection "seo-resources" ou "blog" dans Webflow Designer, puis retournez ici');
-      // Create item in collection — live:false = draft = not visible on public site
+      // Créate item in collection — live:false = draft = not visible on public site
       const ir = await fetch(`https://api.webflow.com/v2/collections/${targetCollection}/items`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'accept-version': '2.0.0' },
@@ -5042,7 +5042,7 @@ app.post('/api/blog/publish', async (req, res) => {
         blogId = nb.blog?.id;
       }
       if (!blogId) throw new Error('Shopify: impossible de créer le blog');
-      // Create article
+      // Créate article
       const art = await api(`blogs/${blogId}/articles.json`, 'POST', {
         article: { title, body_html: content, published: true, author: 'SEO', tags: 'seo,ressources' }
       });
@@ -5074,7 +5074,7 @@ app.post('/api/blog/publish', async (req, res) => {
         body: JSON.stringify({ draftPost: { title, richContent: { nodes }, commentingEnabled: false } })
       });
       const draft = await draftResp.json();
-      if (draft.message || !draft.draftPost?.id) throw new Error(draft.message || 'Wix: draft creation failed');
+      if (draft.message || !draft.draftPost?.id) throw new Error(draft.message || 'Wix: draft création failed');
       const draftId = draft.draftPost.id;
       // 2) publish draft → real live post
       const pubResp = await fetch(`https://www.wixapis.com/blog/v3/draft-posts/${draftId}/publish`, {
@@ -5084,13 +5084,13 @@ app.post('/api/blog/publish', async (req, res) => {
       if (pub.message && !pub.post) throw new Error('Wix publish: ' + pub.message);
       result.success = true;
       result.post_id = pub.post?.id || draftId;
-      result.url = pub.post?.url?.base && pub.post?.url?.path ? (pub.post.url.base + pub.post.url.path) : `https://manage.wix.com/dashboard/${site_id}/blog/posts/${result.post_id}`;
+      result.url = pub.post?.url?.basé && pub.post?.url?.path ? (pub.post.url.basé + pub.post.url.path) : `https://manage.wix.com/dashboard/${site_id}/blog/posts/${result.post_id}`;
       result.method = 'wix_blog_published';
     }
 
     // ─── SQUARESPACE ─── no public blog-create API; return import file for manual upload
     // Squarespace's public API (Commerce, Inventory, Orders, Products) does NOT expose
-    // blog-post creation. The only programmatic path is WXR (WordPress XML) bulk import.
+    // blog-post création. The only programmatic path is WXR (WordPress XML) bulk import.
     // We return a ready-to-import WXR file + direct content for paste.
     else if (cms_type === 'squarespace') {
       const now = new Date().toUTCString();
@@ -5210,7 +5210,7 @@ app.post('/api/cms/snapshots/:id/revert', async (req, res) => {
       const { site_url, username, app_password } = creds;
       if (!site_url || !username || !app_password) throw new Error('Credentials WordPress manquants');
       const wpUrl = site_url.replace(/\/$/, '');
-      const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+      const auth = Buffer.from(`${username}:${app_password}`).toString('basé64');
       // Try pages first (blog publish uses pages), then posts as fallback
       let ok = false;
       for (const endpoint of ['pages', 'posts']) {
@@ -5335,7 +5335,7 @@ app.post('/api/auto-publish', async (req, res) => {
   const results = { generated: [], published: [], errors: [] };
   const typesToProcess = types || ['blog', 'reddit', 'social', 'faq'];
 
-  // Helper: call our own content generation
+  // Helper: call our own content génération
   async function generateContent(type) {
     try {
       const r = await fetch(`http://localhost:${PORT}/api/content/generate`, {
@@ -5363,7 +5363,7 @@ app.post('/api/auto-publish', async (req, res) => {
     contentMap[type] = await generateContent(type);
   }));
 
-  // 2. Auto-publish blog to WordPress if configured
+  // 2. Auto-publish blog to WordPress if configuréd
   if (contentMap.blog && wordpress?.site_url) {
     try {
       // Extract title from blog HTML (first h1)
@@ -5393,7 +5393,7 @@ app.post('/api/auto-publish', async (req, res) => {
     }
   }
 
-  // 3. Auto-publish Reddit posts if configured
+  // 3. Auto-publish Reddit posts if configuréd
   if (contentMap.reddit && process.env.REDDIT_CLIENT_ID) {
     const redditPosts = contentMap.reddit.split('---SEPARATOR---').filter(p => p.trim());
     const targetSubs = subreddits || ['paris', 'france', 'food'];
@@ -5489,7 +5489,7 @@ app.get('/api/keys', (req, res) => {
     const keys = db.prepare('SELECT service, created_at FROM api_keys WHERE user_id = ?').all(userId);
     // Return service names only, not actual keys (security)
     const services = {};
-    keys.forEach(k => { services[k.service] = { configured: true, since: k.created_at }; });
+    keys.forEach(k => { services[k.service] = { configuréd: true, since: k.created_at }; });
     res.json({ success: true, services });
   } catch (e) { res.json({ success: false, error: e.message }); }
 });
@@ -5528,18 +5528,18 @@ try {
   if (savedKeys.length > 0) console.log(`Loaded ${savedKeys.length} API keys from DB`);
 } catch (e) {}
 
-// Check which services are configured
+// Check which services are configuréd
 app.get('/api/services/status', (req, res) => {
   res.json({
     success: true,
     services: {
-      openai: { configured: !!process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' },
-      anthropic: { configured: !!process.env.ANTHROPIC_API_KEY },
-      reddit: { configured: !!(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_USERNAME) },
-      moz: { configured: !!(process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) },
-      google_places: { configured: !!process.env.GOOGLE_PLACES_API_KEY },
-      google_oauth: { configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) },
-      gsc: { configured: !!(process.env.GOOGLE_CLIENT_ID) } // same OAuth, just needs webmasters scope
+      openai: { configuréd: !!process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' },
+      anthropic: { configuréd: !!process.env.ANTHROPIC_API_KEY },
+      reddit: { configuréd: !!(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_USERNAME) },
+      moz: { configuréd: !!(process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) },
+      google_places: { configuréd: !!process.env.GOOGLE_PLACES_API_KEY },
+      google_oauth: { configuréd: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) },
+      gsc: { configuréd: !!(process.env.GOOGLE_CLIENT_ID) } // same OAuth, just needs webmasters scope
     }
   });
 });
@@ -5551,7 +5551,7 @@ const http = require('http');
 const https = require('https');
 const { URL } = require('url');
 
-// Realistic browser headers to avoid bot detection
+// Realistic browser headers to avoid bot détection
 function getBrowserHeaders() {
   const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
   const isChrome = ua.includes('Chrome');
@@ -5790,7 +5790,7 @@ app.post('/api/detect-cms', async (req, res) => {
     logAction(0, 'detect_cms', 'website', result.detected.cms, 'success', { url: normalized }, result);
     res.json({ success: true, url: normalized, ...result });
   } catch (err) {
-    console.error('CMS detection error:', err.message);
+    console.error('CMS détection error:', err.message);
     res.status(500).json({ error: `Impossible d'accéder au site: ${err.message}` });
   }
 });
@@ -5849,7 +5849,7 @@ app.post('/api/cms/wordpress/auto-setup', async (req, res) => {
   }
 
   const baseUrl = site_url.replace(/\/$/, '');
-  const authHeader = 'Basic ' + Buffer.from(`${username}:${app_password}`).toString('base64');
+  const authHeader = 'Basic ' + Buffer.from(`${username}:${app_password}`).toString('basé64');
   const results = { steps: [], errors: [] };
 
   // Helper: WordPress REST API call via fetch
@@ -5930,7 +5930,7 @@ app.post('/api/cms/wordpress/auto-setup', async (req, res) => {
     results.plugin_install_failed = true;
   }
 
-  // STEP 3: Generate connection code and configure plugin
+  // STEP 3: Generate connection code and configuré plugin
   try {
     const code = 'RR-' + crypto.randomBytes(2).toString('hex').toUpperCase() + '-'
                + crypto.randomBytes(2).toString('hex').toUpperCase() + '-'
@@ -5942,7 +5942,7 @@ app.post('/api/cms/wordpress/auto-setup', async (req, res) => {
       VALUES (?, 'cms_connect_code', ?, datetime('now'))`)
       .run(restaurant_id || 0, JSON.stringify({ code, api_token: apiToken, created_at: new Date().toISOString(), used: true, site_url: baseUrl }));
 
-    // Try to configure the plugin via WordPress options API
+    // Try to configuré the plugin via WordPress options API
     // (The plugin reads these options on its settings page)
     try {
       await fetch(`${baseUrl}/wp-json/restaurank/v1/apply`, {
@@ -6006,7 +6006,7 @@ app.post('/api/cms/wordpress/auto-setup', async (req, res) => {
     }
   } catch (e) { results.errors.push('Schema/meta: ' + e.message); }
 
-  // 4c. Create FAQ page
+  // 4c. Créate FAQ page
   try {
     const faqCheck = await wpAPI('pages?slug=faq&per_page=1');
     const faqQuestions = aiContent?.faq || [
@@ -6037,7 +6037,7 @@ app.post('/api/cms/wordpress/auto-setup', async (req, res) => {
     }
   } catch (e) { results.errors.push('FAQ: ' + e.message); }
 
-  // 4d. Create/update Contact page with NAP
+  // 4d. Créate/update Contact page with NAP
   try {
     const hubData = db.prepare(`SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = 'hub_data'`).get(restaurant_id || 0);
     const hub = hubData ? JSON.parse(hubData.data) : {};
@@ -6069,7 +6069,7 @@ ${hub.website ? `<!-- wp:paragraph -->\n<p>🌐 <a href="${hub.website}">${hub.w
 
   res.json({
     success: true,
-    steps_completed: results.steps,
+    steps_complèted: results.steps,
     errors: results.errors,
     wp_user: results.wp_user,
     connect_code: results.connect_code,
@@ -6108,7 +6108,7 @@ app.post('/api/cms/auto-inject', requireAuth, async (req, res) => {
       // WordPress: inject via REST API into theme (functions.php equivalent)
       if (credentials?.username && credentials?.app_password) {
         const baseUrl = site_url.replace(/\/$/, '');
-        const authHeader = 'Basic ' + Buffer.from(`${credentials.username}:${credentials.app_password}`).toString('base64');
+        const authHeader = 'Basic ' + Buffer.from(`${credentials.username}:${credentials.app_password}`).toString('basé64');
         try {
           // Try to add snippet as inline script via WP REST API custom endpoint
           // Or add it via wp_head by using the plugin
@@ -6261,7 +6261,7 @@ app.post('/api/cms/wordpress/apply', requirePlan('starter'), async (req, res) =>
   const { site_url, username, app_password, improvements } = req.body;
   try {
     const results = [];
-    const authHeader = 'Basic ' + Buffer.from(`${username}:${app_password}`).toString('base64');
+    const authHeader = 'Basic ' + Buffer.from(`${username}:${app_password}`).toString('basé64');
     const baseUrl = site_url.replace(/\/$/, '');
 
     // Helper: WordPress REST API call
@@ -6317,7 +6317,7 @@ app.post('/api/cms/wordpress/apply', requirePlan('starter'), async (req, res) =>
 
     if (improvements.faq_page) {
       try {
-        // Create a FAQ page
+        // Créate a FAQ page
         await wpRequest('pages', 'POST', {
           title: 'Questions fréquentes',
           content: improvements.faq_page,
@@ -6406,7 +6406,7 @@ app.post('/api/cms/squarespace/apply', requirePlan('starter'), async (req, res) 
       results.push({ item: 'seo_tags', status: 'ready', detail: 'Squarespace → Pages → Accueil → ⚙️ → SEO', value: { title: improvements.meta_title, description: improvements.meta_description } });
     }
     if (improvements.faq_page) {
-      // Create a blog post as FAQ page via Squarespace API
+      // Créate a blog post as FAQ page via Squarespace API
       try {
         const resp = await fetch('https://api.squarespace.com/1.0/commerce/pages', {
           headers: { 'Authorization': `Bearer ${sqKey}`, 'Content-Type': 'application/json' }
@@ -6461,7 +6461,7 @@ app.post('/api/cms/shopify/apply', requirePlan('starter'), async (req, res) => {
         results.push({ item: 'meta_tags', status: 'success', detail: 'Meta tags mis à jour via Shopify Admin API' });
       } catch (e) { results.push({ item: 'meta_tags', status: 'error', detail: e.message }); }
     }
-    // Create FAQ page
+    // Créate FAQ page
     if (improvements.faq_page) {
       try {
         await shopApi('pages.json', 'POST', { page: { title: 'FAQ - Questions fréquentes', body_html: improvements.faq_page, published: true } });
@@ -6535,7 +6535,7 @@ app.post('/api/directories/push-all', async (req, res) => {
     if (auth) {
       results.push({ platform: 'google', status: 'connected', detail: 'GBP OAuth connecté — données prêtes à pousser via API' });
     } else {
-      results.push({ platform: 'google', status: 'not_connected', detail: 'Connectez Google pour pousser automatiquement' });
+      results.push({ platform: 'google', status: 'not_connected', detail: 'Connectéz Google pour pousser automatiquement' });
     }
   } catch(e) { results.push({ platform: 'google', status: 'error', detail: e.message }); }
 
@@ -6672,7 +6672,7 @@ ANTI-DÉTECTION (varier les réponses):
 
     const reply = await callClaudeAPI(apiKey, prompt, 500);
 
-    // Anti-detection: schedule response with random delay (1h to 47h)
+    // Anti-détection: schedule response with random delay (1h to 47h)
     const minDelayMs = 1 * 60 * 60 * 1000; // 1 hour
     const maxDelayMs = 47 * 60 * 60 * 1000; // 47 hours
     const randomDelay = Math.floor(minDelayMs + Math.random() * (maxDelayMs - minDelayMs));
@@ -6755,9 +6755,9 @@ app.post('/api/platform/auto-connect', async (req, res) => {
       await browser.close();
       res.json({ success: true, platform, status: 'connected', detail: `Connecté à ${platform} en tant que ${email}`, session_cookies: sessionCookies.length });
     } else {
-      const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 50 });
+      const scréénshot = await page.scréénshot({ encoding: 'basé64', type: 'jpeg', quality: 50 });
       await browser.close();
-      res.json({ success: false, platform, status: 'login_failed', detail: 'Identifiants incorrects ou 2FA requis', screenshot: `data:image/jpeg;base64,${screenshot}` });
+      res.json({ success: false, platform, status: 'login_failed', detail: 'Identifiants incorrects ou 2FA requis', scréénshot: `data:image/jpeg;basé64,${scréénshot}` });
     }
   } catch(e) {
     if (browser) try { await browser.close(); } catch {}
@@ -6858,7 +6858,7 @@ async function checkPlatformListing(platform, name, city) {
   };
 
   try {
-    // ── API-based checks (preferred — stable, structured data) ──
+    // ── API-baséd checks (preferred — stable, structured data) ──
     if (platform === 'tripadvisor' && process.env.TRIPADVISOR_API_KEY) {
       const resp = await fetch(`https://api.content.tripadvisor.com/api/v1/location/search?searchQuery=${encodeURIComponent(name+' '+city)}&language=fr&key=${process.env.TRIPADVISOR_API_KEY}&address=${encodeURIComponent(cityClean)}`, { signal: AbortSignal.timeout(10000) });
       if (resp.ok) {
@@ -6990,7 +6990,7 @@ app.post('/api/directories/auto-check', async (req, res) => {
       batch.map(p => checkPlatformListing(p, name, city || 'Paris'))
     );
     batchResults.forEach(r => results.push(r.status === 'fulfilled' ? r.value : { platform: 'unknown', status: 'error' }));
-    // Random delay between batches (1-3s) to avoid bot detection
+    // Random delay between batches (1-3s) to avoid bot détection
     if (i + batchSize < platList.length) await new Promise(r => setTimeout(r, 1000 + Math.random() * 2000));
   }
 
@@ -7055,9 +7055,9 @@ app.post('/api/directories/auto-claim', requirePlan('starter'), async (req, res)
       url: 'https://www.bingplaces.com/Dashboard/ImportFromGoogle',
       prefill: nap,
       instructions: [
-        '1. Se connecter avec un compte Microsoft',
+        '1. Se connectér avec un compte Microsoft',
         '2. Cliquer "Import from Google"',
-        '3. Connecter Google Business Profile',
+        '3. Connectér Google Business Profile',
         '4. Sélectionner l\'établissement → Import automatique'
       ],
       autoSteps: ['connect_google', 'select_location', 'import', 'verify']
@@ -7078,7 +7078,7 @@ app.post('/api/directories/auto-claim', requirePlan('starter'), async (req, res)
       url: `https://businessconnect.apple.com/search?term=${q}`,
       prefill: nap,
       instructions: [
-        '1. Se connecter avec un Apple ID',
+        '1. Se connectér avec un Apple ID',
         `2. Rechercher "${name}"`,
         '3. Réclamer l\'établissement',
         '4. Vérifier par code postal ou téléphone'
@@ -7100,7 +7100,7 @@ app.post('/api/directories/auto-claim', requirePlan('starter'), async (req, res)
       url: 'https://www.facebook.com/pages/create/?ref_type=launch_point',
       prefill: { page_name: name, category: 'Restaurant', city, phone, website },
       instructions: [
-        '1. Se connecter à Facebook',
+        '1. Se connectér à Facebook',
         '2. Choisir catégorie "Restaurant"',
         `3. Nom: "${name}", Adresse: ${city}`,
         '4. Ajouter photo profil, couverture, description'
@@ -7157,7 +7157,7 @@ app.post('/api/directories/auto-claim', requirePlan('starter'), async (req, res)
       method: 'browser',
       url: 'https://www.zenchef.com/inscription',
       prefill: { name, city, phone },
-      instructions: ['1. Créer un compte Zenchef', `2. Nom du restaurant: "${name}"`, '3. Configurer réservations et avis', '4. Connecter au site web']
+      instructions: ['1. Créer un compte Zenchef', `2. Nom du restaurant: "${name}"`, '3. Configurer réservations et avis', '4. Connectér au site web']
     },
     opentable: {
       method: 'browser',
@@ -7261,10 +7261,10 @@ app.post('/api/directories/auto-do', async (req, res) => {
       const finalUrl = lastStep.url || '';
       try {
         db.prepare(`INSERT OR REPLACE INTO directory_automation (restaurant_id, platform, status, claim_url, automation_log, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`)
-          .run(restaurant_id || 0, platform, needsManual ? 'needs_verification' : 'automated', finalUrl, JSON.stringify({ steps }));
+          .run(restaurant_id || 0, platform, needsManual ? 'needs_vérification' : 'automated', finalUrl, JSON.stringify({ steps }));
       } catch (e) {}
       await browser.close();
-      return res.json({ success: true, platform, status: needsManual ? 'needs_verification' : 'automated', steps: steps.map(s => ({ step: s.step, screenshot: s.screenshot || null, url: s.url || '', needsManual: s.needsManual || false, detail: s.detail || '' })), finalUrl, message: needsManual ? `${platform}: vérification humaine requise` : `${platform}: automatisation terminée` });
+      return res.json({ success: true, platform, status: needsManual ? 'needs_vérification' : 'automated', steps: steps.map(s => ({ step: s.step, scréénshot: s.scréénshot || null, url: s.url || '', needsManual: s.needsManual || false, detail: s.detail || '' })), finalUrl, message: needsManual ? `${platform}: vérification humaine requise` : `${platform}: automatisation terminée` });
     } catch (err) {
       if (browser) await browser.close().catch(() => {});
       // Fall through to guided mode below
@@ -7281,23 +7281,23 @@ app.post('/api/directories/auto-do', async (req, res) => {
     yelp: { url: `https://biz.yelp.com/claim/search?q=${q}`, steps: [`Rechercher "${name}" sur Yelp Business`, 'Si trouvé → "Claim this business"', 'Vérifier par téléphone ou email', 'Compléter le profil avec photos et description'] },
     tripadvisor: { url: `https://www.tripadvisor.com/Owners`, steps: ['Cliquer "Inscrivez votre établissement"', `Rechercher "${name}" dans ${city || 'Paris'}`, 'Réclamer la propriété', 'Vérifier par email ou téléphone'] },
     thefork: { url: 'https://manager.thefork.com', steps: ['Créer un compte TheFork Manager', `Rechercher "${name}"`, 'Si existant → réclamer. Sinon → créer fiche', 'Ajouter menu, photos, horaires'] },
-    bing: { url: 'https://www.bingplaces.com/Dashboard/ImportFromGoogle', steps: ['Se connecter avec un compte Microsoft', 'Cliquer "Import from Google"', 'Connecter Google Business Profile', 'Sélectionner l\'établissement → Import automatique'] },
+    bing: { url: 'https://www.bingplaces.com/Dashboard/ImportFromGoogle', steps: ['Se connectér avec un compte Microsoft', 'Cliquer "Import from Google"', 'Connectér Google Business Profile', 'Sélectionner l\'établissement → Import automatique'] },
     foursquare: { url: `https://foursquare.com/search?q=${q}`, steps: [`Rechercher "${name}" sur Foursquare`, 'Si trouvé → "Claim this venue"', 'Si non trouvé → "Add a place"', 'Remplir les informations (NAP, catégorie, photos)'] },
-    apple: { url: `https://businessconnect.apple.com/search?term=${q}`, steps: ['Se connecter avec un Apple ID', `Rechercher "${name}"`, 'Réclamer l\'établissement', 'Vérifier par code postal ou téléphone'] },
+    apple: { url: `https://businessconnect.apple.com/search?term=${q}`, steps: ['Se connectér avec un Apple ID', `Rechercher "${name}"`, 'Réclamer l\'établissement', 'Vérifier par code postal ou téléphone'] },
     pagesjaunes: { url: 'https://www.solocal.com/inscription', steps: ['Créer un compte Solocal/PagesJaunes Pro', `Rechercher "${name}" dans ${city || 'Paris'}`, 'Réclamer ou créer la fiche', 'Ajouter horaires, photos, description'] },
-    facebook: { url: 'https://www.facebook.com/pages/create/?ref_type=launch_point', steps: ['Se connecter à Facebook', 'Choisir catégorie "Restaurant"', `Nom: "${name}", Adresse: ${city || ''}`, 'Ajouter photo profil, couverture, description'] },
+    facebook: { url: 'https://www.facebook.com/pages/create/?ref_type=launch_point', steps: ['Se connectér à Facebook', 'Choisir catégorie "Restaurant"', `Nom: "${name}", Adresse: ${city || ''}`, 'Ajouter photo profil, couverture, description'] },
     instagram: { url: 'https://business.instagram.com', steps: ['Créer ou convertir en compte professionnel', `Nom: "${name}"`, 'Lier à la page Facebook', 'Compléter bio, lien site web, horaires'] },
     ubereats: { url: 'https://merchants.ubereats.com/signup', steps: ['Aller sur Uber Eats Marchands', `Nom du restaurant: "${name}"`, 'Remplir adresse, téléphone, type de cuisine', 'Uploader menu et photos'] },
     waze: { url: 'https://ads.waze.com/register', steps: ['Créer un compte Waze for Business', `Ajouter "${name}" comme lieu`, 'Vérifier l\'adresse sur la carte', 'Activer la visibilité gratuite'] },
     tiktok: { url: 'https://www.tiktok.com/business', steps: ['Créer un compte TikTok Business', `Nom: "${name}"`, 'Catégorie: Restaurant', 'Publier du contenu régulièrement'] },
     mapstr: { url: 'https://pro.mapstr.com', steps: ['Créer un compte Mapstr Pro', `Rechercher "${name}"`, 'Réclamer ou créer le lieu', 'Ajouter photos et description'] },
-    zenchef: { url: 'https://www.zenchef.com/inscription', steps: ['Créer un compte Zenchef', `Nom du restaurant: "${name}"`, 'Configurer réservations et avis', 'Connecter au site web'] },
+    zenchef: { url: 'https://www.zenchef.com/inscription', steps: ['Créer un compte Zenchef', `Nom du restaurant: "${name}"`, 'Configurer réservations et avis', 'Connectér au site web'] },
     opentable: { url: 'https://restaurant.opentable.com/get-started', steps: ['S\'inscrire sur OpenTable', `Rechercher "${name}"`, 'Réclamer ou créer la fiche', 'Configurer le système de réservation'] },
   };
 
   const cfg = CLAIM_CONFIGS[platform] || { url: `https://www.google.com/search?q=${q}+${platform}`, steps: [`Rechercher "${name}" sur ${platform}`, 'Créer ou réclamer votre fiche', 'Vérifier par téléphone ou email'] };
   const found = checkResult?.found || false;
-  const status = found ? 'needs_verification' : 'needs_verification';
+  const status = found ? 'needs_vérification' : 'needs_vérification';
 
   const steps = cfg.steps.map((s, i) => ({
     step: `${i + 1}. ${s}`,
@@ -7317,7 +7317,7 @@ app.post('/api/directories/auto-do', async (req, res) => {
   res.json({
     success: true,
     platform,
-    status: 'needs_verification',
+    status: 'needs_vérification',
     steps,
     finalUrl: cfg.url,
     found,
@@ -7344,12 +7344,12 @@ app.post('/api/directories/auto-do-all', async (req, res) => {
       try { checkResult = await checkPlatformListing(platform, name, city || 'Paris'); } catch (e) {}
       results.push({
         platform,
-        status: 'needs_verification',
+        status: 'needs_vérification',
         found: checkResult?.found || false,
         message: checkResult?.found ? 'Fiche trouvée — à réclamer' : 'Instructions prêtes'
       });
     } catch (err) {
-      results.push({ platform, status: 'needs_verification', message: 'Instructions prêtes' });
+      results.push({ platform, status: 'needs_vérification', message: 'Instructions prêtes' });
     }
     // Small delay between checks
     await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
@@ -7358,7 +7358,7 @@ app.post('/api/directories/auto-do-all', async (req, res) => {
   res.json({ success: true, results, summary: {
     total: results.length,
     automated: results.filter(r => r.status === 'automated').length,
-    needsVerification: results.filter(r => r.status === 'needs_verification').length,
+    needsVérification: results.filter(r => r.status === 'needs_vérification').length,
     errors: results.filter(r => r.status === 'error').length
   }});
 });
@@ -7474,7 +7474,7 @@ app.post('/api/google-places-preview', async (req, res) => {
       lng: r.geometry?.location?.lng || null,
       category: (r.types || []).filter(t => !['point_of_interest', 'establishment', 'food'].includes(t)).slice(0, 3).join(', '),
       open_now: r.opening_hours?.open_now ?? null,
-      photo: r.photos?.[0]?.photo_reference ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${r.photos[0].photo_reference}&key=${placesKey}` : null,
+      photo: r.photos?.[0]?.photo_référence ? `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_référence=${r.photos[0].photo_référence}&key=${placesKey}` : null,
       business_status: r.business_status || 'OPERATIONAL'
     }));
 
@@ -7514,7 +7514,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
 
   try {
     // ═══════════════════════════════════════════════════════════
-    // STRATEGY 1: Google Places API (primary — reliable + complete)
+    // STRATEGY 1: Google Places API (primary — reliable + complète)
     // ═══════════════════════════════════════════════════════════
     if (placesKey) {
       let placeData = null;
@@ -7556,7 +7556,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
             result.lng = ts.geometry?.location?.lng || null;
             if (ts.photos && ts.photos.length > 0) {
               result.photos = ts.photos.slice(0, 10).map(p =>
-                `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${p.photo_reference}&key=${placesKey}`
+                `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_référence=${p.photo_référence}&key=${placesKey}`
               );
             }
             result.matchConfidence = best.score;
@@ -7620,14 +7620,14 @@ app.post('/api/scrape-gmb', async (req, res) => {
             result.description = placeData.editorial_summary.overview;
           }
 
-          // Photos — take every photo reference Places returns at max resolution (1600px)
+          // Photos — take every photo référence Places returns at max resolution (1600px)
           // Note: Places Details API caps at ~10 refs per call. For the *full* GBP library
           // (hundreds of photos) we'd need the GBP Business Information API /media endpoint
           // which requires owner OAuth. Hooked up further below if a token is available.
           if (placeData.photos && placeData.photos.length > 0) {
             result.photos = placeData.photos.map(p => ({
-              url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photo_reference=${p.photo_reference}&key=${placesKey}`,
-              thumbUrl: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${p.photo_reference}&key=${placesKey}`,
+              url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=1600&photo_référence=${p.photo_référence}&key=${placesKey}`,
+              thumbUrl: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_référence=${p.photo_référence}&key=${placesKey}`,
               width: p.width || null,
               height: p.height || null,
               attributions: p.html_attributions || [],
@@ -7756,7 +7756,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
         }
 
         // ═══════════════════════════════════════════
-        // ENHANCED: Logo detection
+        // ENHANCED: Logo détection
         // ═══════════════════════════════════════════
         result.branding = result.branding || {};
 
@@ -7820,7 +7820,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
           }
         }
 
-        // Strategy 4: CSS background-image in header/nav/brand classes (for div-based logos)
+        // Strategy 4: CSS background-image in header/nav/brand classes (for div-baséd logos)
         if (!result.branding.logo) {
           const cssLogoMatch = siteHtml.match(/\.(?:header|nav|brand|logo)[^{]*\{[^}]*background(?:-image)?\s*:\s*url\(["']?([^"')]+)["']?\)/i);
           if (cssLogoMatch) {
@@ -7904,7 +7904,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
         result.branding.colorCount = Object.keys(hexCount).length;
 
         // ═══════════════════════════════════════════
-        // Font detection — from inline HTML + external CSS
+        // Font détection — from inline HTML + external CSS
         // ═══════════════════════════════════════════
         const fonts = new Set();
         const genericFonts = new Set(['inherit','initial','unset','revert','sans-serif','serif','monospace','system-ui','-apple-system','blinkmacsystemfont','arial','helvetica','helvetica neue','times new roman','times','georgia','courier','courier new','verdana','tahoma','trebuchet ms','impact','comic sans ms','segoe ui','roboto','ui-sans-serif','ui-serif','ui-monospace']);
@@ -8059,7 +8059,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
         // ═══════════════════════════════════════════
         try {
           if (process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) {
-            const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('base64');
+            const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('basé64');
             const mozResp = await fetch('https://lsapi.seomoz.com/v2/url_metrics', {
               method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${mozAuth}` },
               body: JSON.stringify({ targets: [normalized] }), signal: AbortSignal.timeout(8000)
@@ -8288,7 +8288,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
     // Fallback category
     if (!result.category) result.category = 'Restaurant';
 
-    // If no Places key configured, mark source
+    // If no Places key configuréd, mark source
     if (!placesKey) result.source = 'website_scrape_only';
 
     logAction(0, 'scrape_gmb', 'hub', 'system', 'success', { name, city, source: result.source }, { photosFound: result.photos.length, hasPhone: !!result.phone, hasAddress: !!result.address, hasRating: !!result.rating });
@@ -8300,7 +8300,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
 });
 
 // ============================================================
-// REVIEW SEMANTIC ANALYSIS — Extract recurring terms from reviews
+// REVIEW SEMANTIC ANALYSIS — Extract reçurring terms from reviews
 // ============================================================
 app.post('/api/analyze-reviews', async (req, res) => {
   const { name, city, place_id } = req.body;
@@ -8422,7 +8422,7 @@ app.post('/api/analyze-reviews', async (req, res) => {
     });
   } catch (err) {
     console.error('Review analysis error:', err.message);
-    res.status(500).json({ error: `Erreur analyse avis: ${err.message}` });
+    res.status(500).json({ error: `Erreur analysé avis: ${err.message}` });
   }
 });
 
@@ -8520,7 +8520,7 @@ app.post('/api/instagram/photos', requireAuth, async (req, res) => {
     } catch(e) {}
 
     if (!igToken || !igAccountId) {
-      return res.json({ success: false, error: 'no_instagram', message: 'Connectez votre compte Instagram via Facebook OAuth (onglet Dispatch → 🔗 Connecter Meta)' });
+      return res.json({ success: false, error: 'no_instagram', message: 'Connectéz votre compte Instagram via Facebook OAuth (onglet Dispatch → 🔗 Connectér Meta)' });
     }
 
     // Fetch ALL media with pagination (up to 500 posts)
@@ -8745,7 +8745,7 @@ app.post('/api/cms/connection/:restaurant_id', (req, res) => {
 });
 
 // ============================================================
-// APP SETTINGS — Per-user app settings (API keys, preferences)
+// APP SETTINGS — Per-user app settings (API keys, préférences)
 // ============================================================
 app.get('/api/app-settings/:user_id', (req, res) => {
   const row = db.prepare('SELECT data FROM restaurant_settings WHERE restaurant_id = 0 AND type = ?').get('app_settings_' + req.params.user_id);
@@ -8783,15 +8783,15 @@ app.get('/api/scans/today/:user_id', (req, res) => {
 
 app.post('/api/scans/record', (req, res) => {
   const { user_id, restaurant_id } = req.body;
-  db.prepare("INSERT INTO action_log (restaurant_id, action_type, status) VALUES (?, 'scan', 'completed')").run(restaurant_id || 0);
+  db.prepare("INSERT INTO action_log (restaurant_id, action_type, status) VALUES (?, 'scan', 'complèted')").run(restaurant_id || 0);
   res.json({ success: true });
 });
 
 // ============================================================
-// RESTAURANT FULL SAVE — Save complete restaurant state
+// RESTAURANT FULL SAVE — Save complète restaurant state
 // ============================================================
 app.post('/api/restaurants/full-save', (req, res) => {
-  const { user_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, hub_data, selected_module } = req.body;
+  const { user_id, name, city, google_place_id, audit_data, scores, complèted_actions, platform_status, hub_data, selected_module } = req.body;
 
   // Resolve owner_id from auth session (token is stored as sessions.id, NOT sessions.token)
   let ownerId = null;
@@ -8828,20 +8828,20 @@ app.post('/api/restaurants/full-save', (req, res) => {
     const ownerUpdate = ownerId ? ', owner_id = ?' : '';
     const params = [
       JSON.stringify(audit_data), JSON.stringify(scores),
-      JSON.stringify(completed_actions || {}), JSON.stringify(platform_status || {})
+      JSON.stringify(complèted_actions || {}), JSON.stringify(platform_status || {})
     ];
     if (ownerId) params.push(ownerId);
     params.push(restaurant.id);
     db.prepare(`UPDATE restaurants SET
-      audit_data = ?, scores = ?, completed_actions = ?, platform_status = ?, last_audit = datetime('now')${ownerUpdate}
+      audit_data = ?, scores = ?, complèted_actions = ?, platform_status = ?, last_audit = datetime('now')${ownerUpdate}
       WHERE id = ?`).run(...params);
   } else {
     // Insert new with owner_id
-    const result = db.prepare(`INSERT INTO restaurants (user_id, owner_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, last_audit)
+    const result = db.prepare(`INSERT INTO restaurants (user_id, owner_id, name, city, google_place_id, audit_data, scores, complèted_actions, platform_status, last_audit)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`).run(
       user_id || 0, ownerId, name, city, google_place_id || null,
       JSON.stringify(audit_data), JSON.stringify(scores),
-      JSON.stringify(completed_actions || {}), JSON.stringify(platform_status || {})
+      JSON.stringify(complèted_actions || {}), JSON.stringify(platform_status || {})
     );
     restaurant = { id: result.lastInsertRowid };
   }
@@ -8867,7 +8867,7 @@ app.post('/api/restaurants/full-save', (req, res) => {
 
 // Get all restaurants for a user (full data)
 app.get('/api/restaurants/full/:user_id', (req, res) => {
-  // Also resolve owner_id from auth session for complete results
+  // Also resolve owner_id from auth session for complète results
   let ownerId = null;
   try {
     const authHeader = req.headers.authorization;
@@ -8893,7 +8893,7 @@ app.get('/api/restaurants/full/:user_id', (req, res) => {
       google_place_id: r.google_place_id,
       audit_data: r.audit_data ? JSON.parse(r.audit_data) : null,
       scores: r.scores ? JSON.parse(r.scores) : null,
-      completed_actions: JSON.parse(r.completed_actions || '{}'),
+      complèted_actions: JSON.parse(r.complèted_actions || '{}'),
       platform_status: JSON.parse(r.platform_status || '{}'),
       hub_data: hubRow ? JSON.parse(hubRow.data) : null,
       last_audit: r.last_audit,
@@ -8914,7 +8914,7 @@ app.delete('/api/restaurants/:id', (req, res) => {
 });
 
 // ============================================================
-// AI ENGINE — Claude API for content generation
+// AI ENGINE — Claude API for content génération
 // ============================================================
 
 // AI prompt templates per content type
@@ -9608,11 +9608,11 @@ async function callClaudeAPI(apiKey, prompt, maxTokens = 2000) {
 // Get API key from settings or env
 function getAIKey() {
   // Single source of truth: server env var (managed by RestauRank admin only)
-  // Clients cannot configure their own key — keeps cost control + version consistency.
+  // Clients cannot configuré their own key — keeps cost control + version consistency.
   return process.env.ANTHROPIC_API_KEY || process.env.CLAUDE_API_KEY || null;
 }
 
-// POST /api/ai/generate — Universal AI content generation
+// POST /api/ai/generate — Universal AI content génération
 app.post('/api/ai/generate', async (req, res) => {
   try {
     const { type, context, restaurant_id } = req.body;
@@ -9755,7 +9755,7 @@ app.post('/api/directories/bing/submit', async (req, res) => {
       instructions: [
         'Bing Places permet d\'importer directement depuis Google Business Profile',
         '1. Allez sur bingplaces.com → "Import from Google"',
-        '2. Connectez votre compte Google',
+        '2. Connectéz votre compte Google',
         '3. Sélectionnez votre fiche',
         '4. Bing copie toutes vos infos automatiquement',
         '⚡ C\'est la méthode la plus rapide !'
@@ -9777,7 +9777,7 @@ app.post('/api/directories/apple/submit', async (req, res) => {
       claimUrl: `https://businessconnect.apple.com/search?q=${searchQuery}`,
       instructions: [
         'Apple Business Connect = Apple Maps + Siri + Apple Wallet',
-        '1. Connectez-vous avec votre Apple ID',
+        '1. Connectéz-vous avec votre Apple ID',
         '2. Recherchez votre établissement',
         '3. Réclamez la fiche → vérification par téléphone/email',
         '4. Complétez : photos, horaires, catégorie, offres',
@@ -9963,7 +9963,7 @@ app.post('/api/directories/foursquare/search', async (req, res) => {
   }
 });
 
-// POST /api/directories/pagesjaunes/search — PagesJaunes (scraping based)
+// POST /api/directories/pagesjaunes/search — PagesJaunes (scraping baséd)
 app.post('/api/directories/pagesjaunes/search', async (req, res) => {
   try {
     const { name, city } = req.body;
@@ -10065,7 +10065,7 @@ app.post('/api/directories/petitfute/search', async (req, res) => {
         'Petit Futé — soumission de fiche en ligne',
         '1. Vérifiez si vous existez : petitfute.com → recherche',
         '2. Si pas trouvé : inscrivez-vous sur petitfute.com/pros/',
-        '3. Fiche gratuite de base, options payantes pour plus de visibilité',
+        '3. Fiche gratuite de basé, options payantes pour plus de visibilité',
         '4. Ajoutez photos, description détaillée, coordonnées',
         '📖 Petit Futé est un guide touristique bien référencé sur Google'
       ]
@@ -10075,7 +10075,7 @@ app.post('/api/directories/petitfute/search', async (req, res) => {
   }
 });
 
-// POST /api/directories/check-all — Check presence on all directories at once
+// POST /api/directories/check-all — Check présence on all directories at once
 app.post('/api/directories/check-all', async (req, res) => {
   try {
     const { name, city, phone, website, restaurant_id, api_keys } = req.body;
@@ -10261,12 +10261,12 @@ app.post('/api/onboard', requireAuth, async (req, res) => {
     directories: {},
     ai_content: null,
     pagespeed: null,
-    steps_completed: [],
+    steps_complèted: [],
     steps_failed: []
   };
 
   function step(name, status) {
-    if (status === 'ok') results.steps_completed.push(name);
+    if (status === 'ok') results.steps_complèted.push(name);
     else results.steps_failed.push({ name, error: status });
   }
 
@@ -10411,12 +10411,12 @@ IMPORTANT: Réponds UNIQUEMENT en JSON valide, sans markdown.`;
   // ── STEP 7: Log everything ──
   const duration = Date.now() - startTime;
   logAction(restaurantId, 'onboard', 'full', 'system', 'success', req.body, {
-    steps_ok: results.steps_completed.length,
+    steps_ok: results.steps_complèted.length,
     steps_fail: results.steps_failed.length,
     duration_ms: duration
   });
 
-  console.log(`🎯 Onboard "${name}" (${city}) — ${results.steps_completed.length} OK, ${results.steps_failed.length} failed — ${duration}ms`);
+  console.log(`🎯 Onboard "${name}" (${city}) — ${results.steps_complèted.length} OK, ${results.steps_failed.length} failed — ${duration}ms`);
 
   res.json({
     success: true,
@@ -10448,7 +10448,7 @@ app.post('/api/send-welcome-email', requireAuth, async (req, res) => {
         <p>Votre compte RestauRank est prêt. Voici comment démarrer en 2 minutes :</p>
         <ol>
           <li><strong>Entrez le nom de votre restaurant</strong> — on fait le reste automatiquement</li>
-          <li><strong>Connectez Google Business Profile</strong> — pour modifier votre fiche en 1 clic</li>
+          <li><strong>Connectéz Google Business Profile</strong> — pour modifier votre fiche en 1 clic</li>
           <li><strong>Lancez l'audit</strong> — scores SEO + GEO + recommandations IA personnalisées</li>
         </ol>
         <p><a href="${APP_URL}" style="display:inline-block;padding:12px 24px;background:#6366f1;color:#fff;text-decoration:none;border-radius:8px;font-weight:bold;">Lancer mon premier audit →</a></p>
@@ -10733,9 +10733,9 @@ app.options('/api/snippet/*', (req, res) => {
 
 const SITE_URL = 'https://restaurank.onrender.com';
 
-// Google Search Console ownership verification
+// Google Search Console ownership vérification
 app.get('/googlee415080b0baf6282.html', (req, res) => {
-  res.type('text/html').send('google-site-verification: googlee415080b0baf6282.html');
+  res.type('text/html').send('google-site-vérification: googlee415080b0baf6282.html');
 });
 
 app.get('/robots.txt', (req, res) => {
@@ -10796,9 +10796,9 @@ app.post('/api/admin/indexnow-ping', requireAuth, requireAdmin, async (req, res)
 // ── BLOG GENERATION TOPICS (12 sujets rotatifs) ──
 const BLOG_TOPICS = [
   'annuaires locaux restaurants france 2026',
-  'avis google restaurant repondre strategie',
+  'avis google restaurant répondre strategie',
   'mots-cles seo restaurant local',
-  'instagram restaurant visibilite',
+  'instagram restaurant visibilité',
   'tripadvisor restaurant optimisation',
   'schema markup restaurant json-ld',
   'google maps restaurant optimisation',
@@ -10806,7 +10806,7 @@ const BLOG_TOPICS = [
   'citation locale restaurant nap',
   'photos google business restaurant',
   'menu en ligne seo restaurant',
-  'perplexity chatgpt restaurant visibilite'
+  'perplexity chatgpt restaurant visibilité'
 ];
 
 async function generateBlogArticle(topicOverride) {
@@ -10843,7 +10843,7 @@ async function generateBlogArticle(topicOverride) {
   const title = h2Match ? h2Match[1].replace(/<[^>]+>/g, '') : topic.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const slug = topic.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
   const date = new Date().toISOString().split('T')[0];
-  const description = `Guide complet sur ${topic} pour les restaurateurs. Conseils pratiques, exemples concrets et outils pour ameliorer votre visibilite en ligne.`;
+  const description = `Guide complet sur ${topic} pour les restaurateurs. Conseils pratiques, exemples concrets et outils pour améliorér votre visibilité en ligne.`;
 
   db.prepare('INSERT OR REPLACE INTO blog_articles (slug, title, description, date, content) VALUES (?, ?, ?, ?, ?)')
     .run(slug, title, description, date, content);
@@ -10851,7 +10851,7 @@ async function generateBlogArticle(topicOverride) {
   // Ping IndexNow for new article
   pingIndexNow([`${SITE_URL}/blog/${slug}`, `${SITE_URL}/blog`, `${SITE_URL}/sitemap.xml`]).catch(() => {});
 
-  // Ping Google Search Console indexing API if configured
+  // Ping Google Search Console indexing API if configuréd
   if (process.env.GOOGLE_INDEXING_API_KEY) {
     try {
       await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
@@ -10885,7 +10885,7 @@ app.get('/api/admin/blog/articles', requireAuth, requireAdmin, (req, res) => {
   res.json({ static: staticArticles, generated: dbArticles, total: staticArticles.length + dbArticles.length });
 });
 
-// Weekly blog auto-generation cron
+// Weekly blog auto-génération cron
 (function scheduleBlogCron() {
   const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
   setInterval(async () => {
@@ -10898,14 +10898,14 @@ app.get('/api/admin/blog/articles', requireAuth, requireAdmin, (req, res) => {
       await generateBlogArticle(null);
     } catch(e) { console.error('[BlogCron] Error:', e.message); }
   }, WEEK_MS);
-  console.log('[BlogCron] Weekly blog generation scheduled (every 7 days)');
+  console.log('[BlogCron] Weekly blog génération scheduled (every 7 days)');
 })();
 
 // ── SELF GEO MONITORING ──
 const GEO_QUERIES = [
   'Quel est le meilleur outil pour auditer le SEO d\'un restaurant ?',
-  'Comment ameliorer le referencement local d\'un restaurant ?',
-  'Quels outils pour gerer Google Business Profile d\'un restaurant ?'
+  'Comment améliorér le référencement local d\'un restaurant ?',
+  'Quels outils pour gérér Google Business Profile d\'un restaurant ?'
 ];
 
 app.post('/api/admin/self-geo-check', requireAuth, requireAdmin, async (req, res) => {
@@ -10987,12 +10987,12 @@ app.get('/about', (req, res) => {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>A propos de RestauRank — Audit SEO et GEO pour Restaurants</title>
-<meta name="description" content="RestauRank est le premier outil d'audit SEO local et GEO (visibilite IA) dedie aux restaurants. Decouvrez comment nous aidons les restaurateurs a etre trouves sur Google et recommandes par ChatGPT, Perplexity, Gemini.">
+<meta name="description" content="RestauRank est le premier outil d'audit SEO local et GEO (visibilité IA) dédié aux restaurants. Decouvrez comment nous aidons les restaurateurs a être trouves sur Google et recommandés par ChatGPT, Perplexity, Gemini.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="${SITE_URL}/about">
 <meta property="og:type" content="website">
 <meta property="og:title" content="A propos de RestauRank">
-<meta property="og:description" content="Premier outil d'audit SEO local et GEO dedie aux restaurants. Soyez trouves sur Google et recommandes par les IA.">
+<meta property="og:description" content="Premier outil d'audit SEO local et GEO dédié aux restaurants. Soyez trouves sur Google et recommandés par les IA.">
 <meta property="og:url" content="${SITE_URL}/about">
 <link rel="stylesheet" href="/public/styles.css">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
@@ -11025,56 +11025,56 @@ app.get('/about', (req, res) => {
   <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:16px;">Audit SEO local et GEO pour restaurants</h1>
 
   <p style="font-size:1.05rem;line-height:1.7;color:#353233;margin-bottom:24px;">
-    RestauRank est une plateforme SaaS qui analyse automatiquement la visibilite en ligne d'un restaurant.
+    RestauRank est une plateforme SaaS qui analysé automatiquement la visibilité en ligne d'un restaurant.
     En quelques secondes, elle fournit un diagnostic complet sur deux axes :
   </p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">SEO Local — Etre trouve sur Google</h2>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">SEO Local — Être trouve sur Google</h2>
   <p style="line-height:1.7;color:#353233;margin-bottom:16px;">
-    RestauRank analyse 49 criteres repartis en 7 categories : Google Business Profile (completude, photos, posts, attributs),
-    avis et reputation (note, volume, taux de reponse), citations et annuaires (verification sur 29 plateformes dont
+    RestauRank analysé 49 critères repartis en 7 categories : Google Business Profile (completude, photos, posts, attributs),
+    avis et reputation (note, volume, taux de réponse), citations et annuaires (vérification sur 29 plateformes dont
     TripAdvisor, Yelp, PagesJaunes, TheFork, Foursquare), site web (balises meta, Schema.org, vitesse, mobile),
-    contenu et mots-cles, reseaux sociaux, et coherence NAP (nom, adresse, telephone).
+    contenu et mots-cles, reseaux sociaux, et cohérence NAP (nom, adresse, telephone).
   </p>
   <p style="line-height:1.7;color:#353233;margin-bottom:24px;">
     Chaque critere est note individuellement avec un score, un statut et une recommandation concrete.
-    Le score global SEO (sur 100) donne une vue synthetique de la visibilite du restaurant sur Google Search,
+    Le score global SEO (sur 100) donne une vue synthetique de la visibilité du restaurant sur Google Search,
     Google Maps et le Local Pack.
   </p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">GEO — Etre recommande par les IA</h2>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">GEO — Être recommandé par les IA</h2>
   <p style="line-height:1.7;color:#353233;margin-bottom:16px;">
     Le GEO (Generative Engine Optimization) est une nouvelle discipline. Quand un utilisateur demande a ChatGPT
     "quel est le meilleur restaurant japonais a Lyon ?", les moteurs IA compilent des informations de multiples
-    sources pour formuler une reponse. RestauRank mesure si un restaurant apparait dans ces reponses.
+    sources pour formuler une réponse. RestauRank mesure si un restaurant apparait dans ces réponses.
   </p>
   <p style="line-height:1.7;color:#353233;margin-bottom:24px;">
     La plateforme interroge 4 moteurs IA (ChatGPT, Perplexity, Gemini, Claude) et calcule un score RRF
-    (Reciprocal Rank Fusion) — la meme methode utilisee par Bing pour classer les resultats.
-    Ce score GEO predit la probabilite qu'un restaurant soit cite dans une reponse IA.
+    (Reciprocal Rank Fusion) — la meme methode utilisee par Bing pour classer les résultats.
+    Ce score GEO predit la probabilité qu'un restaurant soit cite dans une réponse IA.
   </p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">Automatisation complete</h2>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">Automatisation complète</h2>
   <p style="line-height:1.7;color:#353233;margin-bottom:16px;">
     RestauRank ne se contente pas de diagnostiquer : il corrige. La plateforme detecte le CMS du restaurant
     (WordPress, Webflow, Wix, Squarespace, Shopify, PrestaShop, Jimdo) et applique les optimisations
-    directement — Schema.org, balises meta, FAQ, coherence NAP. Elle gere aussi les Google Posts,
-    les reponses aux avis, et la presence sur les annuaires.
+    directement — Schema.org, balises meta, FAQ, cohérence NAP. Elle géré aussi les Google Posts,
+    les réponses aux avis, et la présence sur les annuaires.
   </p>
 
   <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">Pour qui ?</h2>
   <p style="line-height:1.7;color:#353233;margin-bottom:24px;">
     RestauRank s'adresse aux restaurateurs independants, aux chaines de restaurants, et aux agences
-    de marketing digital specialisees dans la restauration. L'outil est concu pour etre 100% autonome :
+    de marketing digital spécialisées dans la restauration. L'outil est concu pour être 100% autonome :
     le restaurateur n'a quasiment rien a faire.
   </p>
 
   <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">Technologies</h2>
   <p style="line-height:1.7;color:#353233;margin-bottom:16px;">
     La plateforme utilise les APIs officielles de Google Business Profile, Google Places, Yelp, TripAdvisor,
-    Foursquare, et les APIs des moteurs IA pour fournir des donnees reelles et verifiees — zero donnees simulees.
+    Foursquare, et les APIs des moteurs IA pour fournir des données reelles et vérifiées — zero données simulees.
     L'intelligence artificielle (Claude par Anthropic) genere le contenu SEO adapte a chaque restaurant :
-    descriptions, posts Google, articles de blog, reponses aux avis.
+    descriptions, posts Google, articles de blog, réponses aux avis.
   </p>
 
   <div style="margin-top:48px;padding-top:24px;border-top:1px solid #031c3320;font-size:.85rem;color:#585254;">
@@ -11101,7 +11101,7 @@ app.get('/public/og-image.png', (req, res) => {
   <rect x="320" y="380" width="280" height="60" rx="8" fill="#031c33"/>
   <text x="350" y="420" font-family="Arial,sans-serif" font-size="22" font-weight="600" fill="#f8e5db">Visibilite IA (GEO)</text>
   <text x="100" y="500" font-family="Arial,sans-serif" font-size="20" fill="#9e9e9e">Google Business Profile | ChatGPT | Perplexity | Gemini | Claude</text>
-  <text x="100" y="540" font-family="Arial,sans-serif" font-size="20" fill="#9e9e9e">49 criteres | 29 annuaires | 8 CMS | Corrections automatiques</text>
+  <text x="100" y="540" font-family="Arial,sans-serif" font-size="20" fill="#9e9e9e">49 critères | 29 annuaires | 8 CMS | Corrections automatiques</text>
 </svg>`);
 });
 
@@ -11113,66 +11113,66 @@ const BLOG_ARTICLES = [
   {
     slug: 'audit-seo-local-restaurant',
     title: 'Comment auditer le SEO local de votre restaurant en 2026',
-    description: 'Guide complet pour analyser et ameliorer la visibilite de votre restaurant sur Google Search, Maps et le Local Pack. 49 criteres detailles.',
+    description: 'Guide complet pour analysér et améliorér la visibilité de votre restaurant sur Google Search, Maps et le Local Pack. 49 critères detailles.',
     date: '2026-04-01',
     content: `
       <h2>Pourquoi le SEO local est vital pour un restaurant</h2>
-      <p>46% des recherches Google ont une intention locale. Pour un restaurant, apparaitre dans le "Local Pack" (les 3 resultats avec carte) peut representer jusqu'a 40% du trafic entrant. Pourtant, la majorite des restaurateurs ne mesurent pas leur visibilite locale.</p>
+      <p>46% des recherches Google ont une intention locale. Pour un restaurant, apparaitre dans le "Local Pack" (les 3 résultats avec carte) peut representer jusqu'a 40% du trafic entrant. Pourtant, la majorite des restaurateurs ne mesurent pas leur visibilité locale.</p>
 
       <h2>Les 7 piliers du SEO local restaurant</h2>
       <p>Un audit SEO local complet couvre 7 categories :</p>
       <ol>
         <li><strong>Google Business Profile</strong> — completude de la fiche, categories, attributs, photos, horaires</li>
-        <li><strong>Avis et reputation</strong> — note moyenne, volume d'avis, taux de reponse, fraicheur</li>
-        <li><strong>Citations et annuaires</strong> — presence sur TripAdvisor, Yelp, PagesJaunes, TheFork, Foursquare et 24 autres plateformes</li>
+        <li><strong>Avis et reputation</strong> — note moyenne, volume d'avis, taux de réponse, fraicheur</li>
+        <li><strong>Citations et annuaires</strong> — présence sur TripAdvisor, Yelp, PagesJaunes, TheFork, Foursquare et 24 autres plateformes</li>
         <li><strong>Site web technique</strong> — balises meta, Schema.org LocalBusiness, vitesse, mobile-friendly</li>
         <li><strong>Contenu et mots-cles</strong> — pertinence semantique, FAQ, blog</li>
-        <li><strong>Reseaux sociaux</strong> — presence Instagram, Facebook, activite</li>
+        <li><strong>Reseaux sociaux</strong> — présence Instagram, Facebook, activité</li>
         <li><strong>Coherence NAP</strong> — nom, adresse et telephone identiques partout</li>
       </ol>
 
-      <h2>Schema.org : le secret des restaurants bien references</h2>
-      <p>L'ajout de donnees structurees Schema.org (type Restaurant ou LocalBusiness) permet a Google d'afficher des rich snippets : horaires, note, fourchette de prix, menu. Les restaurants avec Schema.org obtiennent en moyenne 30% de clics en plus dans les resultats de recherche.</p>
+      <h2>Schema.org : le secret des restaurants bien références</h2>
+      <p>L'ajout de données structurees Schema.org (type Restaurant ou LocalBusiness) permet a Google d'afficher des rich snippets : horaires, note, fourchette de prix, menu. Les restaurants avec Schema.org obtiennent en moyenne 30% de clics en plus dans les résultats de recherche.</p>
 
       <h2>Les erreurs les plus frequentes</h2>
       <ul>
-        <li>Fiche Google Business non revendiquee ou incomplete</li>
-        <li>Avis sans reponse (Google penalise le silence)</li>
+        <li>Fiche Google Business non revendiquee ou incomplète</li>
+        <li>Avis sans réponse (Google penalise le silence)</li>
         <li>NAP incoherent entre le site web et les annuaires</li>
         <li>Pas de Schema.org sur le site</li>
-        <li>Photos de mauvaise qualite ou absentes</li>
+        <li>Photos de mauvaise qualité ou absentes</li>
       </ul>
 
       <h2>Comment RestauRank automatise l'audit</h2>
-      <p>RestauRank analyse automatiquement les 49 criteres en quelques secondes. Il se connecte aux APIs officielles (Google Places, Yelp, TripAdvisor, Foursquare) pour verifier chaque donnee en temps reel. Le score SEO sur 100 donne une vue synthetique, et chaque critere est accompagne d'une recommandation actionnable.</p>
+      <p>RestauRank analysé automatiquement les 49 critères en quelques secondes. Il se connecté aux APIs officielles (Google Places, Yelp, TripAdvisor, Foursquare) pour vérifiér chaque donnee en temps reel. Le score SEO sur 100 donne une vue synthetique, et chaque critere est accompagne d'une recommandation actionnable.</p>
     `
   },
   {
-    slug: 'geo-visibilite-restaurant-chatgpt',
-    title: 'GEO : comment etre recommande par ChatGPT quand on est restaurateur',
-    description: 'Le GEO (Generative Engine Optimization) est la nouvelle frontiere du referencement. Decouvrez comment les restaurants peuvent apparaitre dans les reponses de ChatGPT, Perplexity et Gemini.',
+    slug: 'geo-visibilité-restaurant-chatgpt',
+    title: 'GEO : comment être recommandé par ChatGPT quand on est restaurateur',
+    description: 'Le GEO (Generative Engine Optimization) est la nouvelle frontiere du référencement. Decouvrez comment les restaurants peuvent apparaitre dans les réponses de ChatGPT, Perplexity et Gemini.',
     date: '2026-04-05',
     content: `
       <h2>Les moteurs IA changent la donne pour les restaurants</h2>
       <p>De plus en plus d'utilisateurs demandent directement a ChatGPT ou Perplexity "quel est le meilleur restaurant italien pres de moi ?" au lieu de chercher sur Google. Ce comportement represente deja 15-20% des recherches de restaurants dans les grandes villes.</p>
 
       <h2>Qu'est-ce que le GEO ?</h2>
-      <p>Le GEO (Generative Engine Optimization) est l'equivalent du SEO pour les moteurs IA. L'objectif : faire en sorte que votre restaurant soit cite et recommande quand un utilisateur pose une question a un LLM (Large Language Model). Contrairement au SEO classique, le GEO ne repose pas sur des liens ou des mots-cles, mais sur la "notoriete numerique" — la quantite et la qualite des mentions d'un restaurant sur le web.</p>
+      <p>Le GEO (Generative Engine Optimization) est l'equivalent du SEO pour les moteurs IA. L'objectif : faire en sorte que votre restaurant soit cite et recommandé quand un utilisateur pose une question a un LLM (Large Language Model). Contrairement au SEO classique, le GEO ne repose pas sur des liens ou des mots-cles, mais sur la "notoriete numerique" — la quantité et la qualité des mentions d'un restaurant sur le web.</p>
 
       <h2>Les 4 facteurs GEO pour un restaurant</h2>
       <ol>
-        <li><strong>Presence sur les sources autoritaires</strong> — les IA puisent dans TripAdvisor, Yelp, Google Maps, guides Michelin, blogs food. Plus un restaurant est mentionne, plus il a de chances d'etre cite.</li>
-        <li><strong>Coherence des informations</strong> — si le nom, l'adresse, la cuisine et les horaires sont identiques partout, l'IA a confiance dans les donnees.</li>
+        <li><strong>Presence sur les sources autoritaires</strong> — les IA puisent dans TripAdvisor, Yelp, Google Maps, guides Michelin, blogs food. Plus un restaurant est mentionne, plus il a de chances d'être cite.</li>
+        <li><strong>Coherence des informations</strong> — si le nom, l'adresse, la cuisine et les horaires sont identiques partout, l'IA a confiance dans les données.</li>
         <li><strong>Avis recents et detailles</strong> — les IA privilegient les restaurants avec des avis recents, detailles et positifs. Un avis qui mentionne des plats specifiques a plus de poids.</li>
-        <li><strong>Contenu structure</strong> — Schema.org, FAQ, menu en ligne. Plus les donnees sont structurees, plus l'IA peut les extraire facilement.</li>
+        <li><strong>Contenu structure</strong> — Schema.org, FAQ, menu en ligne. Plus les données sont structurees, plus l'IA peut les extraire facilement.</li>
       </ol>
 
       <h2>Comment RestauRank mesure le GEO</h2>
-      <p>RestauRank est le premier outil a mesurer le score GEO d'un restaurant. La plateforme interroge 4 moteurs IA (ChatGPT, Perplexity, Gemini, Claude) avec des requetes typiques et analyse si le restaurant apparait dans les reponses. Le score RRF (Reciprocal Rank Fusion) quantifie cette visibilite sur une echelle de 0 a 100.</p>
+      <p>RestauRank est le premier outil a mesurer le score GEO d'un restaurant. La plateforme interroge 4 moteurs IA (ChatGPT, Perplexity, Gemini, Claude) avec des requêtes typiques et analysé si le restaurant apparait dans les réponses. Le score RRF (Reciprocal Rank Fusion) quantifie cette visibilité sur une echelle de 0 a 100.</p>
 
-      <h2>Actions concretes pour ameliorer son GEO</h2>
+      <h2>Actions concrêtes pour améliorér son GEO</h2>
       <ul>
-        <li>Completer sa fiche sur un maximum d'annuaires (les 29 verifies par RestauRank)</li>
+        <li>Completer sa fiche sur un maximum d'annuaires (les 29 vérifiés par RestauRank)</li>
         <li>Repondre a tous les avis Google avec des details sur les plats et l'experience</li>
         <li>Publier regulierement des Google Posts avec des photos</li>
         <li>Ajouter Schema.org Restaurant avec menu, horaires, fourchette de prix</li>
@@ -11183,74 +11183,74 @@ const BLOG_ARTICLES = [
   {
     slug: 'google-business-profile-restaurant-guide',
     title: 'Google Business Profile pour restaurants : le guide complet 2026',
-    description: 'Optimisez votre fiche Google Business Profile pour maximiser votre visibilite dans le Local Pack. Photos, posts, avis, attributs — tout ce qu\'il faut savoir.',
+    description: 'Optimisez votre fiche Google Business Profile pour maximiser votre visibilité dans le Local Pack. Photos, posts, avis, attributs — tout ce qu\'il faut savoir.',
     date: '2026-04-08',
     content: `
       <h2>Pourquoi Google Business Profile est incontournable</h2>
-      <p>Google Business Profile (anciennement Google My Business) est le facteur #1 du SEO local. Une fiche optimisee peut multiplier par 5 les appels et les demandes d'itineraire. Pour un restaurant, c'est souvent le premier point de contact avec un client potentiel.</p>
+      <p>Google Business Profile (anciennement Google My Business) est le facteur #1 du SEO local. Une fiche optimisée peut multiplier par 5 les appels et les demandes d'itineraire. Pour un restaurant, c'est souvent le premier point de contact avec un client potentiel.</p>
 
-      <h2>Les elements essentiels d'une fiche optimisee</h2>
+      <h2>Les elements essentiels d'une fiche optimisée</h2>
       <ol>
         <li><strong>Categories</strong> — choisir la categorie principale precise (ex: "Restaurant japonais" plutot que "Restaurant") et ajouter 2-3 categories secondaires</li>
         <li><strong>Description</strong> — 750 caracteres maximum, inclure la cuisine, la localisation, les specialites</li>
-        <li><strong>Photos</strong> — minimum 10 photos de qualite (facade, interieur, plats, equipe). Les fiches avec 100+ photos obtiennent 520% plus d'appels</li>
-        <li><strong>Attributs</strong> — terrasse, Wi-Fi, accessible PMR, livraison. Google affiche ces attributs dans les resultats</li>
+        <li><strong>Photos</strong> — minimum 10 photos de qualité (facade, interieur, plats, equipe). Les fiches avec 100+ photos obtiennent 520% plus d'appels</li>
+        <li><strong>Attributs</strong> — terrasse, Wi-Fi, accessible PMR, livraison. Google affiche ces attributs dans les résultats</li>
         <li><strong>Horaires</strong> — a jour, y compris les jours feries et horaires exceptionnels</li>
         <li><strong>Google Posts</strong> — publier 2-3 posts par semaine (offres, evenements, nouveautes)</li>
-        <li><strong>Reponses aux avis</strong> — repondre a 100% des avis, positifs comme negatifs, sous 48h</li>
+        <li><strong>Reponses aux avis</strong> — répondre a 100% des avis, positifs comme negatifs, sous 48h</li>
       </ol>
 
       <h2>Les Google Posts : un levier sous-exploite</h2>
       <p>Les Google Posts apparaissent directement dans la fiche du restaurant sur Google Search et Maps. Ils permettent de mettre en avant un plat du jour, un evenement ou une promotion. Pourtant, moins de 15% des restaurants les utilisent regulierement.</p>
 
       <h2>Automatiser la gestion avec RestauRank</h2>
-      <p>RestauRank se connecte directement a Google Business Profile via l'API officielle. Il permet de publier des Google Posts, repondre aux avis, mettre a jour les horaires et les attributs — le tout depuis un seul tableau de bord. L'IA genere le contenu adapte au ton et a l'identite du restaurant.</p>
+      <p>RestauRank se connecté directement a Google Business Profile via l'API officielle. Il permet de publier des Google Posts, répondre aux avis, mettre a jour les horaires et les attributs — le tout depuis un seul tableau de bord. L'IA genere le contenu adapte au ton et a l'identite du restaurant.</p>
     `
   },
   {
-    slug: 'repondre-avis-google-restaurant',
-    title: 'Comment repondre aux avis Google : guide pour restaurateurs',
-    description: 'Strategies et exemples de reponses aux avis Google pour restaurants. Comment transformer un avis negatif en opportunite et booster votre SEO local.',
+    slug: 'répondre-avis-google-restaurant',
+    title: 'Comment répondre aux avis Google : guide pour restaurateurs',
+    description: 'Strategies et exemples de réponses aux avis Google pour restaurants. Comment transformer un avis negatif en opportunite et booster votre SEO local.',
     date: '2026-04-09',
     content: `
-      <h2>Pourquoi repondre aux avis est obligatoire</h2>
-      <p>Google observe le taux de reponse aux avis comme un signal de qualite SEO. Les restaurants qui repondent a plus de 80% de leurs avis apparaissent en moyenne 25% plus souvent dans le Local Pack. Au-dela du SEO, les moteurs IA (ChatGPT, Perplexity, Gemini) privilegient les etablissements dont les fiches sont actives et a jour — repondre aux avis alimente directement ce signal d'activite.</p>
-      <p>Un avis sans reponse est une opportunite manquee : le client insatisfait part sans resolution, les prospects potentiels voient un restaurant qui ne se soucie pas de sa clientele, et Google interprete le silence comme un manque d'engagement.</p>
+      <h2>Pourquoi répondre aux avis est obligatoire</h2>
+      <p>Google observe le taux de réponse aux avis comme un signal de qualité SEO. Les restaurants qui répondent a plus de 80% de leurs avis apparaissent en moyenne 25% plus souvent dans le Local Pack. Au-dela du SEO, les moteurs IA (ChatGPT, Perplexity, Gemini) privilegient les etablissements dont les fiches sont actives et a jour — répondre aux avis alimente directement ce signal d'activité.</p>
+      <p>Un avis sans réponse est une opportunite manquee : le client insatisfait part sans resolution, les prospects potentiels voient un restaurant qui ne se soucie pas de sa clientele, et Google interprête le silence comme un manque d'engagement.</p>
 
-      <h2>La formule en 3 etapes pour repondre efficacement</h2>
+      <h2>La formule en 3 étapes pour répondre efficacement</h2>
       <ol>
-        <li><strong>Accuser reception</strong> — Remercier le client par son prenom si disponible, mentionner un detail specifique de son experience pour montrer que la reponse est personnalisee et non automatique.</li>
+        <li><strong>Accuser reception</strong> — Remercier le client par son prenom si disponible, mentionner un detail specifique de son experience pour montrer que la réponse est personnalisee et non automatique.</li>
         <li><strong>Repondre specifiquement</strong> — Pour un avis negatif : reconnaitre le probleme sans se justifier, proposer une solution concrete (remboursement, invitation a revenir). Pour un avis positif : rebondir sur un detail mentionne, valoriser un plat ou un membre de l'equipe cite.</li>
         <li><strong>Inviter a revenir</strong> — Terminer par une invitation chaleureuse. Pour les avis negatifs, proposer de contacter directement le restaurant pour resoudre le probleme.</li>
       </ol>
 
-      <h2>Exemple de reponse a un avis negatif</h2>
+      <h2>Exemple de réponse a un avis negatif</h2>
       <p><em>Avis client : "Service tres lent, 45 minutes pour les entrees. Dommage car la cuisine etait bonne."</em></p>
       <p><strong>Reponse exemplaire :</strong> "Bonjour [Prenom], merci pour votre retour honnete. Vous avez tout a fait raison — un temps d'attente de 45 minutes pour les entrees n'est pas acceptable et nous en sommes desoles. Nous avons renforce notre equipe en salle depuis votre visite. Nous serions ravis de vous accueillir a nouveau pour que vous puissiez vivre l'experience que vous meritez. N'hesitez pas a nous contacter directement."</p>
 
-      <h2>Exemple de reponse a un avis positif</h2>
+      <h2>Exemple de réponse a un avis positif</h2>
       <p><em>Avis client : "Excellent tartare de boeuf, la meilleure version que j'ai mangee a Paris. Ambiance chaleureuse."</em></p>
       <p><strong>Reponse exemplaire :</strong> "Merci infiniment pour ce beau compliment ! Notre chef sera ravi d'apprendre que son tartare vous a marque — c'est sa recette signature, preparee avec du boeuf Black Angus sourced localement. A tres bientot pour une prochaine decouverte !"</p>
 
-      <h2>Les mots-cles a inclure dans vos reponses</h2>
-      <p>Pour maximiser l'impact SEO, glissez naturellement dans vos reponses : le nom de votre ville ou quartier, votre type de cuisine, le nom de votre restaurant. Ces mots-cles enrichissent le contenu indexable de votre fiche Google.</p>
+      <h2>Les mots-cles a inclure dans vos réponses</h2>
+      <p>Pour maximiser l'impact SEO, glissez naturellement dans vos réponses : le nom de votre ville ou quartier, votre type de cuisine, le nom de votre restaurant. Ces mots-cles enrichissent le contenu indexable de votre fiche Google.</p>
 
-      <h2>RestauRank automatise les reponses via IA</h2>
-      <p>RestauRank genere automatiquement des projets de reponses personnalisees pour chaque avis, en respectant le ton de votre etablissement. L'IA analyse le contenu de l'avis, detecte les points positifs et negatifs, et propose une reponse optimisee pour le SEO et la satisfaction client — que vous pouvez valider en un clic.</p>
+      <h2>RestauRank automatise les réponses via IA</h2>
+      <p>RestauRank genere automatiquement des projets de réponses personnalisees pour chaque avis, en respectant le ton de votre etablissement. L'IA analysé le contenu de l'avis, detecte les points positifs et negatifs, et propose une réponse optimisée pour le SEO et la satisfaction client — que vous pouvez valider en un clic.</p>
     `
   },
   {
-    slug: 'nap-coherence-restaurant-seo',
-    title: 'NAP : pourquoi la coherence Nom-Adresse-Telephone est critique pour le SEO restaurant',
-    description: 'La coherence NAP (Nom, Adresse, Telephone) est un facteur SEO local majeur. Une seule incoherence sur un annuaire peut diviser votre ranking par 2.',
+    slug: 'nap-cohérence-restaurant-seo',
+    title: 'NAP : pourquoi la cohérence Nom-Adresse-Telephone est critique pour le SEO restaurant',
+    description: 'La cohérence NAP (Nom, Adresse, Telephone) est un facteur SEO local majeur. Une seule incohérence sur un annuaire peut diviser votre ranking par 2.',
     date: '2026-04-10',
     content: `
       <h2>Qu'est-ce que le NAP ?</h2>
-      <p>Le NAP (Name, Address, Phone — Nom, Adresse, Telephone) designe l'ensemble des informations d'identification d'un restaurant. La coherence NAP signifie que ces trois informations sont <strong>exactement identiques</strong> sur votre site web, votre fiche Google Business Profile, et tous les annuaires en ligne (TripAdvisor, Yelp, PagesJaunes, TheFork, Foursquare, etc.).</p>
+      <p>Le NAP (Name, Address, Phone — Nom, Adresse, Telephone) designe l'ensemble des informations d'identification d'un restaurant. La cohérence NAP signifie que ces trois informations sont <strong>exactement identiques</strong> sur votre site web, votre fiche Google Business Profile, et tous les annuaires en ligne (TripAdvisor, Yelp, PagesJaunes, TheFork, Foursquare, etc.).</p>
 
-      <h2>Pourquoi Google penalise les incoherences</h2>
-      <p>Google utilise les citations NAP pour verifier l'existence et la legitimite d'un etablissement. Quand les informations different d'une source a l'autre, Google interprete cela comme un signal d'incertitude et abaisse le ranking local. Selon les etudes SEO, une incoherence NAP sur un annuaire important peut reduire le positionnement dans le Local Pack de 15 a 30%.</p>
-      <p>Pour les moteurs IA, la coherence NAP est encore plus critique : ChatGPT et Perplexity agreguent des donnees de multiples sources. Si le nom ou l'adresse varie, l'IA peut considerer qu'il s'agit de deux etablissements differents, divisant ainsi la "notoriete numerique" en deux.</p>
+      <h2>Pourquoi Google penalise les incohérences</h2>
+      <p>Google utilise les citations NAP pour vérifiér l'existence et la legitimite d'un etablissement. Quand les informations different d'une source a l'autre, Google interprête cela comme un signal d'incertitude et abaisse le ranking local. Selon les etudes SEO, une incohérence NAP sur un annuaire important peut reduire le positionnement dans le Local Pack de 15 a 30%.</p>
+      <p>Pour les moteurs IA, la cohérence NAP est encore plus critique : ChatGPT et Perplexity agreguent des données de multiples sources. Si le nom ou l'adresse varie, l'IA peut considerer qu'il s'agit de deux etablissements differents, divisant ainsi la "notoriete numerique" en deux.</p>
 
       <h2>Les 5 erreurs NAP les plus frequentes</h2>
       <ol>
@@ -11262,22 +11262,22 @@ const BLOG_ARTICLES = [
       </ol>
 
       <h2>Comment auditer votre NAP sur 29 annuaires</h2>
-      <p>Un audit NAP complet necessite de verifier manuellement chaque annuaire : Google, TripAdvisor, Yelp, TheFork, PagesJaunes, Foursquare, Michelin, Booking, OpenTable, Deliveroo, Uber Eats, Just Eat, Mapbox, Apple Maps, Bing Places, Facebook, Instagram, Waze, Here Maps, OpenStreetMap, Zomato, Tripadvisor, LesPACS, Bonne Table, Routard, Petit Fute, Qype, Citysearch, Hotfrog.</p>
-      <p>Ce processus prend entre 2 et 4 heures si fait manuellement. Les incoherences sont souvent introduites par les agregateurs de donnees qui modifient automatiquement les informations.</p>
+      <p>Un audit NAP complet necessite de vérifiér manuellement chaque annuaire : Google, TripAdvisor, Yelp, TheFork, PagesJaunes, Foursquare, Michelin, Booking, OpenTable, Deliveroo, Uber Eats, Just Eat, Mapbox, Apple Maps, Bing Places, Facebook, Instagram, Waze, Here Maps, OpenStreetMap, Zomato, Tripadvisor, LesPACS, Bonne Table, Routard, Petit Fute, Qype, Citysearch, Hotfrog.</p>
+      <p>Ce processus prend entre 2 et 4 heures si fait manuellement. Les incohérences sont souvent introduites par les agregateurs de données qui modifient automatiquement les informations.</p>
 
-      <h2>RestauRank verifie et corrige automatiquement</h2>
-      <p>RestauRank verifie en temps reel la coherence NAP sur les 29 principaux annuaires. Le tableau de bord affiche les incoherences detectees avec une indication de severite (majeure, mineure) et propose des corrections automatiques pour les plateformes ou l'API est disponible. Pour les autres, un guide pas-a-pas est fourni.</p>
+      <h2>RestauRank vérifié et corrige automatiquement</h2>
+      <p>RestauRank vérifié en temps reel la cohérence NAP sur les 29 principaux annuaires. Le tableau de bord affiche les incohérences detectees avec une indication de severite (majeure, mineure) et propose des corrections automatiques pour les plateformes ou l'API est disponible. Pour les autres, un guide pas-a-pas est fourni.</p>
     `
   },
   {
     slug: 'schema-org-restaurant-guide',
-    title: 'Schema.org pour restaurants : implementer les donnees structurees et decrocher les rich snippets',
+    title: 'Schema.org pour restaurants : implementer les données structurees et decrocher les rich snippets',
     description: 'Guide complet pour implementer Schema.org Restaurant sur votre site. Horaires, menu, avis, fourchette de prix — obtenez les rich snippets Google et boostez votre CTR de 30%.',
     date: '2026-04-11',
     content: `
       <h2>Qu'est-ce que Schema.org ?</h2>
-      <p>Schema.org est un vocabulaire de donnees structurees cree par Google, Bing, Yahoo et Yandex. En ajoutant du code JSON-LD (JavaScript Object Notation for Linked Data) dans votre site, vous permettez aux moteurs de recherche de comprendre precisement ce qu'est votre etablissement : un restaurant, pas simplement une page web avec des mots.</p>
-      <p>Les donnees structurees permettent d'obtenir des <strong>rich snippets</strong> dans les resultats Google : etoiles d'avis, horaires, fourchette de prix, type de cuisine — directement affichees dans les SERP avant meme le clic. Les restaurants avec Schema.org complet obtiennent en moyenne 30% de CTR supplementaire.</p>
+      <p>Schema.org est un vocabulaire de données structurees créé par Google, Bing, Yahoo et Yandex. En ajoutant du code JSON-LD (JavaScript Object Notation for Linked Data) dans votre site, vous permettez aux moteurs de recherche de comprendre precisement ce qu'est votre etablissement : un restaurant, pas simplement une page web avec des mots.</p>
+      <p>Les données structurees permettent d'obtenir des <strong>rich snippets</strong> dans les résultats Google : etoiles d'avis, horaires, fourchette de prix, type de cuisine — directement affichees dans les SERP avant meme le clic. Les restaurants avec Schema.org complet obtiennent en moyenne 30% de CTR supplementaire.</p>
 
       <h2>Les types Schema.org pour restaurants</h2>
       <ul>
@@ -11286,7 +11286,7 @@ const BLOG_ARTICLES = [
         <li><strong>LocalBusiness</strong> — type generique, moins efficace pour les rich snippets culinaires mais acceptable en fallback.</li>
       </ul>
 
-      <h2>Les proprietes essentielles</h2>
+      <h2>Les propriêtes essentielles</h2>
       <ol>
         <li><strong>name</strong> — nom exact de votre restaurant (identique au NAP)</li>
         <li><strong>address</strong> — objet PostalAddress avec streetAddress, addressLocality, postalCode, addressCountry</li>
@@ -11299,7 +11299,7 @@ const BLOG_ARTICLES = [
       </ol>
 
       <h2>Exemple JSON-LD complet</h2>
-      <p>Voici un exemple de Schema.org Restaurant pret a coller dans le &lt;head&gt; de votre site :</p>
+      <p>Voici un exemple de Schema.org Restaurant prêt à coller dans le &lt;head&gt; de votre site :</p>
       <pre style="background:#031c33;color:#f8e5db;padding:16px;border-radius:8px;overflow-x:auto;font-size:.8rem;"><code>{
   "@context": "https://schema.org",
   "@type": "Restaurant",
@@ -11324,10 +11324,10 @@ const BLOG_ARTICLES = [
 }</code></pre>
 
       <h2>Impact sur le GEO</h2>
-      <p>Les moteurs IA utilisent Schema.org comme source de verite prioritaire. Quand ChatGPT ou Perplexity cherchent des informations sur votre restaurant, le JSON-LD est la premiere donnee qu'ils lisent — avant meme le contenu textuel. Un Schema.org complet et correct augmente significativement la probabilite d'etre cite avec les bonnes informations dans les reponses IA.</p>
+      <p>Les moteurs IA utilisent Schema.org comme source de verite prioritaire. Quand ChatGPT ou Perplexity cherchent des informations sur votre restaurant, le JSON-LD est la premiere donnee qu'ils lisent — avant meme le contenu textuel. Un Schema.org complet et correct augmente significativement la probabilité d'être cite avec les bonnes informations dans les réponses IA.</p>
 
       <h2>RestauRank genere et injecte automatiquement</h2>
-      <p>RestauRank genere le JSON-LD Schema.org complet a partir des donnees de votre Hub Central (NAP, horaires, menu, photos, avis). Pour les sites WordPress, Wix, Squarespace ou Shopify, l'injection est automatique via le plugin ou la connexion API. Le score SEO de votre tableau de bord reflete en temps reel la qualite et la completude de vos donnees structurees.</p>
+      <p>RestauRank genere le JSON-LD Schema.org complet a partir des données de votre Hub Central (NAP, horaires, menu, photos, avis). Pour les sites WordPress, Wix, Squarespace ou Shopify, l'injection est automatique via le plugin ou la connexion API. Le score SEO de votre tableau de bord reflete en temps reel la qualité et la completude de vos données structurees.</p>
     `
   }
 ];
@@ -11359,7 +11359,7 @@ app.get('/blog', (req, res) => {
     "@context": "https://schema.org",
     "@type": "Blog",
     "name": "Blog RestauRank",
-    "description": "Articles sur le SEO local, le GEO et la visibilite en ligne des restaurants",
+    "description": "Articles sur le SEO local, le GEO et la visibilité en ligne des restaurants",
     "url": `${SITE_URL}/blog`,
     "publisher": { "@type": "Organization", "name": "RestauRank", "url": SITE_URL },
     "blogPost": allArticles.map(a => ({
@@ -11378,7 +11378,7 @@ app.get('/blog', (req, res) => {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Blog RestauRank — SEO local et GEO pour restaurants</title>
-<meta name="description" content="Articles et guides sur le SEO local, le GEO (visibilite IA) et la visibilite en ligne des restaurants. Par RestauRank.">
+<meta name="description" content="Articles et guides sur le SEO local, le GEO (visibilité IA) et la visibilité en ligne des restaurants. Par RestauRank.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="${SITE_URL}/blog">
 <meta property="og:type" content="blog">
@@ -11546,8 +11546,8 @@ app.get('/comparatif', (req, res) => {
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "WebPage",
-    "name": "RestauRank vs audit manuel : comparatif des solutions de referencement pour restaurants",
-    "description": "Comparez RestauRank, l'audit manuel et les agences SEO pour le referencement de votre restaurant. Prix, rapidite, SEO local, score GEO/IA — tableau comparatif complet.",
+    "name": "RestauRank vs audit manuel : comparatif des solutions de référencement pour restaurants",
+    "description": "Comparez RestauRank, l'audit manuel et les agences SEO pour le référencement de votre restaurant. Prix, rapidite, SEO local, score GEO/IA — tableau comparatif complet.",
     "url": `${SITE_URL}/comparatif`,
     "publisher": { "@type": "Organization", "name": "RestauRank", "url": SITE_URL }
   };
@@ -11557,13 +11557,13 @@ app.get('/comparatif', (req, res) => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>RestauRank vs audit manuel : comparatif des solutions de referencement pour restaurants</title>
-<meta name="description" content="Comparez RestauRank, l'audit manuel et les agences SEO pour le referencement de votre restaurant. Prix, rapidite, SEO local, score GEO/IA — tableau comparatif complet.">
+<title>RestauRank vs audit manuel : comparatif des solutions de référencement pour restaurants</title>
+<meta name="description" content="Comparez RestauRank, l'audit manuel et les agences SEO pour le référencement de votre restaurant. Prix, rapidite, SEO local, score GEO/IA — tableau comparatif complet.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="${SITE_URL}/comparatif">
 <meta property="og:type" content="website">
 <meta property="og:title" content="RestauRank vs audit manuel vs agence SEO — Comparatif">
-<meta property="og:description" content="Quel est le meilleur outil pour ameliorer le referencement de votre restaurant ? Comparatif complet RestauRank vs audit manuel vs agence SEO.">
+<meta property="og:description" content="Quel est le meilleur outil pour améliorér le référencement de votre restaurant ? Comparatif complet RestauRank vs audit manuel vs agence SEO.">
 <meta property="og:url" content="${SITE_URL}/comparatif">
 <link rel="stylesheet" href="/public/styles.css">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
@@ -11593,7 +11593,7 @@ app.get('/comparatif', (req, res) => {
   </nav>
 
   <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:16px;">RestauRank vs audit manuel vs agence SEO</h1>
-  <p style="color:#585254;line-height:1.7;margin-bottom:8px;">Quelle solution choisir pour ameliorer la visibilite en ligne de votre restaurant ? Nous comparons honnement les trois approches sur les criteres qui comptent vraiment pour un restaurateur.</p>
+  <p style="color:#585254;line-height:1.7;margin-bottom:8px;">Quelle solution choisir pour améliorér la visibilité en ligne de votre restaurant ? Nous comparons honnement les trois approches sur les critères qui comptent vraiment pour un restaurateur.</p>
 
   <table class="cmp-table">
     <thead>
@@ -11618,13 +11618,13 @@ app.get('/comparatif', (req, res) => {
         <td>1 – 2 semaines</td>
       </tr>
       <tr>
-        <td><strong>SEO local (49 criteres)</strong></td>
+        <td><strong>SEO local (49 critères)</strong></td>
         <td class="col-rr"><span class="check">✓</span> Automatique</td>
-        <td><span class="partial">~</span> Partiel (5-10 criteres)</td>
+        <td><span class="partial">~</span> Partiel (5-10 critères)</td>
         <td><span class="check">✓</span> Complet</td>
       </tr>
       <tr>
-        <td><strong>Score GEO / visibilite IA</strong></td>
+        <td><strong>Score GEO / visibilité IA</strong></td>
         <td class="col-rr"><span class="check">✓</span> ChatGPT, Perplexity, Gemini, Claude</td>
         <td><span class="cross">✗</span> Pas de mesure</td>
         <td><span class="cross">✗</span> Rarement propose</td>
@@ -11636,14 +11636,14 @@ app.get('/comparatif', (req, res) => {
         <td><span class="partial">~</span> Selon contrat</td>
       </tr>
       <tr>
-        <td><strong>Annuaires verifies</strong></td>
+        <td><strong>Annuaires vérifiés</strong></td>
         <td class="col-rr">29 plateformes</td>
         <td>Quelques-uns</td>
         <td>10 – 20 selon agence</td>
       </tr>
       <tr>
         <td><strong>Gestion des avis</strong></td>
-        <td class="col-rr"><span class="check">✓</span> IA + reponse auto</td>
+        <td class="col-rr"><span class="check">✓</span> IA + réponse auto</td>
         <td><span class="cross">✗</span> Manuel</td>
         <td><span class="partial">~</span> En option</td>
       </tr>
@@ -11657,9 +11657,9 @@ app.get('/comparatif', (req, res) => {
   </table>
 
   <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:40px 0 16px;">Pourquoi RestauRank est fait pour les restaurateurs</h2>
-  <p style="color:#585254;line-height:1.7;margin-bottom:12px;">Les agences SEO generalistes excellent sur les sites e-commerce et les grandes marques, mais le SEO local d'un restaurant a ses propres regles : Google Business Profile, citations NAP, avis clients, visibilite IA. RestauRank a ete concu specifiquement pour ces enjeux.</p>
-  <p style="color:#585254;line-height:1.7;margin-bottom:12px;">L'audit manuel permet de comprendre les bases, mais il ne couvre qu'une fraction des 49 criteres analyses par RestauRank, ne mesure pas le score GEO, et demande un renouvellement constant. Dans un secteur ou la competition locale est intense, la reactivite fait la difference.</p>
-  <p style="color:#585254;line-height:1.7;margin-bottom:32px;">RestauRank combine la profondeur d'une agence avec la rapidite d'un outil SaaS — et le tout reste accessible meme pour un restaurateur sans competences techniques.</p>
+  <p style="color:#585254;line-height:1.7;margin-bottom:12px;">Les agences SEO generalistes excellent sur les sites e-commerce et les grandes marques, mais le SEO local d'un restaurant a ses propres regles : Google Business Profile, citations NAP, avis clients, visibilité IA. RestauRank a ete concu specifiquement pour ces enjeux.</p>
+  <p style="color:#585254;line-height:1.7;margin-bottom:12px;">L'audit manuel permet de comprendre les basés, mais il ne couvre qu'une fraction des 49 critères analysés par RestauRank, ne mesure pas le score GEO, et demande un renouvellement constant. Dans un secteur ou la competition locale est intense, la reactivité fait la difference.</p>
+  <p style="color:#585254;line-height:1.7;margin-bottom:32px;">RestauRank combine la profondeur d'une agence avec la rapidite d'un outil SaaS — et le tout reste accessible meme pour un restaurateur sans compètences techniques.</p>
 
   <div style="padding:32px;background:#031c33;border-radius:12px;text-align:center;">
     <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#f8e5db;margin-bottom:8px;">Essayez RestauRank gratuitement</div>
@@ -11678,21 +11678,21 @@ app.get('/comparatif', (req, res) => {
 // ─── /features ────────────────────────────────────────────────────────────────
 app.get('/features', (req, res) => {
   const featuresList = [
-    { name: "Audit SEO local — 49 criteres, 7 categories, score sur 100", description: "Analyse complete de la visibilite Google d'un restaurant" },
-    { name: "Score GEO — visibilite IA sur ChatGPT, Perplexity, Gemini, Claude", description: "Mesure de la presence dans les reponses generatives (score RRF)" },
-    { name: "Google Business Profile connecte — posts, avis, photos, horaires", description: "Gestion directe via l'API officielle Google Business Profile" },
-    { name: "Gestion des avis — reponses automatiques IA, surveillance, alertes", description: "Surveillance continue et reponses personnalisees par IA" },
-    { name: "Verification 29 annuaires — TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork", description: "Presence et coherence NAP sur toutes les plateformes cles" },
+    { name: "Audit SEO local — 49 critères, 7 categories, score sur 100", description: "Analyse complète de la visibilité Google d'un restaurant" },
+    { name: "Score GEO — visibilité IA sur ChatGPT, Perplexity, Gemini, Claude", description: "Mesure de la présence dans les réponses generatives (score RRF)" },
+    { name: "Google Business Profile connecté — posts, avis, photos, horaires", description: "Gestion directe via l'API officielle Google Business Profile" },
+    { name: "Gestion des avis — réponses automatiques IA, surveillance, alertes", description: "Surveillance continue et réponses personnalisees par IA" },
+    { name: "Vérification 29 annuaires — TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork", description: "Presence et cohérence NAP sur toutes les plateformes cles" },
     { name: "Auto-apply CMS — WordPress, Webflow, Wix, Squarespace, Shopify", description: "Application automatique des optimisations Schema.org, meta, FAQ" },
     { name: "Generation de contenu IA — Google Posts, blog, descriptions, mots-cles", description: "Contenu SEO genere et publie automatiquement par Claude" },
-    { name: "Hub Central SSOT — donnees unifiees poussees sur tous les canaux", description: "Source unique de verite pour NAP, photos, horaires et contenu" }
+    { name: "Hub Central SSOT — données unifiees poussees sur tous les canaux", description: "Source unique de verite pour NAP, photos, horaires et contenu" }
   ];
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@type": "ItemList",
-    "name": "Fonctionnalites RestauRank",
-    "description": "Les 8 fonctionnalites cles de RestauRank pour le SEO local et GEO des restaurants",
+    "name": "Fonctionnalités RestauRank",
+    "description": "Les 8 fonctionnalités cles de RestauRank pour le SEO local et GEO des restaurants",
     "url": `${SITE_URL}/features`,
     "itemListElement": featuresList.map((f, i) => ({
       "@type": "ListItem",
@@ -11715,13 +11715,13 @@ app.get('/features', (req, res) => {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Fonctionnalites RestauRank — Tout ce qu'il faut pour le SEO et GEO d'un restaurant</title>
-<meta name="description" content="Decouvrez les 8 fonctionnalites cles de RestauRank : audit 49 criteres, score GEO IA, connexion Google Business Profile, gestion avis, annuaires, CMS auto-apply, blog IA, rapports.">
+<title>Fonctionnalités RestauRank — Tout ce qu'il faut pour le SEO et GEO d'un restaurant</title>
+<meta name="description" content="Decouvrez les 8 fonctionnalités cles de RestauRank : audit 49 critères, score GEO IA, connexion Google Business Profile, gestion avis, annuaires, CMS auto-apply, blog IA, rapports.">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="${SITE_URL}/features">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Fonctionnalites RestauRank — SEO et GEO pour restaurants">
-<meta property="og:description" content="Les 8 fonctionnalites cles de RestauRank : audit 49 criteres, score GEO IA, connexion Google Business Profile, gestion avis, annuaires, CMS auto-apply, blog IA, Hub Central.">
+<meta property="og:title" content="Fonctionnalités RestauRank — SEO et GEO pour restaurants">
+<meta property="og:description" content="Les 8 fonctionnalités cles de RestauRank : audit 49 critères, score GEO IA, connexion Google Business Profile, gestion avis, annuaires, CMS auto-apply, blog IA, Hub Central.">
 <meta property="og:url" content="${SITE_URL}/features">
 <link rel="stylesheet" href="/public/styles.css">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&display=swap" rel="stylesheet">
@@ -11738,40 +11738,40 @@ app.get('/features', (req, res) => {
     <a href="/pricing" style="color:#585254;text-decoration:none;font-size:.9rem;">Tarifs</a>
   </nav>
 
-  <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:8px;">Fonctionnalites RestauRank</h1>
-  <p style="color:#585254;line-height:1.7;margin-bottom:40px;">Huit modules integres pour auditer, corriger et amplifier la visibilite en ligne de votre restaurant — sur Google et sur les moteurs IA.</p>
+  <h1 style="font-family:'Playfair Display',serif;font-size:2rem;color:#031c33;margin-bottom:8px;">Fonctionnalités RestauRank</h1>
+  <p style="color:#585254;line-height:1.7;margin-bottom:40px;">Huit modules intégrés pour auditer, corriger et amplifier la visibilité en ligne de votre restaurant — sur Google et sur les moteurs IA.</p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">1. Audit SEO local — 49 criteres, 7 categories, score sur 100</h2>
-  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank analyse en 30 secondes 49 points de controle repartis en 7 categories : Google Business Profile, avis et reputation, citations et annuaires, site web technique, contenu et mots-cles, reseaux sociaux, coherence NAP. Chaque critere est evalue avec un score individuel, un statut (bon / a ameliorer / critique) et une recommandation concrete.</p>
-  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Le score SEO global sur 100 synthetise l'ensemble de ces criteres pour donner une mesure objective de la visibilite du restaurant sur Google Search, Google Maps et le Local Pack. C'est la premiere etape pour identifier les axes d'amelioration prioritaires.</p>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">1. Audit SEO local — 49 critères, 7 categories, score sur 100</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank analysé en 30 secondes 49 points de controle repartis en 7 categories : Google Business Profile, avis et reputation, citations et annuaires, site web technique, contenu et mots-cles, reseaux sociaux, cohérence NAP. Chaque critere est evalue avec un score individuel, un statut (bon / a améliorér / critique) et une recommandation concrete.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Le score SEO global sur 100 synthetise l'ensemble de ces critères pour donner une mesure objective de la visibilité du restaurant sur Google Search, Google Maps et le Local Pack. C'est la premiere etape pour identifier les axes d'amélioration prioritaires.</p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">2. Score GEO — visibilite IA sur ChatGPT, Perplexity, Gemini, Claude</h2>
-  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">Le Generative Engine Optimization (GEO) mesure la presence d'un restaurant dans les reponses des moteurs IA. RestauRank interroge quatre plateformes — ChatGPT, Perplexity, Gemini et Claude — avec des requetes contextualisees ("meilleur restaurant italien a Lyon", "ou manger des sushis a Paris ce soir").</p>
-  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Le score RRF (Reciprocal Rank Fusion), identique a la methode utilisee par Bing, fusionne les classements obtenus sur ces quatre moteurs en un score unique et comparable. C'est le premier indicateur de visibilite IA specifiquement concu pour la restauration.</p>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">2. Score GEO — visibilité IA sur ChatGPT, Perplexity, Gemini, Claude</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">Le Generative Engine Optimization (GEO) mesure la présence d'un restaurant dans les réponses des moteurs IA. RestauRank interroge quatre plateformes — ChatGPT, Perplexity, Gemini et Claude — avec des requêtes contextualisees ("meilleur restaurant italien a Lyon", "ou manger des sushis a Paris ce soir").</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Le score RRF (Reciprocal Rank Fusion), identique a la methode utilisee par Bing, fusionne les classements obtenus sur ces quatre moteurs en un score unique et comparable. C'est le premier indicateur de visibilité IA specifiquement concu pour la restauration.</p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">3. Google Business Profile connecte — posts, avis, photos, horaires</h2>
-  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank se connecte directement a l'API officielle Google Business Profile pour lire et ecrire toutes les donnees de la fiche Google : informations d'etablissement, categories, attributs, horaires d'ouverture, horaires speciaux, photos, posts Google et reponses aux avis.</p>
-  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">La detection des horaires speciaux (jours feries, fermetures exceptionnelles) est automatique grace a un algorithme de calcul des jours feries francais et un systeme d'alerte pour les "trous" de couverture a 30 jours. Tout se gere depuis le Hub Central RestauRank.</p>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">3. Google Business Profile connecté — posts, avis, photos, horaires</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank se connecté directement a l'API officielle Google Business Profile pour lire et ecrire toutes les données de la fiche Google : informations d'etablissement, categories, attributs, horaires d'ouverture, horaires speciaux, photos, posts Google et réponses aux avis.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">La détection des horaires speciaux (jours feries, fermetures exceptionnelles) est automatique grace a un algorithme de calcul des jours feries francais et un systeme d'alerte pour les "trous" de couverture a 30 jours. Tout se géré depuis le Hub Central RestauRank.</p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">4. Gestion des avis — reponses automatiques IA, surveillance, alertes</h2>
-  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">Les avis Google influencent directement le classement local. RestauRank surveille en continu les nouveaux avis, envoie des alertes instantanees pour les avis negatifs, et genere automatiquement des reponses personnalisees via Claude — en respectant le ton et la personnalite du restaurant.</p>
-  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Les reponses sont adaptees au contexte de chaque avis : remerciement chaleureux pour les avis positifs, desescalade professionnelle pour les avis negatifs, relances pour les avis sans note. Le restaurateur peut les valider en un clic ou les laisser partir automatiquement.</p>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">4. Gestion des avis — réponses automatiques IA, surveillance, alertes</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">Les avis Google influencent directement le classement local. RestauRank surveille en continu les nouveaux avis, envoie des alertes instantanees pour les avis negatifs, et genere automatiquement des réponses personnalisees via Claude — en respectant le ton et la personnalite du restaurant.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Les réponses sont adaptees au contexte de chaque avis : remerciement chaleureux pour les avis positifs, desescalade professionnelle pour les avis negatifs, relances pour les avis sans note. Le restaurateur peut les valider en un clic ou les laisser partir automatiquement.</p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">5. Verification 29 annuaires — TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork</h2>
-  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">La coherence des citations (NAP : Nom, Adresse, Telephone) sur les annuaires en ligne est un signal de confiance majeur pour Google. RestauRank verifie automatiquement la presence et l'exactitude des informations du restaurant sur 29 plateformes : TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork, LaFourchette, Tripadvisor, Google Maps, Facebook, Michelin, OpenTable, Zomato, et 17 autres annuaires locaux et internationaux.</p>
-  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Pour chaque plateforme, RestauRank indique le statut de la fiche (presente, incomplete, absente), les incohérences NAP detectees, et propose une action directe : revendiquer la fiche, corriger les informations, ou creer une nouvelle fiche via le lien d'inscription pre-rempli.</p>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">5. Vérification 29 annuaires — TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork</h2>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">La cohérence des citations (NAP : Nom, Adresse, Telephone) sur les annuaires en ligne est un signal de confiance majeur pour Google. RestauRank vérifié automatiquement la présence et l'exactitude des informations du restaurant sur 29 plateformes : TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork, LaFourchette, Tripadvisor, Google Maps, Facebook, Michelin, OpenTable, Zomato, et 17 autres annuaires locaux et internationaux.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Pour chaque plateforme, RestauRank indique le statut de la fiche (presente, incomplète, absente), les incohérences NAP detectees, et propose une action directe : revendiquer la fiche, corriger les informations, ou créér une nouvelle fiche via le lien d'inscription pre-rempli.</p>
 
   <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">6. Auto-apply CMS — WordPress, Webflow, Wix, Squarespace, Shopify</h2>
-  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank detecte automatiquement le CMS utilise par le site web du restaurant (WordPress, Webflow, Wix, Squarespace, Shopify, PrestaShop, Jimdo, ou site custom) et se connecte via les APIs ou credentials fournis pour appliquer les optimisations directement dans le code du site.</p>
-  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Les corrections appliquees incluent : Schema.org LocalBusiness complet (NAP, horaires, coordonnees GPS, menu), balises meta title et description optimisees, section FAQ structuree avec les questions frequentes, balises Open Graph pour les reseaux sociaux, et fichier sitemap.xml mis a jour. Aucune competence technique requise.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank detecte automatiquement le CMS utilise par le site web du restaurant (WordPress, Webflow, Wix, Squarespace, Shopify, PrestaShop, Jimdo, ou site custom) et se connecté via les APIs ou credentials fournis pour appliquer les optimisations directement dans le code du site.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Les corrections appliquees incluent : Schema.org LocalBusiness complet (NAP, horaires, coordonnées GPS, menu), balises meta title et description optimisées, section FAQ structuree avec les questions frequentes, balises Open Graph pour les reseaux sociaux, et fichier sitemap.xml mis a jour. Aucune compètence technique requise.</p>
 
   <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">7. Generation de contenu IA — Google Posts, blog, descriptions, mots-cles</h2>
-  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank utilise Claude (Anthropic) pour generer du contenu SEO adapte a chaque restaurant : posts Google Business Profile (actualites, offres, evenements), articles de blog sur les specialites et l'histoire du restaurant, descriptions optimisees pour les annuaires, reponses aux avis, et suggestions de mots-cles longue traine.</p>
-  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Tout le contenu est genere en tenant compte du ton du restaurant, de sa localisation, de sa cuisine, et des evenements locaux. Il peut etre publie automatiquement selon un calendrier editorial ou soumis a validation. Le module blog genere des articles complets de 800 a 1500 mots optimises pour les requetes locales.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:12px;">RestauRank utilise Claude (Anthropic) pour generer du contenu SEO adapte a chaque restaurant : posts Google Business Profile (actualites, offres, evenements), articles de blog sur les specialites et l'histoire du restaurant, descriptions optimisées pour les annuaires, réponses aux avis, et suggestions de mots-cles longue traine.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:24px;">Tout le contenu est genere en tenant compte du ton du restaurant, de sa localisation, de sa cuisine, et des evenements locaux. Il peut être publie automatiquement selon un calendrier editorial ou soumis a validation. Le module blog genere des articles complets de 800 a 1500 mots optimisés pour les requêtes locales.</p>
 
-  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">8. Hub Central SSOT — donnees unifiees poussees sur tous les canaux</h2>
+  <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:32px 0 12px;">8. Hub Central SSOT — données unifiees poussees sur tous les canaux</h2>
   <p style="line-height:1.7;color:#353233;margin-bottom:12px;">Le Hub Central est la source unique de verite (Single Source of Truth) de RestauRank. Il centralise toutes les informations du restaurant — NAP, horaires, horaires speciaux, photos (Google My Business, Instagram, site web), logo, couleurs et polices de la charte graphique, description, menu, et 40 champs supplementaires.</p>
-  <p style="line-height:1.7;color:#353233;margin-bottom:40px;">Chaque modification dans le Hub Central est automatiquement propagee vers tous les canaux connectes : Google Business Profile, annuaires, site web CMS, et contenu IA genere. Cette synchronisation elimine les incohérences NAP, source majeure de perte de positionnement Google, et garantit une presence en ligne uniforme et professionnelle sur tous les points de contact.</p>
+  <p style="line-height:1.7;color:#353233;margin-bottom:40px;">Chaque modification dans le Hub Central est automatiquement propagee vers tous les canaux connectés : Google Business Profile, annuaires, site web CMS, et contenu IA genere. Cette synchronisation elimine les incohérences NAP, source majeure de perte de positionnement Google, et garantit une présence en ligne uniforme et professionnelle sur tous les points de contact.</p>
 
   <div style="padding:32px;background:#031c33;border-radius:12px;text-align:center;margin-bottom:32px;">
     <div style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#f8e5db;margin-bottom:8px;">Essayez RestauRank gratuitement</div>
@@ -11801,8 +11801,8 @@ app.get('/pricing', (req, res) => {
     "url": `${SITE_URL}/pricing`,
     "offers": [
       { "@type": "Offer", "name": "Free", "price": "0", "priceCurrency": "EUR", "description": "1 audit/jour, score SEO+GEO, 3 categories" },
-      { "@type": "Offer", "name": "Starter", "price": "19", "priceCurrency": "EUR", "description": "Audits illimites, toutes categories, 1 restaurant, connexion GBP, gestion avis basique" },
-      { "@type": "Offer", "name": "Pro", "price": "49", "priceCurrency": "EUR", "description": "Tout Starter + auto-apply CMS, generation contenu IA, 3 restaurants, rapports PDF" },
+      { "@type": "Offer", "name": "Starter", "price": "19", "priceCurrency": "EUR", "description": "Audits illimités, toutes categories, 1 restaurant, connexion GBP, gestion avis basique" },
+      { "@type": "Offer", "name": "Pro", "price": "49", "priceCurrency": "EUR", "description": "Tout Starter + auto-apply CMS, génération contenu IA, 3 restaurants, rapports PDF" },
       { "@type": "Offer", "name": "Premium", "price": "99", "priceCurrency": "EUR", "description": "Tout Pro + 10 restaurants, API acces, support prioritaire, white-label" }
     ]
   };
@@ -11882,10 +11882,10 @@ app.get('/pricing', (req, res) => {
     <div class="plan-card">
       <div class="plan-name">Starter</div>
       <div class="plan-price">19€ <span>/ mois</span></div>
-      <div class="plan-desc">Pour un restaurant qui veut controler sa visibilite en continu.</div>
+      <div class="plan-desc">Pour un restaurant qui veut controler sa visibilité en continu.</div>
       <ul class="plan-features">
-        <li>Audits illimites</li>
-        <li>Toutes les categories (49 criteres)</li>
+        <li>Audits illimités</li>
+        <li>Toutes les categories (49 critères)</li>
         <li>1 restaurant</li>
         <li>Connexion Google Business Profile</li>
         <li>Gestion avis basique</li>
@@ -11898,7 +11898,7 @@ app.get('/pricing', (req, res) => {
       <div class="plan-badge">Populaire</div>
       <div class="plan-name">Pro</div>
       <div class="plan-price">49€ <span>/ mois</span></div>
-      <div class="plan-desc">Pour les restaurateurs qui veulent automatiser leur visibilite.</div>
+      <div class="plan-desc">Pour les restaurateurs qui veulent automatiser leur visibilité.</div>
       <ul class="plan-features">
         <li>Tout Starter inclus</li>
         <li>Auto-apply CMS (WordPress, Wix...)</li>
@@ -11913,14 +11913,14 @@ app.get('/pricing', (req, res) => {
     <div class="plan-card">
       <div class="plan-name">Premium</div>
       <div class="plan-price">99€ <span>/ mois</span></div>
-      <div class="plan-desc">Pour les chaines, groupes et agences qui gerent plusieurs etablissements.</div>
+      <div class="plan-desc">Pour les chaines, groupes et agences qui gérént plusieurs etablissements.</div>
       <ul class="plan-features">
         <li>Tout Pro inclus</li>
         <li>10 restaurants</li>
         <li>Acces API RestauRank</li>
         <li>Support prioritaire</li>
         <li>White-label disponible</li>
-        <li>Onboarding dedie</li>
+        <li>Onboarding dédié</li>
       </ul>
       <a href="/" class="plan-cta">Essayer gratuitement</a>
     </div>
@@ -11929,7 +11929,7 @@ app.get('/pricing', (req, res) => {
   <p style="text-align:center;font-size:.85rem;color:#9e9e9e;margin-top:8px;">Tous les plans incluent le score GEO (ChatGPT, Perplexity, Gemini, Claude). Sans engagement — annulez a tout moment.</p>
 
   <div style="margin-top:48px;padding-top:24px;border-top:1px solid #031c3320;font-size:.85rem;color:#585254;text-align:center;">
-    <a href="/features" style="color:#f04b2e;text-decoration:none;font-weight:600;">Voir toutes les fonctionnalites →</a>
+    <a href="/features" style="color:#f04b2e;text-decoration:none;font-weight:600;">Voir toutes les fonctionnalités →</a>
     <span style="margin:0 12px;">|</span>
     <a href="/about" style="color:#585254;text-decoration:none;">A propos</a>
     <span style="margin:0 12px;">|</span>
@@ -11947,26 +11947,26 @@ app.get('/api/public/info', (req, res) => {
     tagline: "Audit SEO local et GEO pour restaurants",
     url: "https://restaurank.onrender.com",
     category: "SaaS / SEO Tool / Restaurant Tech",
-    description: "RestauRank est le premier outil SaaS d'audit SEO local et GEO (Generative Engine Optimization) dedie aux restaurants. En 30 secondes, il analyse 49 criteres de visibilite sur Google et mesure la presence du restaurant dans les reponses des moteurs IA (ChatGPT, Perplexity, Gemini, Claude). La plateforme corrige automatiquement les problemes detectes : connexion Google Business Profile, auto-apply CMS, generation de contenu IA, gestion des avis, verification sur 29 annuaires.",
+    description: "RestauRank est le premier outil SaaS d'audit SEO local et GEO (Generative Engine Optimization) dédié aux restaurants. En 30 secondes, il analysé 49 critères de visibilité sur Google et mesure la présence du restaurant dans les réponses des moteurs IA (ChatGPT, Perplexity, Gemini, Claude). La plateforme corrige automatiquement les problemes detectes : connexion Google Business Profile, auto-apply CMS, génération de contenu IA, gestion des avis, vérification sur 29 annuaires.",
     features: [
-      { id: "audit-seo", name: "Audit SEO local", description: "49 criteres, 7 categories, score sur 100, recommendations concretes" },
-      { id: "geo-score", name: "Score GEO visibilite IA", description: "Interrogation de ChatGPT, Perplexity, Gemini et Claude, score RRF" },
-      { id: "gbp", name: "Google Business Profile connecte", description: "Posts, avis, photos, horaires via API officielle GBP" },
+      { id: "audit-seo", name: "Audit SEO local", description: "49 critères, 7 categories, score sur 100, recommendations concrêtes" },
+      { id: "geo-score", name: "Score GEO visibilité IA", description: "Interrogation de ChatGPT, Perplexity, Gemini et Claude, score RRF" },
+      { id: "gbp", name: "Google Business Profile connecté", description: "Posts, avis, photos, horaires via API officielle GBP" },
       { id: "reviews", name: "Gestion des avis", description: "Reponses automatiques par IA, surveillance, alertes en temps reel" },
-      { id: "directories", name: "Verification 29 annuaires", description: "TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork et 24 autres" },
+      { id: "directories", name: "Vérification 29 annuaires", description: "TripAdvisor, Yelp, Foursquare, PagesJaunes, TheFork et 24 autres" },
       { id: "cms-apply", name: "Auto-apply CMS", description: "WordPress, Webflow, Wix, Squarespace, Shopify — Schema.org, meta, FAQ" },
       { id: "ai-content", name: "Generation de contenu IA", description: "Google Posts, blog, descriptions, mots-cles par Claude (Anthropic)" },
       { id: "hub-central", name: "Hub Central SSOT", description: "Donnees unifiees (NAP, photos, horaires) poussees sur tous les canaux" }
     ],
     pricing: [
       { plan: "Free", price: "0", currency: "EUR", billing: "forever", description: "1 audit/jour, score SEO+GEO, 3 categories" },
-      { plan: "Starter", price: "19", currency: "EUR", billing: "monthly", description: "Audits illimites, toutes categories, 1 restaurant, GBP, avis" },
+      { plan: "Starter", price: "19", currency: "EUR", billing: "monthly", description: "Audits illimités, toutes categories, 1 restaurant, GBP, avis" },
       { plan: "Pro", price: "49", currency: "EUR", billing: "monthly", description: "Starter + auto-apply CMS, contenu IA, 3 restaurants, rapports PDF" },
       { plan: "Premium", price: "99", currency: "EUR", billing: "monthly", description: "Pro + 10 restaurants, API acces, support prioritaire, white-label" }
     ],
     tech: {
       backend: "Node.js/Express",
-      database: "SQLite + PostgreSQL",
+      databasé: "SQLite + PostgreSQL",
       ai: "Claude by Anthropic",
       hosting: "Render"
     },
@@ -12016,7 +12016,7 @@ db.exec(`
     items_manual INTEGER DEFAULT 0,
     error_message TEXT,
     started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    completed_at DATETIME
+    complèted_at DATETIME
   );
   CREATE TABLE IF NOT EXISTS agent_run_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -12147,7 +12147,7 @@ async function agentScrape(runId, name, city, websiteUrl) {
     }
   } catch(e) { agentEmit(runId, { type: 'warning', message: `Audit multi-API error: ${e.message}` }); }
 
-  // 1b. CMS detection (separate call if website available)
+  // 1b. CMS détection (separate call if website available)
   if (websiteUrl && !results.website?.cms) {
     agentEmit(runId, { type: 'step', message: 'Détection du CMS...', progress: 25 });
     try {
@@ -12193,7 +12193,7 @@ async function agentScrape(runId, name, city, websiteUrl) {
 
   db.prepare('UPDATE agent_runs SET scrape_results = ?, stage = ? WHERE id = ?')
     .run(JSON.stringify(results), 'scrape_done', runId);
-  agentEmit(runId, { type: 'stage_completed', stage: 'scrape', progress: 35 });
+  agentEmit(runId, { type: 'stage_complèted', stage: 'scrape', progress: 35 });
   return results;
 }
 
@@ -12221,7 +12221,7 @@ async function agentAnalyze(runId, apiKey, scrapeResults, name, city) {
     agentEmit(runId, { type: 'step', message: '🤖 Enrichissement IA en cours...', progress: 44 });
     try {
       const raw = await agentClaudeCall(apiKey,
-        `Tu es l'agent RestauRank. Analyse les findings ci-dessous et ajoute des insights que l'analyse automatique a pu manquer. Retourne UNIQUEMENT du JSON.`,
+        `Tu es l'agent RestauRank. Analyse les findings ci-dessous et ajoute des insights que l'analysé automatique a pu manquer. Retourne UNIQUEMENT du JSON.`,
         `Restaurant: ${name} à ${city}\nFindings actuels: ${analysis.items.length} items\nDonnées:\n${JSON.stringify({ gmb: { rating: gmb.rating, reviewCount: gmb.reviewCount, category: gmb.category, description: (gmb.description||'').substring(0,200) }, web: { hasTitle: web.hasTitle, hasSchema: web.hasSchemaRestaurant, hasFAQ: web.hasFAQ, hasMetaDesc: web.hasMetaDesc }, perf: { mobile: perf.mobile?.performance, desktop: perf.desktop?.performance } })}\n\nRetourne: { "extra_items": [{ "id": "ai_xxx", "category": "...", "name": "...", "status": "needs_fix", "severity": "...", "finding": "...", "fix": "...", "auto_fixable": false, "priority": 5 }], "enhanced_scores": { "seo_adjustment": <-10 to +10>, "geo_adjustment": <-10 to +10> } }`,
         2048
       );
@@ -12237,10 +12237,10 @@ async function agentAnalyze(runId, apiKey, scrapeResults, name, city) {
       }
       analysis._aiEnhanced = true;
     } catch(e) {
-      agentEmit(runId, { type: 'step', message: `ℹ️ Enrichissement IA non disponible — analyse déterministe complète utilisée`, progress: 47 });
+      agentEmit(runId, { type: 'step', message: `ℹ️ Enrichissement IA non disponible — analysé déterministe complète utilisée`, progress: 47 });
     }
   } else {
-    agentEmit(runId, { type: 'step', message: 'ℹ️ Mode déterministe (pas de clé Claude) — analyse 100% basée sur données réelles', progress: 47 });
+    agentEmit(runId, { type: 'step', message: 'ℹ️ Mode déterministe (pas de clé Claude) — analysé 100% basée sur données réelles', progress: 47 });
   }
 
   // Recalculate summary
@@ -12261,7 +12261,7 @@ async function agentAnalyze(runId, apiKey, scrapeResults, name, city) {
   db.prepare('UPDATE agent_runs SET analysis = ?, stage = ?, total_items = ?, items_manual = ? WHERE id = ?')
     .run(JSON.stringify(analysis), 'analyze_done', analysis.items.length, totalIssues, runId);
 
-  agentEmit(runId, { type: 'stage_completed', stage: 'analyze', summary: analysis.summary, progress: 50 });
+  agentEmit(runId, { type: 'stage_complèted', stage: 'analyze', summary: analysis.summary, progress: 50 });
   return analysis;
 }
 
@@ -12555,14 +12555,14 @@ function buildFullDeterministicAnalysis(gmb, web, cms, perf, ta, fsq, dirs, revs
         geoScore += 1;
       } else {
         const isImportant = ['yelp', 'tripadvisor', 'thefork', 'pagesjaunes', 'apple', 'bing'].some(k => platId.includes(k));
-        add(`cit_${platId}`, 'Citations', plat, 'missing', isImportant ? 'high' : 'medium', `Non trouvé sur ${plat}`, `Revendiquer et optimiser la fiche ${plat}`, false, 'Non trouvé');
+        add(`cit_${platId}`, 'Citations', plat, 'missing', isImportant ? 'high' : 'medium', `Non trouvé sur ${plat}`, `Revendiquer et optimisér la fiche ${plat}`, false, 'Non trouvé');
         if (isImportant) geoScore -= 3;
       }
     });
   } else {
     // No directory data — add checks for known important directories
     ['Yelp', 'TripAdvisor', 'TheFork', 'PagesJaunes', 'Apple Maps', 'Bing Places', 'Foursquare'].forEach(p => {
-      add(`cit_${p.toLowerCase().replace(/\s/g, '_')}`, 'Citations', p, 'needs_fix', 'medium', `Présence ${p} non vérifiée`, `Vérifier et optimiser la fiche ${p}`, false, 'Non scanné');
+      add(`cit_${p.toLowerCase().replace(/\s/g, '_')}`, 'Citations', p, 'needs_fix', 'medium', `Présence ${p} non vérifiée`, `Vérifier et optimisér la fiche ${p}`, false, 'Non scanné');
     });
   }
 
@@ -12577,7 +12577,7 @@ function buildFullDeterministicAnalysis(gmb, web, cms, perf, ta, fsq, dirs, revs
   const hasYelp = dirArray.some(d => d.found && (d.platform || '').toLowerCase().includes('yelp'));
   add('geo_chatgpt_yelp', 'ChatGPT', 'Source Yelp (48% ChatGPT)', hasYelp ? 'good' : 'needs_fix', 'high',
     hasYelp ? 'Profil Yelp actif — source principale de ChatGPT pour les restaurants' : 'Profil Yelp manquant — 48% des réponses restaurants de ChatGPT viennent de Yelp',
-    hasYelp ? '' : 'Créer et optimiser le profil Yelp en priorité — impact direct sur la visibilité ChatGPT',
+    hasYelp ? '' : 'Créer et optimisér le profil Yelp en priorité — impact direct sur la visibilité ChatGPT',
     false, hasYelp ? 'Actif' : 'Manquant');
   if (!hasYelp) geoScore -= 10;
 
@@ -12642,7 +12642,7 @@ function buildFullDeterministicAnalysis(gmb, web, cms, perf, ta, fsq, dirs, revs
   };
 }
 
-// --- PHASE 3: GENERATE — Deterministic content generation + optional Claude enhancement ---
+// --- PHASE 3: GENERATE — Deterministic content génération + optional Claude enhancement ---
 async function agentGenerate(runId, apiKey, analysis, scrapeResults, name, city) {
   agentEmit(runId, { type: 'stage_started', stage: 'generate', message: '✍️ Génération de contenu prêt à publier...', progress: 52 });
 
@@ -12710,7 +12710,7 @@ async function agentGenerate(runId, apiKey, analysis, scrapeResults, name, city)
   db.prepare('UPDATE agent_runs SET generated_content = ?, stage = ?, items_fixed = ? WHERE id = ?')
     .run(JSON.stringify(generated), 'generate_done', fixable, runId);
 
-  agentEmit(runId, { type: 'stage_completed', stage: 'generate', items_generated: fixable, progress: 75 });
+  agentEmit(runId, { type: 'stage_complèted', stage: 'generate', items_generated: fixable, progress: 75 });
   return generated;
 }
 
@@ -12923,7 +12923,7 @@ async function agentApply(runId, apiKey, generated, scrapeResults, name, city) {
   db.prepare('UPDATE agent_runs SET apply_results = ?, stage = ? WHERE id = ?')
     .run(JSON.stringify(applied), 'apply_done', runId);
 
-  agentEmit(runId, { type: 'stage_completed', stage: 'apply', results: { attempted: applied._stats.attempted, success: applied._stats.success, pending: applied._stats.pending }, progress: 90 });
+  agentEmit(runId, { type: 'stage_complèted', stage: 'apply', results: { attempted: applied._stats.attempted, success: applied._stats.success, pending: applied._stats.pending }, progress: 90 });
   return applied;
 }
 
@@ -12995,11 +12995,11 @@ async function agentReport(runId, apiKey, analysis, generated, applied, scrapeRe
       .run(null, 'agent_report', JSON.stringify({ run_id: runId, scores: report.scores, issues: report.issues_found, auto: report.auto_generated }));
   } catch(e) {}
 
-  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
+  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, complèted_at = CURRENT_TIMESTAMP WHERE id = ?')
     .run('report_done', 'report_done', runId);
 
   agentEmit(runId, { type: 'step', message: `📊 Rapport: SEO ${report.scores.seo_score}/100, GEO ${report.scores.geo_score}/100, ${report.issues_found} problèmes, ${report.auto_generated} corrections prêtes`, progress: 93 });
-  agentEmit(runId, { type: 'stage_completed', stage: 'report', report, progress: 93 });
+  agentEmit(runId, { type: 'stage_complèted', stage: 'report', report, progress: 93 });
   return report;
 }
 
@@ -13007,7 +13007,7 @@ async function agentReport(runId, apiKey, analysis, generated, applied, scrapeRe
 async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeResults, name, city, websiteUrl) {
   agentEmit(runId, { type: 'stage_started', stage: 'verify', message: '🔄 Vérification et réflexion...', progress: 94 });
 
-  const verification = { checks: [], improvements: [], score_delta: { seo: 0, geo: 0 }, verified_at: new Date().toISOString() };
+  const vérification = { checks: [], improvements: [], score_delta: { seo: 0, geo: 0 }, verified_at: new Date().toISOString() };
 
   // 6a. Re-scrape website to verify CMS changes took effect
   if (websiteUrl && applied.website?.some(w => w.status === 'applied')) {
@@ -13035,15 +13035,15 @@ async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeRe
         checks.forEach(c => {
           const improved = !c.before && c.after;
           const regressed = c.before && !c.after;
-          verification.checks.push({ ...c, status: improved ? 'improved' : regressed ? 'regressed' : c.after ? 'ok' : 'still_missing' });
+          vérification.checks.push({ ...c, status: improved ? 'improved' : regressed ? 'regressed' : c.after ? 'ok' : 'still_missing' });
           if (improved) {
-            verification.improvements.push(c.field);
-            verification.score_delta.seo += 3;
+            vérification.improvements.push(c.field);
+            vérification.score_delta.seo += 3;
           }
-          if (regressed) verification.score_delta.seo -= 5;
+          if (regressed) vérification.score_delta.seo -= 5;
         });
 
-        const improved = verification.improvements.length;
+        const improved = vérification.improvements.length;
         const stillMissing = checks.filter(c => !c.after).length;
         agentEmit(runId, { type: 'step', message: `✅ Vérification site: ${improved} améliorations confirmées, ${stillMissing} encore à faire`, progress: 97 });
       }
@@ -13052,36 +13052,36 @@ async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeRe
     }
   }
 
-  // 6b. Verify directory presence
+  // 6b. Verify directory présence
   const claimedDirs = (applied.directories || []).filter(d => d.status === 'claim_ready');
   if (claimedDirs.length > 0) {
     agentEmit(runId, { type: 'step', message: `📋 ${claimedDirs.length} annuaires à revendiquer — vérification programmée`, progress: 98 });
-    verification.checks.push({ field: 'Directories', pending_claims: claimedDirs.length, note: 'Les revendications d\'annuaires prennent 24-72h pour être traitées' });
+    vérification.checks.push({ field: 'Directories', pending_claims: claimedDirs.length, note: 'Les revendications d\'annuaires prennent 24-72h pour être traitées' });
   }
 
-  // 6c. Score adjustment based on verification
+  // 6c. Score adjustment baséd on vérification
   const finalScores = {
-    seo: Math.max(0, Math.min(100, (analysis.summary?.seo_score || 0) + verification.score_delta.seo)),
-    geo: Math.max(0, Math.min(100, (analysis.summary?.geo_score || 0) + verification.score_delta.geo))
+    seo: Math.max(0, Math.min(100, (analysis.summary?.seo_score || 0) + vérification.score_delta.seo)),
+    geo: Math.max(0, Math.min(100, (analysis.summary?.geo_score || 0) + vérification.score_delta.geo))
   };
-  verification.final_scores = finalScores;
+  vérification.final_scores = finalScores;
 
   // 6d. Generate reflection summary
-  verification.reflection = {
-    total_checks: verification.checks.length,
-    improvements_confirmed: verification.improvements.length,
-    regressions: verification.checks.filter(c => c.status === 'regressed').length,
-    still_pending: verification.checks.filter(c => c.status === 'still_missing').length,
-    recommendation: verification.improvements.length > 0
-      ? `${verification.improvements.length} améliorations vérifiées. Re-scanner dans 48h pour confirmer l'indexation.`
+  vérification.reflection = {
+    total_checks: vérification.checks.length,
+    improvements_confirmed: vérification.improvements.length,
+    regressions: vérification.checks.filter(c => c.status === 'regressed').length,
+    still_pending: vérification.checks.filter(c => c.status === 'still_missing').length,
+    recommendation: vérification.improvements.length > 0
+      ? `${vérification.improvements.length} améliorations vérifiées. Re-scanner dans 48h pour confirmer l'indexation.`
       : 'Aucun changement appliqué détecté — vérifier la connexion CMS et relancer.'
   };
 
   // Update run with final status
-  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
-    .run('completed', 'done', runId);
+  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, complèted_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run('complèted', 'done', runId);
 
-  // Fetch the full report from DB for the run_completed event
+  // Fetch the full report from DB for the run_complèted event
   let fullReport = {};
   try {
     const runRow = db.prepare('SELECT * FROM agent_runs WHERE id = ?').get(runId);
@@ -13112,8 +13112,8 @@ async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeRe
   } catch(e) { console.error('Report build error:', e.message); }
 
   agentEmit(runId, { type: 'step', message: `🏁 Terminé — SEO ${finalScores.seo}/100, GEO ${finalScores.geo}/100`, progress: 100 });
-  agentEmit(runId, { type: 'run_completed', report: fullReport, verification, final_scores: finalScores, progress: 100 });
-  return verification;
+  agentEmit(runId, { type: 'run_complèted', report: fullReport, vérification, final_scores: finalScores, progress: 100 });
+  return vérification;
 }
 
 // --- POST /api/agent/launch — Start full autonomous run (works WITHOUT Claude API key) ---
@@ -13124,7 +13124,7 @@ app.post('/api/agent/launch', async (req, res) => {
   // API key is OPTIONAL — deterministic engine works without it
   const apiKey = getAIKey();
 
-  // Create run
+  // Créate run
   const result = db.prepare('INSERT INTO agent_runs (restaurant_name, city, website_url, restaurant_id, status, stage) VALUES (?, ?, ?, ?, ?, ?)')
     .run(restaurant_name, city, website_url || null, restaurant_id || null, 'running', 'init');
   const runId = result.lastInsertRowid;
@@ -13212,11 +13212,11 @@ app.post('/api/real-audit', async (req, res) => {
     google: { available: false },
     // === Website audit data ===
     website: { available: false },
-    // === Directory presence ===
+    // === Directory présence ===
     directories: { available: false },
     // === PageSpeed ===
     performance: { available: false },
-    // === CMS detection ===
+    // === CMS détection ===
     cms: { available: false },
     // === TripAdvisor ===
     tripadvisor: { available: false },
@@ -13296,7 +13296,7 @@ app.post('/api/real-audit', async (req, res) => {
               // Photos
               photoCount: p.photos?.length || 0,
               photos: (p.photos || []).slice(0, 10).map(ph => ({
-                url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_reference=${ph.photo_reference}&key=${placesKey}`,
+                url: `https://maps.googleapis.com/maps/api/place/photo?maxwidth=800&photo_référence=${ph.photo_référence}&key=${placesKey}`,
                 attributions: ph.html_attributions
               })),
               // Reviews (Google returns up to 5)
@@ -13997,14 +13997,14 @@ app.post('/api/real-audit', async (req, res) => {
 
     // Source flags
     _pendingGBP: true, // Full GBP API (posts, Q&A, attributes) not available yet
-    _pendingAI: !audit.aiVisibility?.available, // false if AI check completed
+    _pendingAI: !audit.aiVisibility?.available, // false if AI check complèted
     _realAuditComplete: true
   };
 
   audit.scores = realData;
   audit.duration = Date.now() - startTime;
 
-  console.log(`✅ Real audit completed for "${name}" in ${audit.duration}ms — Sources: ${Object.entries(audit.sources).filter(([k,v]) => v === 'ok').map(([k]) => k).join(', ') || 'none'}`);
+  console.log(`✅ Real audit complèted for "${name}" in ${audit.duration}ms — Sources: ${Object.entries(audit.sources).filter(([k,v]) => v === 'ok').map(([k]) => k).join(', ') || 'none'}`);
 
   res.json({ success: true, audit: realData, sources: audit.sources, duration: audit.duration, details: { google: g, website: w, performance: perf, tripadvisor: ta, foursquare: fsq, yelp: ylp, aiVisibility: audit.aiVisibility || { available: false } } });
 });
@@ -14032,7 +14032,7 @@ function _computeNapConsistency(g, w, fsq, ylp, ta) {
   return checks > 0 ? Math.round(score / checks) : null;
 }
 
-// Helper: compute listing completeness
+// Helper: compute listing complèteness
 function _computeListingCompleteness(g, ta, ylp, fsq) {
   const platforms = [
     { available: g.available, hasPhone: !!g.phone, hasAddress: !!g.address, hasPhotos: g.photoCount > 0, hasDesc: g.descriptionLength > 0 },
@@ -14310,7 +14310,7 @@ app.post('/api/competitors/discover', async (req, res) => {
 
     const apiKey = getAIKey();
     if (!apiKey) {
-      return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour l\'analyse concurrentielle' });
+      return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour l\'analysé concurrentielle' });
     }
 
     const prompt = `Tu es un expert en restauration locale. Identifie les 5-8 principaux concurrents directs du restaurant "${restaurant_name}" situé à ${city}${address ? ' ('+address+')' : ''}${cuisine ? ', cuisine: '+cuisine : ''}.
@@ -14469,7 +14469,7 @@ Base-toi sur des données réalistes du marché français de la restauration ${c
       industry_avg: { seo: null, geo: null, rating: null, reviews: null },
       top_10_pct: { seo: null, geo: null, rating: null, reviews: null },
       percentile: { seo: null, geo: null, rating: null, reviews: null },
-      insights: [{ type: 'info', text: 'Benchmark IA indisponible — connectez une clé API Claude pour obtenir des comparaisons sectorielles réelles.' }]
+      insights: [{ type: 'info', text: 'Benchmark IA indisponible — connectéz une clé API Claude pour obtenir des comparaisons sectorielles réelles.' }]
     }});
   } catch(e) {
     res.status(500).json({ success: false, error: e.message });
@@ -14667,7 +14667,7 @@ Génère un email HTML professionnel avec: résumé, évolution, actions priorit
     }
 
     if (!reportHtml) {
-      reportHtml = `<h2>Rapport hebdomadaire — ${name}</h2><p>Mots-clés suivis: ${keywords.length}</p><p>Audits historiques: ${stats.length}</p><p><em>Connectez une clé API Claude pour un rapport détaillé avec recommandations.</em></p>`;
+      reportHtml = `<h2>Rapport hebdomadaire — ${name}</h2><p>Mots-clés suivis: ${keywords.length}</p><p>Audits historiques: ${stats.length}</p><p><em>Connectéz une clé API Claude pour un rapport détaillé avec recommandations.</em></p>`;
     }
 
     // Send via email
@@ -14697,13 +14697,13 @@ app.post('/api/sentiment/analyze', async (req, res) => {
 
     const apiKey = getAIKey();
     if (!apiKey) {
-      return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour l\'analyse de sentiment' });
+      return res.json({ success: false, error: 'no_api_key', message: 'Clé API IA requise pour l\'analysé de sentiment' });
     }
 
     const reviewText = (reviews_sample || []).slice(0, 10).map((r, i) => `Avis ${i+1}: "${r}"`).join('\n');
     const prompt = `Analyse le sentiment de ces avis pour le restaurant "${restaurant_name}".
 
-${reviewText || 'Pas d\'avis fournis — génère une analyse typique pour un restaurant avec note 4/5.'}
+${reviewText || 'Pas d\'avis fournis — génère une analysé typique pour un restaurant avec note 4/5.'}
 
 Réponds UNIQUEMENT avec un JSON:
 {
@@ -14826,7 +14826,7 @@ app.post('/api/reports/preview', async (req, res) => {
       data_source: prev ? 'historical_comparison' : 'first_report'
     };
 
-    // Real actions based on audit data
+    // Real actions baséd on audit data
     if (seo_score < 50) report.actions.push({ priority: 'high', text: 'Corriger les points critiques SEO (score < 50)', status: 'pending' });
     if (geo_score < 20) report.actions.push({ priority: 'high', text: 'Améliorer la visibilité IA (GEO < 20)', status: 'pending' });
     if (rating < 4.0) report.actions.push({ priority: 'medium', text: 'Améliorer la note Google (actuellement ' + rating + ')', status: 'pending' });
@@ -14939,7 +14939,7 @@ async function generateGooglePost(payload, apiKey) {
   const year = new Date().getFullYear();
 
     // ═══════════════════════════════════════════════════════════
-    // UNIFIED GOOGLE POST PROMPT — Hub Central + anti-ban + anti-AI-detection
+    // UNIFIED GOOGLE POST PROMPT — Hub Central + anti-ban + anti-AI-détection
     // Generates a SINGLE post (use /api/ai/google-posts/pack for 5)
     // ═══════════════════════════════════════════════════════════
     const prompt = `Tu écris un Google Post pour "${restaurant_name}" sur Google Business Profile. Tu es le restaurateur lui-même qui partage une actualité authentique — pas un community manager, pas une agence.
