@@ -668,16 +668,14 @@
     <!-- TAB BAR -->
     <div class="dash-tabs" id="dashTabs">
         <div class="dash-tab" onclick="goLanding()">Nouvel audit</div>
-        <div class="dash-tab active" onclick="switchDashTab('audit')">Tableau de bord</div>
+        <div class="dash-tab active" onclick="switchDashTab('audit')">Audit</div>
         <div class="dash-tab" onclick="switchDashTab('hub')">Mon restaurant</div>
-        <div class="dash-tab" onclick="switchDashTab('reviews')">Avis</div>
-        <div class="dash-tab" onclick="switchDashTab('social')">Publications</div>
-        <div class="dash-tab" onclick="switchDashTab('activity')">Activité</div>
-        <div class="dash-tab" onclick="switchDashTab('settings')">Mon plan</div>
+        <div class="dash-tab" onclick="switchDashTab('social')">Publier</div>
+        <div class="dash-tab" onclick="switchDashTab('settings')">Mon compte</div>
         <!-- Onglets opérationnels — visibles uniquement pour les admins -->
         <div class="dash-tab admin-only" onclick="switchDashTab('stats')" style="display:none;">SEO Stats</div>
-        <div class="dash-tab admin-only" onclick="switchDashTab('content')" style="display:none;">Contenu</div>
         <div class="dash-tab admin-only" onclick="switchDashTab('dispatch')" style="display:none;">Opérations</div>
+        <div class="dash-tab admin-only" onclick="switchDashTab('content')" style="display:none;">Contenu</div>
         <div class="dash-tab admin-only" onclick="switchDashTab('team')" style="display:none;">Équipe</div>
     </div>
     <!-- AUDIT TAB (default, existing content) -->
@@ -953,6 +951,43 @@
                     </table>
                 </div>
             </div>
+            <!-- AVIS SECTION (merged from tabReviews) -->
+            <div style="border-top:1px solid var(--bdr);padding-top:20px;margin-top:8px;">
+                <div style="font-weight:800;font-size:1rem;margin-bottom:16px;">Avis clients</div>
+                <div class="reviews-container">
+                    <div class="review-stats">
+                        <div class="stat-card">
+                            <div class="stat-val" id="reviewCount">—</div>
+                            <div class="stat-label">Avis</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-val" id="avgRating">—</div>
+                            <div class="stat-label">Note moy.</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-val" id="responseRate">—</div>
+                            <div class="stat-label">Réponses</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-val" id="sentiment"></div>
+                            <div class="stat-label">Sentiment</div>
+                        </div>
+                    </div>
+                    <div id="reviewsList"></div>
+                    <!-- Semantic Review Analysis (auto-runs after scan) -->
+                    <div id="reviewSemanticAnalysis" style="margin-top:20px;">
+                        <div style="padding:16px;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;">
+                            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                                <h3 style="font-size:.95rem;color:var(--txt);margin:0;"> Analyse sémantique des avis</h3>
+                                <button class="btn" onclick="runReviewAnalysis()" style="background:#f04b2e;border:none;color:#f8e5db;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:.75rem;font-weight:700;" id="btnRunSemantic">⟳ Relancer</button>
+                            </div>
+                            <div id="semanticResults" style="font-size:.8rem;color:var(--mut);">
+                                <p>L'analyse sémantique se lance automatiquement après chaque scan. Elle extrait les termes récurrents de vos avis Google et vérifie l'alignement avec votre description.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -961,42 +996,8 @@
         <div class="stats-container" id="statsContainer"></div>
     </div>
 
-    <!-- REVIEWS TAB -->
-    <div class="dash-tab-content" id="tabReviews">
-        <div class="reviews-container">
-            <div class="review-stats">
-                <div class="stat-card">
-                    <div class="stat-val" id="reviewCount">—</div>
-                    <div class="stat-label">Avis</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-val" id="avgRating">—</div>
-                    <div class="stat-label">Note moy.</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-val" id="responseRate">—</div>
-                    <div class="stat-label">Réponses</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-val" id="sentiment"></div>
-                    <div class="stat-label">Sentiment</div>
-                </div>
-            </div>
-            <div id="reviewsList"></div>
-            <!-- Semantic Review Analysis (auto-runs after scan) -->
-            <div id="reviewSemanticAnalysis" style="margin-top:20px;">
-                <div style="padding:16px;background:var(--s1);border:1px solid var(--bdr);border-radius:12px;">
-                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-                        <h3 style="font-size:.95rem;color:var(--txt);margin:0;"> Analyse sémantique des avis</h3>
-                        <button class="btn" onclick="runReviewAnalysis()" style="background:#f04b2e;border:none;color:#f8e5db;padding:6px 16px;border-radius:8px;cursor:pointer;font-size:.75rem;font-weight:700;" id="btnRunSemantic">⟳ Relancer</button>
-                    </div>
-                    <div id="semanticResults" style="font-size:.8rem;color:var(--mut);">
-                        <p>L'analyse sémantique se lance automatiquement après chaque scan. Elle extrait les termes récurrents de vos avis Google et vérifie l'alignement avec votre description.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- REVIEWS TAB — content moved to tabHub, kept for backward compat -->
+    <div class="dash-tab-content" id="tabReviews" style="display:none;"></div>
 
     <!-- SOCIAL TAB -->
     <div class="dash-tab-content" id="tabSocial">
@@ -1043,10 +1044,22 @@
             <button style="width:100%;margin-top:10px;padding:9px;font-size:.75rem;background:none;border:1px dashed var(--bdr);border-radius:8px;color:var(--mut);cursor:pointer;transition:all .15s;" onmouseover="this.style.borderColor='var(--ind)';this.style.color='var(--ind)'" onmouseout="this.style.borderColor='var(--bdr)';this.style.color='var(--mut)'" onclick="document.getElementById('quickCompose').style.display='block';document.getElementById('socialContent')?.focus();">Rédiger manuellement</button>
 
             <div class="post-calendar" id="postCalendar" style="margin-top:20px;"></div>
+
+            <!-- BLOG SECTION -->
+            <div style="border-top:1px solid var(--bdr);padding-top:20px;margin-top:20px;">
+                <div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:16px;">
+                    <div>
+                        <h2 style="font-size:1.1rem;font-weight:800;margin:0;color:var(--txt);">Articles de blog SEO</h2>
+                        <p style="font-size:.72rem;color:var(--mut);margin:4px 0 0;">Générez et publiez des articles optimisés pour Google et les IA génératives.</p>
+                    </div>
+                    <button class="btn-gen" style="font-size:.7rem;padding:6px 14px;" onclick="generateBlogContent()">Générer avec Claude AI</button>
+                </div>
+                <div id="blogHistoryListInSocial"></div>
+            </div>
         </div>
     </div>
-    
-    <!-- CONTENU TAB — Blog + Reddit editor -->
+
+    <!-- CONTENU TAB — Blog + Reddit editor (admin-only) -->
     <div class="dash-tab-content" id="tabContent">
         <div style="padding:20px;max-width:960px;margin:0 auto;width:100%;">
             <div style="background:var(--s1);border:1px solid var(--bdr);border-radius:14px;padding:20px;margin-bottom:16px;">
@@ -1251,8 +1264,8 @@
       </div>
     </div>
 
-    <!-- ACTIVITY TAB — Journal d'activité RestauRank -->
-    <div class="dash-tab-content" id="tabActivity">
+    <!-- ACTIVITY TAB — content moved to tabSettings, kept for backward compat -->
+    <div class="dash-tab-content" id="tabActivity" style="display:none !important;">
         <div style="padding:20px;max-width:800px;margin:0 auto;">
             <h2>Activité RestauRank</h2>
             <p style="font-size:.82rem;color:#585254;margin-bottom:20px;">Ce que RestauRank fait pour votre restaurant cette semaine.</p>
@@ -1282,7 +1295,7 @@
             <div style="background:#f8e5db;border-radius:8px;padding:20px;margin-bottom:16px;">
                 <div style="font-weight:700;margin-bottom:12px;">Rapport mensuel</div>
                 <p style="font-size:.82rem;color:#585254;margin-bottom:12px;">Consultez l'évolution de votre visibilité SEO + GEO.</p>
-                <button class="btn-gen" onclick="switchDashTab('audit')">Voir mon tableau de bord</button> <button class="btn-gen" onclick="switchDashTab('activity')">Voir l'activité</button>
+                <button class="btn-gen" onclick="switchDashTab('audit')">Voir mon tableau de bord</button> <button class="btn-gen" onclick="switchDashTab('settings')">Voir l'activité</button>
             </div>
 
             <!-- Hidden inputs for backward compat — populated from Hub Central -->
@@ -1500,6 +1513,12 @@
                 <div id="algoUpdatesPanel" style="margin-bottom:10px;"></div>
                 <button class="auto-btn-full" style="background:#f04b2e;" onclick="checkAlgoUpdates()">Vérifier les dernières mises à jour</button>
             </div><!-- close admin-only algo -->
+            </div>
+
+            <!-- ACTIVITÉ SECTION -->
+            <div style="margin-top:24px;border-top:1px solid var(--bdr);padding-top:20px;">
+                <h3 style="font-size:.9rem;font-weight:800;margin:0 0 14px;color:var(--txt);">Journal d'activité</h3>
+                <div id="activityFeedInSettings"></div>
             </div>
         </div>
     </div>

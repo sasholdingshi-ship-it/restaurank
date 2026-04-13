@@ -4423,11 +4423,15 @@ async function autoApplyFromModal(itemId){
 
 // Switch dashboard tabs
 function switchDashTab(tab){
+    // Backward-compat redirects for tabs merged into others
+    if(tab==='reviews'){tab='hub';}
+    if(tab==='activity'){tab='settings';}
+
     document.querySelectorAll('.dash-tab').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.dash-tab-content').forEach(c=>c.classList.remove('active'));
 
-    const tabMap={audit:'Audit',stats:'SEO Stats',hub:'Hub Central',reviews:'Avis',social:'Social',content:'Contenu',dispatch:'IA Dispatch',agent:'Agent Auto',team:'Équipe',settings:'Paramètres'};
-    document.querySelectorAll('.dash-tab').forEach(t=>{if(t.textContent.includes(tabMap[tab]||tab))t.classList.add('active');});
+    const tabMap={audit:'Audit',stats:'SEO Stats',hub:'Mon restaurant',social:'Publier',content:'Contenu',dispatch:'Opérations',agent:'Agent Auto',team:'Équipe',settings:'Mon compte'};
+    document.querySelectorAll('.dash-tab').forEach(t=>{if(t.textContent.trim()===(tabMap[tab]||tab))t.classList.add('active');});
     const el=document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
     if(el)el.classList.add('active');
     if(tab==='stats'){try{renderStatsTab();}catch(e){console.error(e);}}
@@ -4436,8 +4440,53 @@ function switchDashTab(tab){
     if(tab==='team'){try{renderTeam();}catch(e){}}
     if(tab==='agent'){try{loadAgentHistory();}catch(e){}}
     if(tab==='content'){try{loadBlogHistory();loadCMSSnapshots();renderContentCMSStatus();}catch(e){}}
-    if(tab==='social'){try{renderGooglePostsList();renderPostPhotoGrid();}catch(e){}}
-    if(tab==='activity'){try{renderActivityFeed();}catch(e){}}
+    if(tab==='social'){try{renderGooglePostsList();renderPostPhotoGrid();loadBlogHistoryInSocial();}catch(e){}}
+    if(tab==='settings'){try{renderActivityFeedInSettings();}catch(e){}}
+}
+
+// Render activity feed into tabSettings
+function renderActivityFeedInSettings(){
+    const container=document.getElementById('activityFeedInSettings');
+    if(!container)return;
+    // Reuse same renderActivityFeed logic but target our container
+    try{
+        const src=document.getElementById('activityFeed');
+        if(src&&src.children.length>0&&!src.querySelector('[style*="Chargement"]')){
+            container.innerHTML=src.innerHTML;
+        } else {
+            // Trigger fetch and mirror result
+            renderActivityFeed();
+            // Mirror after short delay
+            setTimeout(()=>{
+                const s=document.getElementById('activityFeed');
+                if(s)container.innerHTML=s.innerHTML;
+            },1200);
+        }
+    }catch(e){console.error(e);}
+}
+
+// Load blog history into tabSocial
+function loadBlogHistoryInSocial(){
+    const container=document.getElementById('blogHistoryListInSocial');
+    if(!container)return;
+    const sess=localStorage.getItem('restaurank_session')||sessionStorage.getItem('restaurank_session');
+    if(!sess){container.innerHTML='<p style="font-size:.78rem;color:var(--mut);">Connectez-vous pour voir l\'historique des articles.</p>';return;}
+    container.innerHTML='<p style="font-size:.75rem;color:var(--mut);">Chargement...</p>';
+    fetch('/api/blog/history',{headers:{'Authorization':'Bearer '+sess}})
+        .then(r=>r.json())
+        .then(data=>{
+            const items=data.articles||data.history||data||[];
+            if(!items.length){container.innerHTML='<p style="font-size:.78rem;color:var(--mut);">Aucun article généré pour l\'instant.</p>';return;}
+            container.innerHTML=items.slice(0,5).map(a=>`
+                <div style="padding:10px 14px;background:var(--s1);border:1px solid var(--bdr);border-radius:8px;margin-bottom:8px;display:flex;align-items:center;gap:10px;">
+                    <div style="flex:1;">
+                        <div style="font-weight:700;font-size:.82rem;">${a.title||'Article sans titre'}</div>
+                        <div style="font-size:.68rem;color:var(--mut);">${a.created_at?new Date(a.created_at).toLocaleDateString('fr-FR'):''} · ${a.status||'brouillon'}</div>
+                    </div>
+                    <button class="btn-gen" style="font-size:.68rem;padding:4px 10px;" onclick="switchDashTab('content')">Voir</button>
+                </div>`).join('');
+        })
+        .catch(()=>{container.innerHTML='<p style="font-size:.75rem;color:var(--mut);">Erreur de chargement.</p>';});
 }
 
 // Show CMS connection status at the top of the Content tab
