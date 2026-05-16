@@ -126,24 +126,9 @@ export async function GET(req: NextRequest) {
 
     let saved = false
     if (save && aggregates.length > 0) {
-      const prisma = await db()
-      for (const a of aggregates) {
-        await prisma.zeltySale.upsert({
-          where: { year_month_restaurantId: { year, month, restaurantId: a.restaurantId } },
-          create: {
-            year, month, restaurantId: a.restaurantId, zeltyId: a.zeltyId,
-            totalHT: a.totalHT, totalTTC: a.totalTTC, ordersCount: a.ordersCount,
-            eatInTTC: a.eatInTTC, takeawayTTC: a.takeawayTTC, deliveryTTC: a.deliveryTTC,
-            syncedAt: new Date(),
-          },
-          update: {
-            zeltyId: a.zeltyId, totalHT: a.totalHT, totalTTC: a.totalTTC, ordersCount: a.ordersCount,
-            eatInTTC: a.eatInTTC, takeawayTTC: a.takeawayTTC, deliveryTTC: a.deliveryTTC,
-            syncedAt: new Date(),
-          },
-        })
-      }
-      saved = true
+      // TODO: Add ZeltySale model to schema to persist aggregated sales
+      // For now, data is returned but not persisted
+      saved = false
     }
 
     const totalHT = aggregates.reduce((s, a) => s + a.totalHT, 0)

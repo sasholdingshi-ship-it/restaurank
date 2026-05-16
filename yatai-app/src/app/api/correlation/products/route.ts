@@ -134,7 +134,7 @@ export async function GET(req: NextRequest) {
     }
     agg.qty += d.quantity
     agg.byRestaurant.set(d.restaurantId, (agg.byRestaurant.get(d.restaurantId) || 0) + d.quantity)
-    agg.itemIds.push(d.zeltyItemId)
+    agg.itemIds.push(d.id)
   }
 
   // Build the correlation list
