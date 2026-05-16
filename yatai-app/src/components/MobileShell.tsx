@@ -2,8 +2,9 @@
 
 import Image from "next/image"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { ReactNode } from "react"
+import { createClient } from "@/lib/supabase/client"
 
 const NAV = [
   { href: "/", label: "Dashboard", icon: "📊" },
@@ -15,6 +16,17 @@ const NAV = [
 
 export function MobileShell({ children }: { children: ReactNode }) {
   const pathname = usePathname()
+  const router = useRouter()
+
+  // Login page: no shell, just the content
+  if (pathname === "/login") return <>{children}</>
+
+  async function handleLogout() {
+    const supabase = createClient()
+    await supabase.auth.signOut()
+    router.push("/login")
+    router.refresh()
+  }
 
   return (
     <>
@@ -40,8 +52,12 @@ export function MobileShell({ children }: { children: ReactNode }) {
               )
             })}
           </nav>
-          <div className="p-4 border-t border-gray-700 text-xs text-gray-500">
-            5 restaurants &bull; Paris
+          <div className="p-4 border-t border-gray-700 flex items-center justify-between">
+            <span className="text-xs text-gray-500">5 restaurants</span>
+            <button onClick={handleLogout}
+              className="text-xs text-gray-400 hover:text-red-400 transition-colors cursor-pointer">
+              Deconnexion
+            </button>
           </div>
         </aside>
         <main className="flex-1 overflow-auto">

@@ -162,12 +162,12 @@ model ZeltyDishSale {
   year          Int
   month         Int
   restaurantId  Int      // Yatai Restaurant.id
-  zeltyItemId   Int      // Zelty dish item_id (catalog id, stable across orders)
   name          String   // Zelty dish name
   quantity      Int      @default(0)  // total units sold this month
+  revenue       Float    @default(0)  // revenue for this dish this month
   yataiProductRef String?  // mapped Yatai Product.ref (if matched)
   syncedAt      DateTime @default(now())
-  @@unique([year, month, restaurantId, zeltyItemId])
+  @@unique([restaurantId, year, month, name])
   @@index([year, month])
   @@index([yataiProductRef])
 }
