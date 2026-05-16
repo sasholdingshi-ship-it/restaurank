@@ -142,9 +142,9 @@ export async function GET(req: NextRequest) {
       const now = new Date()
       for (const r of result) {
         await prisma.zeltyDishSale.upsert({
-          where: { year_month_restaurantId_zeltyItemId: { year, month, restaurantId: r.restaurantId, zeltyItemId: r.itemId } },
-          create: { year, month, restaurantId: r.restaurantId, zeltyItemId: r.itemId, name: r.name, quantity: r.qty, syncedAt: now },
-          update: { name: r.name, quantity: r.qty, syncedAt: now },
+          where: { restaurantId_year_month_name: { year, month, restaurantId: r.restaurantId, name: r.name } },
+          create: { year, month, restaurantId: r.restaurantId, name: r.name, quantity: r.qty, revenue: 0 },
+          update: { quantity: r.qty },
         })
       }
       saved = true
