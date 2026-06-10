@@ -671,6 +671,7 @@
         <div class="dash-tab active" onclick="switchDashTab('audit')">Audit</div>
         <div class="dash-tab" onclick="switchDashTab('hub')">Mon restaurant</div>
         <div class="dash-tab" onclick="switchDashTab('social')">Publier</div>
+        <div class="dash-tab" onclick="switchDashTab('agents')">Agents IA</div>
         <div class="dash-tab" onclick="switchDashTab('settings')">Mon compte</div>
         <!-- Onglets opérationnels — visibles uniquement pour les admins -->
         <div class="dash-tab admin-only" onclick="switchDashTab('stats')" style="display:none;">SEO Stats</div>
@@ -1301,6 +1302,8 @@
     </div>
 
     <!-- SETTINGS TAB — Client sees only plan + billing -->
+    <div class="dash-tab-content" id="tabAgents"><div id="agentsFeedRoot"></div></div>
+
     <div class="dash-tab-content" id="tabSettings">
         <div class="settings-container">
             <h2>Mon abonnement</h2>
@@ -1586,5 +1589,6 @@
 </div>
 
 <script src="/public/app.js"></script>
+<script src="/public/agents-tab.js"></script>
 </body>
 </html>

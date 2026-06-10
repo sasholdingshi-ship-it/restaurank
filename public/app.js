@@ -4430,7 +4430,7 @@ function switchDashTab(tab){
     document.querySelectorAll('.dash-tab').forEach(t=>t.classList.remove('active'));
     document.querySelectorAll('.dash-tab-content').forEach(c=>c.classList.remove('active'));
 
-    const tabMap={audit:'Audit',stats:'SEO Stats',hub:'Mon restaurant',social:'Publier',content:'Contenu',dispatch:'Opérations',agent:'Agent Auto',team:'Équipe',settings:'Mon compte'};
+    const tabMap={audit:'Audit',stats:'SEO Stats',hub:'Mon restaurant',social:'Publier',agents:'Agents IA',content:'Contenu',dispatch:'Opérations',agent:'Agent Auto',team:'Équipe',settings:'Mon compte'};
     document.querySelectorAll('.dash-tab').forEach(t=>{if(t.textContent.trim()===(tabMap[tab]||tab))t.classList.add('active');});
     const el=document.getElementById('tab'+tab.charAt(0).toUpperCase()+tab.slice(1));
     if(el)el.classList.add('active');
@@ -4442,6 +4442,7 @@ function switchDashTab(tab){
     if(tab==='content'){try{loadBlogHistory();loadCMSSnapshots();renderContentCMSStatus();}catch(e){}}
     if(tab==='social'){try{renderGooglePostsList();renderPostPhotoGrid();loadBlogHistoryInSocial();}catch(e){}}
     if(tab==='settings'){try{renderActivityFeedInSettings();}catch(e){}}
+    if(tab==='agents'){try{renderAgentsTab();}catch(e){console.error(e);}}
 }
 
 // Render activity feed into tabSettings

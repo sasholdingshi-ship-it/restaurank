@@ -15660,6 +15660,39 @@ app.get('/api/agent/actions', agentOrAdmin, (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
+// ── Client-facing: agent activity for ONE restaurant (owner or admin session) ──
+app.get('/api/restaurants/:id/agent-feed', authMiddleware, requireAuth, (req, res) => {
+  try {
+    const rid = parseInt(req.params.id);
+    const resto = db.prepare('SELECT id, name, city, owner_id, user_id FROM restaurants WHERE id = ?').get(rid);
+    if (!resto) return res.status(404).json({ error: 'restaurant inconnu' });
+    const isOwner = resto.owner_id === req.account.id || resto.user_id === req.account.id;
+    if (!isOwner && req.account.role !== 'admin') return res.status(403).json({ error: 'accès refusé' });
+    const actions = db.prepare('SELECT id, run_tag, role, action, reason, priority, status, created_at FROM agent_actions WHERE restaurant_id = ? ORDER BY id DESC LIMIT 50').all(rid);
+    const contents = db.prepare('SELECT id, type, title, published, publish_url, created_at, substr(content, 1, 240) AS excerpt FROM generated_content WHERE restaurant_id = ? ORDER BY id DESC LIMIT 20').all(rid);
+    const stats = {
+      actions_30d: db.prepare("SELECT COUNT(*) c FROM agent_actions WHERE restaurant_id = ? AND created_at > datetime('now','-30 days')").get(rid).c,
+      contents_total: db.prepare('SELECT COUNT(*) c FROM generated_content WHERE restaurant_id = ?').get(rid).c,
+      published_total: db.prepare('SELECT COUNT(*) c FROM generated_content WHERE restaurant_id = ? AND published = 1').get(rid).c,
+      last_run: db.prepare('SELECT MAX(created_at) m FROM agent_actions WHERE restaurant_id = ?').get(rid).m
+    };
+    res.json({ success: true, restaurant: { id: resto.id, name: resto.name, city: resto.city }, publication_mode: process.env.PUBLICATION_MODE || 'auto', stats, actions, contents });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/restaurants/:id/agent-content/:cid', authMiddleware, requireAuth, (req, res) => {
+  try {
+    const rid = parseInt(req.params.id);
+    const resto = db.prepare('SELECT id, owner_id, user_id FROM restaurants WHERE id = ?').get(rid);
+    if (!resto) return res.status(404).json({ error: 'restaurant inconnu' });
+    const isOwner = resto.owner_id === req.account.id || resto.user_id === req.account.id;
+    if (!isOwner && req.account.role !== 'admin') return res.status(403).json({ error: 'accès refusé' });
+    const c = db.prepare('SELECT id, type, title, content, published, publish_url, created_at FROM generated_content WHERE id = ? AND restaurant_id = ?').get(parseInt(req.params.cid), rid);
+    if (!c) return res.status(404).json({ error: 'contenu introuvable' });
+    res.json({ success: true, content: c });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
 // ── Per-restaurant status (kept for compat with agent-monitor.sh) ──
 app.get('/api/agent/status', agentOrAdmin, (req, res) => {
   const { restaurant_id } = req.query;

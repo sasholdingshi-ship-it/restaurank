@@ -280,3 +280,8 @@ test('reddit push without account for this restaurant stays stored_only', async 
   assert.strictEqual(j.publication.status, 'stored_only');
   assert.match(j.publication.reason, /pour ce restaurant/);
 });
+
+test('GET /api/restaurants/:id/agent-feed requires a session', async () => {
+  const r = await fetch(`${BASE}/api/restaurants/1/agent-feed`);
+  assert.strictEqual(r.status, 401);
+});
