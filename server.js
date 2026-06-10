@@ -15396,7 +15396,8 @@ async function publishToWordPressHidden({ site_url, username, app_password, titl
   let parentId = 0;
   try {
     const findResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo&status=publish,private`, {
-      headers: { 'Authorization': `Basic ${auth}` }
+      headers: { 'Authorization': `Basic ${auth}` },
+      signal: AbortSignal.timeout(15000)
     });
     const found = await findResp.json();
     if (Array.isArray(found) && found.length > 0) {
@@ -15405,6 +15406,7 @@ async function publishToWordPressHidden({ site_url, username, app_password, titl
       const parentResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+        signal: AbortSignal.timeout(15000),
         body: JSON.stringify({
           title: 'Ressources SEO',
           slug: 'ressources-seo',
@@ -15422,6 +15424,7 @@ async function publishToWordPressHidden({ site_url, username, app_password, titl
   const pageResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+    signal: AbortSignal.timeout(15000),
     body: JSON.stringify({
       title: title || 'Article SEO RestauRank',
       content: content || '',
@@ -15453,11 +15456,11 @@ async function publishToWordPressHidden({ site_url, username, app_password, titl
 async function autoPublishContent({ contentId, restaurantId, type, title, content, metadata }) {
   try {
     if (type === 'blog' || type === 'faq') {
-      const cms = db.prepare("SELECT cms_type, site_url, credentials FROM cms_connections WHERE restaurant_id = ? AND status != 'disconnected' ORDER BY id DESC LIMIT 1").get(restaurantId);
+      const cms = db.prepare("SELECT cms_type, site_url, api_credentials FROM cms_connections WHERE restaurant_id = ? AND status != 'disconnected' ORDER BY id DESC LIMIT 1").get(restaurantId);
       if (!cms) return { status: 'stored_only', reason: 'aucun CMS connecté pour ce restaurant' };
       if (cms.cms_type !== 'wordpress') return { status: 'stored_only', reason: `publication auto non câblée pour ${cms.cms_type}` };
       let creds = {};
-      try { creds = JSON.parse(cms.credentials || '{}'); } catch (e) {}
+      try { creds = JSON.parse(cms.api_credentials || '{}') || {}; } catch (e) {}
       const appPassword = creds.app_password || creds.password;
       if (!creds.username || !appPassword) return { status: 'stored_only', reason: 'credentials WordPress incomplets' };
       const pub = await publishToWordPressHidden({ site_url: cms.site_url, username: creds.username, app_password: appPassword, title, content });
@@ -15466,12 +15469,15 @@ async function autoPublishContent({ contentId, restaurantId, type, title, conten
     }
 
     if (type === 'reddit') {
-      const account = db.prepare("SELECT id FROM reddit_accounts WHERE ban_status IS NULL OR ban_status IN ('', 'ok') ORDER BY last_posted_at ASC LIMIT 1").get();
-      if (!account) return { status: 'stored_only', reason: 'aucun compte Reddit configuré' };
+      // Garde-fou anti-mélange : uniquement le compte Reddit DE ce restaurant
+      const account = db.prepare('SELECT id FROM reddit_accounts WHERE restaurant_id = ? AND is_active = 1 ORDER BY id LIMIT 1').get(restaurantId);
+      if (!account) return { status: 'stored_only', reason: 'aucun compte Reddit configuré pour ce restaurant' };
       const subreddit = (metadata && metadata.subreddit) || 'paris';
-      const scheduledFor = (metadata && metadata.scheduled_for) || new Date(Date.now() + 3600000).toISOString();
-      db.prepare('INSERT INTO reddit_post_queue (restaurant_id, account_id, subreddit, title, body, scheduled_for) VALUES (?, ?, ?, ?, ?, ?)')
-        .run(restaurantId, account.id, subreddit, title || '', content, scheduledFor);
+      const schedTs = Date.parse(metadata && metadata.scheduled_for) || (Date.now() + 3600000);
+      const scheduledFor = new Date(schedTs).toISOString();
+      const contentHash = crypto.createHash('md5').update((title || '') + content).digest('hex').substring(0, 16);
+      db.prepare('INSERT INTO reddit_post_queue (restaurant_id, account_id, subreddit, title, body, scheduled_for, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(restaurantId, account.id, subreddit, title || '', content, scheduledFor, contentHash);
       return { status: 'queued', target: `reddit r/${subreddit}`, scheduled_for: scheduledFor };
     }
 
@@ -15482,17 +15488,76 @@ async function autoPublishContent({ contentId, restaurantId, type, title, conten
   }
 }
 
+// ── Reddit queue worker : draine reddit_post_queue (sans lui, le full-auto
+// "queued" ne posterait jamais). Réutilise la machinerie anti-ban existante. ──
+async function processRedditQueue() {
+  try {
+    const due = db.prepare("SELECT * FROM reddit_post_queue WHERE status = 'pending' AND scheduled_for <= datetime('now') AND attempt_count < 3 ORDER BY scheduled_for LIMIT 1").all();
+    for (const item of due) {
+      const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ? AND restaurant_id = ? AND is_active = 1').get(item.account_id, item.restaurant_id);
+      if (!acc) {
+        db.prepare("UPDATE reddit_post_queue SET status = 'failed', last_error = 'compte Reddit introuvable ou inactif pour ce restaurant' WHERE id = ?").run(item.id);
+        continue;
+      }
+      const contentHash = item.content_hash || crypto.createHash('md5').update(item.title + item.body).digest('hex').substring(0, 16);
+      const check = checkRedditAntiBan(acc.id, item.subreddit, contentHash);
+      if (!check.allowed) {
+        // Pas un échec : l'anti-ban repousse, on garde la trace du pourquoi
+        db.prepare("UPDATE reddit_post_queue SET scheduled_for = datetime('now', '+6 hours'), last_error = ? WHERE id = ?").run(`anti-ban: ${check.reason}`, item.id);
+        continue;
+      }
+      try {
+        const token = await getRedditToken(acc);
+        const subRules = await checkSubredditRules(token, item.subreddit);
+        if (subRules.hasAntiPromo) {
+          db.prepare("UPDATE reddit_post_queue SET status = 'blocked', last_error = ? WHERE id = ?").run(`r/${item.subreddit} interdit l'auto-promo`, item.id);
+          continue;
+        }
+        await new Promise(r => setTimeout(r, 5000 + Math.random() * 25000));
+        const resp = await fetch('https://oauth.reddit.com/api/submit', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': randomUA() },
+          body: `sr=${encodeURIComponent(item.subreddit)}&kind=self&title=${encodeURIComponent(item.title)}&text=${encodeURIComponent(item.body)}&api_type=json&sendreplies=true`,
+          signal: AbortSignal.timeout(20000)
+        });
+        const d = await resp.json();
+        if (d.json?.errors?.length > 0) throw new Error(d.json.errors.map(e => e[1]).join(', '));
+        const url = d.json?.data?.url || '';
+        const postId = d.json?.data?.id || '';
+        db.prepare("UPDATE reddit_post_queue SET status = 'posted', post_id = ?, post_url = ?, published_at = datetime('now') WHERE id = ?").run(postId, url, item.id);
+        db.prepare("INSERT INTO reddit_post_log (account_id, subreddit, post_id, post_url, content_hash, status) VALUES (?, ?, ?, ?, ?, 'ok')").run(acc.id, item.subreddit, postId, url, contentHash);
+        console.log(`[RedditQueue] posté r/${item.subreddit} pour resto ${item.restaurant_id}: ${url}`);
+      } catch (e) {
+        const attempts = (item.attempt_count || 0) + 1;
+        db.prepare('UPDATE reddit_post_queue SET attempt_count = ?, last_error = ?, status = ? WHERE id = ?')
+          .run(attempts, e.message, attempts >= 3 ? 'failed' : 'pending', item.id);
+      }
+    }
+  } catch (e) { console.warn('[RedditQueue]', e.message); }
+}
+setInterval(processRedditQueue, 5 * 60 * 1000);
+
 // ── Content push: agents deliver generated content here ──
 app.post('/api/content/push', agentAuth, async (req, res) => {
   const { restaurant_id, type, title, content, metadata } = req.body;
   if (!type || !content) return res.status(400).json({ error: 'type and content required' });
   try {
-    const resto = db.prepare('SELECT id, name FROM restaurants WHERE id = ?').get(restaurant_id || 0);
+    const rid = parseInt(restaurant_id) || 0;
+    // Garde-fou [CODE] : pas de contenu orphelin — l'id doit exister (0 = global/test toléré)
+    const resto = rid === 0 ? null : db.prepare('SELECT id, name FROM restaurants WHERE id = ?').get(rid);
+    if (rid !== 0 && !resto) return res.status(404).json({ error: `restaurant ${rid} inconnu — contenu refusé (anti-orphelin)` });
+    // Garde-fou [CODE] : quotas anti-spam appliqués par le serveur, pas par la mémoire d'un agent
+    const QUOTAS = { blog: { max: 1, days: 7 }, reddit: { max: 3, days: 7 } };
+    const quota = QUOTAS[type];
+    if (quota) {
+      const n = db.prepare(`SELECT COUNT(*) c FROM generated_content WHERE restaurant_id = ? AND type = ? AND created_at > datetime('now', '-${quota.days} days')`).get(rid, type).c;
+      if (n >= quota.max) return res.status(429).json({ error: `quota dépassé : max ${quota.max} ${type}/restaurant/${quota.days} jours`, quota: `${type}_${quota.days}d`, current: n });
+    }
     const info = db.prepare("INSERT INTO generated_content (restaurant_id, restaurant_name, type, title, content, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
-      .run(restaurant_id || 0, resto ? resto.name : '', type, title || '', content);
+      .run(rid, resto ? resto.name : '', type, title || '', content);
     const publication = await autoPublishContent({
       contentId: info.lastInsertRowid,
-      restaurantId: restaurant_id || 0,
+      restaurantId: rid,
       type, title: title || '', content,
       metadata: metadata || {}
     });
@@ -15510,7 +15575,7 @@ app.get('/api/agent/state', agentAuth, (req, res) => {
       ? db.prepare('SELECT * FROM restaurants WHERE id = ?').all(rid)
       : db.prepare('SELECT * FROM restaurants ORDER BY id').all();
     let redditAccounts = 0;
-    try { redditAccounts = db.prepare("SELECT COUNT(*) c FROM reddit_accounts WHERE ban_status IS NULL OR ban_status IN ('', 'ok')").get().c; } catch (e) {}
+    try { redditAccounts = db.prepare('SELECT COUNT(*) c FROM reddit_accounts WHERE is_active = 1').get().c; } catch (e) {}
     const globalLearnings = db.prepare("SELECT learning, confidence, content_type, scope, status FROM agent_learnings WHERE restaurant_id = 0 AND status != 'dropped' AND confidence >= 0.5 ORDER BY confidence DESC LIMIT 30").all();
 
     const CONTENT_TYPES = ['blog', 'reddit', 'faq', 'guest_post', 'report'];
@@ -15532,6 +15597,8 @@ app.get('/api/agent/state', agentAuth, (req, res) => {
       }
       const daysOr999 = (t) => (content[t].days_ago === null ? 999 : content[t].days_ago);
       const cms = db.prepare('SELECT cms_type, site_url, status FROM cms_connections WHERE restaurant_id = ? ORDER BY id DESC LIMIT 1').get(r.id) || null;
+      let redditForResto = 0;
+      try { redditForResto = db.prepare('SELECT COUNT(*) c FROM reddit_accounts WHERE restaurant_id = ? AND is_active = 1').get(r.id).c; } catch (e) {}
       const directories = db.prepare('SELECT platform, status FROM directory_automation WHERE restaurant_id = ?').all(r.id);
       const learnings = db.prepare("SELECT learning, confidence, content_type, scope, status FROM agent_learnings WHERE restaurant_id = ? AND status != 'dropped' AND confidence >= 0.5 ORDER BY confidence DESC LIMIT 30").all(r.id);
       const lastManagerRun = db.prepare("SELECT MAX(created_at) m FROM agent_actions WHERE restaurant_id IN (0, ?) AND role = 'manager'").get(r.id).m;
@@ -15540,7 +15607,7 @@ app.get('/api/agent/state', agentAuth, (req, res) => {
         google_place_id: r.google_place_id,
         last_audit: r.last_audit,
         scores: { seo: scores.seo !== undefined ? scores.seo : null, geo: scores.geo !== undefined ? scores.geo : null },
-        cms, directories, content,
+        cms, reddit_accounts: redditForResto, directories, content,
         content_counts_7d: counts7d,
         learnings,
         needs_action: {

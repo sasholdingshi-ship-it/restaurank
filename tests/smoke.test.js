@@ -4,15 +4,19 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { spawn } = require('node:child_process');
 const path = require('node:path');
+const os = require('node:os');
+const fs = require('node:fs');
 
 const PORT = 9876;
+// DB jetable par run : tests déterministes, zéro pollution de la base de dev
+const TMPDB = path.join(os.tmpdir(), `restaurank-test-${process.pid}.db`);
 const BASE = `http://localhost:${PORT}`;
 let server;
 
 test.before(async () => {
   server = spawn('node', ['server.js'], {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), NODE_ENV: 'test', AGENT_TOKEN: 'test-agent-token' },
+    env: { ...process.env, PORT: String(PORT), NODE_ENV: 'test', AGENT_TOKEN: 'test-agent-token', DB_PATH: TMPDB },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   // Wait until the HTTP server actually answers (big single-file boot can take >5s)
@@ -30,6 +34,7 @@ test.before(async () => {
 
 test.after(() => {
   if (server && !server.killed) server.kill('SIGTERM');
+  for (const f of [TMPDB, TMPDB + '-wal', TMPDB + '-shm']) fs.rmSync(f, { force: true });
 });
 
 test('GET / serves landing page', async () => {
@@ -237,4 +242,41 @@ test('POST /api/metrics/track requires token', async () => {
     body: JSON.stringify({ metric_type: 'health_check', value: 1 }),
   });
   assert.strictEqual(r.status, 401);
+});
+
+test('POST /api/content/push rejects unknown restaurant_id (anti-orphelin)', async () => {
+  const r = await fetch(`${BASE}/api/content/push`, {
+    method: 'POST', headers: AGENT_HEADERS,
+    body: JSON.stringify({ restaurant_id: 99999, type: 'faq', title: 'x', content: 'y' }),
+  });
+  assert.strictEqual(r.status, 404);
+});
+
+test('server-side blog quota: pushing past the limit gets 429', async () => {
+  // NB: le test squarespace plus haut insère déjà un blog rid=0 dans l'historique,
+  // donc le quota (1 blog/7j) peut déclencher dès le 1er push — les deux cas le prouvent.
+  const first = await fetch(`${BASE}/api/content/push`, {
+    method: 'POST', headers: AGENT_HEADERS,
+    body: JSON.stringify({ restaurant_id: 0, type: 'blog', title: 'Blog 1', content: 'contenu' }),
+  });
+  assert.ok([200, 429].includes(first.status), `expected 200 or 429, got ${first.status}`);
+  const second = await fetch(`${BASE}/api/content/push`, {
+    method: 'POST', headers: AGENT_HEADERS,
+    body: JSON.stringify({ restaurant_id: 0, type: 'blog', title: 'Blog 2', content: 'contenu' }),
+  });
+  assert.strictEqual(second.status, 429);
+  const j = await second.json();
+  assert.strictEqual(j.quota, 'blog_7d');
+  assert.ok(j.current >= 1);
+});
+
+test('reddit push without account for this restaurant stays stored_only', async () => {
+  const r = await fetch(`${BASE}/api/content/push`, {
+    method: 'POST', headers: AGENT_HEADERS,
+    body: JSON.stringify({ restaurant_id: 0, type: 'reddit', title: 'Post', content: 'texte', metadata: { subreddit: 'paris' } }),
+  });
+  assert.strictEqual(r.status, 200);
+  const j = await r.json();
+  assert.strictEqual(j.publication.status, 'stored_only');
+  assert.match(j.publication.reason, /pour ce restaurant/);
 });
