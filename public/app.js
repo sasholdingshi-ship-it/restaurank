@@ -12,7 +12,7 @@
         'app.restaurank.com',
         'restaurank.onrender.com',
         // Cowork/dev environments
-        'anthropic-cowork.com'
+        'anthropic-cowork.com','restaurank.yatairamen.fr','yatairamen.fr'
     ];
     const ALLOW_FILE = true; // Allow file:// during dev
     const host = location.hostname;
@@ -4830,6 +4830,79 @@ async function publishRedditPost(){
         }
         showContentStatus('redditStatus','✓ Publié sur r/'+subreddit+' ! '+(data.url||''),'ok');
     }catch(e){showContentStatus('redditStatus','✗ '+e.message,'err');}
+}
+
+async function generateGuestPost(){
+    const hub=getHubData();
+    const context={
+        name:hub.name||'Restaurant',
+        city:hub.city||'Paris',
+        cuisine:hub.category||'',
+        description:hub.description||'',
+        rating:hub.rating||'',
+        reviewCount:hub.review_count||0,
+        website:hub.website||'',
+        address:hub.address||'',
+        phone:hub.phone||'',
+        chef:hub.chef||'',
+        openingYear:hub.opening_year||null,
+        priceLevel:hub.price_level,
+    };
+    showContentStatus('guestStatus','⏳ Génération pitch + article invité (~30s)...','info');
+    try{
+        const resp=await fetch(API_BASE+'/api/ai/generate',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
+            body:JSON.stringify({type:'guest_post',context,restaurant_id:currentData?.restaurant_id||0})
+        });
+        const data=await resp.json();
+        if(!data.success)throw new Error(data.message||data.error||'Erreur IA');
+        const content=typeof data.result==='string'?data.result:JSON.stringify(data.result,null,2);
+        const parts=content.split(/---SEPARATOR---|---separator---/);
+        if(parts.length>=2){
+            document.getElementById('guestPitch').value=parts[0].trim();
+            document.getElementById('guestArticle').value=parts.slice(1).join('\n').trim();
+        } else {
+            document.getElementById('guestArticle').value=content;
+        }
+        showContentStatus('guestStatus','✅ Pitch + article générés — relisez, personnalisez et envoyez !','ok');
+    }catch(e){showContentStatus('guestStatus','❌ '+e.message,'err');}
+}
+
+function copyGuestPitch(){
+    const text=document.getElementById('guestPitch').value.trim();
+    if(!text)return showContentStatus('guestStatus','❌ Générez d\'abord le pitch','err');
+    navigator.clipboard.writeText(text).then(()=>showContentStatus('guestStatus','✅ Pitch copié dans le presse-papier','ok')).catch(()=>showContentStatus('guestStatus','❌ Erreur copie','err'));
+}
+
+function copyGuestArticle(){
+    const text=document.getElementById('guestArticle').value.trim();
+    if(!text)return showContentStatus('guestStatus','❌ Générez d\'abord l\'article','err');
+    navigator.clipboard.writeText(text).then(()=>showContentStatus('guestStatus','✅ Article copié dans le presse-papier','ok')).catch(()=>showContentStatus('guestStatus','❌ Erreur copie','err'));
+}
+
+async function publishGuestPost(){
+    const title=document.getElementById('guestArticle').value.match(/<h1[^>]*>(.*?)<\/h1>/i)?.[1]?.replace(/<[^>]+>/g,'')||'Guest Post — Article invité';
+    const content=document.getElementById('guestArticle').value.trim();
+    if(!content)return showContentStatus('guestStatus','❌ Article requis','err');
+    const cms=cmsConnection||JSON.parse(localStorage.getItem('restaurank_cms_conn')||'null');
+    const detected=detectedCMS?.detected?.cms||currentData?.detectedCMS?.cms;
+    const cmsType=cms?.type||detected||'generic';
+    showContentStatus('guestStatus','⏳ Publication sur '+cmsType+'...','info');
+    try{
+        const resp=await fetch(API_BASE+'/api/blog/publish',{
+            method:'POST',
+            headers:{'Content-Type':'application/json','Authorization':'Bearer '+(sessionToken||'')},
+            body:JSON.stringify({cms_type:cmsType,credentials:cms?.credentials||{},title,content,status:'draft',restaurant_id:currentData?.restaurant_id||0})
+        });
+        const data=await resp.json();
+        if(!data.success)throw new Error(data.error||'Erreur');
+        if(data.method==='manual'||data.method==='squarespace_manual'){
+            showContentStatus('guestStatus','📋 '+(data.note||'Contenu prêt à copier manuellement'),'info');
+        } else {
+            showContentStatus('guestStatus','✅ Publié en brouillon sur '+cmsType+' ! '+(data.url?'→ '+data.url:''),'ok');
+        }
+    }catch(e){showContentStatus('guestStatus','❌ '+e.message,'err');}
 }
 
 // ============================================================

@@ -15413,3 +15413,95 @@ app.listen(PORT, '0.0.0.0', async () => {
 ╚══════════════════════════════════════════════════════╝
   `);
 });
+
+// Content push endpoint for scheduled Claude Code generation
+app.post('/api/content/push', (req, res) => {
+  const { restaurant_id, type, title, content, metadata } = req.body;
+  if (!type || !content) return res.status(400).json({ error: 'type and content required' });
+  try {
+    db.exec("CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+    const stmt = db.prepare("INSERT INTO generated_content (restaurant_id, type, title, content, created_at) VALUES (?, ?, ?, ?, datetime('now'))");
+    const info = stmt.run(restaurant_id || 0, type, title || '', content);
+    res.json({ success: true, id: info.lastInsertRowid });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/api/agent/status', (req, res) => {
+  const { restaurant_id } = req.query;
+  try {
+    db.exec("CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+    const rid = parseInt(restaurant_id) || 0;
+    const lastBlog = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'blog' ORDER BY created_at DESC LIMIT 1").get(rid);
+    const lastReddit = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'reddit' ORDER BY created_at DESC LIMIT 1").get(rid);
+    const lastFaq = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'faq' ORDER BY created_at DESC LIMIT 1").get(rid);
+    const lastGuestPost = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'guest_post' ORDER BY created_at DESC LIMIT 1").get(rid);
+    const lastReport = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'report' ORDER BY created_at DESC LIMIT 1").get(rid);
+    const now = new Date();
+    const daysSince = (d) => d ? Math.floor((now - new Date(d.created_at)) / 86400000) : 999;
+    const contentCounts = db.prepare("SELECT type, COUNT(*) as count FROM generated_content WHERE restaurant_id = ? GROUP BY type").all(rid);
+    res.json({
+      success: true, restaurant_id: rid,
+      last_content: {
+        blog: { date: lastBlog?.created_at || null, days_ago: daysSince(lastBlog) },
+        reddit: { date: lastReddit?.created_at || null, days_ago: daysSince(lastReddit) },
+        faq: { date: lastFaq?.created_at || null, days_ago: daysSince(lastFaq) },
+        guest_post: { date: lastGuestPost?.created_at || null, days_ago: daysSince(lastGuestPost) },
+        report: { date: lastReport?.created_at || null, days_ago: daysSince(lastReport) }
+      },
+      content_counts: Object.fromEntries(contentCounts.map(r => [r.type, r.count])),
+      needs_action: {
+        blog: daysSince(lastBlog) > 7, reddit: daysSince(lastReddit) > 7,
+        faq: daysSince(lastFaq) > 90 || !lastFaq, guest_post: daysSince(lastGuestPost) > 30 || !lastGuestPost,
+        report: daysSince(lastReport) > 7
+      }
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/metrics/track', (req, res) => {
+  const { content_id, restaurant_id, metric_type, value, source, metadata } = req.body;
+  if (!metric_type) return res.status(400).json({ error: 'metric_type required' });
+  try {
+    db.exec("CREATE TABLE IF NOT EXISTS content_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, content_id INTEGER, restaurant_id INTEGER, content_type TEXT, metric_type TEXT NOT NULL, value REAL DEFAULT 0, source TEXT, metadata TEXT, tracked_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+    db.prepare('INSERT INTO content_performance (content_id, restaurant_id, content_type, metric_type, value, source, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)').run(content_id||null, restaurant_id||0, req.body.content_type||'', metric_type, value||0, source||'manual', JSON.stringify(metadata||{}));
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/metrics/report', (req, res) => {
+  const rid = parseInt(req.query.restaurant_id) || 0;
+  try {
+    db.exec("CREATE TABLE IF NOT EXISTS content_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, content_id INTEGER, restaurant_id INTEGER, content_type TEXT, metric_type TEXT NOT NULL, value REAL DEFAULT 0, source TEXT, metadata TEXT, tracked_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+    const byType = db.prepare("SELECT content_type, metric_type, AVG(value) as avg_val, MAX(value) as max_val, COUNT(*) as count FROM content_performance WHERE restaurant_id = ? GROUP BY content_type, metric_type").all(rid);
+    const bestContent = db.prepare("SELECT cp.content_id, gc.title, gc.type, cp.metric_type, cp.value FROM content_performance cp LEFT JOIN generated_content gc ON gc.id = cp.content_id WHERE cp.restaurant_id = ? AND cp.value > 0 ORDER BY cp.value DESC LIMIT 10").all(rid);
+    res.json({ success: true, performance_by_type: byType, best_content: bestContent });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/metrics/learn', (req, res) => {
+  const rid = parseInt(req.query.restaurant_id) || 0;
+  try {
+    db.exec("CREATE TABLE IF NOT EXISTS agent_learnings (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, content_type TEXT, learning TEXT NOT NULL, confidence REAL DEFAULT 0.5, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+    const learnings = db.prepare('SELECT * FROM agent_learnings WHERE restaurant_id = ? OR restaurant_id = 0 ORDER BY confidence DESC').all(rid);
+    res.json({ success: true, learnings, recommendations: learnings.filter(l => l.confidence > 0.7).map(l => l.learning) });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/metrics/learn', (req, res) => {
+  const { restaurant_id, content_type, learning, confidence } = req.body;
+  if (!learning) return res.status(400).json({ error: 'learning required' });
+  try {
+    db.exec("CREATE TABLE IF NOT EXISTS agent_learnings (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, content_type TEXT, learning TEXT NOT NULL, confidence REAL DEFAULT 0.5, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
+    const existing = db.prepare('SELECT id, confidence FROM agent_learnings WHERE restaurant_id = ? AND learning = ?').get(restaurant_id||0, learning);
+    if (existing) {
+      const nc = Math.min(1, existing.confidence + (confidence||0.1));
+      db.prepare("UPDATE agent_learnings SET confidence = ?, updated_at = datetime('now') WHERE id = ?").run(nc, existing.id);
+      res.json({ success: true, action: 'reinforced', confidence: nc });
+    } else {
+      db.prepare('INSERT INTO agent_learnings (restaurant_id, content_type, learning, confidence) VALUES (?, ?, ?, ?)').run(restaurant_id||0, content_type||'', learning, confidence||0.5);
+      res.json({ success: true, action: 'created' });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
