@@ -15,16 +15,17 @@ test.before(async () => {
     env: { ...process.env, PORT: String(PORT), NODE_ENV: 'test' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  // Wait for "listening" or 5s
-  await new Promise((resolve, reject) => {
-    const t = setTimeout(() => resolve(), 5000);
-    server.stdout.on('data', (buf) => {
-      if (buf.toString().toLowerCase().includes('listening') || buf.toString().includes(String(PORT))) {
-        clearTimeout(t); resolve();
-      }
-    });
-    server.on('error', (e) => { clearTimeout(t); reject(e); });
-  });
+  // Wait until the HTTP server actually answers (big single-file boot can take >5s)
+  const deadline = Date.now() + 30000;
+  let lastErr;
+  while (Date.now() < deadline) {
+    try {
+      const r = await fetch(`${BASE}/api/ping`);
+      if (r.ok) return;
+    } catch (e) { lastErr = e; }
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`server not ready after 30s: ${lastErr?.message || 'no response'}`);
 });
 
 test.after(() => {
