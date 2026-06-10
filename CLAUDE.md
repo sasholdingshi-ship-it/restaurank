@@ -1,8 +1,22 @@
 # RestauRank — Guide complet pour Claude Code
 
 ## TL;DR
-SaaS webapp qui audite la visibilité en ligne d'un restaurant sur Google (SEO local) ET sur les moteurs IA (ChatGPT, Perplexity, Gemini, Claude). Single-file HTML frontend + Node.js/Express/SQLite backend. Déployé sur Render. 50 commits, ~20k lignes de code total.
-**Vision** : outil 100% autonome — le client n'a presque rien à faire. RestauRank détecte le CMS, se connecte aux APIs, et applique les améliorations automatiquement.
+SaaS webapp qui audite et maximise la visibilité en ligne d'un restaurant sur Google (SEO local + GMB) ET sur les moteurs IA (ChatGPT, Perplexity, Gemini, Claude — GEO). Node.js/Express/SQLite backend + frontend HTML. **Déployé sur le VPS Yatai** (`restaurank.yatairamen.fr`, PM2 :8765, Caddy) — Render = legacy.
+**Vision v2 (validée 2026-06-10)** : je prospecte un resto, je l'ajoute, et des **agents IA autonomes** s'occupent de tout (audit, contenu, publication, suivi, apprentissage) en continu.
+
+## 🤖 Architecture v2 — agents autonomes (depuis 2026-06-10)
+
+**Inversion de l'intelligence** : le serveur ne fait AUCUN appel LLM (aucune `ANTHROPIC_API_KEY` requise). Les agents = Claude Code sur le VPS (abonnement Claude Max), via le pattern systemd `claude-agent-cron@` :
+
+- `claude-agent-cron@restaurank-manager.timer` — 00h15/06h15/12h15/18h15 Paris. Lit `GET /api/agent/state` (token), décide, génère (blog/Reddit/FAQ/guest post) en appliquant les learnings, pousse via `POST /api/content/push` (publication full-auto si canal câblé), journalise CHAQUE décision dans `POST /api/agent/actions`.
+- `claude-agent-cron@restaurank-report.timer` — lundi 07h30. Rapport hebdo par resto + boucle d'apprentissage (reinforce/drop des learnings selon `content_performance`).
+- Prompts de prod : `vps:/home/james/agents-worktrees/restaurank-{manager,report}/PROMPT.md` · logs : `~james/agents/shared/logs/restaurank-*.log` · monitoring : le réveil (ops.yatairamen.fr/reveil).
+
+**Auth agents** : header `X-Agent-Token` = env `AGENT_TOKEN` (`.env` VPS + `.secrets.md` Mac). Jamais de credentials admin dans un skill/prompt.
+
+**API agent v2** (`server.js`, section "AGENT API v2" en fin de fichier) : `GET /api/agent/state` · `POST /api/content/push` (dispatch auto : WordPress pages cachées indexées sous /ressources-seo/, queue Reddit ; sinon `stored_only`+raison) · `POST/GET /api/agent/actions` · `POST /api/metrics/track` · `GET/POST /api/learnings` (cycle testing→permanent ≥0.9 / dropped <0.3).
+
+**Migrations** : `migrations.js`, exécutées au boot (table `schema_migrations`). ⚠️ Historique : une passe de "correction d'accents" avait corrompu des identifiants anglais du code (`basé64`, `reçurring`, `création_id`, colonnes `complèted_actions`…) — réparé le 2026-06-10 (commits `0d39aca`, migration 001). **Ne jamais lancer d'outil de correction orthographique sur le code.**
 
 ---
 
@@ -16,7 +30,12 @@ SaaS webapp qui audite la visibilité en ligne d'un restaurant sur Google (SEO l
 - **Git config** : `git config user.name "James"` + `git config user.email "sasholdingshi@gmail.com"`
 - PAT et clone URL → voir `.secrets.md`
 
-### Render (hébergement)
+### VPS Yatai (hébergement ACTUEL)
+- **URL live** : `https://restaurank.yatairamen.fr` (Caddy → PM2 `restaurank` :8765, `/root/restaurank`)
+- Déploiement : push sur `main` → `ssh yatai-vps 'cd /root/restaurank && git pull && pm2 restart restaurank'` (deploy key SSH lecture seule)
+- DB : `/root/restaurank/restaurank.db` (SQLite, source de vérité)
+
+### Render (hébergement LEGACY — plus utilisé)
 - **URL live** : `https://restaurank.onrender.com`
 - **Service ID** : `srv-d71tgi5m5p6s73a18kv0`
 - **Dashboard** : `https://dashboard.render.com` (login avec GitHub)
