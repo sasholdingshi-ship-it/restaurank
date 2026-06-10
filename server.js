@@ -401,6 +401,7 @@ if (NODE_ENV === 'production') {
 }
 
 const app = express();
+app.set('trust proxy', 1); // behind Caddy — needed for express-rate-limit to see real client IPs
 app.use(cors());
 
 // Rate limiting — prevent API abuse
@@ -4848,88 +4849,31 @@ app.get('/api/social/connections', requireAuth, (req, res) => {
 // WORDPRESS — Real REST API blog post publishing
 // ============================================================
 app.post('/api/wordpress/publish', async (req, res) => {
-  const { site_url, username, app_password, title, content, status, categories, tags, restaurant_id } = req.body;
+  const { site_url, username, app_password, title, content, status, restaurant_id } = req.body;
   if (!site_url || !username || !app_password) {
     return res.json({ success: false, error: 'WordPress credentials required (site_url, username, app_password)' });
   }
 
   try {
-    const wpUrl = site_url.replace(/\/$/, '');
-    const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
-
-    // Step 1: Find or create the hidden parent page "ressources-seo"
-    // Pages under this parent are:
-    // - NOT shown on homepage loop (WordPress pages never are)
-    // - NOT in RSS feed
-    // - NOT in "latest posts" widgets
-    // - BUT indexed by Google (included in sitemap.xml, robots meta = index,follow)
-    // - Accessible only via direct URL → no UX pollution for regular visitors
-    let parentId = 0;
-    try {
-      const findResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo&status=publish,private`, {
-        headers: { 'Authorization': `Basic ${auth}` }
-      });
-      const found = await findResp.json();
-      if (Array.isArray(found) && found.length > 0) {
-        parentId = found[0].id;
-      } else {
-        // Create the hidden parent page
-        const parentResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
-          body: JSON.stringify({
-            title: 'Ressources SEO',
-            slug: 'ressources-seo',
-            content: '<!-- wp:paragraph --><p>Ressources et guides (indexés par les moteurs de recherche).</p><!-- /wp:paragraph -->',
-            status: 'publish',
-            menu_order: 999,
-            meta: { _wp_page_template: 'default' }
-          })
-        });
-        const pdata = await parentResp.json();
-        if (pdata.id) parentId = pdata.id;
-      }
-    } catch (e) { console.warn('Parent page setup:', e.message); }
-
-    // Step 2: Publish as a PAGE (not post) under the hidden parent
-    // Pages are indexed by Google but not displayed in the blog loop / homepage / RSS
-    const pageResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${auth}`
-      },
-      body: JSON.stringify({
-        title: title || 'Article SEO RestauRank',
-        content: content || '',
-        status: status || 'publish',
-        parent: parentId || 0,
-        menu_order: 999,
-        comment_status: 'closed',
-        ping_status: 'closed'
-      })
-    });
-
-    const data = await pageResp.json();
-    if (data.code) throw new Error(data.message || data.code);
+    // Shared with the agent auto-publish dispatcher (defined in AGENT API v2 section)
+    const pub = await publishToWordPressHidden({ site_url, username, app_password, title, content, status });
 
     // Save to history
     try {
-      db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
       db.prepare('INSERT INTO generated_content (restaurant_id, type, title, content, published, publish_url) VALUES (?, ?, ?, ?, 1, ?)')
-        .run(restaurant_id || 0, 'blog', title || 'Article', content || '', data.link || '');
+        .run(restaurant_id || 0, 'blog', title || 'Article', content || '', pub.url || '');
     } catch (e) {}
 
     res.json({
       success: true,
-      post_id: data.id,
-      url: data.link,
-      status: data.status,
+      post_id: pub.post_id,
+      url: pub.url,
+      status: pub.status,
       type: 'page',
-      parent_id: parentId,
+      parent_id: pub.parent_id,
       hidden_from_nav: true,
       note: 'Page publiée sous /ressources-seo/ — indexée par Google mais invisible dans la navigation du site',
-      edit_url: `${wpUrl}/wp-admin/post.php?post=${data.id}&action=edit`
+      edit_url: pub.edit_url
     });
   } catch (e) {
     console.error('WordPress publish error:', e.message);
@@ -15418,41 +15362,250 @@ app.listen(PORT, '0.0.0.0', async () => {
   `);
 });
 
-// Content push endpoint for scheduled Claude Code generation
-app.post('/api/content/push', (req, res) => {
+// ============================================================
+// AGENT API v2 — endpoints for Claude Code agents ("Hermès" pattern)
+// Auth: X-Agent-Token header (AGENT_TOKEN env var).
+// The server makes NO LLM calls: agents (Claude Code on the VPS, covered
+// by Claude Max) read state here, generate content natively, push it back;
+// the server stores, publishes through wired channels, tracks performance.
+// ============================================================
+
+function agentAuth(req, res, next) {
+  const token = req.headers['x-agent-token'];
+  if (!process.env.AGENT_TOKEN) return res.status(503).json({ error: 'AGENT_TOKEN non configuré côté serveur' });
+  if (!token || token !== process.env.AGENT_TOKEN) return res.status(401).json({ error: 'X-Agent-Token invalide' });
+  next();
+}
+
+// Reads allowed for agents or logged-in admins (backoffice UI reuses these endpoints)
+function agentOrAdmin(req, res, next) {
+  const token = req.headers['x-agent-token'];
+  if (token && process.env.AGENT_TOKEN && token === process.env.AGENT_TOKEN) return next();
+  return authMiddleware(req, res, () => {
+    if (!req.account || req.account.role !== 'admin') return res.status(401).json({ error: 'X-Agent-Token ou session admin requis' });
+    next();
+  });
+}
+
+// WordPress "hidden but indexed" publication: a page under /ressources-seo/,
+// in the sitemap and indexable, but absent from nav/RSS/homepage loops.
+async function publishToWordPressHidden({ site_url, username, app_password, title, content, status }) {
+  const wpUrl = site_url.replace(/\/$/, '');
+  const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+
+  let parentId = 0;
+  try {
+    const findResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo&status=publish,private`, {
+      headers: { 'Authorization': `Basic ${auth}` }
+    });
+    const found = await findResp.json();
+    if (Array.isArray(found) && found.length > 0) {
+      parentId = found[0].id;
+    } else {
+      const parentResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+        body: JSON.stringify({
+          title: 'Ressources SEO',
+          slug: 'ressources-seo',
+          content: '<!-- wp:paragraph --><p>Ressources et guides (indexés par les moteurs de recherche).</p><!-- /wp:paragraph -->',
+          status: 'publish',
+          menu_order: 999,
+          meta: { _wp_page_template: 'default' }
+        })
+      });
+      const pdata = await parentResp.json();
+      if (pdata.id) parentId = pdata.id;
+    }
+  } catch (e) { console.warn('Parent page setup:', e.message); }
+
+  const pageResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+    body: JSON.stringify({
+      title: title || 'Article SEO RestauRank',
+      content: content || '',
+      status: status || 'publish',
+      parent: parentId || 0,
+      menu_order: 999,
+      comment_status: 'closed',
+      ping_status: 'closed'
+    })
+  });
+
+  const data = await pageResp.json();
+  if (data.code) throw new Error(data.message || data.code);
+
+  return {
+    success: true,
+    post_id: data.id,
+    url: data.link,
+    status: data.status,
+    parent_id: parentId,
+    edit_url: `${wpUrl}/wp-admin/post.php?post=${data.id}&action=edit`
+  };
+}
+
+// Routes pushed content to whatever publication channel is wired for the
+// restaurant. Publication mode is full-auto (decision James 2026-06-10);
+// channels missing access (no CMS, no Reddit account, GBP pending) degrade
+// to stored_only with an explicit reason the agent can report.
+async function autoPublishContent({ contentId, restaurantId, type, title, content, metadata }) {
+  try {
+    if (type === 'blog' || type === 'faq') {
+      const cms = db.prepare("SELECT cms_type, site_url, credentials FROM cms_connections WHERE restaurant_id = ? AND status != 'disconnected' ORDER BY id DESC LIMIT 1").get(restaurantId);
+      if (!cms) return { status: 'stored_only', reason: 'aucun CMS connecté pour ce restaurant' };
+      if (cms.cms_type !== 'wordpress') return { status: 'stored_only', reason: `publication auto non câblée pour ${cms.cms_type}` };
+      let creds = {};
+      try { creds = JSON.parse(cms.credentials || '{}'); } catch (e) {}
+      const appPassword = creds.app_password || creds.password;
+      if (!creds.username || !appPassword) return { status: 'stored_only', reason: 'credentials WordPress incomplets' };
+      const pub = await publishToWordPressHidden({ site_url: cms.site_url, username: creds.username, app_password: appPassword, title, content });
+      db.prepare('UPDATE generated_content SET published = 1, publish_url = ? WHERE id = ?').run(pub.url || '', contentId);
+      return { status: 'published', target: 'wordpress', url: pub.url };
+    }
+
+    if (type === 'reddit') {
+      const account = db.prepare("SELECT id FROM reddit_accounts WHERE ban_status IS NULL OR ban_status IN ('', 'ok') ORDER BY last_posted_at ASC LIMIT 1").get();
+      if (!account) return { status: 'stored_only', reason: 'aucun compte Reddit configuré' };
+      const subreddit = (metadata && metadata.subreddit) || 'paris';
+      const scheduledFor = (metadata && metadata.scheduled_for) || new Date(Date.now() + 3600000).toISOString();
+      db.prepare('INSERT INTO reddit_post_queue (restaurant_id, account_id, subreddit, title, body, scheduled_for) VALUES (?, ?, ?, ?, ?, ?)')
+        .run(restaurantId, account.id, subreddit, title || '', content, scheduledFor);
+      return { status: 'queued', target: `reddit r/${subreddit}`, scheduled_for: scheduledFor };
+    }
+
+    // guest_post (outreach material), report (internal), schema, etc.
+    return { status: 'stored_only', reason: 'type sans canal de publication directe' };
+  } catch (e) {
+    return { status: 'failed', reason: e.message };
+  }
+}
+
+// ── Content push: agents deliver generated content here ──
+app.post('/api/content/push', agentAuth, async (req, res) => {
   const { restaurant_id, type, title, content, metadata } = req.body;
   if (!type || !content) return res.status(400).json({ error: 'type and content required' });
   try {
-    db.exec("CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
-    const stmt = db.prepare("INSERT INTO generated_content (restaurant_id, type, title, content, created_at) VALUES (?, ?, ?, ?, datetime('now'))");
-    const info = stmt.run(restaurant_id || 0, type, title || '', content);
-    res.json({ success: true, id: info.lastInsertRowid });
+    const resto = db.prepare('SELECT id, name FROM restaurants WHERE id = ?').get(restaurant_id || 0);
+    const info = db.prepare("INSERT INTO generated_content (restaurant_id, restaurant_name, type, title, content, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+      .run(restaurant_id || 0, resto ? resto.name : '', type, title || '', content);
+    const publication = await autoPublishContent({
+      contentId: info.lastInsertRowid,
+      restaurantId: restaurant_id || 0,
+      type, title: title || '', content,
+      metadata: metadata || {}
+    });
+    res.json({ success: true, id: info.lastInsertRowid, publication });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
 });
 
-app.get('/api/agent/status', (req, res) => {
+// ── Full state in one call: everything the Agent Manager needs to decide ──
+app.get('/api/agent/state', agentAuth, (req, res) => {
+  try {
+    const rid = req.query.restaurant_id ? parseInt(req.query.restaurant_id) : null;
+    const restos = rid
+      ? db.prepare('SELECT * FROM restaurants WHERE id = ?').all(rid)
+      : db.prepare('SELECT * FROM restaurants ORDER BY id').all();
+    let redditAccounts = 0;
+    try { redditAccounts = db.prepare("SELECT COUNT(*) c FROM reddit_accounts WHERE ban_status IS NULL OR ban_status IN ('', 'ok')").get().c; } catch (e) {}
+    const globalLearnings = db.prepare("SELECT learning, confidence, content_type, scope, status FROM agent_learnings WHERE restaurant_id = 0 AND status != 'dropped' AND confidence >= 0.5 ORDER BY confidence DESC LIMIT 30").all();
+
+    const CONTENT_TYPES = ['blog', 'reddit', 'faq', 'guest_post', 'report'];
+    const lastStmt = db.prepare('SELECT created_at, published FROM generated_content WHERE restaurant_id = ? AND type = ? ORDER BY created_at DESC LIMIT 1');
+    const count7dStmt = db.prepare("SELECT COUNT(*) c FROM generated_content WHERE restaurant_id = ? AND type = ? AND created_at > datetime('now', '-7 days')");
+
+    const restaurants = restos.map((r) => {
+      let scores = {};
+      try { scores = JSON.parse(r.scores || '{}'); } catch (e) {}
+      const content = {}; const counts7d = {};
+      for (const t of CONTENT_TYPES) {
+        const last = lastStmt.get(r.id, t);
+        content[t] = {
+          last_at: last ? last.created_at : null,
+          days_ago: last ? Math.floor((Date.now() - new Date(last.created_at).getTime()) / 86400000) : null,
+          last_published: last ? !!last.published : null
+        };
+        counts7d[t] = count7dStmt.get(r.id, t).c;
+      }
+      const daysOr999 = (t) => (content[t].days_ago === null ? 999 : content[t].days_ago);
+      const cms = db.prepare('SELECT cms_type, site_url, status FROM cms_connections WHERE restaurant_id = ? ORDER BY id DESC LIMIT 1').get(r.id) || null;
+      const directories = db.prepare('SELECT platform, status FROM directory_automation WHERE restaurant_id = ?').all(r.id);
+      const learnings = db.prepare("SELECT learning, confidence, content_type, scope, status FROM agent_learnings WHERE restaurant_id = ? AND status != 'dropped' AND confidence >= 0.5 ORDER BY confidence DESC LIMIT 30").all(r.id);
+      const lastManagerRun = db.prepare("SELECT MAX(created_at) m FROM agent_actions WHERE restaurant_id IN (0, ?) AND role = 'manager'").get(r.id).m;
+      return {
+        id: r.id, name: r.name, city: r.city,
+        google_place_id: r.google_place_id,
+        last_audit: r.last_audit,
+        scores: { seo: scores.seo !== undefined ? scores.seo : null, geo: scores.geo !== undefined ? scores.geo : null },
+        cms, directories, content,
+        content_counts_7d: counts7d,
+        learnings,
+        needs_action: {
+          blog: daysOr999('blog') > 7,
+          reddit: daysOr999('reddit') > 7,
+          faq: daysOr999('faq') > 90,
+          guest_post: daysOr999('guest_post') > 30,
+          report: daysOr999('report') > 7
+        },
+        anti_spam: { blog_7d: counts7d.blog, reddit_7d: counts7d.reddit },
+        last_manager_run: lastManagerRun
+      };
+    });
+
+    res.json({
+      success: true,
+      generated_at: new Date().toISOString(),
+      publication_mode: process.env.PUBLICATION_MODE || 'auto',
+      channels: { reddit_accounts: redditAccounts, gbp_api: false },
+      global_learnings: globalLearnings,
+      restaurants
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Action journal: every agent decision/action, feeds the dashboard timeline ──
+app.post('/api/agent/actions', agentAuth, (req, res) => {
+  const { restaurant_id, run_tag, role, action, reason, priority, status, payload } = req.body;
+  if (!action) return res.status(400).json({ error: 'action required' });
+  try {
+    const info = db.prepare('INSERT INTO agent_actions (restaurant_id, run_tag, role, action, reason, priority, status, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(restaurant_id || 0, run_tag || '', role || 'manager', action, reason || '', priority || '', status || 'done', JSON.stringify(payload || {}));
+    res.json({ success: true, id: info.lastInsertRowid });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/agent/actions', agentOrAdmin, (req, res) => {
+  try {
+    const rid = req.query.restaurant_id ? parseInt(req.query.restaurant_id) : null;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const rows = rid !== null
+      ? db.prepare('SELECT * FROM agent_actions WHERE restaurant_id = ? ORDER BY id DESC LIMIT ?').all(rid, limit)
+      : db.prepare('SELECT * FROM agent_actions ORDER BY id DESC LIMIT ?').all(limit);
+    res.json({ success: true, actions: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Per-restaurant status (kept for compat with agent-monitor.sh) ──
+app.get('/api/agent/status', agentOrAdmin, (req, res) => {
   const { restaurant_id } = req.query;
   try {
-    db.exec("CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
     const rid = parseInt(restaurant_id) || 0;
-    const lastBlog = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'blog' ORDER BY created_at DESC LIMIT 1").get(rid);
-    const lastReddit = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'reddit' ORDER BY created_at DESC LIMIT 1").get(rid);
-    const lastFaq = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'faq' ORDER BY created_at DESC LIMIT 1").get(rid);
-    const lastGuestPost = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'guest_post' ORDER BY created_at DESC LIMIT 1").get(rid);
-    const lastReport = db.prepare("SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = 'report' ORDER BY created_at DESC LIMIT 1").get(rid);
+    const lastOf = (type) => db.prepare('SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = ? ORDER BY created_at DESC LIMIT 1').get(rid, type);
     const now = new Date();
     const daysSince = (d) => d ? Math.floor((now - new Date(d.created_at)) / 86400000) : 999;
-    const contentCounts = db.prepare("SELECT type, COUNT(*) as count FROM generated_content WHERE restaurant_id = ? GROUP BY type").all(rid);
+    const lastBlog = lastOf('blog'), lastReddit = lastOf('reddit'), lastFaq = lastOf('faq'), lastGuestPost = lastOf('guest_post'), lastReport = lastOf('report');
+    const contentCounts = db.prepare('SELECT type, COUNT(*) as count FROM generated_content WHERE restaurant_id = ? GROUP BY type').all(rid);
     res.json({
       success: true, restaurant_id: rid,
       last_content: {
-        blog: { date: lastBlog?.created_at || null, days_ago: daysSince(lastBlog) },
-        reddit: { date: lastReddit?.created_at || null, days_ago: daysSince(lastReddit) },
-        faq: { date: lastFaq?.created_at || null, days_ago: daysSince(lastFaq) },
-        guest_post: { date: lastGuestPost?.created_at || null, days_ago: daysSince(lastGuestPost) },
-        report: { date: lastReport?.created_at || null, days_ago: daysSince(lastReport) }
+        blog: { date: lastBlog ? lastBlog.created_at : null, days_ago: daysSince(lastBlog) },
+        reddit: { date: lastReddit ? lastReddit.created_at : null, days_ago: daysSince(lastReddit) },
+        faq: { date: lastFaq ? lastFaq.created_at : null, days_ago: daysSince(lastFaq) },
+        guest_post: { date: lastGuestPost ? lastGuestPost.created_at : null, days_ago: daysSince(lastGuestPost) },
+        report: { date: lastReport ? lastReport.created_at : null, days_ago: daysSince(lastReport) }
       },
       content_counts: Object.fromEntries(contentCounts.map(r => [r.type, r.count])),
       needs_action: {
@@ -15464,48 +15617,62 @@ app.get('/api/agent/status', (req, res) => {
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.post('/api/metrics/track', (req, res) => {
+// ── Metrics: agents track content performance after publication ──
+app.post('/api/metrics/track', agentAuth, (req, res) => {
   const { content_id, restaurant_id, metric_type, value, source, metadata } = req.body;
   if (!metric_type) return res.status(400).json({ error: 'metric_type required' });
   try {
-    db.exec("CREATE TABLE IF NOT EXISTS content_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, content_id INTEGER, restaurant_id INTEGER, content_type TEXT, metric_type TEXT NOT NULL, value REAL DEFAULT 0, source TEXT, metadata TEXT, tracked_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
-    db.prepare('INSERT INTO content_performance (content_id, restaurant_id, content_type, metric_type, value, source, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)').run(content_id||null, restaurant_id||0, req.body.content_type||'', metric_type, value||0, source||'manual', JSON.stringify(metadata||{}));
+    db.prepare('INSERT INTO content_performance (content_id, restaurant_id, content_type, metric_type, value, source, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(content_id || null, restaurant_id || 0, req.body.content_type || '', metric_type, value || 0, source || 'manual', JSON.stringify(metadata || {}));
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/metrics/report', (req, res) => {
+app.get('/api/metrics/report', agentOrAdmin, (req, res) => {
   const rid = parseInt(req.query.restaurant_id) || 0;
   try {
-    db.exec("CREATE TABLE IF NOT EXISTS content_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, content_id INTEGER, restaurant_id INTEGER, content_type TEXT, metric_type TEXT NOT NULL, value REAL DEFAULT 0, source TEXT, metadata TEXT, tracked_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
-    const byType = db.prepare("SELECT content_type, metric_type, AVG(value) as avg_val, MAX(value) as max_val, COUNT(*) as count FROM content_performance WHERE restaurant_id = ? GROUP BY content_type, metric_type").all(rid);
-    const bestContent = db.prepare("SELECT cp.content_id, gc.title, gc.type, cp.metric_type, cp.value FROM content_performance cp LEFT JOIN generated_content gc ON gc.id = cp.content_id WHERE cp.restaurant_id = ? AND cp.value > 0 ORDER BY cp.value DESC LIMIT 10").all(rid);
+    const byType = db.prepare('SELECT content_type, metric_type, AVG(value) as avg_val, MAX(value) as max_val, COUNT(*) as count FROM content_performance WHERE restaurant_id = ? GROUP BY content_type, metric_type').all(rid);
+    const bestContent = db.prepare('SELECT cp.content_id, gc.title, gc.type, cp.metric_type, cp.value FROM content_performance cp LEFT JOIN generated_content gc ON gc.id = cp.content_id WHERE cp.restaurant_id = ? AND cp.value > 0 ORDER BY cp.value DESC LIMIT 10').all(rid);
     res.json({ success: true, performance_by_type: byType, best_content: bestContent });
   } catch (e) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/metrics/learn', (req, res) => {
+// ── Learnings: the ML-like loop. testing → permanent (≥0.9) / dropped (<0.3) ──
+function getLearnings(req, res) {
   const rid = parseInt(req.query.restaurant_id) || 0;
   try {
-    db.exec("CREATE TABLE IF NOT EXISTS agent_learnings (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, content_type TEXT, learning TEXT NOT NULL, confidence REAL DEFAULT 0.5, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
-    const learnings = db.prepare('SELECT * FROM agent_learnings WHERE restaurant_id = ? OR restaurant_id = 0 ORDER BY confidence DESC').all(rid);
-    res.json({ success: true, learnings, recommendations: learnings.filter(l => l.confidence > 0.7).map(l => l.learning) });
+    const includeDropped = req.query.include_dropped === '1';
+    const learnings = db.prepare(`SELECT * FROM agent_learnings WHERE (restaurant_id = ? OR restaurant_id = 0)${includeDropped ? '' : " AND status != 'dropped'"} ORDER BY confidence DESC`).all(rid);
+    res.json({
+      success: true, learnings,
+      recommendations: learnings.filter(l => l.confidence > 0.7 && l.status !== 'dropped').map(l => l.learning)
+    });
   } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}
 
-app.post('/api/metrics/learn', (req, res) => {
-  const { restaurant_id, content_type, learning, confidence } = req.body;
+function postLearning(req, res) {
+  const { restaurant_id, content_type, learning, confidence, delta, scope } = req.body;
   if (!learning) return res.status(400).json({ error: 'learning required' });
   try {
-    db.exec("CREATE TABLE IF NOT EXISTS agent_learnings (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, content_type TEXT, learning TEXT NOT NULL, confidence REAL DEFAULT 0.5, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)");
-    const existing = db.prepare('SELECT id, confidence FROM agent_learnings WHERE restaurant_id = ? AND learning = ?').get(restaurant_id||0, learning);
+    const statusFor = (c) => (c >= 0.9 ? 'permanent' : (c < 0.3 ? 'dropped' : 'testing'));
+    const existing = db.prepare('SELECT id, confidence, evidence_count FROM agent_learnings WHERE restaurant_id = ? AND learning = ?').get(restaurant_id || 0, learning);
     if (existing) {
-      const nc = Math.min(1, existing.confidence + (confidence||0.1));
-      db.prepare("UPDATE agent_learnings SET confidence = ?, updated_at = datetime('now') WHERE id = ?").run(nc, existing.id);
-      res.json({ success: true, action: 'reinforced', confidence: nc });
+      const d = typeof delta === 'number' ? delta : 0.1;
+      const nc = Math.max(0, Math.min(1, existing.confidence + d));
+      db.prepare("UPDATE agent_learnings SET confidence = ?, status = ?, evidence_count = ?, updated_at = datetime('now') WHERE id = ?")
+        .run(nc, statusFor(nc), (existing.evidence_count || 0) + 1, existing.id);
+      res.json({ success: true, action: d >= 0 ? 'reinforced' : 'weakened', confidence: nc, status: statusFor(nc) });
     } else {
-      db.prepare('INSERT INTO agent_learnings (restaurant_id, content_type, learning, confidence) VALUES (?, ?, ?, ?)').run(restaurant_id||0, content_type||'', learning, confidence||0.5);
-      res.json({ success: true, action: 'created' });
+      const c = typeof confidence === 'number' ? Math.max(0, Math.min(1, confidence)) : 0.5;
+      db.prepare('INSERT INTO agent_learnings (restaurant_id, content_type, learning, confidence, status, scope, evidence_count) VALUES (?, ?, ?, ?, ?, ?, 1)')
+        .run(restaurant_id || 0, content_type || '', learning, c, statusFor(c), scope || 'restaurant');
+      res.json({ success: true, action: 'created', confidence: c, status: statusFor(c) });
     }
   } catch (e) { res.status(500).json({ error: e.message }); }
-});
+}
+
+app.get('/api/metrics/learn', agentOrAdmin, getLearnings);
+app.post('/api/metrics/learn', agentAuth, postLearning);
+// Aliases under /api/learnings (same handlers, clearer name)
+app.get('/api/learnings', agentOrAdmin, getLearnings);
+app.post('/api/learnings', agentAuth, postLearning);

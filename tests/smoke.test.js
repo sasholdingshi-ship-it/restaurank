@@ -12,7 +12,7 @@ let server;
 test.before(async () => {
   server = spawn('node', ['server.js'], {
     cwd: path.join(__dirname, '..'),
-    env: { ...process.env, PORT: String(PORT), NODE_ENV: 'test' },
+    env: { ...process.env, PORT: String(PORT), NODE_ENV: 'test', AGENT_TOKEN: 'test-agent-token' },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   // Wait until the HTTP server actually answers (big single-file boot can take >5s)
@@ -145,4 +145,96 @@ test('GET /blog/:slug serves article page', async () => {
   const body = await r.text();
   assert.match(body, /SEO local/);
   assert.match(body, /BlogPosting/);
+});
+
+// ── AGENT API v2 (X-Agent-Token auth) ──
+const AGENT_HEADERS = { 'Content-Type': 'application/json', 'X-Agent-Token': 'test-agent-token' };
+
+test('POST /api/content/push without token is rejected', async () => {
+  const r = await fetch(`${BASE}/api/content/push`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ type: 'blog', content: 'x' }),
+  });
+  assert.strictEqual(r.status, 401);
+});
+
+test('POST /api/content/push stores content and reports publication status', async () => {
+  const r = await fetch(`${BASE}/api/content/push`, {
+    method: 'POST',
+    headers: AGENT_HEADERS,
+    body: JSON.stringify({ restaurant_id: 0, type: 'report', title: 'Rapport test', content: 'contenu de test' }),
+  });
+  assert.strictEqual(r.status, 200);
+  const j = await r.json();
+  assert.strictEqual(j.success, true);
+  assert.ok(j.id > 0);
+  assert.strictEqual(j.publication.status, 'stored_only');
+});
+
+test('GET /api/agent/state returns full state for the manager', async () => {
+  const r = await fetch(`${BASE}/api/agent/state`, { headers: AGENT_HEADERS });
+  assert.strictEqual(r.status, 200);
+  const j = await r.json();
+  assert.strictEqual(j.success, true);
+  assert.ok(Array.isArray(j.restaurants));
+  assert.ok(j.publication_mode);
+  assert.ok('reddit_accounts' in j.channels);
+  if (j.restaurants.length > 0) {
+    const r0 = j.restaurants[0];
+    assert.ok('needs_action' in r0 && 'content' in r0 && 'learnings' in r0 && 'anti_spam' in r0);
+  }
+});
+
+test('agent actions journal roundtrip', async () => {
+  const post = await fetch(`${BASE}/api/agent/actions`, {
+    method: 'POST',
+    headers: AGENT_HEADERS,
+    body: JSON.stringify({ restaurant_id: 0, run_tag: 'test-run', role: 'manager', action: 'smoke_test', reason: 'test suite', priority: 'low' }),
+  });
+  assert.strictEqual(post.status, 200);
+  const pj = await post.json();
+  assert.strictEqual(pj.success, true);
+  const get = await fetch(`${BASE}/api/agent/actions?limit=5`, { headers: AGENT_HEADERS });
+  const gj = await get.json();
+  assert.strictEqual(gj.success, true);
+  assert.ok(gj.actions.some(a => a.action === 'smoke_test'));
+});
+
+test('learnings lifecycle: create then reinforce', async () => {
+  const learning = `test learning ${Date.now()}`;
+  const c1 = await fetch(`${BASE}/api/learnings`, {
+    method: 'POST', headers: AGENT_HEADERS,
+    body: JSON.stringify({ restaurant_id: 0, content_type: 'blog', learning, confidence: 0.5, scope: 'global' }),
+  });
+  const j1 = await c1.json();
+  assert.strictEqual(j1.action, 'created');
+  assert.strictEqual(j1.status, 'testing');
+  const c2 = await fetch(`${BASE}/api/learnings`, {
+    method: 'POST', headers: AGENT_HEADERS,
+    body: JSON.stringify({ restaurant_id: 0, learning }),
+  });
+  const j2 = await c2.json();
+  assert.strictEqual(j2.action, 'reinforced');
+  assert.ok(j2.confidence > 0.5);
+  const g = await fetch(`${BASE}/api/learnings?restaurant_id=0`, { headers: AGENT_HEADERS });
+  const gj = await g.json();
+  assert.ok(gj.learnings.some(l => l.learning === learning));
+});
+
+test('GET /api/agent/status still answers (agent-monitor compat)', async () => {
+  const r = await fetch(`${BASE}/api/agent/status?restaurant_id=1`, { headers: AGENT_HEADERS });
+  assert.strictEqual(r.status, 200);
+  const j = await r.json();
+  assert.strictEqual(j.success, true);
+  assert.ok('needs_action' in j);
+});
+
+test('POST /api/metrics/track requires token', async () => {
+  const r = await fetch(`${BASE}/api/metrics/track`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ metric_type: 'health_check', value: 1 }),
+  });
+  assert.strictEqual(r.status, 401);
 });

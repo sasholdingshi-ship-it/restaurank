@@ -20,6 +20,35 @@ function runMigrations(db) {
         if (hasTable('directory_automation')) db.exec("UPDATE directory_automation SET status='needs_verification' WHERE status='needs_vérification'");
       },
     },
+    {
+      // Agent API v2: action journal + learnings lifecycle + perf indexes.
+      // Base tables may already exist (created inline by v1 handlers on prod).
+      name: '002_agent_v2_tables',
+      up() {
+        db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+        db.exec(`CREATE TABLE IF NOT EXISTS content_performance (id INTEGER PRIMARY KEY AUTOINCREMENT, content_id INTEGER, restaurant_id INTEGER, content_type TEXT, metric_type TEXT NOT NULL, value REAL DEFAULT 0, source TEXT, metadata TEXT, tracked_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+        db.exec(`CREATE TABLE IF NOT EXISTS agent_learnings (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, content_type TEXT, learning TEXT NOT NULL, confidence REAL DEFAULT 0.5, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
+        if (!hasCol('agent_learnings', 'status')) db.exec("ALTER TABLE agent_learnings ADD COLUMN status TEXT DEFAULT 'testing'");
+        if (!hasCol('agent_learnings', 'scope')) db.exec("ALTER TABLE agent_learnings ADD COLUMN scope TEXT DEFAULT 'restaurant'");
+        if (!hasCol('agent_learnings', 'evidence_count')) db.exec('ALTER TABLE agent_learnings ADD COLUMN evidence_count INTEGER DEFAULT 0');
+        db.exec(`CREATE TABLE IF NOT EXISTS agent_actions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          restaurant_id INTEGER DEFAULT 0,
+          run_tag TEXT,
+          role TEXT,
+          action TEXT NOT NULL,
+          reason TEXT,
+          priority TEXT,
+          status TEXT DEFAULT 'done',
+          payload TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )`);
+        db.exec('CREATE INDEX IF NOT EXISTS idx_actions_restaurant ON agent_actions(restaurant_id, created_at)');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_actions_run ON agent_actions(run_tag)');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_perf_restaurant ON content_performance(restaurant_id, tracked_at)');
+        db.exec('CREATE INDEX IF NOT EXISTS idx_gc_restaurant_type ON generated_content(restaurant_id, type, created_at)');
+      },
+    },
   ];
 
   for (const m of MIGRATIONS) {
