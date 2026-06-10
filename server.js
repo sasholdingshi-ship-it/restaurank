@@ -15455,6 +15455,10 @@ async function publishToWordPressHidden({ site_url, username, app_password, titl
 // to stored_only with an explicit reason the agent can report.
 async function autoPublishContent({ contentId, restaurantId, type, title, content, metadata }) {
   try {
+    // Garde-fou [CODE] : en mode draft (phase de test), RIEN ne sort vers l'extérieur —
+    // le contenu est stocké et visible en base/backoffice, c'est tout.
+    const mode = process.env.PUBLICATION_MODE || 'auto';
+    if (mode !== 'auto') return { status: 'stored_only', reason: `publication extérieure désactivée (PUBLICATION_MODE=${mode}) — phase de test` };
     if (type === 'blog' || type === 'faq') {
       const cms = db.prepare("SELECT cms_type, site_url, api_credentials FROM cms_connections WHERE restaurant_id = ? AND status != 'disconnected' ORDER BY id DESC LIMIT 1").get(restaurantId);
       if (!cms) return { status: 'stored_only', reason: 'aucun CMS connecté pour ce restaurant' };
@@ -15492,6 +15496,7 @@ async function autoPublishContent({ contentId, restaurantId, type, title, conten
 // "queued" ne posterait jamais). Réutilise la machinerie anti-ban existante. ──
 async function processRedditQueue() {
   try {
+    if ((process.env.PUBLICATION_MODE || 'auto') !== 'auto') return; // mode test : la queue attend
     const due = db.prepare("SELECT * FROM reddit_post_queue WHERE status = 'pending' AND scheduled_for <= datetime('now') AND attempt_count < 3 ORDER BY scheduled_for LIMIT 1").all();
     for (const item of due) {
       const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ? AND restaurant_id = ? AND is_active = 1').get(item.account_id, item.restaurant_id);
