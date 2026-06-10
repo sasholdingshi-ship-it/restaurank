@@ -18,6 +18,38 @@ SaaS webapp qui audite et maximise la visibilité en ligne d'un restaurant sur G
 
 **Migrations** : `migrations.js`, exécutées au boot (table `schema_migrations`). ⚠️ Historique : une passe de "correction d'accents" avait corrompu des identifiants anglais du code (`basé64`, `reçurring`, `création_id`, colonnes `complèted_actions`…) — réparé le 2026-06-10 (commits `0d39aca`, migration 001). **Ne jamais lancer d'outil de correction orthographique sur le code.**
 
+## 🚧 GARDE-FOUS (ancrés le 2026-06-11 — ne JAMAIS contourner sans décision écrite de James)
+
+Niveaux d'application : **[CODE]** = enforcé par le serveur (le plus fort) · **[AGENT]** = règle dure des PROMPT.md des agents VPS · **[DEV]** = toute session Claude travaillant sur ce repo. Si tu modifies un PROMPT.md ou le serveur, ces règles doivent y survivre.
+
+### Clients & données (anti-mélange)
+1. **[AGENT]** Isolation stricte par client : un sous-agent au **contexte vierge par restaurant**, qui ne reçoit QUE le bloc state de SON client. Jamais de génération multi-clients dans un même contexte. Ne jamais revenir au traitement inline.
+2. **[CODE]** Le serveur est l'unique source de vérité factuelle : noms stampés depuis la DB, canaux de publication résolus par `restaurant_id` en base — jamais d'après ce que l'agent affirme.
+3. **[AGENT]** Interdit d'inventer un fait client (adresse, prix, horaires, plats, anecdotes). Un fait absent du state → on écrit sans lui.
+
+### Honnêteté (anti-hallucination)
+4. **[AGENT]** « Publié » UNIQUEMENT si l'API répond `publication.status == "published"`. Tout le reste = stored/queued/skipped, raison journalisée dans `agent_actions`.
+5. **[AGENT]** Learnings = **faits observés** dans le run uniquement (blocage, réponse API, erreur reproductible). Hypothèses de stratégie sans métriques : interdites aux sous-agents — rôle exclusif de l'agent hebdo, qui a les données de performance.
+6. **[DEV]** Un run d'agent est FAILED si systemd le dit (exit≠0 / timeout) — JAMAIS sur la présence du mot « error » dans la prose d'un LLM.
+
+### Périmètre produit & publication
+7. **[AGENT+DEV]** Périmètre = **SEO local + GEO + GMB, point**. Tout nouveau levier (publicité payante, emailing aux clients finaux des restos, DM, nouvelle plateforme) = décision écrite de James AVANT toute implémentation.
+8. **[AGENT]** Anti-spam : max 1 blog/resto/7j · 3 posts Reddit/resto/7j · 10 réponses avis/run. Les compteurs SQL du state font foi, jamais la mémoire de l'agent.
+9. **[AGENT]** Jamais publier sur un canal que James n'a pas explicitement connecté ; jamais créer de compte tiers (Reddit, annuaire, réseau…) en autonomie.
+10. **[AGENT]** Brand safety : jamais de faux avis, jamais se faire passer pour un client du restaurant, jamais de prix/promo/engagement inventés. Chaque contenu publié doit être assumable publiquement par le restaurateur qui le découvrirait.
+
+### Sécurité & accès
+11. **[DEV]** Aucune clé API LLM (`ANTHROPIC_API_KEY`, OpenAI…) n'est requise pour les agents — architecture Claude-Max-only. Ne pas en réintroduire dans le chemin des agents.
+12. **[DEV]** Zéro secret dans un fichier commité (SKILL.md, PROMPT.md, CLAUDE.md inclus). `AGENT_TOKEN` jamais affiché ni loggé. Secrets → `.env` / `.secrets.md` (gitignorés) uniquement.
+13. **[AGENT]** Aucune notification humaine directe par les agents (WhatsApp perso, iMessage, email : interdits). Canaux autorisés : journal en base + réveil + backoffice — et plus tard le groupe « RestauRank Ops » SEUL, quand James l'aura créé.
+
+### Code & ops
+14. **[DEV]** JAMAIS d'outil de correction orthographique/accents sur du code (cause de la corruption de juin 2026).
+15. **[DEV]** Tout changement de schéma DB passe par `migrations.js` — plus jamais de `CREATE/ALTER` inline dans un handler.
+16. **[DEV]** Jamais de modification non commitée en prod : commit → push → pull VPS → `pm2 restart restaurank`. Le VPS ne diverge jamais de `main`.
+17. **[DEV]** `npm test` vert avant tout déploiement.
+18. **[DEV]** Une session RestauRank ne touche à AUCUN autre service du VPS (apps Yatai, Caddy global, agents systemd existants, WhatsApp bridge).
+
 ---
 
 ## 🔑 ACCÈS CRITIQUES
