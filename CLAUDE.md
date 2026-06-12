@@ -1,8 +1,54 @@
 # RestauRank — Guide complet pour Claude Code
 
 ## TL;DR
-SaaS webapp qui audite la visibilité en ligne d'un restaurant sur Google (SEO local) ET sur les moteurs IA (ChatGPT, Perplexity, Gemini, Claude). Single-file HTML frontend + Node.js/Express/SQLite backend. Déployé sur Render. 50 commits, ~20k lignes de code total.
-**Vision** : outil 100% autonome — le client n'a presque rien à faire. RestauRank détecte le CMS, se connecte aux APIs, et applique les améliorations automatiquement.
+SaaS webapp qui audite et maximise la visibilité en ligne d'un restaurant sur Google (SEO local + GMB) ET sur les moteurs IA (ChatGPT, Perplexity, Gemini, Claude — GEO). Node.js/Express/SQLite backend + frontend HTML. **Déployé sur le VPS Yatai** (`restaurank.yatairamen.fr`, PM2 :8765, Caddy) — Render = legacy.
+**Vision v2 (validée 2026-06-10)** : je prospecte un resto, je l'ajoute, et des **agents IA autonomes** s'occupent de tout (audit, contenu, publication, suivi, apprentissage) en continu.
+
+## 🤖 Architecture v2 — agents autonomes (depuis 2026-06-10)
+
+**Inversion de l'intelligence** : le serveur ne fait AUCUN appel LLM (aucune `ANTHROPIC_API_KEY` requise). Les agents = Claude Code sur le VPS (abonnement Claude Max), via le pattern systemd `claude-agent-cron@` :
+
+- `claude-agent-cron@restaurank-manager.timer` — 00h15/06h15/12h15/18h15 Paris. Lit `GET /api/agent/state` (token), décide, génère (blog/Reddit/FAQ/guest post) en appliquant les learnings, pousse via `POST /api/content/push` (publication full-auto si canal câblé), journalise CHAQUE décision dans `POST /api/agent/actions`.
+- `claude-agent-cron@restaurank-report.timer` — lundi 07h30. Rapport hebdo par resto + boucle d'apprentissage (reinforce/drop des learnings selon `content_performance`).
+- Prompts de prod : `vps:/home/james/agents-worktrees/restaurank-{manager,report}/PROMPT.md` · logs : `~james/agents/shared/logs/restaurank-*.log` · monitoring : le réveil (ops.yatairamen.fr/reveil).
+
+**Auth agents** : header `X-Agent-Token` = env `AGENT_TOKEN` (`.env` VPS + `.secrets.md` Mac). Jamais de credentials admin dans un skill/prompt.
+
+**API agent v2** (`server.js`, section "AGENT API v2" en fin de fichier) : `GET /api/agent/state` · `POST /api/content/push` (dispatch auto : WordPress pages cachées indexées sous /ressources-seo/, queue Reddit ; sinon `stored_only`+raison) · `POST/GET /api/agent/actions` · `POST /api/metrics/track` · `GET/POST /api/learnings` (cycle testing→permanent ≥0.9 / dropped <0.3).
+
+**Migrations** : `migrations.js`, exécutées au boot (table `schema_migrations`). ⚠️ Historique : une passe de "correction d'accents" avait corrompu des identifiants anglais du code (`basé64`, `reçurring`, `création_id`, colonnes `complèted_actions`…) — réparé le 2026-06-10 (commits `0d39aca`, migration 001). **Ne jamais lancer d'outil de correction orthographique sur le code.**
+
+## 🚧 GARDE-FOUS (ancrés le 2026-06-11 — ne JAMAIS contourner sans décision écrite de James)
+
+Niveaux d'application : **[CODE]** = enforcé par le serveur (le plus fort) · **[AGENT]** = règle dure des PROMPT.md des agents VPS · **[DEV]** = toute session Claude travaillant sur ce repo. Si tu modifies un PROMPT.md ou le serveur, ces règles doivent y survivre.
+
+### Clients & données (anti-mélange)
+1. **[AGENT]** Isolation stricte par client : un sous-agent au **contexte vierge par restaurant**, qui ne reçoit QUE le bloc state de SON client. Jamais de génération multi-clients dans un même contexte. Ne jamais revenir au traitement inline.
+2. **[CODE]** Le serveur est l'unique source de vérité factuelle : noms stampés depuis la DB, canaux de publication résolus par `restaurant_id` en base — jamais d'après ce que l'agent affirme.
+3. **[AGENT]** Interdit d'inventer un fait client (adresse, prix, horaires, plats, anecdotes). Un fait absent du state → on écrit sans lui.
+
+### Honnêteté (anti-hallucination)
+4. **[AGENT]** « Publié » UNIQUEMENT si l'API répond `publication.status == "published"`. Tout le reste = stored/queued/skipped, raison journalisée dans `agent_actions`.
+5. **[AGENT]** Learnings = **faits observés** dans le run uniquement (blocage, réponse API, erreur reproductible). Hypothèses de stratégie sans métriques : interdites aux sous-agents — rôle exclusif de l'agent hebdo, qui a les données de performance.
+6. **[DEV]** Un run d'agent est FAILED si systemd le dit (exit≠0 / timeout) — JAMAIS sur la présence du mot « error » dans la prose d'un LLM.
+
+### Périmètre produit & publication
+7. **[AGENT+DEV]** Périmètre = **SEO local + GEO + GMB, point**. Tout nouveau levier (publicité payante, emailing aux clients finaux des restos, DM, nouvelle plateforme) = décision écrite de James AVANT toute implémentation.
+8. **[AGENT]** Anti-spam : max 1 blog/resto/7j · 3 posts Reddit/resto/7j · 10 réponses avis/run. Les compteurs SQL du state font foi, jamais la mémoire de l'agent.
+9. **[AGENT]** Jamais publier sur un canal que James n'a pas explicitement connecté ; jamais créer de compte tiers (Reddit, annuaire, réseau…) en autonomie.
+10. **[AGENT]** Brand safety : jamais de faux avis, jamais se faire passer pour un client du restaurant, jamais de prix/promo/engagement inventés. Chaque contenu publié doit être assumable publiquement par le restaurateur qui le découvrirait.
+
+### Sécurité & accès
+11. **[DEV]** Aucune clé API LLM (`ANTHROPIC_API_KEY`, OpenAI…) n'est requise pour les agents — architecture Claude-Max-only. Ne pas en réintroduire dans le chemin des agents.
+12. **[DEV]** Zéro secret dans un fichier commité (SKILL.md, PROMPT.md, CLAUDE.md inclus). `AGENT_TOKEN` jamais affiché ni loggé. Secrets → `.env` / `.secrets.md` (gitignorés) uniquement.
+13. **[AGENT]** Aucune notification humaine directe par les agents (WhatsApp perso, iMessage, email : interdits). Canaux autorisés : journal en base + réveil + backoffice — et plus tard le groupe « RestauRank Ops » SEUL, quand James l'aura créé.
+
+### Code & ops
+14. **[DEV]** JAMAIS d'outil de correction orthographique/accents sur du code (cause de la corruption de juin 2026).
+15. **[DEV]** Tout changement de schéma DB passe par `migrations.js` — plus jamais de `CREATE/ALTER` inline dans un handler.
+16. **[DEV]** Jamais de modification non commitée en prod : commit → push → pull VPS → `pm2 restart restaurank`. Le VPS ne diverge jamais de `main`.
+17. **[DEV]** `npm test` vert avant tout déploiement.
+18. **[DEV]** Une session RestauRank ne touche à AUCUN autre service du VPS (apps Yatai, Caddy global, agents systemd existants, WhatsApp bridge).
 
 ---
 
@@ -16,7 +62,12 @@ SaaS webapp qui audite la visibilité en ligne d'un restaurant sur Google (SEO l
 - **Git config** : `git config user.name "James"` + `git config user.email "sasholdingshi@gmail.com"`
 - PAT et clone URL → voir `.secrets.md`
 
-### Render (hébergement)
+### VPS Yatai (hébergement ACTUEL)
+- **URL live** : `https://restaurank.yatairamen.fr` (Caddy → PM2 `restaurank` :8765, `/root/restaurank`)
+- Déploiement : push sur `main` → `ssh yatai-vps 'cd /root/restaurank && git pull && pm2 restart restaurank'` (deploy key SSH lecture seule)
+- DB : `/root/restaurank/restaurank.db` (SQLite, source de vérité)
+
+### Render (hébergement LEGACY — plus utilisé)
 - **URL live** : `https://restaurank.onrender.com`
 - **Service ID** : `srv-d71tgi5m5p6s73a18kv0`
 - **Dashboard** : `https://dashboard.render.com` (login avec GitHub)

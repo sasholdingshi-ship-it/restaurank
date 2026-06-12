@@ -73,10 +73,10 @@ async function stealthPage(page) {
   return page;
 }
 
-async function autoFillAndScréénshot(page, step) {
-  // Take scréénshot at each step
-  const scréénshot = await page.scréénshot({ encoding: 'basé64', type: 'jpeg', quality: 60 });
-  return { scréénshot: `data:image/jpeg;basé64,${scréénshot}`, step, url: page.url(), title: await page.title().catch(() => '') };
+async function autoFillAndScreenshot(page, step) {
+  // Take screenshot at each step
+  const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 60 });
+  return { screenshot: `data:image/jpeg;base64,${screenshot}`, step, url: page.url(), title: await page.title().catch(() => '') };
 }
 
 // Platform-specific automation scripts
@@ -85,34 +85,34 @@ const PLATFORM_AUTOMATIONS = {
     const steps = [];
     // Step 1: Go to Yelp Business claim page
     await page.goto(`https://biz.yelp.com/claim/search?q=${encodeURIComponent(name + ' ' + city)}`, { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Recherche sur Yelp Business'));
+    steps.push(await autoFillAndScreenshot(page, 'Recherche sur Yelp Business'));
     // Try to find and click on the business listing
     try {
       const found = await page.$('a[href*="/claim/"]');
       if (found) {
         await found.click();
         await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-        steps.push(await autoFillAndScréénshot(page, 'Page de réclamation trouvée'));
+        steps.push(await autoFillAndScreenshot(page, 'Page de réclamation trouvée'));
       } else {
         steps.push({ step: 'Fiche non trouvée — ajout nécessaire', url: page.url(), needsManual: true,
           detail: 'Le restaurant n\'a pas été trouvé sur Yelp. RestauRank va créer la fiche.' });
         // Try to navigate to add business
         await page.goto('https://biz.yelp.com/claim', { waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-        steps.push(await autoFillAndScréénshot(page, 'Page d\'ajout de commerce'));
+        steps.push(await autoFillAndScreenshot(page, 'Page d\'ajout de commerce'));
       }
     } catch (e) {
       steps.push({ step: 'Navigation automatique', detail: e.message, needsManual: true });
     }
     // Try to fill any visible form fields
     await autoFillFormFields(page, { business_name: name, city, phone, website, name });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
   tripadvisor: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://www.tripadvisor.com/Owners', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Page TripAdvisor Owners'));
+    steps.push(await autoFillAndScreenshot(page, 'Page TripAdvisor Owners'));
     // Search for business
     try {
       const searchInput = await page.$('input[type="text"], input[name*="search"], input[placeholder*="name"]');
@@ -120,7 +120,7 @@ const PLATFORM_AUTOMATIONS = {
         await searchInput.type(name + ' ' + city, { delay: 50 });
         await page.keyboard.press('Enter');
         await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-        steps.push(await autoFillAndScréénshot(page, 'Recherche effectuée'));
+        steps.push(await autoFillAndScreenshot(page, 'Recherche effectuée'));
       }
     } catch (e) {}
     return steps;
@@ -129,21 +129,21 @@ const PLATFORM_AUTOMATIONS = {
   thefork: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://manager.thefork.com', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'TheFork Manager'));
+    steps.push(await autoFillAndScreenshot(page, 'TheFork Manager'));
     return steps;
   },
 
   bing: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://www.bingplaces.com', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Bing Places Dashboard'));
+    steps.push(await autoFillAndScreenshot(page, 'Bing Places Dashboard'));
     try {
       // Try import from Google
       const importBtn = await page.$('a[href*="ImportFromGoogle"], button:has-text("Import")');
       if (importBtn) {
         await importBtn.click();
         await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15000 }).catch(() => {});
-        steps.push(await autoFillAndScréénshot(page, 'Import depuis Google'));
+        steps.push(await autoFillAndScreenshot(page, 'Import depuis Google'));
       }
     } catch (e) {}
     return steps;
@@ -153,7 +153,7 @@ const PLATFORM_AUTOMATIONS = {
     const steps = [];
     const q = encodeURIComponent(name + ' ' + city);
     await page.goto(`https://foursquare.com/search?q=${q}`, { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Recherche Foursquare'));
+    steps.push(await autoFillAndScreenshot(page, 'Recherche Foursquare'));
     return steps;
   },
 
@@ -161,50 +161,50 @@ const PLATFORM_AUTOMATIONS = {
     const steps = [];
     const q = encodeURIComponent(name + ' ' + city);
     await page.goto(`https://businessconnect.apple.com/search?term=${q}`, { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Apple Business Connect'));
+    steps.push(await autoFillAndScreenshot(page, 'Apple Business Connect'));
     return steps;
   },
 
   pagesjaunes: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://www.solocal.com/inscription', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Solocal / Pages Jaunes'));
+    steps.push(await autoFillAndScreenshot(page, 'Solocal / Pages Jaunes'));
     await autoFillFormFields(page, { business_name: name, city, name });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
   facebook: async (page, { name, city, phone, website }) => {
     const steps = [];
     await page.goto('https://www.facebook.com/pages/create/', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Création de page Facebook'));
+    steps.push(await autoFillAndScreenshot(page, 'Création de page Facebook'));
     await autoFillFormFields(page, { page_name: name, name, city, phone, website, category: 'Restaurant' });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
   instagram: async (page, { name }) => {
     const steps = [];
     await page.goto('https://business.instagram.com', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Instagram Business'));
+    steps.push(await autoFillAndScreenshot(page, 'Instagram Business'));
     return steps;
   },
 
   ubereats: async (page, { name, city, phone }) => {
     const steps = [];
     await page.goto('https://merchants.ubereats.com/signup', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Uber Eats Marchands'));
+    steps.push(await autoFillAndScreenshot(page, 'Uber Eats Marchands'));
     await autoFillFormFields(page, { restaurant_name: name, name, city, phone });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
   waze: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://ads.waze.com/register', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Waze for Business'));
+    steps.push(await autoFillAndScreenshot(page, 'Waze for Business'));
     await autoFillFormFields(page, { business_name: name, name, city });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
 
@@ -212,53 +212,53 @@ const PLATFORM_AUTOMATIONS = {
   tiktok: async (page, { name }) => {
     const steps = [];
     await page.goto('https://www.tiktok.com/business', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'TikTok Business'));
+    steps.push(await autoFillAndScreenshot(page, 'TikTok Business'));
     return steps;
   },
   mapstr: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://pro.mapstr.com', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Mapstr Pro'));
+    steps.push(await autoFillAndScreenshot(page, 'Mapstr Pro'));
     return steps;
   },
   zenchef: async (page, { name, city, phone }) => {
     const steps = [];
     await page.goto('https://www.zenchef.com/inscription', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Zenchef'));
+    steps.push(await autoFillAndScreenshot(page, 'Zenchef'));
     await autoFillFormFields(page, { name, city, phone });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
   opentable: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://restaurant.opentable.com/get-started', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'OpenTable'));
+    steps.push(await autoFillAndScreenshot(page, 'OpenTable'));
     await autoFillFormFields(page, { name, city });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
   deliveroo: async (page, { name, city, phone }) => {
     const steps = [];
     await page.goto('https://restaurants.deliveroo.com/signup', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Deliveroo Partner'));
+    steps.push(await autoFillAndScreenshot(page, 'Deliveroo Partner'));
     await autoFillFormFields(page, { restaurant_name: name, name, city, phone });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
   doordash: async (page, { name, city }) => {
     const steps = [];
     await page.goto('https://get.doordash.com/signup', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'DoorDash'));
+    steps.push(await autoFillAndScreenshot(page, 'DoorDash'));
     await autoFillFormFields(page, { restaurant_name: name, name, city });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   },
   justeat: async (page, { name, city, phone }) => {
     const steps = [];
     await page.goto('https://restaurants.just-eat.fr/inscription', { waitUntil: 'networkidle2', timeout: 30000 });
-    steps.push(await autoFillAndScréénshot(page, 'Just Eat'));
+    steps.push(await autoFillAndScreenshot(page, 'Just Eat'));
     await autoFillFormFields(page, { restaurant_name: name, name, city, phone });
-    steps.push(await autoFillAndScréénshot(page, 'Formulaire pré-rempli'));
+    steps.push(await autoFillAndScreenshot(page, 'Formulaire pré-rempli'));
     return steps;
   }
 };
@@ -401,6 +401,7 @@ if (NODE_ENV === 'production') {
 }
 
 const app = express();
+app.set('trust proxy', 1); // behind Caddy — needed for express-rate-limit to see real client IPs
 app.use(cors());
 
 // Rate limiting — prevent API abuse
@@ -420,6 +421,10 @@ const PORT = process.env.PORT || 8765;
 // DATABASE — SQLite (local) or PostgreSQL (production via DATABASE_URL)
 // ============================================================
 const db = createDB();
+
+// Apply pending schema migrations before anything touches the tables
+const { runMigrations } = require('./migrations');
+runMigrations(db);
 
 // PG sync is handled by setupPGSync() in app.listen callback
 
@@ -443,7 +448,7 @@ db.exec(`
     google_location_id TEXT,
     audit_data TEXT,
     scores TEXT,
-    complèted_actions TEXT DEFAULT '{}',
+    completed_actions TEXT DEFAULT '{}',
     platform_status TEXT DEFAULT '{}',
     last_audit DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -616,7 +621,7 @@ db.exec(`
     max_restaurants INTEGER DEFAULT 1,
     is_active INTEGER DEFAULT 1,
     email_verified INTEGER DEFAULT 0,
-    vérification_token TEXT,
+    verification_token TEXT,
     reset_token TEXT,
     reset_expires DATETIME,
     last_login DATETIME,
@@ -691,7 +696,7 @@ try {
   }
 } catch(e) { console.warn('Migration owner_id:', e.message); }
 
-// Créate default admin account if not exists
+// Create default admin account if not exists
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@restaurank.com';
 const ADMIN_PASS = process.env.ADMIN_PASSWORD || 'RestauRank2026!';
 const existingAdmin = db.prepare('SELECT id, salt, password_hash FROM accounts WHERE email = ?').get(ADMIN_EMAIL);
@@ -1258,7 +1263,7 @@ db.exec(`
 // ============================================================
 
 // Google Sign-In for client login/register
-// REUSES the same redirect URI already configuréd in Google Cloud Console
+// REUSES the same redirect URI already configured in Google Cloud Console
 // (avoids needing to add a new URI — the callback path handles both flows)
 app.get('/auth/social/google', (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
@@ -1272,7 +1277,7 @@ app.get('/auth/social/google', (req, res) => {
 // The callback is handled by the EXISTING /auth/google/callback route below
 // It detects state=social_login to handle account création vs GBP OAuth
 
-// Apple Sign-In redirect (requires Apple Developer account + Service ID configuréd)
+// Apple Sign-In redirect (requires Apple Developer account + Service ID configured)
 app.get('/auth/social/apple', (req, res) => {
   const clientId = process.env.APPLE_CLIENT_ID || 'com.restaurank.signin';
   const redirectUri = (() => {
@@ -1293,7 +1298,7 @@ app.post('/auth/social/apple/callback', async (req, res) => {
     if (id_token) {
       const parts = id_token.split('.');
       if (parts.length === 3) {
-        const payload = JSON.parse(Buffer.from(parts[1], 'basé64url').toString());
+        const payload = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
         email = payload.email;
       }
     }
@@ -1405,9 +1410,9 @@ app.post('/auth/register', (req, res) => {
 
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = hashPassword(password, salt);
-  const vérificationToken = generateToken();
+  const verificationToken = generateToken();
   const limits = PLAN_LIMITS[grantedPlan] || PLAN_LIMITS.free;
-  const result = db.prepare('INSERT INTO accounts (email, password_hash, salt, name, vérification_token, plan, max_restaurants, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime(\'now\', \'+14 days\'))').run(emailClean, hash, salt, name || '', vérificationToken, grantedPlan, limits.restaurants);
+  const result = db.prepare('INSERT INTO accounts (email, password_hash, salt, name, verification_token, plan, max_restaurants, trial_ends_at) VALUES (?, ?, ?, ?, ?, ?, ?, datetime(\'now\', \'+14 days\'))').run(emailClean, hash, salt, name || '', verificationToken, grantedPlan, limits.restaurants);
 
   // Auto-accept pending invitations for this email
   const pendingInvites = db.prepare('SELECT * FROM invitations WHERE email = ? AND accepted = 0 AND expires_at > datetime(\'now\')').all(emailClean);
@@ -1416,7 +1421,7 @@ app.post('/auth/register', (req, res) => {
     db.prepare('UPDATE invitations SET accepted = 1 WHERE id = ?').run(inv.id);
   });
 
-  // Créate session
+  // Create session
   const sessionId = generateSessionToken();
   const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
   db.prepare('INSERT INTO sessions (id, account_id, expires_at) VALUES (?, ?, ?)').run(sessionId, result.lastInsertRowid, expires);
@@ -1544,7 +1549,7 @@ app.post('/api/team/invite', requireAuth, (req, res) => {
     return res.json({ success: true, directAdd: true });
   }
 
-  // Créate invitation
+  // Create invitation
   const token = generateToken();
   const expires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // 7 days
   db.prepare('INSERT INTO invitations (email, restaurant_id, role, token, invited_by, expires_at) VALUES (?, ?, ?, ?, ?, ?)').run(email.toLowerCase().trim(), restaurantId, inviteRole, token, req.account.id, expires);
@@ -1672,10 +1677,10 @@ async function setupStripeProducts() {
       const existingId = db.prepare('SELECT value FROM app_config WHERE key=?').get(`stripe_price_${p.key}`)?.value;
       if (existingId) { ids[p.key] = existingId; continue; }
       const product = await stripe.products.create({ name: p.name, metadata: { plan: p.key } });
-      const priceObj = await stripe.prices.create({ product: product.id, unit_amount: p.price, currency: 'eur', reçurring: { interval: 'month' } });
+      const priceObj = await stripe.prices.create({ product: product.id, unit_amount: p.price, currency: 'eur', recurring: { interval: 'month' } });
       db.prepare('INSERT OR REPLACE INTO app_config (key,value) VALUES (?,?)').run(`stripe_price_${p.key}`, priceObj.id);
       ids[p.key] = priceObj.id;
-      console.log(`💳 Créated Stripe price for ${p.name}: ${priceObj.id}`);
+      console.log(`💳 Created Stripe price for ${p.name}: ${priceObj.id}`);
     }
     console.log(`💳 Stripe prices ready: starter=${ids.starter} pro=${ids.pro} premium=${ids.premium}`);
   } catch(e) {
@@ -1687,7 +1692,7 @@ app.get('/api/plans', (req, res) => {
   res.json(PLAN_LIMITS);
 });
 
-// Créate Stripe checkout session (or direct upgrade in demo mode)
+// Create Stripe checkout session (or direct upgrade in demo mode)
 app.post('/api/subscription/upgrade', requireAuth, async (req, res) => {
   const { plan } = req.body;
   if (!PLAN_LIMITS[plan]) return res.status(400).json({ error: 'Plan invalide' });
@@ -1722,7 +1727,7 @@ app.post('/api/subscription/upgrade', requireAuth, async (req, res) => {
       return res.status(500).json({ error: 'Erreur Stripe: ' + e.message });
     }
   } else {
-    // --- DEMO MODE: instant upgrade (no Stripe keys configuréd) ---
+    // --- DEMO MODE: instant upgrade (no Stripe keys configured) ---
     const limits = PLAN_LIMITS[plan];
     const expires = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     db.prepare('UPDATE accounts SET plan = ?, plan_expires = ?, max_restaurants = ? WHERE id = ?').run(plan, expires, limits.restaurants, req.account.id);
@@ -1924,7 +1929,7 @@ app.post('/api/webhook/stripe', express.raw({ type: 'application/json' }), (req,
   console.log(`💳 Stripe webhook: ${event.type}`);
 
   switch (event.type) {
-    case 'checkout.session.complèted': {
+    case 'checkout.session.completed': {
       const session = event.data.object;
       const accountId = session.metadata?.account_id;
       const plan = session.metadata?.plan;
@@ -2104,9 +2109,9 @@ app.post('/api/admin/account/:id/plan', requireAuth, requireAdmin, (req, res) =>
 
 app.get('/api/admin/account/:id/restaurants', requireAuth, requireAdmin, (req, res) => {
   // Search by owner_id first, fallback to user_id
-  let restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, complèted_actions FROM restaurants WHERE owner_id = ?').all(req.params.id);
+  let restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, completed_actions FROM restaurants WHERE owner_id = ?').all(req.params.id);
   if (restaurants.length === 0) {
-    restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, complèted_actions FROM restaurants WHERE user_id = ?').all(req.params.id);
+    restaurants = db.prepare('SELECT id, name, city, last_audit, scores, audit_data, hub_data, completed_actions FROM restaurants WHERE user_id = ?').all(req.params.id);
   }
   // Also fetch hub_data from restaurant_settings + generated_content
   restaurants = restaurants.map(r => {
@@ -2143,11 +2148,11 @@ app.post('/api/admin/restaurant/:id/hub', requireAuth, requireAdmin, (req, res) 
 
 // --- ADMIN: Update restaurant data (audit, scores, etc.) ---
 app.post('/api/admin/restaurant/:id/update', requireAuth, requireAdmin, (req, res) => {
-  const { audit_data, scores, complèted_actions, hub_data, name, city } = req.body;
+  const { audit_data, scores, completed_actions, hub_data, name, city } = req.body;
   const updates = []; const params = [];
   if (audit_data !== undefined) { updates.push('audit_data = ?'); params.push(JSON.stringify(audit_data)); }
   if (scores !== undefined) { updates.push('scores = ?'); params.push(JSON.stringify(scores)); }
-  if (complèted_actions !== undefined) { updates.push('complèted_actions = ?'); params.push(JSON.stringify(complèted_actions)); }
+  if (completed_actions !== undefined) { updates.push('completed_actions = ?'); params.push(JSON.stringify(completed_actions)); }
   if (hub_data !== undefined) { updates.push('hub_data = ?'); params.push(JSON.stringify(hub_data)); }
   if (name) { updates.push('name = ?'); params.push(name); }
   if (city) { updates.push('city = ?'); params.push(city); }
@@ -2159,7 +2164,7 @@ app.post('/api/admin/restaurant/:id/update', requireAuth, requireAdmin, (req, re
 
 // --- ADMIN: Invite Codes Management ---
 app.get('/api/admin/invite-codes', requireAuth, requireAdmin, (req, res) => {
-  const codes = db.prepare('SELECT ic.*, a.email as créator_email FROM invite_codes ic LEFT JOIN accounts a ON ic.created_by = a.id ORDER BY ic.created_at DESC').all();
+  const codes = db.prepare('SELECT ic.*, a.email as creator_email FROM invite_codes ic LEFT JOIN accounts a ON ic.created_by = a.id ORDER BY ic.created_at DESC').all();
   res.json(codes);
 });
 
@@ -3003,7 +3008,7 @@ app.get('/api/restaurants', (req, res) => {
     ...r,
     audit_data: r.audit_data ? JSON.parse(r.audit_data) : null,
     scores: r.scores ? JSON.parse(r.scores) : null,
-    complèted_actions: JSON.parse(r.complèted_actions || '{}'),
+    completed_actions: JSON.parse(r.completed_actions || '{}'),
     platform_status: JSON.parse(r.platform_status || '{}')
   })));
 });
@@ -3024,12 +3029,12 @@ app.post('/api/restaurants', (req, res) => {
 });
 
 app.put('/api/restaurants/:id', (req, res) => {
-  const { audit_data, scores, complèted_actions, platform_status } = req.body;
+  const { audit_data, scores, completed_actions, platform_status } = req.body;
   const updates = [];
   const params = [];
   if (audit_data) { updates.push('audit_data = ?'); params.push(JSON.stringify(audit_data)); }
   if (scores) { updates.push('scores = ?'); params.push(JSON.stringify(scores)); }
-  if (complèted_actions) { updates.push('complèted_actions = ?'); params.push(JSON.stringify(complèted_actions)); }
+  if (completed_actions) { updates.push('completed_actions = ?'); params.push(JSON.stringify(completed_actions)); }
   if (platform_status) { updates.push('platform_status = ?'); params.push(JSON.stringify(platform_status)); }
   updates.push("last_audit = datetime('now')");
   params.push(req.params.id);
@@ -3344,10 +3349,10 @@ app.post('/api/backlinks', async (req, res) => {
       }
     } catch (e) {}
 
-    // 4. Moz API if keys configuréd
+    // 4. Moz API if keys configured
     if (process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) {
       try {
-        const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('basé64');
+        const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('base64');
         const mozResp = await fetch('https://lsapi.seomoz.com/v2/url_metrics', {
           method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${mozAuth}` },
           body: JSON.stringify({ targets: [domain] }), signal: AbortSignal.timeout(8000)
@@ -3855,12 +3860,12 @@ function nextPeakSlot(now = new Date()) {
   return next;
 }
 
-// Ensure content has never been posted before on this platform (hash-baséd)
+// Ensure content has never been posted before on this platform (hash-based)
 function isContentUnique(platform, restaurantId, contentText) {
   const hash = crypto.createHash('md5').update(contentText).digest('hex').substring(0, 16);
   try {
-    db.exec(`CREATE TABLE IF NOT EXISTS anti_détection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
-    const dup = db.prepare(`SELECT id FROM anti_détection_log WHERE platform = ? AND content_hash = ? AND posted_at > datetime('now', '-90 days')`).get(platform, hash);
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    const dup = db.prepare(`SELECT id FROM anti_detection_log WHERE platform = ? AND content_hash = ? AND posted_at > datetime('now', '-90 days')`).get(platform, hash);
     return { unique: !dup, hash };
   } catch(e) { return { unique: true, hash }; }
 }
@@ -3870,15 +3875,15 @@ function checkRateLimit(platform, accountRef) {
   const rules = PLATFORM_LIMITS[platform];
   if (!rules) return { allowed: true };
   try {
-    db.exec(`CREATE TABLE IF NOT EXISTS anti_détection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
 
-    const today = db.prepare(`SELECT COUNT(*) as c FROM anti_détection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-24 hours')`).get(platform, accountRef || '')?.c || 0;
+    const today = db.prepare(`SELECT COUNT(*) as c FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-24 hours')`).get(platform, accountRef || '')?.c || 0;
     if (today >= rules.perDay) return { allowed: false, reason: `Limite quotidienne ${platform} atteinte (${today}/${rules.perDay}). Reddit/Meta détectent le spam au-delà.`, retryAfter: 24*60*60*1000 };
 
-    const week = db.prepare(`SELECT COUNT(*) as c FROM anti_détection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-7 days')`).get(platform, accountRef || '')?.c || 0;
+    const week = db.prepare(`SELECT COUNT(*) as c FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' AND posted_at > datetime('now','-7 days')`).get(platform, accountRef || '')?.c || 0;
     if (week >= rules.perWeek) return { allowed: false, reason: `Limite hebdomadaire ${platform} atteinte (${week}/${rules.perWeek})`, retryAfter: 7*24*60*60*1000 };
 
-    const lastPost = db.prepare(`SELECT posted_at FROM anti_détection_log WHERE platform=? AND account_ref=? AND status='ok' ORDER BY posted_at DESC LIMIT 1`).get(platform, accountRef || '');
+    const lastPost = db.prepare(`SELECT posted_at FROM anti_detection_log WHERE platform=? AND account_ref=? AND status='ok' ORDER BY posted_at DESC LIMIT 1`).get(platform, accountRef || '');
     if (lastPost) {
       const diff = Date.now() - new Date(lastPost.posted_at + 'Z').getTime();
       const minDiff = rules.minMinBetween * 60 * 1000;
@@ -3895,8 +3900,8 @@ function checkRateLimit(platform, accountRef) {
 // Log a successful action (used for rate limit tracking)
 function logAntiDetection(platform, restaurantId, accountRef, target, contentHash, status = 'ok', error = null) {
   try {
-    db.exec(`CREATE TABLE IF NOT EXISTS anti_détection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
-    db.prepare(`INSERT INTO anti_détection_log (restaurant_id, platform, account_ref, target, content_hash, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    db.exec(`CREATE TABLE IF NOT EXISTS anti_detection_log (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, platform TEXT, account_ref TEXT, target TEXT, content_hash TEXT, posted_at DATETIME DEFAULT CURRENT_TIMESTAMP, status TEXT DEFAULT 'ok', error TEXT)`);
+    db.prepare(`INSERT INTO anti_detection_log (restaurant_id, platform, account_ref, target, content_hash, status, error) VALUES (?, ?, ?, ?, ?, ?, ?)`)
       .run(restaurantId || 0, platform, accountRef || '', target || '', contentHash || '', status, error);
   } catch(e) {}
 }
@@ -3910,7 +3915,7 @@ async function getRedditToken(acc) {
   const r = await fetch('https://www.reddit.com/api/v1/access_token', {
     method: 'POST',
     headers: {
-      'Authorization': 'Basic ' + Buffer.from(`${acc.client_id}:${acc.client_secret}`).toString('basé64'),
+      'Authorization': 'Basic ' + Buffer.from(`${acc.client_id}:${acc.client_secret}`).toString('base64'),
       'Content-Type': 'application/x-www-form-urlencoded',
       'User-Agent': `RestauRank/1.0 by /u/${acc.username}`
     },
@@ -4371,7 +4376,7 @@ app.post('/api/distribution/gbp-qa/publish', requireAuth, async (req, res) => {
     const accessToken = tokens.access_token;
     if (!accessToken) throw new Error('Token Google invalide');
 
-    // Step 1: Créate the question
+    // Step 1: Create the question
     const qResp = await fetch(`https://mybusinessqanda.googleapis.com/v1/${location_name}/questions`, {
       method: 'POST',
       headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json', 'User-Agent': pickUA() },
@@ -4495,7 +4500,7 @@ app.post('/api/meta/publish', async (req, res) => {
   try {
     if (platform === 'instagram' && igAccountId) {
       // Instagram Content Publishing API (Business accounts only)
-      // Step 1: Créate media container
+      // Step 1: Create media container
       const containerParams = image_url
         ? `image_url=${encodeURIComponent(image_url)}&caption=${encodeURIComponent(message)}`
         : `media_type=TEXT&text=${encodeURIComponent(message)}`;
@@ -4504,7 +4509,7 @@ app.post('/api/meta/publish', async (req, res) => {
       if (container.error) throw new Error(container.error.message);
 
       // Step 2: Publish the container
-      const publishResp = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media_publish?création_id=${container.id}&access_token=${accessToken}`, { method: 'POST' });
+      const publishResp = await fetch(`https://graph.facebook.com/v19.0/${igAccountId}/media_publish?creation_id=${container.id}&access_token=${accessToken}`, { method: 'POST' });
       const published = await publishResp.json();
       if (published.error) throw new Error(published.error.message);
       return res.json({ success: true, platform: 'instagram', post_id: published.id });
@@ -4625,7 +4630,7 @@ app.post('/api/social/publish', async (req, res) => {
 // REAL OAUTH FLOWS — Facebook/Instagram, LinkedIn, TikTok
 // ============================================================
 
-// --- Helper: get basé URL for callbacks ---
+// --- Helper: get base URL for callbacks ---
 function getBaseUrl(req) {
   const proto = req.headers['x-forwarded-proto'] || req.protocol || 'http';
   const host = req.headers['x-forwarded-host'] || req.headers.host;
@@ -4649,7 +4654,7 @@ app.get('/api/db/status', requireAuth, (req, res) => {
   res.json({
     sqlite: { path: process.env.DB_PATH || 'restaurank.db', tables },
     postgres: {
-      configuréd: pgConfigured,
+      configured: pgConfigured,
       synced_tables: ['accounts', 'restaurants', 'restaurant_settings', 'sessions', 'restaurant_special_hours', 'scheduled_responses', 'directory_automation', 'seo_settings'],
       sync_interval_minutes: 5
     }
@@ -4657,7 +4662,7 @@ app.get('/api/db/status', requireAuth, (req, res) => {
 });
 
 app.get('/api/meta/status', requireAuth, (req, res) => {
-  const configuréd = !!(process.env.META_APP_ID || process.env.FACEBOOK_APP_ID) && !!(process.env.META_APP_SECRET || process.env.FACEBOOK_APP_SECRET);
+  const configured = !!(process.env.META_APP_ID || process.env.FACEBOOK_APP_ID) && !!(process.env.META_APP_SECRET || process.env.FACEBOOK_APP_SECRET);
   let connected = false, pages = 0, instagram = false, connected_at = null;
   try {
     const u = db.prepare('SELECT social_tokens FROM users WHERE id = ?').get(req.account.id);
@@ -4669,7 +4674,7 @@ app.get('/api/meta/status', requireAuth, (req, res) => {
       connected_at = st.meta_connected_at || null;
     }
   } catch (e) {}
-  res.json({ configuréd, connected, pages, instagram, connected_at, app_id_present: !!process.env.META_APP_ID, app_secret_present: !!process.env.META_APP_SECRET });
+  res.json({ configured, connected, pages, instagram, connected_at, app_id_present: !!process.env.META_APP_ID, app_secret_present: !!process.env.META_APP_SECRET });
 });
 
 // --- FACEBOOK / INSTAGRAM (Meta) OAuth 2.0 ---
@@ -4844,88 +4849,31 @@ app.get('/api/social/connections', requireAuth, (req, res) => {
 // WORDPRESS — Real REST API blog post publishing
 // ============================================================
 app.post('/api/wordpress/publish', async (req, res) => {
-  const { site_url, username, app_password, title, content, status, categories, tags, restaurant_id } = req.body;
+  const { site_url, username, app_password, title, content, status, restaurant_id } = req.body;
   if (!site_url || !username || !app_password) {
     return res.json({ success: false, error: 'WordPress credentials required (site_url, username, app_password)' });
   }
 
   try {
-    const wpUrl = site_url.replace(/\/$/, '');
-    const auth = Buffer.from(`${username}:${app_password}`).toString('basé64');
-
-    // Step 1: Find or create the hidden parent page "ressources-seo"
-    // Pages under this parent are:
-    // - NOT shown on homepage loop (WordPress pages never are)
-    // - NOT in RSS feed
-    // - NOT in "latest posts" widgets
-    // - BUT indexed by Google (included in sitemap.xml, robots meta = index,follow)
-    // - Accessible only via direct URL → no UX pollution for regular visitors
-    let parentId = 0;
-    try {
-      const findResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo&status=publish,private`, {
-        headers: { 'Authorization': `Basic ${auth}` }
-      });
-      const found = await findResp.json();
-      if (Array.isArray(found) && found.length > 0) {
-        parentId = found[0].id;
-      } else {
-        // Créate the hidden parent page
-        const parentResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
-          body: JSON.stringify({
-            title: 'Ressources SEO',
-            slug: 'ressources-seo',
-            content: '<!-- wp:paragraph --><p>Ressources et guides (indexés par les moteurs de recherche).</p><!-- /wp:paragraph -->',
-            status: 'publish',
-            menu_order: 999,
-            meta: { _wp_page_template: 'default' }
-          })
-        });
-        const pdata = await parentResp.json();
-        if (pdata.id) parentId = pdata.id;
-      }
-    } catch (e) { console.warn('Parent page setup:', e.message); }
-
-    // Step 2: Publish as a PAGE (not post) under the hidden parent
-    // Pages are indexed by Google but not displayed in the blog loop / homepage / RSS
-    const pageResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${auth}`
-      },
-      body: JSON.stringify({
-        title: title || 'Article SEO RestauRank',
-        content: content || '',
-        status: status || 'publish',
-        parent: parentId || 0,
-        menu_order: 999,
-        comment_status: 'closed',
-        ping_status: 'closed'
-      })
-    });
-
-    const data = await pageResp.json();
-    if (data.code) throw new Error(data.message || data.code);
+    // Shared with the agent auto-publish dispatcher (defined in AGENT API v2 section)
+    const pub = await publishToWordPressHidden({ site_url, username, app_password, title, content, status });
 
     // Save to history
     try {
-      db.exec(`CREATE TABLE IF NOT EXISTS generated_content (id INTEGER PRIMARY KEY AUTOINCREMENT, restaurant_id INTEGER, restaurant_name TEXT, type TEXT NOT NULL, title TEXT, content TEXT NOT NULL, published INTEGER DEFAULT 0, publish_url TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)`);
       db.prepare('INSERT INTO generated_content (restaurant_id, type, title, content, published, publish_url) VALUES (?, ?, ?, ?, 1, ?)')
-        .run(restaurant_id || 0, 'blog', title || 'Article', content || '', data.link || '');
+        .run(restaurant_id || 0, 'blog', title || 'Article', content || '', pub.url || '');
     } catch (e) {}
 
     res.json({
       success: true,
-      post_id: data.id,
-      url: data.link,
-      status: data.status,
+      post_id: pub.post_id,
+      url: pub.url,
+      status: pub.status,
       type: 'page',
-      parent_id: parentId,
+      parent_id: pub.parent_id,
       hidden_from_nav: true,
       note: 'Page publiée sous /ressources-seo/ — indexée par Google mais invisible dans la navigation du site',
-      edit_url: `${wpUrl}/wp-admin/post.php?post=${data.id}&action=edit`
+      edit_url: pub.edit_url
     });
   } catch (e) {
     console.error('WordPress publish error:', e.message);
@@ -4935,7 +4883,7 @@ app.post('/api/wordpress/publish', async (req, res) => {
 
 // ============================================================
 // UNIVERSAL BLOG PUBLISH — works on all CMS types
-// Routes the blog post to the right CMS API baséd on cms_type
+// Routes the blog post to the right CMS API based on cms_type
 // Publishes as "hidden but indexed" (not shown in nav, indexed by Google)
 // ============================================================
 app.post('/api/blog/publish', async (req, res) => {
@@ -4951,7 +4899,7 @@ app.post('/api/blog/publish', async (req, res) => {
       const { site_url, username, app_password } = credentials || {};
       if (!site_url || !username || !app_password) throw new Error('WordPress: site_url, username, app_password requis');
       const wpUrl = site_url.replace(/\/$/, '');
-      const auth = Buffer.from(`${username}:${app_password}`).toString('basé64');
+      const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
       // Find or create hidden parent page
       let parentId = 0;
       try {
@@ -4997,7 +4945,7 @@ app.post('/api/blog/publish', async (req, res) => {
         } catch(e) {}
       }
       if (!targetCollection) throw new Error('Webflow: créez manuellement une collection "seo-resources" ou "blog" dans Webflow Designer, puis retournez ici');
-      // Créate item in collection — live:false = draft = not visible on public site
+      // Create item in collection — live:false = draft = not visible on public site
       const ir = await fetch(`https://api.webflow.com/v2/collections/${targetCollection}/items`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json', 'accept-version': '2.0.0' },
@@ -5042,7 +4990,7 @@ app.post('/api/blog/publish', async (req, res) => {
         blogId = nb.blog?.id;
       }
       if (!blogId) throw new Error('Shopify: impossible de créer le blog');
-      // Créate article
+      // Create article
       const art = await api(`blogs/${blogId}/articles.json`, 'POST', {
         article: { title, body_html: content, published: true, author: 'SEO', tags: 'seo,ressources' }
       });
@@ -5084,7 +5032,7 @@ app.post('/api/blog/publish', async (req, res) => {
       if (pub.message && !pub.post) throw new Error('Wix publish: ' + pub.message);
       result.success = true;
       result.post_id = pub.post?.id || draftId;
-      result.url = pub.post?.url?.basé && pub.post?.url?.path ? (pub.post.url.basé + pub.post.url.path) : `https://manage.wix.com/dashboard/${site_id}/blog/posts/${result.post_id}`;
+      result.url = pub.post?.url?.base && pub.post?.url?.path ? (pub.post.url.basé + pub.post.url.path) : `https://manage.wix.com/dashboard/${site_id}/blog/posts/${result.post_id}`;
       result.method = 'wix_blog_published';
     }
 
@@ -5210,7 +5158,7 @@ app.post('/api/cms/snapshots/:id/revert', async (req, res) => {
       const { site_url, username, app_password } = creds;
       if (!site_url || !username || !app_password) throw new Error('Credentials WordPress manquants');
       const wpUrl = site_url.replace(/\/$/, '');
-      const auth = Buffer.from(`${username}:${app_password}`).toString('basé64');
+      const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
       // Try pages first (blog publish uses pages), then posts as fallback
       let ok = false;
       for (const endpoint of ['pages', 'posts']) {
@@ -5363,7 +5311,7 @@ app.post('/api/auto-publish', async (req, res) => {
     contentMap[type] = await generateContent(type);
   }));
 
-  // 2. Auto-publish blog to WordPress if configuréd
+  // 2. Auto-publish blog to WordPress if configured
   if (contentMap.blog && wordpress?.site_url) {
     try {
       // Extract title from blog HTML (first h1)
@@ -5393,7 +5341,7 @@ app.post('/api/auto-publish', async (req, res) => {
     }
   }
 
-  // 3. Auto-publish Reddit posts if configuréd
+  // 3. Auto-publish Reddit posts if configured
   if (contentMap.reddit && process.env.REDDIT_CLIENT_ID) {
     const redditPosts = contentMap.reddit.split('---SEPARATOR---').filter(p => p.trim());
     const targetSubs = subreddits || ['paris', 'france', 'food'];
@@ -5489,7 +5437,7 @@ app.get('/api/keys', (req, res) => {
     const keys = db.prepare('SELECT service, created_at FROM api_keys WHERE user_id = ?').all(userId);
     // Return service names only, not actual keys (security)
     const services = {};
-    keys.forEach(k => { services[k.service] = { configuréd: true, since: k.created_at }; });
+    keys.forEach(k => { services[k.service] = { configured: true, since: k.created_at }; });
     res.json({ success: true, services });
   } catch (e) { res.json({ success: false, error: e.message }); }
 });
@@ -5528,18 +5476,18 @@ try {
   if (savedKeys.length > 0) console.log(`Loaded ${savedKeys.length} API keys from DB`);
 } catch (e) {}
 
-// Check which services are configuréd
+// Check which services are configured
 app.get('/api/services/status', (req, res) => {
   res.json({
     success: true,
     services: {
-      openai: { configuréd: !!process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' },
-      anthropic: { configuréd: !!process.env.ANTHROPIC_API_KEY },
-      reddit: { configuréd: !!(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_USERNAME) },
-      moz: { configuréd: !!(process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) },
-      google_places: { configuréd: !!process.env.GOOGLE_PLACES_API_KEY },
-      google_oauth: { configuréd: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) },
-      gsc: { configuréd: !!(process.env.GOOGLE_CLIENT_ID) } // same OAuth, just needs webmasters scope
+      openai: { configured: !!process.env.OPENAI_API_KEY, model: process.env.OPENAI_MODEL || 'gpt-4o-mini' },
+      anthropic: { configured: !!process.env.ANTHROPIC_API_KEY },
+      reddit: { configured: !!(process.env.REDDIT_CLIENT_ID && process.env.REDDIT_USERNAME) },
+      moz: { configured: !!(process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) },
+      google_places: { configured: !!process.env.GOOGLE_PLACES_API_KEY },
+      google_oauth: { configured: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) },
+      gsc: { configured: !!(process.env.GOOGLE_CLIENT_ID) } // same OAuth, just needs webmasters scope
     }
   });
 });
@@ -5849,7 +5797,7 @@ app.post('/api/cms/wordpress/auto-setup', async (req, res) => {
   }
 
   const baseUrl = site_url.replace(/\/$/, '');
-  const authHeader = 'Basic ' + Buffer.from(`${username}:${app_password}`).toString('basé64');
+  const authHeader = 'Basic ' + Buffer.from(`${username}:${app_password}`).toString('base64');
   const results = { steps: [], errors: [] };
 
   // Helper: WordPress REST API call via fetch
@@ -6006,7 +5954,7 @@ app.post('/api/cms/wordpress/auto-setup', async (req, res) => {
     }
   } catch (e) { results.errors.push('Schema/meta: ' + e.message); }
 
-  // 4c. Créate FAQ page
+  // 4c. Create FAQ page
   try {
     const faqCheck = await wpAPI('pages?slug=faq&per_page=1');
     const faqQuestions = aiContent?.faq || [
@@ -6037,7 +5985,7 @@ app.post('/api/cms/wordpress/auto-setup', async (req, res) => {
     }
   } catch (e) { results.errors.push('FAQ: ' + e.message); }
 
-  // 4d. Créate/update Contact page with NAP
+  // 4d. Create/update Contact page with NAP
   try {
     const hubData = db.prepare(`SELECT data FROM restaurant_settings WHERE restaurant_id = ? AND type = 'hub_data'`).get(restaurant_id || 0);
     const hub = hubData ? JSON.parse(hubData.data) : {};
@@ -6069,7 +6017,7 @@ ${hub.website ? `<!-- wp:paragraph -->\n<p>🌐 <a href="${hub.website}">${hub.w
 
   res.json({
     success: true,
-    steps_complèted: results.steps,
+    steps_completed: results.steps,
     errors: results.errors,
     wp_user: results.wp_user,
     connect_code: results.connect_code,
@@ -6108,7 +6056,7 @@ app.post('/api/cms/auto-inject', requireAuth, async (req, res) => {
       // WordPress: inject via REST API into theme (functions.php equivalent)
       if (credentials?.username && credentials?.app_password) {
         const baseUrl = site_url.replace(/\/$/, '');
-        const authHeader = 'Basic ' + Buffer.from(`${credentials.username}:${credentials.app_password}`).toString('basé64');
+        const authHeader = 'Basic ' + Buffer.from(`${credentials.username}:${credentials.app_password}`).toString('base64');
         try {
           // Try to add snippet as inline script via WP REST API custom endpoint
           // Or add it via wp_head by using the plugin
@@ -6261,7 +6209,7 @@ app.post('/api/cms/wordpress/apply', requirePlan('starter'), async (req, res) =>
   const { site_url, username, app_password, improvements } = req.body;
   try {
     const results = [];
-    const authHeader = 'Basic ' + Buffer.from(`${username}:${app_password}`).toString('basé64');
+    const authHeader = 'Basic ' + Buffer.from(`${username}:${app_password}`).toString('base64');
     const baseUrl = site_url.replace(/\/$/, '');
 
     // Helper: WordPress REST API call
@@ -6317,7 +6265,7 @@ app.post('/api/cms/wordpress/apply', requirePlan('starter'), async (req, res) =>
 
     if (improvements.faq_page) {
       try {
-        // Créate a FAQ page
+        // Create a FAQ page
         await wpRequest('pages', 'POST', {
           title: 'Questions fréquentes',
           content: improvements.faq_page,
@@ -6406,7 +6354,7 @@ app.post('/api/cms/squarespace/apply', requirePlan('starter'), async (req, res) 
       results.push({ item: 'seo_tags', status: 'ready', detail: 'Squarespace → Pages → Accueil → ⚙️ → SEO', value: { title: improvements.meta_title, description: improvements.meta_description } });
     }
     if (improvements.faq_page) {
-      // Créate a blog post as FAQ page via Squarespace API
+      // Create a blog post as FAQ page via Squarespace API
       try {
         const resp = await fetch('https://api.squarespace.com/1.0/commerce/pages', {
           headers: { 'Authorization': `Bearer ${sqKey}`, 'Content-Type': 'application/json' }
@@ -6461,7 +6409,7 @@ app.post('/api/cms/shopify/apply', requirePlan('starter'), async (req, res) => {
         results.push({ item: 'meta_tags', status: 'success', detail: 'Meta tags mis à jour via Shopify Admin API' });
       } catch (e) { results.push({ item: 'meta_tags', status: 'error', detail: e.message }); }
     }
-    // Créate FAQ page
+    // Create FAQ page
     if (improvements.faq_page) {
       try {
         await shopApi('pages.json', 'POST', { page: { title: 'FAQ - Questions fréquentes', body_html: improvements.faq_page, published: true } });
@@ -6755,9 +6703,9 @@ app.post('/api/platform/auto-connect', async (req, res) => {
       await browser.close();
       res.json({ success: true, platform, status: 'connected', detail: `Connecté à ${platform} en tant que ${email}`, session_cookies: sessionCookies.length });
     } else {
-      const scréénshot = await page.scréénshot({ encoding: 'basé64', type: 'jpeg', quality: 50 });
+      const screenshot = await page.screenshot({ encoding: 'base64', type: 'jpeg', quality: 50 });
       await browser.close();
-      res.json({ success: false, platform, status: 'login_failed', detail: 'Identifiants incorrects ou 2FA requis', scréénshot: `data:image/jpeg;basé64,${scréénshot}` });
+      res.json({ success: false, platform, status: 'login_failed', detail: 'Identifiants incorrects ou 2FA requis', screenshot: `data:image/jpeg;base64,${screenshot}` });
     }
   } catch(e) {
     if (browser) try { await browser.close(); } catch {}
@@ -6858,7 +6806,7 @@ async function checkPlatformListing(platform, name, city) {
   };
 
   try {
-    // ── API-baséd checks (preferred — stable, structured data) ──
+    // ── API-based checks (preferred — stable, structured data) ──
     if (platform === 'tripadvisor' && process.env.TRIPADVISOR_API_KEY) {
       const resp = await fetch(`https://api.content.tripadvisor.com/api/v1/location/search?searchQuery=${encodeURIComponent(name+' '+city)}&language=fr&key=${process.env.TRIPADVISOR_API_KEY}&address=${encodeURIComponent(cityClean)}`, { signal: AbortSignal.timeout(10000) });
       if (resp.ok) {
@@ -7261,10 +7209,10 @@ app.post('/api/directories/auto-do', async (req, res) => {
       const finalUrl = lastStep.url || '';
       try {
         db.prepare(`INSERT OR REPLACE INTO directory_automation (restaurant_id, platform, status, claim_url, automation_log, updated_at) VALUES (?, ?, ?, ?, ?, datetime('now'))`)
-          .run(restaurant_id || 0, platform, needsManual ? 'needs_vérification' : 'automated', finalUrl, JSON.stringify({ steps }));
+          .run(restaurant_id || 0, platform, needsManual ? 'needs_verification' : 'automated', finalUrl, JSON.stringify({ steps }));
       } catch (e) {}
       await browser.close();
-      return res.json({ success: true, platform, status: needsManual ? 'needs_vérification' : 'automated', steps: steps.map(s => ({ step: s.step, scréénshot: s.scréénshot || null, url: s.url || '', needsManual: s.needsManual || false, detail: s.detail || '' })), finalUrl, message: needsManual ? `${platform}: vérification humaine requise` : `${platform}: automatisation terminée` });
+      return res.json({ success: true, platform, status: needsManual ? 'needs_verification' : 'automated', steps: steps.map(s => ({ step: s.step, screenshot: s.screenshot || null, url: s.url || '', needsManual: s.needsManual || false, detail: s.detail || '' })), finalUrl, message: needsManual ? `${platform}: vérification humaine requise` : `${platform}: automatisation terminée` });
     } catch (err) {
       if (browser) await browser.close().catch(() => {});
       // Fall through to guided mode below
@@ -7297,7 +7245,7 @@ app.post('/api/directories/auto-do', async (req, res) => {
 
   const cfg = CLAIM_CONFIGS[platform] || { url: `https://www.google.com/search?q=${q}+${platform}`, steps: [`Rechercher "${name}" sur ${platform}`, 'Créer ou réclamer votre fiche', 'Vérifier par téléphone ou email'] };
   const found = checkResult?.found || false;
-  const status = found ? 'needs_vérification' : 'needs_vérification';
+  const status = found ? 'needs_verification' : 'needs_verification';
 
   const steps = cfg.steps.map((s, i) => ({
     step: `${i + 1}. ${s}`,
@@ -7317,7 +7265,7 @@ app.post('/api/directories/auto-do', async (req, res) => {
   res.json({
     success: true,
     platform,
-    status: 'needs_vérification',
+    status: 'needs_verification',
     steps,
     finalUrl: cfg.url,
     found,
@@ -7344,12 +7292,12 @@ app.post('/api/directories/auto-do-all', async (req, res) => {
       try { checkResult = await checkPlatformListing(platform, name, city || 'Paris'); } catch (e) {}
       results.push({
         platform,
-        status: 'needs_vérification',
+        status: 'needs_verification',
         found: checkResult?.found || false,
         message: checkResult?.found ? 'Fiche trouvée — à réclamer' : 'Instructions prêtes'
       });
     } catch (err) {
-      results.push({ platform, status: 'needs_vérification', message: 'Instructions prêtes' });
+      results.push({ platform, status: 'needs_verification', message: 'Instructions prêtes' });
     }
     // Small delay between checks
     await new Promise(r => setTimeout(r, 500 + Math.random() * 1000));
@@ -7358,7 +7306,7 @@ app.post('/api/directories/auto-do-all', async (req, res) => {
   res.json({ success: true, results, summary: {
     total: results.length,
     automated: results.filter(r => r.status === 'automated').length,
-    needsVérification: results.filter(r => r.status === 'needs_vérification').length,
+    needsVerification: results.filter(r => r.status === 'needs_verification').length,
     errors: results.filter(r => r.status === 'error').length
   }});
 });
@@ -7820,7 +7768,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
           }
         }
 
-        // Strategy 4: CSS background-image in header/nav/brand classes (for div-baséd logos)
+        // Strategy 4: CSS background-image in header/nav/brand classes (for div-based logos)
         if (!result.branding.logo) {
           const cssLogoMatch = siteHtml.match(/\.(?:header|nav|brand|logo)[^{]*\{[^}]*background(?:-image)?\s*:\s*url\(["']?([^"')]+)["']?\)/i);
           if (cssLogoMatch) {
@@ -8059,7 +8007,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
         // ═══════════════════════════════════════════
         try {
           if (process.env.MOZ_ACCESS_ID && process.env.MOZ_SECRET_KEY) {
-            const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('basé64');
+            const mozAuth = Buffer.from(`${process.env.MOZ_ACCESS_ID}:${process.env.MOZ_SECRET_KEY}`).toString('base64');
             const mozResp = await fetch('https://lsapi.seomoz.com/v2/url_metrics', {
               method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${mozAuth}` },
               body: JSON.stringify({ targets: [normalized] }), signal: AbortSignal.timeout(8000)
@@ -8288,7 +8236,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
     // Fallback category
     if (!result.category) result.category = 'Restaurant';
 
-    // If no Places key configuréd, mark source
+    // If no Places key configured, mark source
     if (!placesKey) result.source = 'website_scrape_only';
 
     logAction(0, 'scrape_gmb', 'hub', 'system', 'success', { name, city, source: result.source }, { photosFound: result.photos.length, hasPhone: !!result.phone, hasAddress: !!result.address, hasRating: !!result.rating });
@@ -8300,7 +8248,7 @@ app.post('/api/scrape-gmb', async (req, res) => {
 });
 
 // ============================================================
-// REVIEW SEMANTIC ANALYSIS — Extract reçurring terms from reviews
+// REVIEW SEMANTIC ANALYSIS — Extract recurring terms from reviews
 // ============================================================
 app.post('/api/analyze-reviews', async (req, res) => {
   const { name, city, place_id } = req.body;
@@ -8783,7 +8731,7 @@ app.get('/api/scans/today/:user_id', (req, res) => {
 
 app.post('/api/scans/record', (req, res) => {
   const { user_id, restaurant_id } = req.body;
-  db.prepare("INSERT INTO action_log (restaurant_id, action_type, status) VALUES (?, 'scan', 'complèted')").run(restaurant_id || 0);
+  db.prepare("INSERT INTO action_log (restaurant_id, action_type, status) VALUES (?, 'scan', 'completed')").run(restaurant_id || 0);
   res.json({ success: true });
 });
 
@@ -8791,7 +8739,7 @@ app.post('/api/scans/record', (req, res) => {
 // RESTAURANT FULL SAVE — Save complète restaurant state
 // ============================================================
 app.post('/api/restaurants/full-save', (req, res) => {
-  const { user_id, name, city, google_place_id, audit_data, scores, complèted_actions, platform_status, hub_data, selected_module } = req.body;
+  const { user_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, hub_data, selected_module } = req.body;
 
   // Resolve owner_id from auth session (token is stored as sessions.id, NOT sessions.token)
   let ownerId = null;
@@ -8828,20 +8776,20 @@ app.post('/api/restaurants/full-save', (req, res) => {
     const ownerUpdate = ownerId ? ', owner_id = ?' : '';
     const params = [
       JSON.stringify(audit_data), JSON.stringify(scores),
-      JSON.stringify(complèted_actions || {}), JSON.stringify(platform_status || {})
+      JSON.stringify(completed_actions || {}), JSON.stringify(platform_status || {})
     ];
     if (ownerId) params.push(ownerId);
     params.push(restaurant.id);
     db.prepare(`UPDATE restaurants SET
-      audit_data = ?, scores = ?, complèted_actions = ?, platform_status = ?, last_audit = datetime('now')${ownerUpdate}
+      audit_data = ?, scores = ?, completed_actions = ?, platform_status = ?, last_audit = datetime('now')${ownerUpdate}
       WHERE id = ?`).run(...params);
   } else {
     // Insert new with owner_id
-    const result = db.prepare(`INSERT INTO restaurants (user_id, owner_id, name, city, google_place_id, audit_data, scores, complèted_actions, platform_status, last_audit)
+    const result = db.prepare(`INSERT INTO restaurants (user_id, owner_id, name, city, google_place_id, audit_data, scores, completed_actions, platform_status, last_audit)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`).run(
       user_id || 0, ownerId, name, city, google_place_id || null,
       JSON.stringify(audit_data), JSON.stringify(scores),
-      JSON.stringify(complèted_actions || {}), JSON.stringify(platform_status || {})
+      JSON.stringify(completed_actions || {}), JSON.stringify(platform_status || {})
     );
     restaurant = { id: result.lastInsertRowid };
   }
@@ -8893,7 +8841,7 @@ app.get('/api/restaurants/full/:user_id', (req, res) => {
       google_place_id: r.google_place_id,
       audit_data: r.audit_data ? JSON.parse(r.audit_data) : null,
       scores: r.scores ? JSON.parse(r.scores) : null,
-      complèted_actions: JSON.parse(r.complèted_actions || '{}'),
+      completed_actions: JSON.parse(r.completed_actions || '{}'),
       platform_status: JSON.parse(r.platform_status || '{}'),
       hub_data: hubRow ? JSON.parse(hubRow.data) : null,
       last_audit: r.last_audit,
@@ -9963,7 +9911,7 @@ app.post('/api/directories/foursquare/search', async (req, res) => {
   }
 });
 
-// POST /api/directories/pagesjaunes/search — PagesJaunes (scraping baséd)
+// POST /api/directories/pagesjaunes/search — PagesJaunes (scraping based)
 app.post('/api/directories/pagesjaunes/search', async (req, res) => {
   try {
     const { name, city } = req.body;
@@ -10065,7 +10013,7 @@ app.post('/api/directories/petitfute/search', async (req, res) => {
         'Petit Futé — soumission de fiche en ligne',
         '1. Vérifiez si vous existez : petitfute.com → recherche',
         '2. Si pas trouvé : inscrivez-vous sur petitfute.com/pros/',
-        '3. Fiche gratuite de basé, options payantes pour plus de visibilité',
+        '3. Fiche gratuite de base, options payantes pour plus de visibilité',
         '4. Ajoutez photos, description détaillée, coordonnées',
         '📖 Petit Futé est un guide touristique bien référencé sur Google'
       ]
@@ -10261,12 +10209,12 @@ app.post('/api/onboard', requireAuth, async (req, res) => {
     directories: {},
     ai_content: null,
     pagespeed: null,
-    steps_complèted: [],
+    steps_completed: [],
     steps_failed: []
   };
 
   function step(name, status) {
-    if (status === 'ok') results.steps_complèted.push(name);
+    if (status === 'ok') results.steps_completed.push(name);
     else results.steps_failed.push({ name, error: status });
   }
 
@@ -10411,12 +10359,12 @@ IMPORTANT: Réponds UNIQUEMENT en JSON valide, sans markdown.`;
   // ── STEP 7: Log everything ──
   const duration = Date.now() - startTime;
   logAction(restaurantId, 'onboard', 'full', 'system', 'success', req.body, {
-    steps_ok: results.steps_complèted.length,
+    steps_ok: results.steps_completed.length,
     steps_fail: results.steps_failed.length,
     duration_ms: duration
   });
 
-  console.log(`🎯 Onboard "${name}" (${city}) — ${results.steps_complèted.length} OK, ${results.steps_failed.length} failed — ${duration}ms`);
+  console.log(`🎯 Onboard "${name}" (${city}) — ${results.steps_completed.length} OK, ${results.steps_failed.length} failed — ${duration}ms`);
 
   res.json({
     success: true,
@@ -10851,7 +10799,7 @@ async function generateBlogArticle(topicOverride) {
   // Ping IndexNow for new article
   pingIndexNow([`${SITE_URL}/blog/${slug}`, `${SITE_URL}/blog`, `${SITE_URL}/sitemap.xml`]).catch(() => {});
 
-  // Ping Google Search Console indexing API if configuréd
+  // Ping Google Search Console indexing API if configured
   if (process.env.GOOGLE_INDEXING_API_KEY) {
     try {
       await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
@@ -11286,7 +11234,7 @@ const BLOG_ARTICLES = [
         <li><strong>LocalBusiness</strong> — type generique, moins efficace pour les rich snippets culinaires mais acceptable en fallback.</li>
       </ul>
 
-      <h2>Les propriêtes essentielles</h2>
+      <h2>Les propriétés essentielles</h2>
       <ol>
         <li><strong>name</strong> — nom exact de votre restaurant (identique au NAP)</li>
         <li><strong>address</strong> — objet PostalAddress avec streetAddress, addressLocality, postalCode, addressCountry</li>
@@ -11658,7 +11606,7 @@ app.get('/comparatif', (req, res) => {
 
   <h2 style="font-family:'Playfair Display',serif;font-size:1.4rem;color:#031c33;margin:40px 0 16px;">Pourquoi RestauRank est fait pour les restaurateurs</h2>
   <p style="color:#585254;line-height:1.7;margin-bottom:12px;">Les agences SEO generalistes excellent sur les sites e-commerce et les grandes marques, mais le SEO local d'un restaurant a ses propres regles : Google Business Profile, citations NAP, avis clients, visibilité IA. RestauRank a ete concu specifiquement pour ces enjeux.</p>
-  <p style="color:#585254;line-height:1.7;margin-bottom:12px;">L'audit manuel permet de comprendre les basés, mais il ne couvre qu'une fraction des 49 critères analysés par RestauRank, ne mesure pas le score GEO, et demande un renouvellement constant. Dans un secteur ou la competition locale est intense, la reactivité fait la difference.</p>
+  <p style="color:#585254;line-height:1.7;margin-bottom:12px;">L'audit manuel permet de comprendre les bases, mais il ne couvre qu'une fraction des 49 critères analysés par RestauRank, ne mesure pas le score GEO, et demande un renouvellement constant. Dans un secteur ou la competition locale est intense, la reactivité fait la difference.</p>
   <p style="color:#585254;line-height:1.7;margin-bottom:32px;">RestauRank combine la profondeur d'une agence avec la rapidite d'un outil SaaS — et le tout reste accessible meme pour un restaurateur sans compètences techniques.</p>
 
   <div style="padding:32px;background:#031c33;border-radius:12px;text-align:center;">
@@ -11966,7 +11914,7 @@ app.get('/api/public/info', (req, res) => {
     ],
     tech: {
       backend: "Node.js/Express",
-      databasé: "SQLite + PostgreSQL",
+      database: "SQLite + PostgreSQL",
       ai: "Claude by Anthropic",
       hosting: "Render"
     },
@@ -12016,7 +11964,7 @@ db.exec(`
     items_manual INTEGER DEFAULT 0,
     error_message TEXT,
     started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    complèted_at DATETIME
+    completed_at DATETIME
   );
   CREATE TABLE IF NOT EXISTS agent_run_items (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -12193,7 +12141,7 @@ async function agentScrape(runId, name, city, websiteUrl) {
 
   db.prepare('UPDATE agent_runs SET scrape_results = ?, stage = ? WHERE id = ?')
     .run(JSON.stringify(results), 'scrape_done', runId);
-  agentEmit(runId, { type: 'stage_complèted', stage: 'scrape', progress: 35 });
+  agentEmit(runId, { type: 'stage_completed', stage: 'scrape', progress: 35 });
   return results;
 }
 
@@ -12261,7 +12209,7 @@ async function agentAnalyze(runId, apiKey, scrapeResults, name, city) {
   db.prepare('UPDATE agent_runs SET analysis = ?, stage = ?, total_items = ?, items_manual = ? WHERE id = ?')
     .run(JSON.stringify(analysis), 'analyze_done', analysis.items.length, totalIssues, runId);
 
-  agentEmit(runId, { type: 'stage_complèted', stage: 'analyze', summary: analysis.summary, progress: 50 });
+  agentEmit(runId, { type: 'stage_completed', stage: 'analyze', summary: analysis.summary, progress: 50 });
   return analysis;
 }
 
@@ -12710,7 +12658,7 @@ async function agentGenerate(runId, apiKey, analysis, scrapeResults, name, city)
   db.prepare('UPDATE agent_runs SET generated_content = ?, stage = ?, items_fixed = ? WHERE id = ?')
     .run(JSON.stringify(generated), 'generate_done', fixable, runId);
 
-  agentEmit(runId, { type: 'stage_complèted', stage: 'generate', items_generated: fixable, progress: 75 });
+  agentEmit(runId, { type: 'stage_completed', stage: 'generate', items_generated: fixable, progress: 75 });
   return generated;
 }
 
@@ -12923,7 +12871,7 @@ async function agentApply(runId, apiKey, generated, scrapeResults, name, city) {
   db.prepare('UPDATE agent_runs SET apply_results = ?, stage = ? WHERE id = ?')
     .run(JSON.stringify(applied), 'apply_done', runId);
 
-  agentEmit(runId, { type: 'stage_complèted', stage: 'apply', results: { attempted: applied._stats.attempted, success: applied._stats.success, pending: applied._stats.pending }, progress: 90 });
+  agentEmit(runId, { type: 'stage_completed', stage: 'apply', results: { attempted: applied._stats.attempted, success: applied._stats.success, pending: applied._stats.pending }, progress: 90 });
   return applied;
 }
 
@@ -12995,11 +12943,11 @@ async function agentReport(runId, apiKey, analysis, generated, applied, scrapeRe
       .run(null, 'agent_report', JSON.stringify({ run_id: runId, scores: report.scores, issues: report.issues_found, auto: report.auto_generated }));
   } catch(e) {}
 
-  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, complèted_at = CURRENT_TIMESTAMP WHERE id = ?')
+  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
     .run('report_done', 'report_done', runId);
 
   agentEmit(runId, { type: 'step', message: `📊 Rapport: SEO ${report.scores.seo_score}/100, GEO ${report.scores.geo_score}/100, ${report.issues_found} problèmes, ${report.auto_generated} corrections prêtes`, progress: 93 });
-  agentEmit(runId, { type: 'stage_complèted', stage: 'report', report, progress: 93 });
+  agentEmit(runId, { type: 'stage_completed', stage: 'report', report, progress: 93 });
   return report;
 }
 
@@ -13059,7 +13007,7 @@ async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeRe
     vérification.checks.push({ field: 'Directories', pending_claims: claimedDirs.length, note: 'Les revendications d\'annuaires prennent 24-72h pour être traitées' });
   }
 
-  // 6c. Score adjustment baséd on vérification
+  // 6c. Score adjustment based on vérification
   const finalScores = {
     seo: Math.max(0, Math.min(100, (analysis.summary?.seo_score || 0) + vérification.score_delta.seo)),
     geo: Math.max(0, Math.min(100, (analysis.summary?.geo_score || 0) + vérification.score_delta.geo))
@@ -13078,10 +13026,10 @@ async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeRe
   };
 
   // Update run with final status
-  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, complèted_at = CURRENT_TIMESTAMP WHERE id = ?')
-    .run('complèted', 'done', runId);
+  db.prepare('UPDATE agent_runs SET status = ?, stage = ?, completed_at = CURRENT_TIMESTAMP WHERE id = ?')
+    .run('completed', 'done', runId);
 
-  // Fetch the full report from DB for the run_complèted event
+  // Fetch the full report from DB for the run_completed event
   let fullReport = {};
   try {
     const runRow = db.prepare('SELECT * FROM agent_runs WHERE id = ?').get(runId);
@@ -13112,7 +13060,7 @@ async function agentVerify(runId, apiKey, analysis, generated, applied, scrapeRe
   } catch(e) { console.error('Report build error:', e.message); }
 
   agentEmit(runId, { type: 'step', message: `🏁 Terminé — SEO ${finalScores.seo}/100, GEO ${finalScores.geo}/100`, progress: 100 });
-  agentEmit(runId, { type: 'run_complèted', report: fullReport, vérification, final_scores: finalScores, progress: 100 });
+  agentEmit(runId, { type: 'run_completed', report: fullReport, vérification, final_scores: finalScores, progress: 100 });
   return vérification;
 }
 
@@ -13124,7 +13072,7 @@ app.post('/api/agent/launch', async (req, res) => {
   // API key is OPTIONAL — deterministic engine works without it
   const apiKey = getAIKey();
 
-  // Créate run
+  // Create run
   const result = db.prepare('INSERT INTO agent_runs (restaurant_name, city, website_url, restaurant_id, status, stage) VALUES (?, ?, ?, ?, ?, ?)')
     .run(restaurant_name, city, website_url || null, restaurant_id || null, 'running', 'init');
   const runId = result.lastInsertRowid;
@@ -13997,14 +13945,14 @@ app.post('/api/real-audit', async (req, res) => {
 
     // Source flags
     _pendingGBP: true, // Full GBP API (posts, Q&A, attributes) not available yet
-    _pendingAI: !audit.aiVisibility?.available, // false if AI check complèted
+    _pendingAI: !audit.aiVisibility?.available, // false if AI check completed
     _realAuditComplete: true
   };
 
   audit.scores = realData;
   audit.duration = Date.now() - startTime;
 
-  console.log(`✅ Real audit complèted for "${name}" in ${audit.duration}ms — Sources: ${Object.entries(audit.sources).filter(([k,v]) => v === 'ok').map(([k]) => k).join(', ') || 'none'}`);
+  console.log(`✅ Real audit completed for "${name}" in ${audit.duration}ms — Sources: ${Object.entries(audit.sources).filter(([k,v]) => v === 'ok').map(([k]) => k).join(', ') || 'none'}`);
 
   res.json({ success: true, audit: realData, sources: audit.sources, duration: audit.duration, details: { google: g, website: w, performance: perf, tripadvisor: ta, foursquare: fsq, yelp: ylp, aiVisibility: audit.aiVisibility || { available: false } } });
 });
@@ -14032,7 +13980,7 @@ function _computeNapConsistency(g, w, fsq, ylp, ta) {
   return checks > 0 ? Math.round(score / checks) : null;
 }
 
-// Helper: compute listing complèteness
+// Helper: compute listing completeness
 function _computeListingCompleteness(g, ta, ylp, fsq) {
   const platforms = [
     { available: g.available, hasPhone: !!g.phone, hasAddress: !!g.address, hasPhotos: g.photoCount > 0, hasDesc: g.descriptionLength > 0 },
@@ -14826,7 +14774,7 @@ app.post('/api/reports/preview', async (req, res) => {
       data_source: prev ? 'historical_comparison' : 'first_report'
     };
 
-    // Real actions baséd on audit data
+    // Real actions based on audit data
     if (seo_score < 50) report.actions.push({ priority: 'high', text: 'Corriger les points critiques SEO (score < 50)', status: 'pending' });
     if (geo_score < 20) report.actions.push({ priority: 'high', text: 'Améliorer la visibilité IA (GEO < 20)', status: 'pending' });
     if (rating < 4.0) report.actions.push({ priority: 'medium', text: 'Améliorer la note Google (actuellement ' + rating + ')', status: 'pending' });
@@ -15413,3 +15361,423 @@ app.listen(PORT, '0.0.0.0', async () => {
 ╚══════════════════════════════════════════════════════╝
   `);
 });
+
+// ============================================================
+// AGENT API v2 — endpoints for Claude Code agents ("Hermès" pattern)
+// Auth: X-Agent-Token header (AGENT_TOKEN env var).
+// The server makes NO LLM calls: agents (Claude Code on the VPS, covered
+// by Claude Max) read state here, generate content natively, push it back;
+// the server stores, publishes through wired channels, tracks performance.
+// ============================================================
+
+function agentAuth(req, res, next) {
+  const token = req.headers['x-agent-token'];
+  if (!process.env.AGENT_TOKEN) return res.status(503).json({ error: 'AGENT_TOKEN non configuré côté serveur' });
+  if (!token || token !== process.env.AGENT_TOKEN) return res.status(401).json({ error: 'X-Agent-Token invalide' });
+  next();
+}
+
+// Reads allowed for agents or logged-in admins (backoffice UI reuses these endpoints)
+function agentOrAdmin(req, res, next) {
+  const token = req.headers['x-agent-token'];
+  if (token && process.env.AGENT_TOKEN && token === process.env.AGENT_TOKEN) return next();
+  return authMiddleware(req, res, () => {
+    if (!req.account || req.account.role !== 'admin') return res.status(401).json({ error: 'X-Agent-Token ou session admin requis' });
+    next();
+  });
+}
+
+// WordPress "hidden but indexed" publication: a page under /ressources-seo/,
+// in the sitemap and indexable, but absent from nav/RSS/homepage loops.
+async function publishToWordPressHidden({ site_url, username, app_password, title, content, status }) {
+  const wpUrl = site_url.replace(/\/$/, '');
+  const auth = Buffer.from(`${username}:${app_password}`).toString('base64');
+
+  let parentId = 0;
+  try {
+    const findResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages?slug=ressources-seo&status=publish,private`, {
+      headers: { 'Authorization': `Basic ${auth}` },
+      signal: AbortSignal.timeout(15000)
+    });
+    const found = await findResp.json();
+    if (Array.isArray(found) && found.length > 0) {
+      parentId = found[0].id;
+    } else {
+      const parentResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+        signal: AbortSignal.timeout(15000),
+        body: JSON.stringify({
+          title: 'Ressources SEO',
+          slug: 'ressources-seo',
+          content: '<!-- wp:paragraph --><p>Ressources et guides (indexés par les moteurs de recherche).</p><!-- /wp:paragraph -->',
+          status: 'publish',
+          menu_order: 999,
+          meta: { _wp_page_template: 'default' }
+        })
+      });
+      const pdata = await parentResp.json();
+      if (pdata.id) parentId = pdata.id;
+    }
+  } catch (e) { console.warn('Parent page setup:', e.message); }
+
+  const pageResp = await fetch(`${wpUrl}/wp-json/wp/v2/pages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': `Basic ${auth}` },
+    signal: AbortSignal.timeout(15000),
+    body: JSON.stringify({
+      title: title || 'Article SEO RestauRank',
+      content: content || '',
+      status: status || 'publish',
+      parent: parentId || 0,
+      menu_order: 999,
+      comment_status: 'closed',
+      ping_status: 'closed'
+    })
+  });
+
+  const data = await pageResp.json();
+  if (data.code) throw new Error(data.message || data.code);
+
+  return {
+    success: true,
+    post_id: data.id,
+    url: data.link,
+    status: data.status,
+    parent_id: parentId,
+    edit_url: `${wpUrl}/wp-admin/post.php?post=${data.id}&action=edit`
+  };
+}
+
+// Routes pushed content to whatever publication channel is wired for the
+// restaurant. Publication mode is full-auto (decision James 2026-06-10);
+// channels missing access (no CMS, no Reddit account, GBP pending) degrade
+// to stored_only with an explicit reason the agent can report.
+async function autoPublishContent({ contentId, restaurantId, type, title, content, metadata }) {
+  try {
+    // Garde-fou [CODE] : en mode draft (phase de test), RIEN ne sort vers l'extérieur —
+    // le contenu est stocké et visible en base/backoffice, c'est tout.
+    const mode = process.env.PUBLICATION_MODE || 'auto';
+    if (mode !== 'auto') return { status: 'stored_only', reason: `publication extérieure désactivée (PUBLICATION_MODE=${mode}) — phase de test` };
+    if (type === 'blog' || type === 'faq') {
+      const cms = db.prepare("SELECT cms_type, site_url, api_credentials FROM cms_connections WHERE restaurant_id = ? AND status != 'disconnected' ORDER BY id DESC LIMIT 1").get(restaurantId);
+      if (!cms) return { status: 'stored_only', reason: 'aucun CMS connecté pour ce restaurant' };
+      if (cms.cms_type !== 'wordpress') return { status: 'stored_only', reason: `publication auto non câblée pour ${cms.cms_type}` };
+      let creds = {};
+      try { creds = JSON.parse(cms.api_credentials || '{}') || {}; } catch (e) {}
+      const appPassword = creds.app_password || creds.password;
+      if (!creds.username || !appPassword) return { status: 'stored_only', reason: 'credentials WordPress incomplets' };
+      const pub = await publishToWordPressHidden({ site_url: cms.site_url, username: creds.username, app_password: appPassword, title, content });
+      db.prepare('UPDATE generated_content SET published = 1, publish_url = ? WHERE id = ?').run(pub.url || '', contentId);
+      return { status: 'published', target: 'wordpress', url: pub.url };
+    }
+
+    if (type === 'reddit') {
+      // Garde-fou anti-mélange : uniquement le compte Reddit DE ce restaurant
+      const account = db.prepare('SELECT id FROM reddit_accounts WHERE restaurant_id = ? AND is_active = 1 ORDER BY id LIMIT 1').get(restaurantId);
+      if (!account) return { status: 'stored_only', reason: 'aucun compte Reddit configuré pour ce restaurant' };
+      const subreddit = (metadata && metadata.subreddit) || 'paris';
+      const schedTs = Date.parse(metadata && metadata.scheduled_for) || (Date.now() + 3600000);
+      const scheduledFor = new Date(schedTs).toISOString();
+      const contentHash = crypto.createHash('md5').update((title || '') + content).digest('hex').substring(0, 16);
+      db.prepare('INSERT INTO reddit_post_queue (restaurant_id, account_id, subreddit, title, body, scheduled_for, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?)')
+        .run(restaurantId, account.id, subreddit, title || '', content, scheduledFor, contentHash);
+      return { status: 'queued', target: `reddit r/${subreddit}`, scheduled_for: scheduledFor };
+    }
+
+    // guest_post (outreach material), report (internal), schema, etc.
+    return { status: 'stored_only', reason: 'type sans canal de publication directe' };
+  } catch (e) {
+    return { status: 'failed', reason: e.message };
+  }
+}
+
+// ── Reddit queue worker : draine reddit_post_queue (sans lui, le full-auto
+// "queued" ne posterait jamais). Réutilise la machinerie anti-ban existante. ──
+async function processRedditQueue() {
+  try {
+    if ((process.env.PUBLICATION_MODE || 'auto') !== 'auto') return; // mode test : la queue attend
+    const due = db.prepare("SELECT * FROM reddit_post_queue WHERE status = 'pending' AND scheduled_for <= datetime('now') AND attempt_count < 3 ORDER BY scheduled_for LIMIT 1").all();
+    for (const item of due) {
+      const acc = db.prepare('SELECT * FROM reddit_accounts WHERE id = ? AND restaurant_id = ? AND is_active = 1').get(item.account_id, item.restaurant_id);
+      if (!acc) {
+        db.prepare("UPDATE reddit_post_queue SET status = 'failed', last_error = 'compte Reddit introuvable ou inactif pour ce restaurant' WHERE id = ?").run(item.id);
+        continue;
+      }
+      const contentHash = item.content_hash || crypto.createHash('md5').update(item.title + item.body).digest('hex').substring(0, 16);
+      const check = checkRedditAntiBan(acc.id, item.subreddit, contentHash);
+      if (!check.allowed) {
+        // Pas un échec : l'anti-ban repousse, on garde la trace du pourquoi
+        db.prepare("UPDATE reddit_post_queue SET scheduled_for = datetime('now', '+6 hours'), last_error = ? WHERE id = ?").run(`anti-ban: ${check.reason}`, item.id);
+        continue;
+      }
+      try {
+        const token = await getRedditToken(acc);
+        const subRules = await checkSubredditRules(token, item.subreddit);
+        if (subRules.hasAntiPromo) {
+          db.prepare("UPDATE reddit_post_queue SET status = 'blocked', last_error = ? WHERE id = ?").run(`r/${item.subreddit} interdit l'auto-promo`, item.id);
+          continue;
+        }
+        await new Promise(r => setTimeout(r, 5000 + Math.random() * 25000));
+        const resp = await fetch('https://oauth.reddit.com/api/submit', {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/x-www-form-urlencoded', 'User-Agent': randomUA() },
+          body: `sr=${encodeURIComponent(item.subreddit)}&kind=self&title=${encodeURIComponent(item.title)}&text=${encodeURIComponent(item.body)}&api_type=json&sendreplies=true`,
+          signal: AbortSignal.timeout(20000)
+        });
+        const d = await resp.json();
+        if (d.json?.errors?.length > 0) throw new Error(d.json.errors.map(e => e[1]).join(', '));
+        const url = d.json?.data?.url || '';
+        const postId = d.json?.data?.id || '';
+        db.prepare("UPDATE reddit_post_queue SET status = 'posted', post_id = ?, post_url = ?, published_at = datetime('now') WHERE id = ?").run(postId, url, item.id);
+        db.prepare("INSERT INTO reddit_post_log (account_id, subreddit, post_id, post_url, content_hash, status) VALUES (?, ?, ?, ?, ?, 'ok')").run(acc.id, item.subreddit, postId, url, contentHash);
+        console.log(`[RedditQueue] posté r/${item.subreddit} pour resto ${item.restaurant_id}: ${url}`);
+      } catch (e) {
+        const attempts = (item.attempt_count || 0) + 1;
+        db.prepare('UPDATE reddit_post_queue SET attempt_count = ?, last_error = ?, status = ? WHERE id = ?')
+          .run(attempts, e.message, attempts >= 3 ? 'failed' : 'pending', item.id);
+      }
+    }
+  } catch (e) { console.warn('[RedditQueue]', e.message); }
+}
+setInterval(processRedditQueue, 5 * 60 * 1000);
+
+// ── Content push: agents deliver generated content here ──
+app.post('/api/content/push', agentAuth, async (req, res) => {
+  const { restaurant_id, type, title, content, metadata } = req.body;
+  if (!type || !content) return res.status(400).json({ error: 'type and content required' });
+  try {
+    const rid = parseInt(restaurant_id) || 0;
+    // Garde-fou [CODE] : pas de contenu orphelin — l'id doit exister (0 = global/test toléré)
+    const resto = rid === 0 ? null : db.prepare('SELECT id, name FROM restaurants WHERE id = ?').get(rid);
+    if (rid !== 0 && !resto) return res.status(404).json({ error: `restaurant ${rid} inconnu — contenu refusé (anti-orphelin)` });
+    // Garde-fou [CODE] : quotas anti-spam appliqués par le serveur, pas par la mémoire d'un agent
+    const QUOTAS = { blog: { max: 1, days: 7 }, reddit: { max: 3, days: 7 } };
+    const quota = QUOTAS[type];
+    if (quota) {
+      const n = db.prepare(`SELECT COUNT(*) c FROM generated_content WHERE restaurant_id = ? AND type = ? AND created_at > datetime('now', '-${quota.days} days')`).get(rid, type).c;
+      if (n >= quota.max) return res.status(429).json({ error: `quota dépassé : max ${quota.max} ${type}/restaurant/${quota.days} jours`, quota: `${type}_${quota.days}d`, current: n });
+    }
+    const info = db.prepare("INSERT INTO generated_content (restaurant_id, restaurant_name, type, title, content, created_at) VALUES (?, ?, ?, ?, ?, datetime('now'))")
+      .run(rid, resto ? resto.name : '', type, title || '', content);
+    const publication = await autoPublishContent({
+      contentId: info.lastInsertRowid,
+      restaurantId: rid,
+      type, title: title || '', content,
+      metadata: metadata || {}
+    });
+    res.json({ success: true, id: info.lastInsertRowid, publication });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// ── Full state in one call: everything the Agent Manager needs to decide ──
+app.get('/api/agent/state', agentAuth, (req, res) => {
+  try {
+    const rid = req.query.restaurant_id ? parseInt(req.query.restaurant_id) : null;
+    const restos = rid
+      ? db.prepare('SELECT * FROM restaurants WHERE id = ?').all(rid)
+      : db.prepare('SELECT * FROM restaurants ORDER BY id').all();
+    let redditAccounts = 0;
+    try { redditAccounts = db.prepare('SELECT COUNT(*) c FROM reddit_accounts WHERE is_active = 1').get().c; } catch (e) {}
+    const globalLearnings = db.prepare("SELECT learning, confidence, content_type, scope, status FROM agent_learnings WHERE restaurant_id = 0 AND status != 'dropped' AND confidence >= 0.5 ORDER BY confidence DESC LIMIT 30").all();
+
+    const CONTENT_TYPES = ['blog', 'reddit', 'faq', 'guest_post', 'report'];
+    const lastStmt = db.prepare('SELECT created_at, published FROM generated_content WHERE restaurant_id = ? AND type = ? ORDER BY created_at DESC LIMIT 1');
+    const count7dStmt = db.prepare("SELECT COUNT(*) c FROM generated_content WHERE restaurant_id = ? AND type = ? AND created_at > datetime('now', '-7 days')");
+
+    const restaurants = restos.map((r) => {
+      let scores = {};
+      try { scores = JSON.parse(r.scores || '{}'); } catch (e) {}
+      const content = {}; const counts7d = {};
+      for (const t of CONTENT_TYPES) {
+        const last = lastStmt.get(r.id, t);
+        content[t] = {
+          last_at: last ? last.created_at : null,
+          days_ago: last ? Math.floor((Date.now() - new Date(last.created_at).getTime()) / 86400000) : null,
+          last_published: last ? !!last.published : null
+        };
+        counts7d[t] = count7dStmt.get(r.id, t).c;
+      }
+      const daysOr999 = (t) => (content[t].days_ago === null ? 999 : content[t].days_ago);
+      const cms = db.prepare('SELECT cms_type, site_url, status FROM cms_connections WHERE restaurant_id = ? ORDER BY id DESC LIMIT 1').get(r.id) || null;
+      let redditForResto = 0;
+      try { redditForResto = db.prepare('SELECT COUNT(*) c FROM reddit_accounts WHERE restaurant_id = ? AND is_active = 1').get(r.id).c; } catch (e) {}
+      const directories = db.prepare('SELECT platform, status FROM directory_automation WHERE restaurant_id = ?').all(r.id);
+      const learnings = db.prepare("SELECT learning, confidence, content_type, scope, status FROM agent_learnings WHERE restaurant_id = ? AND status != 'dropped' AND confidence >= 0.5 ORDER BY confidence DESC LIMIT 30").all(r.id);
+      const lastManagerRun = db.prepare("SELECT MAX(created_at) m FROM agent_actions WHERE restaurant_id IN (0, ?) AND role = 'manager'").get(r.id).m;
+      return {
+        id: r.id, name: r.name, city: r.city,
+        google_place_id: r.google_place_id,
+        last_audit: r.last_audit,
+        scores: { seo: scores.seo !== undefined ? scores.seo : null, geo: scores.geo !== undefined ? scores.geo : null },
+        cms, reddit_accounts: redditForResto, directories, content,
+        content_counts_7d: counts7d,
+        learnings,
+        needs_action: {
+          blog: daysOr999('blog') > 7,
+          reddit: daysOr999('reddit') > 7,
+          faq: daysOr999('faq') > 90,
+          guest_post: daysOr999('guest_post') > 30,
+          report: daysOr999('report') > 7
+        },
+        anti_spam: { blog_7d: counts7d.blog, reddit_7d: counts7d.reddit },
+        last_manager_run: lastManagerRun
+      };
+    });
+
+    res.json({
+      success: true,
+      generated_at: new Date().toISOString(),
+      publication_mode: process.env.PUBLICATION_MODE || 'auto',
+      channels: { reddit_accounts: redditAccounts, gbp_api: false },
+      global_learnings: globalLearnings,
+      restaurants
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Action journal: every agent decision/action, feeds the dashboard timeline ──
+app.post('/api/agent/actions', agentAuth, (req, res) => {
+  const { restaurant_id, run_tag, role, action, reason, priority, status, payload } = req.body;
+  if (!action) return res.status(400).json({ error: 'action required' });
+  try {
+    const info = db.prepare('INSERT INTO agent_actions (restaurant_id, run_tag, role, action, reason, priority, status, payload) VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+      .run(restaurant_id || 0, run_tag || '', role || 'manager', action, reason || '', priority || '', status || 'done', JSON.stringify(payload || {}));
+    res.json({ success: true, id: info.lastInsertRowid });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/agent/actions', agentOrAdmin, (req, res) => {
+  try {
+    const rid = req.query.restaurant_id ? parseInt(req.query.restaurant_id) : null;
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const rows = rid !== null
+      ? db.prepare('SELECT * FROM agent_actions WHERE restaurant_id = ? ORDER BY id DESC LIMIT ?').all(rid, limit)
+      : db.prepare('SELECT * FROM agent_actions ORDER BY id DESC LIMIT ?').all(limit);
+    res.json({ success: true, actions: rows });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Client-facing: agent activity for ONE restaurant (owner or admin session) ──
+app.get('/api/restaurants/:id/agent-feed', authMiddleware, requireAuth, (req, res) => {
+  try {
+    const rid = parseInt(req.params.id);
+    const resto = db.prepare('SELECT id, name, city, owner_id, user_id FROM restaurants WHERE id = ?').get(rid);
+    if (!resto) return res.status(404).json({ error: 'restaurant inconnu' });
+    const isOwner = resto.owner_id === req.account.id || resto.user_id === req.account.id;
+    if (!isOwner && req.account.role !== 'admin') return res.status(403).json({ error: 'accès refusé' });
+    const actions = db.prepare('SELECT id, run_tag, role, action, reason, priority, status, created_at FROM agent_actions WHERE restaurant_id = ? ORDER BY id DESC LIMIT 50').all(rid);
+    const contents = db.prepare('SELECT id, type, title, published, publish_url, created_at, substr(content, 1, 240) AS excerpt FROM generated_content WHERE restaurant_id = ? ORDER BY id DESC LIMIT 20').all(rid);
+    const stats = {
+      actions_30d: db.prepare("SELECT COUNT(*) c FROM agent_actions WHERE restaurant_id = ? AND created_at > datetime('now','-30 days')").get(rid).c,
+      contents_total: db.prepare('SELECT COUNT(*) c FROM generated_content WHERE restaurant_id = ?').get(rid).c,
+      published_total: db.prepare('SELECT COUNT(*) c FROM generated_content WHERE restaurant_id = ? AND published = 1').get(rid).c,
+      last_run: db.prepare('SELECT MAX(created_at) m FROM agent_actions WHERE restaurant_id = ?').get(rid).m
+    };
+    res.json({ success: true, restaurant: { id: resto.id, name: resto.name, city: resto.city }, publication_mode: process.env.PUBLICATION_MODE || 'auto', stats, actions, contents });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/restaurants/:id/agent-content/:cid', authMiddleware, requireAuth, (req, res) => {
+  try {
+    const rid = parseInt(req.params.id);
+    const resto = db.prepare('SELECT id, owner_id, user_id FROM restaurants WHERE id = ?').get(rid);
+    if (!resto) return res.status(404).json({ error: 'restaurant inconnu' });
+    const isOwner = resto.owner_id === req.account.id || resto.user_id === req.account.id;
+    if (!isOwner && req.account.role !== 'admin') return res.status(403).json({ error: 'accès refusé' });
+    const c = db.prepare('SELECT id, type, title, content, published, publish_url, created_at FROM generated_content WHERE id = ? AND restaurant_id = ?').get(parseInt(req.params.cid), rid);
+    if (!c) return res.status(404).json({ error: 'contenu introuvable' });
+    res.json({ success: true, content: c });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Per-restaurant status (kept for compat with agent-monitor.sh) ──
+app.get('/api/agent/status', agentOrAdmin, (req, res) => {
+  const { restaurant_id } = req.query;
+  try {
+    const rid = parseInt(restaurant_id) || 0;
+    const lastOf = (type) => db.prepare('SELECT created_at FROM generated_content WHERE restaurant_id = ? AND type = ? ORDER BY created_at DESC LIMIT 1').get(rid, type);
+    const now = new Date();
+    const daysSince = (d) => d ? Math.floor((now - new Date(d.created_at)) / 86400000) : 999;
+    const lastBlog = lastOf('blog'), lastReddit = lastOf('reddit'), lastFaq = lastOf('faq'), lastGuestPost = lastOf('guest_post'), lastReport = lastOf('report');
+    const contentCounts = db.prepare('SELECT type, COUNT(*) as count FROM generated_content WHERE restaurant_id = ? GROUP BY type').all(rid);
+    res.json({
+      success: true, restaurant_id: rid,
+      last_content: {
+        blog: { date: lastBlog ? lastBlog.created_at : null, days_ago: daysSince(lastBlog) },
+        reddit: { date: lastReddit ? lastReddit.created_at : null, days_ago: daysSince(lastReddit) },
+        faq: { date: lastFaq ? lastFaq.created_at : null, days_ago: daysSince(lastFaq) },
+        guest_post: { date: lastGuestPost ? lastGuestPost.created_at : null, days_ago: daysSince(lastGuestPost) },
+        report: { date: lastReport ? lastReport.created_at : null, days_ago: daysSince(lastReport) }
+      },
+      content_counts: Object.fromEntries(contentCounts.map(r => [r.type, r.count])),
+      needs_action: {
+        blog: daysSince(lastBlog) > 7, reddit: daysSince(lastReddit) > 7,
+        faq: daysSince(lastFaq) > 90 || !lastFaq, guest_post: daysSince(lastGuestPost) > 30 || !lastGuestPost,
+        report: daysSince(lastReport) > 7
+      }
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Metrics: agents track content performance after publication ──
+app.post('/api/metrics/track', agentAuth, (req, res) => {
+  const { content_id, restaurant_id, metric_type, value, source, metadata } = req.body;
+  if (!metric_type) return res.status(400).json({ error: 'metric_type required' });
+  try {
+    db.prepare('INSERT INTO content_performance (content_id, restaurant_id, content_type, metric_type, value, source, metadata) VALUES (?, ?, ?, ?, ?, ?, ?)')
+      .run(content_id || null, restaurant_id || 0, req.body.content_type || '', metric_type, value || 0, source || 'manual', JSON.stringify(metadata || {}));
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/metrics/report', agentOrAdmin, (req, res) => {
+  const rid = parseInt(req.query.restaurant_id) || 0;
+  try {
+    const byType = db.prepare('SELECT content_type, metric_type, AVG(value) as avg_val, MAX(value) as max_val, COUNT(*) as count FROM content_performance WHERE restaurant_id = ? GROUP BY content_type, metric_type').all(rid);
+    const bestContent = db.prepare('SELECT cp.content_id, gc.title, gc.type, cp.metric_type, cp.value FROM content_performance cp LEFT JOIN generated_content gc ON gc.id = cp.content_id WHERE cp.restaurant_id = ? AND cp.value > 0 ORDER BY cp.value DESC LIMIT 10').all(rid);
+    res.json({ success: true, performance_by_type: byType, best_content: bestContent });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+// ── Learnings: the ML-like loop. testing → permanent (≥0.9) / dropped (<0.3) ──
+function getLearnings(req, res) {
+  const rid = parseInt(req.query.restaurant_id) || 0;
+  try {
+    const includeDropped = req.query.include_dropped === '1';
+    const learnings = db.prepare(`SELECT * FROM agent_learnings WHERE (restaurant_id = ? OR restaurant_id = 0)${includeDropped ? '' : " AND status != 'dropped'"} ORDER BY confidence DESC`).all(rid);
+    res.json({
+      success: true, learnings,
+      recommendations: learnings.filter(l => l.confidence > 0.7 && l.status !== 'dropped').map(l => l.learning)
+    });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+}
+
+function postLearning(req, res) {
+  const { restaurant_id, content_type, learning, confidence, delta, scope } = req.body;
+  if (!learning) return res.status(400).json({ error: 'learning required' });
+  try {
+    const statusFor = (c) => (c >= 0.9 ? 'permanent' : (c < 0.3 ? 'dropped' : 'testing'));
+    const existing = db.prepare('SELECT id, confidence, evidence_count FROM agent_learnings WHERE restaurant_id = ? AND learning = ?').get(restaurant_id || 0, learning);
+    if (existing) {
+      const d = typeof delta === 'number' ? delta : 0.1;
+      const nc = Math.max(0, Math.min(1, existing.confidence + d));
+      db.prepare("UPDATE agent_learnings SET confidence = ?, status = ?, evidence_count = ?, updated_at = datetime('now') WHERE id = ?")
+        .run(nc, statusFor(nc), (existing.evidence_count || 0) + 1, existing.id);
+      res.json({ success: true, action: d >= 0 ? 'reinforced' : 'weakened', confidence: nc, status: statusFor(nc) });
+    } else {
+      const c = typeof confidence === 'number' ? Math.max(0, Math.min(1, confidence)) : 0.5;
+      db.prepare('INSERT INTO agent_learnings (restaurant_id, content_type, learning, confidence, status, scope, evidence_count) VALUES (?, ?, ?, ?, ?, ?, 1)')
+        .run(restaurant_id || 0, content_type || '', learning, c, statusFor(c), scope || 'restaurant');
+      res.json({ success: true, action: 'created', confidence: c, status: statusFor(c) });
+    }
+  } catch (e) { res.status(500).json({ error: e.message }); }
+}
+
+app.get('/api/metrics/learn', agentOrAdmin, getLearnings);
+app.post('/api/metrics/learn', agentAuth, postLearning);
+// Aliases under /api/learnings (same handlers, clearer name)
+app.get('/api/learnings', agentOrAdmin, getLearnings);
+app.post('/api/learnings', agentAuth, postLearning);
