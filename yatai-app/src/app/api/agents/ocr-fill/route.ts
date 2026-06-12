@@ -8,9 +8,34 @@ function auth(req: NextRequest): boolean {
 }
 
 // GET — référentiel pour l'agent OCR : restaurants (mapping par arrondissement) + produits (refs P0xx)
+// GET ?year=&month= — couverture de la grille (pour l'agent de vérification) : items/jour par resto
 export async function GET(req: NextRequest) {
   if (!auth(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const prisma = await db()
+
+  const yearQ = req.nextUrl.searchParams.get('year')
+  const monthQ = req.nextUrl.searchParams.get('month')
+  if (yearQ && monthQ) {
+    const year = parseInt(yearQ), month = parseInt(monthQ)
+    if (year < 2024 || year > 2035 || month < 1 || month > 12) {
+      return NextResponse.json({ error: 'year/month hors bornes' }, { status: 400 })
+    }
+    const orders = await prisma.order.findMany({
+      where: { year, month },
+      include: { restaurant: { select: { id: true, name: true } }, items: { select: { day: true, quantity: true } } },
+    })
+    const grid = orders.map(o => {
+      const days: Record<number, { items: number; totalQty: number }> = {}
+      for (const it of o.items) {
+        const d = (days[it.day] ||= { items: 0, totalQty: 0 })
+        d.items++
+        d.totalQty = Math.round((d.totalQty + it.quantity) * 1000) / 1000
+      }
+      return { restaurantId: o.restaurantId, restaurant: o.restaurant.name, days }
+    })
+    return NextResponse.json({ year, month, grid })
+  }
+
   const [restaurants, products] = await Promise.all([
     prisma.restaurant.findMany({ select: { id: true, name: true, arrondissement: true } }),
     prisma.product.findMany({ select: { id: true, ref: true, name: true, unit: true }, orderBy: { ref: 'asc' } }),
