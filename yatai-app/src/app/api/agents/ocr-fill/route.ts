@@ -1,6 +1,8 @@
 import { db } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
 
+export const dynamic = 'force-dynamic'
+
 const CRON_SECRET = process.env.CRON_SECRET || ''
 
 function auth(req: NextRequest): boolean {
@@ -20,18 +22,30 @@ export async function GET(req: NextRequest) {
     if (year < 2024 || year > 2035 || month < 1 || month > 12) {
       return NextResponse.json({ error: 'year/month hors bornes' }, { status: 400 })
     }
+    const detail = req.nextUrl.searchParams.get('detail') === '1'
     const orders = await prisma.order.findMany({
       where: { year, month },
-      include: { restaurant: { select: { id: true, name: true } }, items: { select: { day: true, quantity: true } } },
+      include: {
+        restaurant: { select: { id: true, name: true } },
+        items: detail
+          ? { select: { day: true, quantity: true, product: { select: { ref: true } } } }
+          : { select: { day: true, quantity: true } },
+      },
     })
     const grid = orders.map(o => {
       const days: Record<number, { items: number; totalQty: number }> = {}
+      const lines: Record<number, { ref: string; quantity: number }[]> = {}
       for (const it of o.items) {
         const d = (days[it.day] ||= { items: 0, totalQty: 0 })
         d.items++
         d.totalQty = Math.round((d.totalQty + it.quantity) * 1000) / 1000
+        if (detail && 'product' in it) {
+          ;(lines[it.day] ||= []).push({ ref: (it as { product: { ref: string } }).product.ref, quantity: it.quantity })
+        }
       }
-      return { restaurantId: o.restaurantId, restaurant: o.restaurant.name, days }
+      return detail
+        ? { restaurantId: o.restaurantId, restaurant: o.restaurant.name, days, lines }
+        : { restaurantId: o.restaurantId, restaurant: o.restaurant.name, days }
     })
     return NextResponse.json({ year, month, grid })
   }
